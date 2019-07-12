@@ -1,5 +1,4 @@
 <script context="module">
-  import images from 'emoji.json';
   import { simpleMarkdown, basicFormat } from './formats';
   import { insertTextAtCursor, getCursor, setCursor, noMarkup } from './text';
 </script>
@@ -10,11 +9,7 @@
   export let markup = '';
 
   let enabled = false;
-  let emojis = false;
-  let search = '';
-  let offset = 0;
   let input;
-  let t;
 
   function run(go) {
     const offset = getCursor(input);
@@ -51,10 +46,6 @@
 
       if (e.keyCode === 8) {
         e.preventDefault();
-
-        if (emojis) {
-          emojis = false;
-        }
 
         const a = markup.charAt(markup.length - 1);
         const b = markup.charAt(markup.length - 2);
@@ -97,45 +88,7 @@
       e.preventDefault();
       sync();
     }
-    if (e.keyCode === 27 || (e.keyCode === 8 && !search)) {
-      emojis = false;
-      return;
-    }
-    if (e.key.length === 1 && t) {
-      clearTimeout(t);
-    }
-    if (emojis) {
-      if (e.keyCode === 13) {
-        const code = 'think:';
-
-        insertTextAtCursor(code);
-        setCursor(input, offset + code.length);
-
-        emojis = false;
-        return;
-      }
-
-      if (e.keyCode === 8) search = search.substr(0, search.length - 1);
-      else if (e.key.length === 1) search += e.key;
-
-      e.preventDefault();
-      return;
-    }
-    if (e.keyCode === 186) {
-      clearTimeout(t);
-      t = setTimeout(() => {
-        t = null;
-        search = '';
-        emojis = true;
-        offset = getCursor(input);
-        setCursor(input, offset);
-      }, 500);
-    }
   }
-
-  $: filtered = images
-    .filter(x => x.name.includes(search))
-    .slice(0, 100);
 </script>
 
 <style>
@@ -163,9 +116,4 @@
     on:keyup={sync}
     on:keydown={check}
   />
-  {#if emojis}
-    ({search}) {#each filtered as emoji}
-      {emoji.char}
-    {/each}
-  {/if}
 </div>
