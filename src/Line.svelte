@@ -121,6 +121,8 @@
         return;
       }
 
+      e.preventDefault();
+
       if (e.keyCode === 37 || e.keyCode === 38) {
         image = Math.max(0, image - (e.keyCode === 38 ? 10 : 1));
       } else if (e.keyCode === 39 || e.keyCode === 40) {
@@ -129,8 +131,6 @@
 
       if (e.keyCode === 8) search = search.substr(0, search.length - 1);
       else if (e.key.length === 1) search += e.key;
-
-      e.preventDefault();
       return;
     }
     if (e.key === ':') {

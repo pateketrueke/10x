@@ -1,11 +1,10 @@
 export function basicFormat(text) {
   return text
     .replace(/<\/font[^<>]*>/ig, '')
-    .replace(/(?![<*])([=*/+-])(\s+)/g, (_, $1, $2) => {
+    .replace(/([-+/*])(\s*)(?=\d)/g, (_, $1, $2) => {
       let type;
 
       switch ($1) {
-        case '=': type = 'equal'; break;
         case '+': type = 'plus'; break;
         case '-': type = 'min'; break;
         case '/': type = 'div'; break;
@@ -15,6 +14,7 @@ export function basicFormat(text) {
 
       return `<var data-${type}>${$1}</var>${$2}`;
     })
+    .replace(/=/g, '<var data-equal>=</var>')
     .replace(/([$]?\d[\d,.]*)/g, '<var data-number>$1</var>');
 }
 
