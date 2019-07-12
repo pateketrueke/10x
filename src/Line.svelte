@@ -1,38 +1,84 @@
 <script>
   import { onMount } from 'svelte';
-  import { saveCaretPosition } from './text';
+  import { simpleMarkdown } from './formats';
+  import { getCursor, setCursor } from './text';
 
   export let markup = '';
 
   let enabled = false;
-  let buffer;
   let input;
+  let t;
 
-  function sync(e) {
+  function tag(_, $1) {
+    let type;
+
+    switch ($1) {
+      case '=': type = 'equal'; break;
+      case '+': type = 'plus'; break;
+      case '-': type = 'min'; break;
+      case '/': type = 'div'; break;
+      case '*': type = 'mul'; break;
+      default: break;
+    }
+
+    return `<var data-${type}>${$1}</var>`;
+  }
+
+  function run(go) {
+    const offset = getCursor(input);
+
+    let source = markup;
+
+    do {
+      source = source
+        .replace(/<\/font[^<>]*>/ig, '')
+        .replace(/(?![<*])([=*/+-])/g, tag)
+        .replace(/([$]?\d[\d,.]*)/g, '<var data-number>$1</var>')
+        .trim() + ' ';
+    } while (/<\/?font/i.test(source));
+
+    input.innerHTML = simpleMarkdown(source);
+
+    if (go !== false) {
+      setCursor(input, Math.min(offset, input.textContent.length - 1))
+    };
+  }
+
+  function sync(e, go) {
     markup = input.textContent;
 
-    if (markup.substr(markup.length - 1, 1).charCodeAt(0) === 160) {
+    if (e && /[\d_*]/.test(e.key)) {
+      e.preventDefault();
+      run(go);
+      return;
+    }
+
+    if (e && /\s\s*$/.test(markup)) {
       e.preventDefault();
       return;
     }
 
-    const restore = saveCaretPosition(input);
-
-    input.innerHTML = markup
-      .replace(/(?!<)([=+/*-])/g, '<b style="color:gray">$1</b>')
-      .replace(/[\d]+([\d,.]*)?/g, '<b style="color:purple">$&</b>')
-      .trim() + ' ';
-
-    restore();
-  }
-
-  function update() {
-    buffer.style.height = `${input.getBoundingClientRect().height}px`;
+    run(go);
   }
 
   function insert(e) {
     e.preventDefault();
-    document.execCommand('insertHTML', false, e.clipboardData.getData('text/plain'));
+
+    if (window.clipboardData) {
+      const content = window.clipboardData.getData('Text');
+
+      if (window.getSelection) {
+        const selObj = window.getSelection();
+        const selRange = selObj.getRangeAt(0);
+
+        selRange.deleteContents();
+        selRange.insertNode(document.createTextNode(content));
+      }
+    } else if (e.clipboardData) {
+      document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+    }
+
+    sync();
   }
 
   function enable() {
@@ -51,19 +97,19 @@
     }
   }
 
-  function validate(e) {
-    if (e.keyCode === 13) {
+  function check(e) {
+    if (e.keyCode === 38 || e.keyCode == 40) {
       e.preventDefault();
     }
-  }
-
-  $: if (input && buffer) {
-    update();
+    if (e.keyCode === 13) {
+      e.preventDefault();
+      sync();
+    }
   }
 </script>
 
 <style>
-  div {
+  .editor {
     word-break: break-word;
     width: 100%;
     left: 0;
@@ -75,11 +121,11 @@
   }
 </style>
 
-<div
+<div class="editor" spellcheck="false"
   bind:this={input}
   on:click={enable}
   on:blur={disable}
-  on:input={sync}
   on:paste={insert}
-  on:keydown={validate}
+  on:keyup={sync}
+  on:keydown={check}
 />

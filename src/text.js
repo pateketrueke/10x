@@ -16,7 +16,7 @@ export function getTextNodeAtPosition(target, offset) {
   };
 }
 
-export function saveCaretPosition(target) {
+export function getCursor(target) {
   const selection = window.getSelection();
   const range = selection.getRangeAt(0);
 
@@ -24,14 +24,17 @@ export function saveCaretPosition(target) {
 
   const { length } = range.toString();
 
-  return () => {
-    const pos = getTextNodeAtPosition(target, length);
+  return length;
+}
 
-    selection.removeAllRanges();
+export function setCursor(target, offset) {
+  const selection = window.getSelection();
+  const pos = getTextNodeAtPosition(target, offset);
 
-    const range = new Range();
+  selection.removeAllRanges();
 
-    range.setStart(pos.node, pos.position);
-    selection.addRange(range);
-  };
+  const range = new Range();
+
+  range.setStart(pos.node, pos.position);
+  selection.addRange(range);
 }
