@@ -1,7 +1,7 @@
 <script context="module">
   import images from 'emoji.json';
   import { simpleMarkdown, basicFormat } from './formats';
-  import { insertTextAtCursor, getCursor, setCursor, noMarkup } from './text';
+  import { getCursor, setCursor, noMarkup } from './text';
 </script>
 
 <script>
@@ -113,9 +113,8 @@
         const code = filtered[image] && filtered[image].char;
 
         if (code) {
-          insertTextAtCursor(code, offset, 1);
-          sync();
-          setCursor(input, (offset + code.length) - 1);
+          markup = markup.substr(0, offset - 1) + code + markup.substr(offset);
+          run();
         }
 
         emojis = false;
@@ -137,12 +136,11 @@
     if (e.key === ':') {
       clearTimeout(t);
       t = setTimeout(() => {
-        t = null;
-        image = 0;
-        search = '';
-        emojis = true;
         offset = getCursor(input);
         setCursor(input, offset);
+        emojis = true;
+        search = '';
+        image = 0;
       }, 260);
     }
   }
@@ -155,9 +153,8 @@
       const code = e.target.textContent.trim();
 
       if (code) {
-        insertTextAtCursor(code, offset, 1);
-        setCursor(input, (offset + code.length) - 1);
-        sync();
+        markup = markup.substr(0, offset - 1) + code + markup.substr(offset);
+        run();
       }
 
       emojis = false;

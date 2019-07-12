@@ -16,26 +16,6 @@ export function getTextNodeAtPosition(target, offset = 0) {
   };
 }
 
-export function insertTextAtCursor(text, offset = 0, remove = 0) {
-  if (window.getSelection) {
-    const selection = window.getSelection();
-
-    if (selection.getRangeAt && selection.rangeCount) {
-      const range = selection.getRangeAt(0);
-
-      if (offset || remove) {
-        range.setStart(range.endContainer, offset - remove);
-        range.setEnd(range.endContainer, offset);
-      }
-
-      range.deleteContents();
-      range.insertNode(document.createTextNode(text));
-    }
-  } else if (document.selection && document.selection.createRange) {
-    document.selection.createRange().text = text;
-  }
-}
-
 export function getCursor(target) {
   const selection = window.getSelection();
   const range = selection.getRangeAt(0);
@@ -64,14 +44,11 @@ export function noMarkup(e) {
 
   if (window.clipboardData) {
     const content = window.clipboardData.getData('Text');
+    const selObj = window.getSelection();
+    const selRange = selObj.getRangeAt(0);
 
-    if (window.getSelection) {
-      const selObj = window.getSelection();
-      const selRange = selObj.getRangeAt(0);
-
-      selRange.deleteContents();
-      selRange.insertNode(document.createTextNode(content));
-    }
+    selRange.deleteContents();
+    selRange.insertNode(document.createTextNode(content));
   } else if (e.clipboardData) {
     document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
   }
