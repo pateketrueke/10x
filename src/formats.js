@@ -1,7 +1,7 @@
 export function basicFormat(text) {
   return text
     .replace(/<\/font[^<>]*>/ig, '')
-    .replace(/(?![<*])([=*/+-])/g, (_, $1) => {
+    .replace(/(?![<*])([=*/+-])\s+/g, (_, $1) => {
       let type;
 
       switch ($1) {
