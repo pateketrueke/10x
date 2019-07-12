@@ -47,15 +47,30 @@
   function sync(e, go) {
     markup = input.textContent;
 
-    if (e && /[\d_*]/.test(e.key)) {
-      e.preventDefault();
-      run(go);
-      return;
-    }
+    if (e) {
+      if (e.keyCode === 16 || e.keyCode === 18 || e.keyCode === 91 || e.keyCode === 39 ||e.keyCode === 37) return;
 
-    if (e && /\s\s*$/.test(markup)) {
-      e.preventDefault();
-      return;
+      if (e.keyCode === 8) {
+        e.preventDefault();
+
+        const a = markup.charAt(markup.length - 1);
+        const b = markup.charAt(markup.length - 2);
+
+        if (a === ' ' && b !== ' ') run(go);
+        else if (/[\d_*]/.test(a)) run(go);
+        return;
+      }
+
+      if (/[\w\d_*]/.test(e.key)) {
+        e.preventDefault();
+        run(go);
+        return;
+      }
+
+      if (/\s\s*$/.test(markup)) {
+        e.preventDefault();
+        return;
+      }
     }
 
     run(go);
