@@ -6,6 +6,7 @@
   export let markup = '';
 
   let enabled = false;
+  let emojis = false;
   let input;
   let t;
 
@@ -48,10 +49,30 @@
     markup = input.textContent;
 
     if (e) {
-      if (e.keyCode === 16 || e.keyCode === 18 || e.keyCode === 91 || e.keyCode === 39 ||e.keyCode === 37) return;
+      if (e.metaKey || e.key === 'Meta' || [16, 18, 37, 39, 65, 91].includes(e.keyCode)) return;
+
+      if (/[\d_*]/.test(e.key)) {
+        e.preventDefault();
+        run(go);
+        return;
+      }
+
+      if (/\s\s*$/.test(markup)) {
+        e.preventDefault();
+        return;
+      }
+
+      if (e.keyCode === 186) {
+        emojis = true;
+        return;
+      }
 
       if (e.keyCode === 8) {
         e.preventDefault();
+
+        if (emojis) {
+          emojis = false;
+        }
 
         const a = markup.charAt(markup.length - 1);
         const b = markup.charAt(markup.length - 2);
@@ -61,15 +82,8 @@
         return;
       }
 
-      if (/[\w\d_*]/.test(e.key)) {
-        e.preventDefault();
-        run(go);
-        return;
-      }
-
-      if (/\s\s*$/.test(markup)) {
-        e.preventDefault();
-        return;
+      if (emojis) {
+        emojis = false;
       }
     }
 
@@ -134,13 +148,21 @@
     font-size: 1em;
     min-height: 1em;
   }
+  .main {
+    position: relative;
+  }
 </style>
 
-<div class="editor" spellcheck="false"
-  bind:this={input}
-  on:click={enable}
-  on:blur={disable}
-  on:paste={insert}
-  on:keyup={sync}
-  on:keydown={check}
-/>
+<div class="main">
+  <div class="editor" spellcheck="false"
+    bind:this={input}
+    on:click={enable}
+    on:blur={disable}
+    on:paste={insert}
+    on:keyup={sync}
+    on:keydown={check}
+  />
+  {#if emojis}
+    SHOW EMOJI LIST
+  {/if}
+</div>
