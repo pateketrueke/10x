@@ -8,15 +8,20 @@
   let buffer;
   let input;
 
-  function sync() {
+  function sync(e) {
     markup = input.textContent;
+
+    if (markup.substr(markup.length - 1, 1).charCodeAt(0) === 160) {
+      e.preventDefault();
+      return;
+    }
 
     const restore = saveCaretPosition(input);
 
-    input.innerHTML = markup.replace(/\s/g, '&nbsp;')
-      .replace(/(?!<)([=+/*-])/g, '<b style="color:red">$1</b>')
-      .replace(/[\d]+([\d,.]*)?/g, '<i style="color:blue">$&</i>')
-      ;
+    input.innerHTML = markup
+      .replace(/(?!<)([=+/*-])/g, '<b style="color:gray">$1</b>')
+      .replace(/[\d]+([\d,.]*)?/g, '<b style="color:purple">$&</b>')
+      .trim() + ' ';
 
     restore();
   }
@@ -59,7 +64,7 @@
 
 <style>
   div {
-    background-color: pink;
+    word-break: break-word;
     width: 100%;
     left: 0;
     top: 0;
@@ -75,6 +80,6 @@
   on:click={enable}
   on:blur={disable}
   on:input={sync}
+  on:paste={insert}
+  on:keydown={validate}
 />
-
-{JSON.stringify(markup)}
