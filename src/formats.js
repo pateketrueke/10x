@@ -1,7 +1,7 @@
 export function basicFormat(text) {
   return text
     .replace(/<\/font[^<>]*>/ig, '')
-    .replace(/(?![<*])([=*/+-])\s+/g, (_, $1) => {
+    .replace(/(?![<*])([=*/+-])(\s+)/g, (_, $1, $2) => {
       let type;
 
       switch ($1) {
@@ -13,7 +13,7 @@ export function basicFormat(text) {
         default: break;
       }
 
-      return `<var data-${type}>${$1}</var>`;
+      return `<var data-${type}>${$1}</var>${$2}`;
     })
     .replace(/([$]?\d[\d,.]*)/g, '<var data-number>$1</var>');
 }

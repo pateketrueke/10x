@@ -96,7 +96,7 @@
       e.preventDefault();
       sync();
     }
-    if (e.keyCode === 27 || (e.keyCode === 8 && !search)) {
+    if (e.keyCode === 27) {
       emojis = false;
       return;
     }
@@ -123,9 +123,9 @@
       }
 
       if (e.keyCode === 37 || e.keyCode === 38) {
-        image = Math.max(0, image - (e.keyCode === 38 ? 20 : 1));
+        image = Math.max(0, image - (e.keyCode === 38 ? 10 : 1));
       } else if (e.keyCode === 39 || e.keyCode === 40) {
-        image = Math.min(filtered.length - 1, image + (e.keyCode === 40 ? 20 : 1));
+        image = Math.min(filtered.length - 1, image + (e.keyCode === 40 ? 10 : 1));
       }
 
       if (e.keyCode === 8) search = search.substr(0, search.length - 1);
@@ -134,7 +134,7 @@
       e.preventDefault();
       return;
     }
-    if (e.keyCode === 186) {
+    if (e.key === ':') {
       clearTimeout(t);
       t = setTimeout(() => {
         t = null;
@@ -143,7 +143,7 @@
         emojis = true;
         offset = getCursor(input);
         setCursor(input, offset);
-      }, 500);
+      }, 260);
     }
   }
 
@@ -151,19 +151,21 @@
     enable();
     setCursor(input, offset);
 
-    const code = e.target.textContent.trim();
+    if (e.target.tagName === 'SPAN') {
+      const code = e.target.textContent.trim();
 
-    if (code) {
-      insertTextAtCursor(code, offset, 1);
-      setCursor(input, (offset + code.length) - 1);
-      sync();
+      if (code) {
+        insertTextAtCursor(code, offset, 1);
+        setCursor(input, (offset + code.length) - 1);
+        sync();
+      }
+
+      emojis = false;
     }
-
-    emojis = false;
   }
 
   $: filtered = images
-    .filter(x => x.name.includes(search))
+    .filter(x => x.name.toLowerCase().includes(search.toLowerCase()))
     .slice(0, 100);
 </script>
 
@@ -183,11 +185,24 @@
   .editor:focus {
     outline: 1px dotted silver;
   }
+  .overlay {
+    cursor: pointer;
+  }
   .main {
     position: relative;
   }
-  .on {
-    outline: 1px dotted gray;
+  .on, .off:hover {
+    background-color: gray;
+  }
+  span {
+    padding: 0 2px 5px 2px;
+    transition: all .3s;
+    transform-origin: 50% 50%;
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+    width: 20px;
+    height: 20px;
   }
 </style>
 
@@ -200,12 +215,12 @@
     on:keydown={check}
     on:click={enable}
   />
-  <div on:click={activate}>
+  <div class="overlay" on:click={activate}>
     {#if emojis}
       Search: {search || 'N/A'} <small>{filtered[image] ? filtered[image].name : '?'}</small>
       {#each filtered as emoji, key (emoji.codes)}
-        {#if (key % 20) === 0}<br />{/if}
-        <span class={image === key ? 'on' : ''} title={emoji.name}>{emoji.char}</span>
+        {#if (key % 10) === 0}<br />{/if}
+        <span class={image === key ? 'on' : 'off'} title={emoji.name}>{emoji.char}</span>
       {/each}
     {/if}
   </div>
