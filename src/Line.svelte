@@ -1,78 +1,80 @@
 <script>
-  import { setCursor, getCursor } from './text';
+  import { onMount } from 'svelte';
+  import { saveCaretPosition } from './text';
 
-  export let text = '';
+  export let markup = '';
 
-  let offset = 0;
+  let enabled = false;
   let buffer;
   let input;
 
-  $: if (input && buffer) {
-    if (offset !== getCursor(input)) {
-      setCursor(input, offset);
-    }
+  function sync() {
+    markup = input.textContent;
 
+    const restore = saveCaretPosition(input);
+
+    input.innerHTML = markup.replace(/\s/g, '&nbsp;')
+      .replace(/(?!<)([=+/*-])/g, '<b style="color:red">$1</b>')
+      .replace(/[\d]+([\d,.]*)?/g, '<i style="color:blue">$&</i>')
+      ;
+
+    restore();
+  }
+
+  function update() {
     buffer.style.height = `${input.getBoundingClientRect().height}px`;
   }
 
-  function update(e) {
+  function insert(e) {
     e.preventDefault();
-
-    if (e.keyCode === 39) {
-      offset = Math.min(text.length, offset + 1);
-    } else if (e.keyCode === 37) {
-      offset = Math.max(0, offset - 1);
-    } else if (e.keyCode === 8 || (e.keyCode >= 32 && e.keyCode <= 127)) {
-      if (e.key === 'Backspace') {
-        text = text.substr(0, text.length - 1);
-        offset = Math.max(0, offset - 1);
-      } else if (e.key.length === 1) {
-        text += e.key;
-        offset += 1;
-      }
-    }
+    document.execCommand('insertHTML', false, e.clipboardData.getData('text/plain'));
   }
 
   function enable() {
-    input.contentEditable = true;
-    input.focus();
+    if (!enabled) {
+      input.contentEditable = true;
+      input.focus();
 
-    offset = getCursor(input);
+      enabled = true;
+    }
   }
 
   function disable() {
-    input.contentEditable = false;
+    if (enabled) {
+      input.contentEditable = false;
+      enabled = false;
+    }
+  }
+
+  function validate(e) {
+    if (e.keyCode === 13) {
+      e.preventDefault();
+    }
+  }
+
+  $: if (input && buffer) {
+    update();
   }
 </script>
 
 <style>
-  .wrap {
-    position: relative;
-  }
-  .field {
-    background-color: transparent;
-    visibility: hidden;
-    width: 100%;
-    border: 0;
-  }
-  .input {
-    position: absolute;
+  div {
+    background-color: pink;
     width: 100%;
     left: 0;
     top: 0;
+    z-index: 1;
     cursor: text;
     font-size: 1em;
     min-height: 1em;
-    outline: 1px dotted silver;
   }
 </style>
 
-<div class="wrap">
-  <textarea class="field" bind:this={buffer} bind:value={text} />
-  <div class="input"
-    bind:this={input}
-    on:keydown={update}
-    on:click={enable}
-    on:blur={disable}
-  >{text}</div>
-</div>
+<div
+  bind:this={input}
+  on:click={enable}
+  on:blur={disable}
+  on:input={sync}
+/>
+
+{JSON.stringify(markup)}

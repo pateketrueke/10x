@@ -1,9 +1,9 @@
-export function getTextNodeAtPosition(root, index) {
+export function getTextNodeAtPosition(target, offset) {
   let lastNode = null;
 
-  const c = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, elem => {
-    if (index >= elem.textContent.length) {
-      index -= elem.textContent.length;
+  const c = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, elem => {
+    if (offset >= elem.textContent.length) {
+      offset -= elem.textContent.length;
       lastNode = elem;
       return NodeFilter.FILTER_REJECT;
     }
@@ -11,49 +11,27 @@ export function getTextNodeAtPosition(root, index) {
   }).nextNode();
 
   return {
-    node: c ? c : root,
-    position: c ? index : 0,
+    node: c ? c : target,
+    position: c ? offset : 0,
   };
 }
 
-export function setCursor(target, offset) {
-  const pos = getTextNodeAtPosition(target, offset);
+export function saveCaretPosition(target) {
   const selection = window.getSelection();
-  const range = new Range();
+  const range = selection.getRangeAt(0);
 
-  selection.removeAllRanges();
-  range.setStart(pos.node, pos.position);
-  selection.addRange(range);
-}
+  range.setStart(target, 0);
 
-export function getCursor(target) {
-  let caretPos = 0;
-  let sel;
-  let range;
+  const { length } = range.toString();
 
-  if (window.getSelection) {
-    sel = window.getSelection();
+  return () => {
+    const pos = getTextNodeAtPosition(target, length);
 
-    if (sel.rangeCount) {
-      range = sel.getRangeAt(0);
+    selection.removeAllRanges();
 
-      if (range.commonAncestorContainer.parentNode === target) {
-        caretPos = range.endOffset;
-      }
-    }
-  } else if (document.selection && document.selection.createRange) {
-    range = document.selection.createRange();
+    const range = new Range();
 
-    if (range.parentElement() === target) {
-      const tempEl = document.createElement('span');
-      const tempRange = range.duplicate();
-
-      editableDiv.insertBefore(tempEl, target.firstChild);
-      tempRange.moveToElementText(tempEl);
-      tempRange.setEndPoint('EndToEnd', range);
-      caretPos = tempRange.text.length;
-    }
-  }
-
-  return caretPos;
+    range.setStart(pos.node, pos.position);
+    selection.addRange(range);
+  };
 }
