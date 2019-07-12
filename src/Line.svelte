@@ -11,7 +11,6 @@
 
   // FIXME: cleanup...
 
-
   let enabled = false;
   let emojis = false;
   let image = null;
@@ -29,9 +28,7 @@
       source = basicFormat(source) + ' ';
     } while (/<\/?font/i.test(source));
 
-    input.innerHTML = simpleMarkdown(images.reduce((prev, cur) => {
-      return prev.replace(new RegExp(`:${cur.name.replace(/\W/g, '-').replace(/--+/g, '-').toLowerCase()}:`, 'g'), cur.char);
-    }, source));
+    input.innerHTML = simpleMarkdown(source);
 
     if (go !== false) {
       setCursor(input, Math.min(offset, input.textContent.length - 1))
@@ -107,13 +104,18 @@
       clearTimeout(t);
     }
     if (emojis) {
+      if (/\W/.test(e.key)) {
+        emojis = false;
+        return;
+      }
+
       if (e.keyCode === 13) {
-        const code = filtered[image] && `${filtered[image].name.replace(/\W/g, '-').replace(/--+/g, '-').toLowerCase()}:`;
+        const code = filtered[image] && filtered[image].char;
 
         if (code) {
-          insertTextAtCursor(code);
+          insertTextAtCursor(code, offset, 1);
           sync();
-          setCursor(input, offset);
+          setCursor(input, (offset + code.length) - 1);
         }
 
         emojis = false;
@@ -149,11 +151,11 @@
     enable();
     setCursor(input, offset);
 
-    const code = e.target.title && `${e.target.title.replace(/\W/g, '-').replace(/--+/g, '-').toLowerCase()}:`;
+    const code = e.target.textContent.trim();
 
     if (code) {
-      insertTextAtCursor(code);
-      setCursor(input, offset + code.length);
+      insertTextAtCursor(code, offset, 1);
+      setCursor(input, (offset + code.length) - 1);
       sync();
     }
 

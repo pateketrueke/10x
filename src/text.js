@@ -1,4 +1,4 @@
-export function getTextNodeAtPosition(target, offset) {
+export function getTextNodeAtPosition(target, offset = 0) {
   let lastNode = null;
 
   const c = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, elem => {
@@ -16,12 +16,17 @@ export function getTextNodeAtPosition(target, offset) {
   };
 }
 
-export function insertTextAtCursor(text) {
+export function insertTextAtCursor(text, offset = 0, remove = 0) {
   if (window.getSelection) {
     const selection = window.getSelection();
 
     if (selection.getRangeAt && selection.rangeCount) {
       const range = selection.getRangeAt(0);
+
+      if (offset || remove) {
+        range.setStart(range.endContainer, offset - remove);
+        range.setEnd(range.endContainer, offset);
+      }
 
       range.deleteContents();
       range.insertNode(document.createTextNode(text));
@@ -42,7 +47,7 @@ export function getCursor(target) {
   return length;
 }
 
-export function setCursor(target, offset) {
+export function setCursor(target, offset = 0) {
   const selection = window.getSelection();
   const pos = getTextNodeAtPosition(target, offset);
 
