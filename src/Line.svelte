@@ -112,8 +112,8 @@
 
         if (code) {
           insertTextAtCursor(code);
-          setCursor(input, offset + code.length);
           sync();
+          setCursor(input, offset);
         }
 
         emojis = false;
@@ -135,10 +135,6 @@
     if (e.keyCode === 186) {
       clearTimeout(t);
       t = setTimeout(() => {
-        const lastChar = markup.trim().split('').pop();
-
-        if (lastChar && lastChar !== ':') return;
-
         t = null;
         image = 0;
         search = '';
@@ -182,6 +178,9 @@
     outline: none;
     box-shadow: none;
   }
+  .editor:focus {
+    outline: 1px dotted silver;
+  }
   .main {
     position: relative;
   }
@@ -201,7 +200,7 @@
   />
   <div on:click={activate}>
     {#if emojis}
-      {search} ({filtered[image] ? filtered[image].name : '?'})
+      Search: {search || 'N/A'} <small>{filtered[image] ? filtered[image].name : '?'}</small>
       {#each filtered as emoji, key (emoji.codes)}
         {#if (key % 20) === 0}<br />{/if}
         <span class={image === key ? 'on' : ''} title={emoji.name}>{emoji.char}</span>
