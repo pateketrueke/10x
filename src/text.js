@@ -16,6 +16,21 @@ export function getTextNodeAtPosition(target, offset) {
   };
 }
 
+export function insertTextAtCursor(text) {
+  if (window.getSelection) {
+    const selection = window.getSelection();
+
+    if (selection.getRangeAt && selection.rangeCount) {
+      const range = selection.getRangeAt(0);
+
+      range.deleteContents();
+      range.insertNode(document.createTextNode(text));
+    }
+  } else if (document.selection && document.selection.createRange) {
+    document.selection.createRange().text = text;
+  }
+}
+
 export function getCursor(target) {
   const selection = window.getSelection();
   const range = selection.getRangeAt(0);
@@ -37,4 +52,22 @@ export function setCursor(target, offset) {
 
   range.setStart(pos.node, pos.position);
   selection.addRange(range);
+}
+
+export function noMarkup(e) {
+  e.preventDefault();
+
+  if (window.clipboardData) {
+    const content = window.clipboardData.getData('Text');
+
+    if (window.getSelection) {
+      const selObj = window.getSelection();
+      const selRange = selObj.getRangeAt(0);
+
+      selRange.deleteContents();
+      selRange.insertNode(document.createTextNode(content));
+    }
+  } else if (e.clipboardData) {
+    document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+  }
 }

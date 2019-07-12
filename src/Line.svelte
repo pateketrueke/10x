@@ -1,29 +1,20 @@
+<script context="module">
+  import images from 'emoji.json';
+  import { simpleMarkdown, basicFormat } from './formats';
+  import { insertTextAtCursor, getCursor, setCursor, noMarkup } from './text';
+</script>
+
 <script>
   import { onMount } from 'svelte';
-  import { simpleMarkdown } from './formats';
-  import { getCursor, setCursor } from './text';
 
   export let markup = '';
 
   let enabled = false;
   let emojis = false;
+  let search = '';
+  let offset = 0;
   let input;
   let t;
-
-  function tag(_, $1) {
-    let type;
-
-    switch ($1) {
-      case '=': type = 'equal'; break;
-      case '+': type = 'plus'; break;
-      case '-': type = 'min'; break;
-      case '/': type = 'div'; break;
-      case '*': type = 'mul'; break;
-      default: break;
-    }
-
-    return `<var data-${type}>${$1}</var>`;
-  }
 
   function run(go) {
     const offset = getCursor(input);
@@ -31,11 +22,7 @@
     let source = markup;
 
     do {
-      source = source
-        .replace(/<\/font[^<>]*>/ig, '')
-        .replace(/(?![<*])([=*/+-])/g, tag)
-        .replace(/([$]?\d[\d,.]*)/g, '<var data-number>$1</var>')
-        .trim() + ' ';
+      source = basicFormat(source) + ' ';
     } while (/<\/?font/i.test(source));
 
     input.innerHTML = simpleMarkdown(source);
@@ -62,11 +49,6 @@
         return;
       }
 
-      if (e.keyCode === 186) {
-        emojis = true;
-        return;
-      }
-
       if (e.keyCode === 8) {
         e.preventDefault();
 
@@ -81,32 +63,13 @@
         else if (/[\d_*]/.test(a)) run(go);
         return;
       }
-
-      if (emojis) {
-        emojis = false;
-      }
     }
 
     run(go);
   }
 
   function insert(e) {
-    e.preventDefault();
-
-    if (window.clipboardData) {
-      const content = window.clipboardData.getData('Text');
-
-      if (window.getSelection) {
-        const selObj = window.getSelection();
-        const selRange = selObj.getRangeAt(0);
-
-        selRange.deleteContents();
-        selRange.insertNode(document.createTextNode(content));
-      }
-    } else if (e.clipboardData) {
-      document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
-    }
-
+    noMarkup(e);
     sync();
   }
 
@@ -134,7 +97,45 @@
       e.preventDefault();
       sync();
     }
+    if (e.keyCode === 27 || (e.keyCode === 8 && !search)) {
+      emojis = false;
+      return;
+    }
+    if (e.key.length === 1 && t) {
+      clearTimeout(t);
+    }
+    if (emojis) {
+      if (e.keyCode === 13) {
+        const code = 'think:';
+
+        insertTextAtCursor(code);
+        setCursor(input, offset + code.length);
+
+        emojis = false;
+        return;
+      }
+
+      if (e.keyCode === 8) search = search.substr(0, search.length - 1);
+      else if (e.key.length === 1) search += e.key;
+
+      e.preventDefault();
+      return;
+    }
+    if (e.keyCode === 186) {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        t = null;
+        search = '';
+        emojis = true;
+        offset = getCursor(input);
+        setCursor(input, offset);
+      }, 500);
+    }
   }
+
+  $: filtered = images
+    .filter(x => x.name.includes(search))
+    .slice(0, 100);
 </script>
 
 <style>
@@ -163,6 +164,8 @@
     on:keydown={check}
   />
   {#if emojis}
-    SHOW EMOJI LIST
+    ({search}) {#each filtered as emoji}
+      {emoji.char}
+    {/each}
   {/if}
 </div>
