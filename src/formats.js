@@ -21,6 +21,7 @@ export function basicFormat(text) {
     .replace(/<\/font[^<>]*>/ig, '')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/(\d+)\/(\d+)/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
     .replace(RE_UNIT, (_, pre, mid, post, suff, op) => {
       let type;
 
@@ -43,6 +44,20 @@ export function basicFormat(text) {
     })
     .replace(/[([\])]/g, char => {
       return `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`;
+    })
+    .replace(/(\s+|data-\w+>)([-+/*=])(\s+|<)/g, (_, ll, op, rr) => {
+      let type;
+
+      switch (op) {
+        case '=': type = 'equal'; break;
+        case '+': type = 'plus'; break;
+        case '-': type = 'min'; break;
+        case '/': type = 'div'; break;
+        case '*': type = 'mul'; break;
+        default: type = 'unit'; break;
+      }
+
+      return `${ll || ''}<var data-${type}>${op}</var>${rr || ''}`;
     });
 }
 
