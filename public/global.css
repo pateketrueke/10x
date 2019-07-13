@@ -1,9 +1,12 @@
-.editor { font-family: Montserrat; color: #414A52; caret-color: #616161; }
+.editor { font-family: Montserrat; color: #414A52; caret-color: #898E8A; }
 .editor var { font-style: normal; }
-.editor span { color: #898E8A; font-weight: normal; }
+.editor span { color: #D4D8D5; font-weight: normal; }
 .editor [data-number], .editor [data-unit] { color: #3B89C6; }
 .editor [data-equal], .editor [data-plus], .editor [data-min] { color: #D776C7; }
-.editor [data-div], .editor [data-mul] { color: #D776C7; }
+.editor [data-div], .editor [data-mul] { position: relative; color: transparent; display: inline-block; width: .5em; }
+.editor [data-div]::after, [data-mul]::after { caret-color: #898E8A; color: #D776C7; position: absolute; left: -2px; }
+.editor [data-div]::after { content: '÷'; }
+.editor [data-mul]::after { content: '×'; }
 
 /* montserrat-regular - latin */
 @font-face {

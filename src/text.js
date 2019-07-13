@@ -16,6 +16,12 @@ export function getTextNodeAtPosition(target, offset = 0) {
   };
 }
 
+export function getSelectionStart() {
+  const node = document.getSelection().anchorNode;
+
+  return node.nodeType == 3 ? node.parentNode : node;
+}
+
 export function insertTextAtCursor(text) {
   const selection = window.getSelection();
   const range = selection.getRangeAt(0);

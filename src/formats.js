@@ -14,11 +14,7 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`(-?[$€£¢]?\\d[\\d,.]*)(\\s*)(${keys.join('|')}|)(\\s*)([-+/*=]?)(?!\\5)`, 'ig');
-
-export function plainOps(text) {
-  return text.replace(/÷/g, '/').replace(/×/g, '*');
-}
+const RE_UNIT = new RegExp(`(-?[$€£¢]?\\d[\\d,.]*%?)(\\s*)(${keys.join('|')}|)(\\s*)([-+/*=]?)(?!\\5)`, 'ig');
 
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')
@@ -32,8 +28,8 @@ export function basicFormat(text) {
         case '=': type = 'equal'; break;
         case '+': type = 'plus'; break;
         case '-': type = 'min'; break;
-        case '/': type = 'div'; op = '÷'; break;
-        case '*': type = 'mul'; op = '×'; break;
+        case '/': type = 'div'; break;
+        case '*': type = 'mul'; break;
         default: type = 'unit'; break;
       }
 

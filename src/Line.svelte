@@ -1,7 +1,7 @@
 <script context="module">
   import Emoji from './pick/Emoji.svelte';
   import { simpleMarkdown, basicFormat, plainOps } from './formats';
-  import { insertTextAtCursor, getCursor, setCursor, noMarkup } from './text';
+  import { insertTextAtCursor, getSelectionStart, getCursor, setCursor, noMarkup } from './text';
 
   const MODES = {
     ':': {
@@ -12,11 +12,18 @@
 </script>
 
 <script>
-  import { onMount } from 'svelte';
-
   export let markup = '';
 
-  // FIXME: cleanup...
+  function p() {
+    let source = markup;
+
+    do {
+      source = basicFormat(source);
+      source += !/\s$/.test(source) ? ' ' : '';
+    } while (/<\/?font/i.test(source));
+
+    input.innerHTML = simpleMarkdown(source);
+  }
 
   let usingMode = null;
   let enabled = false;
@@ -31,21 +38,13 @@
   function run() {
     const pos = getCursor(input);
 
-    let source = markup;
-
-    do {
-      source = basicFormat(source);
-      source += !/\s$/.test(source) ? ' ' : '';
-    } while (/<\/?font/i.test(source));
-
-    input.innerHTML = simpleMarkdown(source);
-
+    p();
     setCursor(input, Math.min(pos, input.textContent.length - 1));
   }
 
   function sync(e) {
     if (!usingMode) {
-      markup = plainOps(input.textContent);
+      markup = input.textContent;
     }
 
     if (e) {
@@ -66,6 +65,14 @@
       input.focus();
 
       enabled = true;
+    } else {
+      const node = getSelectionStart();
+
+      if (node.tagName === 'SPAN') {
+        console.log(node.parentNode);
+      } else {
+        console.log(node);
+      }
     }
   }
 
@@ -177,6 +184,8 @@
       }
     }
   }
+
+  $: if (input && !enabled) p();
 </script>
 
 <style>
