@@ -21,7 +21,7 @@ export function basicFormat(text) {
     .replace(/<\/font[^<>]*>/ig, '')
     .replace(/=/g, '<var data-equal>=</var>')
     .replace(RE_UNIT, '<var data-number>$1</var>')
-    .replace(/([-+/*])(\s*)(?=\d)/g, (_, $1, $2) => {
+    .replace(/(?!\w)([-+/*])(?!\w)/g, (_, $1, $2) => {
       let type;
 
       switch ($1) {
@@ -32,7 +32,7 @@ export function basicFormat(text) {
         default: break;
       }
 
-      return `<var data-${type}>${$1}</var>${$2}`;
+      return `<var data-${type}>${$1}</var>`;
     });
 }
 

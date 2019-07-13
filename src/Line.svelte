@@ -73,12 +73,14 @@
     if (e.keyCode === 38 || e.keyCode == 40) {
       e.preventDefault();
     }
-    if (e.keyCode === 32) {
-      insertTextAtCursor(String.fromCharCode(160));
-      setCursor(input, getCursor(input));
-      if (markup.length || input.firstChild.textContent.length !== 1) e.preventDefault();
-      return;
-    }
+    // FIXME: initial spaces are weird?
+    // if (e.keyCode === 32) {
+    //   if (!input.firstChild) {
+    //     const pos = getCursor(input);
+    //     insertTextAtCursor('');
+    //     setCursor(input, pos);
+    //   }
+    // }
     if (e.keyCode === 13) {
       e.preventDefault();
       sync();
