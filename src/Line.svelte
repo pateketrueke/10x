@@ -92,23 +92,14 @@
   }
 
   function check(e) {
+    clearTimeout(t);
     if (e.keyCode === 13) {
       e.preventDefault();
     }
     if (e.keyCode === 32) {
-      if (usingMode) {
-        usingMode = null;
-        insertTextAtCursor(String.fromCharCode(160));
-        setCursor(input, getCursor(input));
-      } else {
-        if (!input.firstChild) {
-          insertTextAtCursor(String.fromCharCode(160) + ' ');
-          setTimeout(() => setCursor(input, 1));
-        } else {
-          insertTextAtCursor(String.fromCharCode(160));
-          setCursor(input, getCursor(input));
-        }
-      }
+      if (usingMode) usingMode = null;
+      insertTextAtCursor(String.fromCharCode(160) + (!input.firstChild ? ' ' : ''));
+      setCursor(input, Math.min(input.textContent.length - 1, getCursor(input)));
       e.preventDefault();
       return;
     }
