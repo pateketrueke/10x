@@ -1,7 +1,7 @@
 <script context="module">
   import images from 'emoji.json';
   import { simpleMarkdown, basicFormat } from './formats';
-  import { insertTextAtCursor, getCursor, setCursor, noMarkup } from './text';
+  import { getCursor, setCursor, noMarkup } from './text';
 </script>
 
 <script>
@@ -25,8 +25,7 @@
     let source = markup;
 
     do {
-      source = basicFormat(source)
-      source += !/\s$/.test(source) ? ' ' : '';
+      source = basicFormat(source) + ' ';
     } while (/<\/?font/i.test(source));
 
     input.innerHTML = simpleMarkdown(source);
@@ -73,14 +72,6 @@
     if (e.keyCode === 38 || e.keyCode == 40) {
       e.preventDefault();
     }
-    // FIXME: initial spaces are weird?
-    // if (e.keyCode === 32) {
-    //   if (!input.firstChild) {
-    //     const pos = getCursor(input);
-    //     insertTextAtCursor('');
-    //     setCursor(input, pos);
-    //   }
-    // }
     if (e.keyCode === 13) {
       e.preventDefault();
       sync();
