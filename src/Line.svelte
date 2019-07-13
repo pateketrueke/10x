@@ -25,7 +25,8 @@
     let source = markup;
 
     do {
-      source = basicFormat(source) + ' ';
+      source = basicFormat(source);
+      source += !/\s$/.test(source) ? ' ' : '';
     } while (/<\/?font/i.test(source));
 
     input.innerHTML = simpleMarkdown(source);
@@ -68,20 +69,39 @@
     }
   }
 
+  function insertTextAtCursor(text) {
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+
+    range.deleteContents();
+    range.insertNode(document.createTextNode(text));
+  }
+
+
   function check(e) {
-    if (e.keyCode === 38 || e.keyCode == 40) {
+    if (e.keyCode === 32) {
+      if (emojis) {
+        emojis = false;
+        insertTextAtCursor(String.fromCharCode(160));
+        setCursor(input, getCursor(input));
+      } else {
+        if (!input.firstChild) {
+          insertTextAtCursor(String.fromCharCode(160) + ' ');
+          setTimeout(() => setCursor(input, 1));
+        } else {
+          insertTextAtCursor(String.fromCharCode(160));
+          setCursor(input, getCursor(input));
+        }
+      }
       e.preventDefault();
+      return;
     }
     if (e.keyCode === 13) {
       e.preventDefault();
-      sync();
     }
     if (e.keyCode === 27) {
       emojis = false;
       return;
-    }
-    if (e.key.length === 1 && t) {
-      clearTimeout(t);
     }
     if (emojis) {
       if (/\W/.test(e.key)) {
@@ -142,7 +162,7 @@
         emojis = true;
         search = '';
         image = 0;
-      }, 260);
+      }, 180);
     }
   }
 
