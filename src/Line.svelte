@@ -25,6 +25,16 @@
     input.innerHTML = simpleMarkdown(source);
   }
 
+  function f() {
+    const node = getSelectionStart();
+
+    if (node.tagName === 'SPAN') {
+      console.log(node.parentNode);
+    } else if (node !== input) {
+      console.log(node);
+    }
+  }
+
   let usingMode = null;
   let enabled = false;
   let search = '';
@@ -66,13 +76,7 @@
 
       enabled = true;
     } else {
-      const node = getSelectionStart();
-
-      if (node.tagName === 'SPAN') {
-        console.log(node.parentNode);
-      } else {
-        console.log(node);
-      }
+      f();
     }
   }
 
