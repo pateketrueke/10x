@@ -75,9 +75,9 @@
       input.focus();
 
       enabled = true;
-    } else {
-      f();
     }
+
+    f();
   }
 
   function disable() {
