@@ -14,29 +14,25 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`(-?[$€£¢]?\\d[\\d,.]*)\s*(?:${keys.join('|')}|\s*[-+/*=])?`, 'gi');
+const RE_UNIT = new RegExp(`(-?[$€£¢]?\\d[\\d,.]*)(\\s*)([-+/*=]|${keys.join('|')})`, 'gi');
 
 export function basicFormat(text) {
-  return text
+  return text.replace(/&nbsp;/g, ' ')
     .replace(/<\/font[^<>]*>/ig, '')
-    .replace(/=/g, '<span data-equal>=</span>')
-    .replace(RE_UNIT, (_, prefix, operator, unitType, suffix) => {
-      console.log(operator, unitType)
-      return _.trim();
+    .replace(RE_UNIT, (_, pre, mid, post) => {
+      let type;
+
+      switch (post) {
+        case '=': type = 'equal'; break;
+        case '+': type = 'plus'; break;
+        case '-': type = 'min'; break;
+        case '/': type = 'div'; break;
+        case '*': type = 'mul'; break;
+        default: type = 'unit'; break;
+      }
+
+      return `<var data-number>${pre}</var>${mid}<var data-${type}>${post}</var>`;
     });
-    // .replace(/(\s+)([-+/*])(\s+(=>(?!\1)))/g, (_, $1, $2, $3) => {
-    //   let type;
-
-    //   switch ($2) {
-    //     case '+': type = 'plus'; break;
-    //     case '-': type = 'min'; break;
-    //     case '/': type = 'div'; break;
-    //     case '*': type = 'mul'; break;
-    //     default: break;
-    //   }
-
-    //   return `${$1}<var data-${type}>${$2}</var>${$3}`;
-    // });
 }
 
 export function simpleMarkdown(text) {
