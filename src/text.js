@@ -16,6 +16,14 @@ export function getTextNodeAtPosition(target, offset = 0) {
   };
 }
 
+export function insertTextAtCursor(text) {
+  const selection = window.getSelection();
+  const range = selection.getRangeAt(0);
+
+  range.deleteContents();
+  range.insertNode(document.createTextNode(text));
+}
+
 export function getCursor(target) {
   const selection = window.getSelection();
   const range = selection.getRangeAt(0);

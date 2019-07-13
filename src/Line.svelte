@@ -1,7 +1,7 @@
 <script context="module">
   import images from 'emoji.json';
   import { simpleMarkdown, basicFormat } from './formats';
-  import { getCursor, setCursor, noMarkup } from './text';
+  import { insertTextAtCursor, getCursor, setCursor, noMarkup } from './text';
 </script>
 
 <script>
@@ -25,7 +25,8 @@
     let source = markup;
 
     do {
-      source = basicFormat(source) + ' ';
+      source = basicFormat(source)
+      source += !/\s$/.test(source) ? ' ' : '';
     } while (/<\/?font/i.test(source));
 
     input.innerHTML = simpleMarkdown(source);
@@ -71,6 +72,12 @@
   function check(e) {
     if (e.keyCode === 38 || e.keyCode == 40) {
       e.preventDefault();
+    }
+    if (e.keyCode === 32) {
+      insertTextAtCursor(String.fromCharCode(160));
+      setCursor(input, getCursor(input));
+      if (markup.length || input.firstChild.textContent.length !== 1) e.preventDefault();
+      return;
     }
     if (e.keyCode === 13) {
       e.preventDefault();
@@ -177,7 +184,9 @@
     z-index: 1;
     cursor: text;
     font-size: 1em;
-    min-height: 1em;
+    min-height: 26px;
+    line-height: 26px;
+    padding: 0 3px;
     outline: none;
     box-shadow: none;
   }
