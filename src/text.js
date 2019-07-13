@@ -16,6 +16,14 @@ export function getTextNodeAtPosition(target, offset = 0) {
   };
 }
 
+export function insertTextAtCursor(text) {
+  const selection = window.getSelection();
+  const range = selection.getRangeAt(0);
+
+  range.deleteContents();
+  range.insertNode(document.createTextNode(text));
+}
+
 export function getCursor(target) {
   const selection = window.getSelection();
   const range = selection.getRangeAt(0);
@@ -42,14 +50,9 @@ export function setCursor(target, offset = 0) {
 export function noMarkup(e) {
   e.preventDefault();
 
-  if (window.clipboardData) {
-    const content = window.clipboardData.getData('Text');
-    const selObj = window.getSelection();
-    const selRange = selObj.getRangeAt(0);
+  const content = window.clipboardData
+    ? window.clipboardData.getData('Text')
+    : e.clipboardData.getData('text/plain');
 
-    selRange.deleteContents();
-    selRange.insertNode(document.createTextNode(content));
-  } else if (e.clipboardData) {
-    document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
-  }
+  insertTextAtCursor(content.trim());
 }

@@ -1,7 +1,7 @@
 <script context="module">
   import Emoji from './pick/Emoji.svelte';
-  import { getCursor, setCursor, noMarkup } from './text';
   import { simpleMarkdown, basicFormat, plainOps } from './formats';
+  import { insertTextAtCursor, getCursor, setCursor, noMarkup } from './text';
 
   const MODES = {
     ':': {
@@ -79,14 +79,6 @@
   function update(e) {
     sources = e.detail.data;
     selected = e.detail.offset;
-  }
-
-  function insertTextAtCursor(text) {
-    const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-
-    range.deleteContents();
-    range.insertNode(document.createTextNode(text));
   }
 
   function append() {
