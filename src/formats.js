@@ -14,7 +14,7 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`(-?[$€£¢]?\\d[\\d,.]*)?(\\s*)([-+/*=]|${keys.join('|')})?`, 'ig');
+const RE_UNIT = new RegExp(`(-?[$€£¢]?\\d[\\d,.]*)(\\s*)([-+/*=]|${keys.join('|')})?`, 'ig');
 
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')

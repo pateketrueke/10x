@@ -100,7 +100,7 @@
   }
 
   function check(e) {
-    if ([13, 38, 40].includes(e.keyCode)) {
+    if (e.keyCode === 13) {
       e.preventDefault();
     }
     if (e.keyCode === 32) {
