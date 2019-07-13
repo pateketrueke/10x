@@ -1,7 +1,7 @@
 <script context="module">
   import images from 'emoji.json';
   import { simpleMarkdown, basicFormat } from './formats';
-  import { getCursor, setCursor, noMarkup } from './text';
+  import { insertTextAtCursor, removeTextAtCursor, getCursor, setCursor, noMarkup } from './text';
 </script>
 
 <script>
@@ -20,7 +20,7 @@
   let t;
 
   function run(go) {
-    const offset = getCursor(input);
+    const pos = getCursor(input);
 
     let source = markup;
 
@@ -31,37 +31,17 @@
     input.innerHTML = simpleMarkdown(source);
 
     if (go !== false) {
-      setCursor(input, Math.min(offset, input.textContent.length - 1))
+      setCursor(input, Math.min(pos, input.textContent.length - 1));
     };
   }
 
   function sync(e, go) {
-    markup = input.textContent;
+    if (!emojis) {
+      markup = input.textContent;
+    }
 
     if (e) {
       if (e.metaKey || e.key === 'Meta' || [16, 18, 37, 39, 65, 91].includes(e.keyCode)) return;
-
-      if (/[\d_*]/.test(e.key)) {
-        e.preventDefault();
-        run(go);
-        return;
-      }
-
-      if (/\s\s*$/.test(markup)) {
-        e.preventDefault();
-        return;
-      }
-
-      if (e.keyCode === 8) {
-        e.preventDefault();
-
-        const a = markup.charAt(markup.length - 1);
-        const b = markup.charAt(markup.length - 2);
-
-        if (a === ' ' && b !== ' ') run(go);
-        else if (/[\d_*]/.test(a)) run(go);
-        return;
-      }
     }
 
     run(go);
@@ -113,8 +93,9 @@
         const code = filtered[image] && filtered[image].char;
 
         if (code) {
-          markup = markup.substr(0, offset - 1) + code + markup.substr(offset);
+          markup = markup.substr(0, offset - search.length - 1) + code + markup.substr(offset);
           run();
+          setCursor(input, offset - search.length);
         }
 
         emojis = false;
@@ -129,8 +110,28 @@
         image = Math.min(filtered.length - 1, image + (e.keyCode === 40 ? 10 : 1));
       }
 
-      if (e.keyCode === 8) search = search.substr(0, search.length - 1);
-      else if (e.key.length === 1) search += e.key;
+      if (e.keyCode === 8) {
+        if (!search.length) {
+          emojis = false;
+          return;
+        }
+
+        markup = markup.substr(0, offset - 1) + markup.substr(offset);
+        search = search.substr(0, search.length - 1);
+        offset -= 1;
+
+        run();
+        setCursor(input, offset);
+      } else if (e.key.length === 1 && !(e.metaKey || e.ctrlKey)) {
+        markup = markup.substr(0, offset) + e.key + markup.substr(offset);
+        search += e.key;
+        offset += 1;
+
+        run();
+        setCursor(input, offset);
+      }
+
+      image = Math.min(filtered.length - 1, image);
       return;
     }
     if (e.key === ':') {
@@ -153,8 +154,9 @@
       const code = e.target.textContent.trim();
 
       if (code) {
-        markup = markup.substr(0, offset - 1) + code + markup.substr(offset);
+        markup = markup.substr(0, offset - search.length - 1) + code + markup.substr(offset);
         run();
+        setCursor(input, offset - search.length);
       }
 
       emojis = false;
@@ -201,6 +203,9 @@
     width: 20px;
     height: 20px;
   }
+  small {
+    color: silver;
+  }
 </style>
 
 <div class="main">
@@ -214,7 +219,7 @@
   />
   <div class="overlay" on:click={activate}>
     {#if emojis}
-      Search: {search || 'N/A'} <small>{filtered[image] ? filtered[image].name : '?'}</small>
+      <small>{filtered[image] ? filtered[image].name : '?'}</small>
       {#each filtered as emoji, key (emoji.codes)}
         {#if (key % 10) === 0}<br />{/if}
         <span class={image === key ? 'on' : 'off'} title={emoji.name}>{emoji.char}</span>
