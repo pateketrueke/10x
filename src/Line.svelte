@@ -1,7 +1,7 @@
 <script context="module">
   import images from 'emoji.json';
   import { simpleMarkdown, basicFormat } from './formats';
-  import { insertTextAtCursor, removeTextAtCursor, getCursor, setCursor, noMarkup } from './text';
+  import { getCursor, setCursor, noMarkup } from './text';
 </script>
 
 <script>
