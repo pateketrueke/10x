@@ -13,13 +13,13 @@
 
   let enabled = false;
   let emojis = false;
-  let image = null;
   let search = '';
   let offset = 0;
+  let image = 0;
   let input;
   let t;
 
-  function run(go) {
+  function run() {
     const pos = getCursor(input);
 
     let source = markup;
@@ -31,12 +31,14 @@
 
     input.innerHTML = simpleMarkdown(source);
 
-    if (go !== false) {
-      setCursor(input, Math.min(pos, input.textContent.length - 1));
-    };
+    if (filtered) {
+      image = Math.max(0, Math.min(filtered.length - 1, image));
+    }
+
+    setCursor(input, Math.min(pos, input.textContent.length - 1));
   }
 
-  function sync(e, go) {
+  function sync(e) {
     if (!emojis) {
       markup = input.textContent;
     }
@@ -45,7 +47,7 @@
       if (e.metaKey || e.key === 'Meta' || [16, 18, 37, 39, 65, 91].includes(e.keyCode)) return;
     }
 
-    run(go);
+    run();
   }
 
   function insert(e) {
@@ -79,6 +81,9 @@
 
 
   function check(e) {
+    if ([13, 38, 40].includes(e.keyCode)) {
+      e.preventDefault();
+    }
     if (e.keyCode === 32) {
       if (emojis) {
         emojis = false;
@@ -96,28 +101,25 @@
       e.preventDefault();
       return;
     }
-    if (e.keyCode === 13) {
-      e.preventDefault();
-    }
     if (e.keyCode === 27) {
       emojis = false;
       return;
     }
     if (emojis) {
-      if (/\W/.test(e.key)) {
-        emojis = false;
-        return;
-      }
-
       if (e.keyCode === 13) {
         const code = filtered[image] && filtered[image].char;
 
         if (code) {
           markup = markup.substr(0, offset - search.length - 1) + code + markup.substr(offset);
           run();
-          setCursor(input, offset - search.length);
+          setCursor(input, (offset - search.length - 1) + code.length);
         }
 
+        emojis = false;
+        return;
+      }
+
+      if (/\W/.test(e.key)) {
         emojis = false;
         return;
       }
@@ -150,8 +152,6 @@
         run();
         setCursor(input, offset);
       }
-
-      image = Math.min(filtered.length - 1, image);
       return;
     }
     if (e.key === ':') {
@@ -176,14 +176,14 @@
       if (code) {
         markup = markup.substr(0, offset - search.length - 1) + code + markup.substr(offset);
         run();
-        setCursor(input, offset - search.length);
+        setCursor(input, (offset - search.length - 1) + code.length);
       }
 
       emojis = false;
     }
   }
 
-  $: filtered = images
+  $: filtered = emojis && images
     .filter(x => x.name.toLowerCase().includes(search.toLowerCase()))
     .slice(0, 100);
 </script>
