@@ -14,24 +14,36 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`(-?[$€£¢]?\\d[\\d,.]*)(\\s*)([-+/*=]|${keys.join('|')})?`, 'ig');
+const RE_UNIT = new RegExp(`(-?[$€£¢]?\\d[\\d,.]*)(\\s*)(${keys.join('|')}|)(\\s*)([-+/*=]?)(?!\\5)`, 'ig');
+
+export function plainOps(text) {
+  return text.replace(/÷/g, '/').replace(/×/g, '*');
+}
 
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')
     .replace(/<\/font[^<>]*>/ig, '')
-    .replace(RE_UNIT, (_, pre, mid, post) => {
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(RE_UNIT, (_, pre, mid, post, suff, op) => {
       let type;
 
-      switch (post) {
+      switch (op) {
         case '=': type = 'equal'; break;
         case '+': type = 'plus'; break;
         case '-': type = 'min'; break;
-        case '/': type = 'div'; break;
-        case '*': type = 'mul'; break;
+        case '/': type = 'div'; op = '÷'; break;
+        case '*': type = 'mul'; op = '×'; break;
         default: type = 'unit'; break;
       }
 
-      return `${pre ? `<var data-number>${pre}</var>` : ''}${mid}${post ? `<var data-${type}>${post}</var>` : ''}`;
+      op = op ? `<var data-${type}>${op}</var>` : '';
+
+      if (!post) {
+        return `<var data-number>${pre}</var>${mid}${suff}${op}`;
+      }
+
+      return `<var data-number>${pre}${mid}${post}</var>${suff}${op}`;
     });
 }
 

@@ -1,7 +1,7 @@
 <script context="module">
   import Emoji from './pick/Emoji.svelte';
-  import { simpleMarkdown, basicFormat } from './formats';
   import { getCursor, setCursor, noMarkup } from './text';
+  import { simpleMarkdown, basicFormat, plainOps } from './formats';
 
   const MODES = {
     ':': {
@@ -45,11 +45,11 @@
 
   function sync(e) {
     if (!usingMode) {
-      markup = input.textContent;
+      markup = plainOps(input.textContent);
     }
 
     if (e) {
-      if (e.metaKey || e.key === 'Meta' || [16, 18, 37, 39, 65, 91].includes(e.keyCode)) return;
+      if (e.metaKey || e.key === 'Meta' || [16, 18, 37, 38, 39, 40, 65, 91].includes(e.keyCode)) return;
     }
 
     run();
