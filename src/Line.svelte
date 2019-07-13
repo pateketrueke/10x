@@ -1,7 +1,14 @@
 <script context="module">
-  import images from 'emoji.json';
+  import Emoji from './pick/Emoji.svelte';
   import { simpleMarkdown, basicFormat } from './formats';
   import { getCursor, setCursor, noMarkup } from './text';
+
+  const MODES = {
+    ':': {
+      component: Emoji,
+      pagination: 10,
+    },
+  };
 </script>
 
 <script>
@@ -11,11 +18,13 @@
 
   // FIXME: cleanup...
 
+  let usingMode = null;
   let enabled = false;
-  let emojis = false;
   let search = '';
+  let sources = [];
+  let selected = 0;
   let offset = 0;
-  let image = 0;
+  let overlay;
   let input;
   let t;
 
@@ -31,15 +40,11 @@
 
     input.innerHTML = simpleMarkdown(source);
 
-    if (filtered) {
-      image = Math.max(0, Math.min(filtered.length - 1, image));
-    }
-
     setCursor(input, Math.min(pos, input.textContent.length - 1));
   }
 
   function sync(e) {
-    if (!emojis) {
+    if (!usingMode) {
       markup = input.textContent;
     }
 
@@ -71,6 +76,11 @@
     }
   }
 
+  function update(e) {
+    sources = e.detail.data;
+    selected = e.detail.offset;
+  }
+
   function insertTextAtCursor(text) {
     const selection = window.getSelection();
     const range = selection.getRangeAt(0);
@@ -79,14 +89,23 @@
     range.insertNode(document.createTextNode(text));
   }
 
+  function append() {
+    const code = sources[selected] && sources[selected].char;
+
+    if (code) {
+      markup = markup.substr(0, offset - search.length - 1) + code + markup.substr(offset);
+      run();
+      setCursor(input, (offset - search.length - 1) + code.length);
+    }
+  }
 
   function check(e) {
     if ([13, 38, 40].includes(e.keyCode)) {
       e.preventDefault();
     }
     if (e.keyCode === 32) {
-      if (emojis) {
-        emojis = false;
+      if (usingMode) {
+        usingMode = null;
         insertTextAtCursor(String.fromCharCode(160));
         setCursor(input, getCursor(input));
       } else {
@@ -102,39 +121,34 @@
       return;
     }
     if (e.keyCode === 27) {
-      emojis = false;
+      usingMode = null;
       return;
     }
-    if (emojis) {
+    if (usingMode) {
       if (e.keyCode === 13) {
-        const code = filtered[image] && filtered[image].char;
-
-        if (code) {
-          markup = markup.substr(0, offset - search.length - 1) + code + markup.substr(offset);
-          run();
-          setCursor(input, (offset - search.length - 1) + code.length);
-        }
-
-        emojis = false;
+        append();
+        usingMode = null;
         return;
       }
 
       if (/\W/.test(e.key)) {
-        emojis = false;
+        usingMode = null;
         return;
       }
 
       e.preventDefault();
 
-      if (e.keyCode === 37 || e.keyCode === 38) {
-        image = Math.max(0, image - (e.keyCode === 38 ? 10 : 1));
-      } else if (e.keyCode === 39 || e.keyCode === 40) {
-        image = Math.min(filtered.length - 1, image + (e.keyCode === 40 ? 10 : 1));
+      if (usingMode) {
+        if (e.keyCode === 37 || e.keyCode === 38) {
+          selected = Math.max(0, selected - (e.keyCode === 38 ? usingMode.pagination : 1));
+        } else if (e.keyCode === 39 || e.keyCode === 40) {
+          selected = Math.min(sources.length - 1, selected + (e.keyCode === 40 ? usingMode.pagination : 1));
+        }
       }
 
       if (e.keyCode === 8) {
         if (!search.length) {
-          emojis = false;
+          usingMode = null;
           return;
         }
 
@@ -154,14 +168,14 @@
       }
       return;
     }
-    if (e.key === ':') {
+
+    if (MODES[e.key]) {
       clearTimeout(t);
       t = setTimeout(() => {
         offset = getCursor(input);
         setCursor(input, offset);
-        emojis = true;
+        usingMode = MODES[e.key];
         search = '';
-        image = 0;
       }, 180);
     }
   }
@@ -171,21 +185,15 @@
     setCursor(input, offset);
 
     if (e.target.tagName === 'SPAN') {
-      const code = e.target.textContent.trim();
+      const fixedOffset = [].slice.call(overlay.querySelectorAll('span')).indexOf(e.target);
 
-      if (code) {
-        markup = markup.substr(0, offset - search.length - 1) + code + markup.substr(offset);
-        run();
-        setCursor(input, (offset - search.length - 1) + code.length);
+      if (fixedOffset !== -1) {
+        selected = fixedOffset;
+        append();
+        usingMode = null;
       }
-
-      emojis = false;
     }
   }
-
-  $: filtered = emojis && images
-    .filter(x => x.name.toLowerCase().includes(search.toLowerCase()))
-    .slice(0, 100);
 </script>
 
 <style>
@@ -212,22 +220,6 @@
   .main {
     position: relative;
   }
-  .on, .off:hover {
-    background-color: gray;
-  }
-  span {
-    padding: 0 2px 5px 2px;
-    transition: all .3s;
-    transform-origin: 50% 50%;
-    display: inline-block;
-    text-align: center;
-    vertical-align: middle;
-    width: 20px;
-    height: 20px;
-  }
-  small {
-    color: silver;
-  }
 </style>
 
 <div class="main">
@@ -239,13 +231,9 @@
     on:keydown={check}
     on:click={enable}
   />
-  <div class="overlay" on:click={activate}>
-    {#if emojis}
-      <small>{filtered[image] ? filtered[image].name : '?'}</small>
-      {#each filtered as emoji, key (emoji.codes)}
-        {#if (key % 10) === 0}<br />{/if}
-        <span class={image === key ? 'on' : 'off'} title={emoji.name}>{emoji.char}</span>
-      {/each}
-    {/if}
-  </div>
+  {#if usingMode}
+    <div class="overlay" bind:this={overlay} on:click={activate}>
+      <svelte:component bind:search bind:selected on:change={update} this={usingMode.component} />
+    </div>
+  {/if}
 </div>
