@@ -244,7 +244,9 @@ export function calculateFromTokens(tokens) {
     if (typeof prev[index][prev[index].length - 1] === 'number'
       && typeof cur[0] === 'number') {
       index += 1;
-      prev[index] = cur;
+      prev[index] = prev[index] || [];
+      prev[index].push(...cur);
+
       return prev;
     }
 
