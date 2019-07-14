@@ -21,6 +21,7 @@
 
   let input;
   let overlay;
+  let offset = 0;
   let search = '';
   let enabled = false;
   let selected = 0;
@@ -35,6 +36,16 @@
     source += !/\s$/.test(source) ? ' ' : '';
 
     input.innerHTML = source;
+  }
+
+  // apply changes to current markup
+  function mutate(text, length = 0) {
+    const prefix = markup.substr(0, offset + length);
+    const suffix = markup.substr(offset);
+
+    markup = prefix + text + suffix;
+    render();
+    setCursor(input, (offset + length) + text.length);
   }
 
   function disable() {
@@ -52,7 +63,17 @@
     }
   }
 
-  function sync() {
+  function sync(e) {
+    // update offset and reset cursor again,
+    // otherwise the cursor gets reset
+    offset = getCursor(input);
+    setCursor(input, offset);
+
+    if (e.key.length === 1) {
+      mutate(e.key);
+    } else if (e.keyCode === 8) {
+      mutate('', -1);
+    }
   }
 
   function check(e) {
