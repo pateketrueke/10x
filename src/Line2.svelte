@@ -20,11 +20,13 @@
 </script>
 
 <script>
+  import { createEventDispatcher } from 'svelte';
   export let markup = '';
+
+  const dispatch = createEventDispatcher();
 
   let input;
   let overlay;
-  let results;
   let history = [];
   let revision = -1;
   let offset = -1;
@@ -54,10 +56,10 @@
   // evaluate aftermath
   function maths() {
     const ast = [].slice.call(input.children)
-      .filter(x => x.textContent)
+      .filter(x => Object.keys(x.dataset).length === 1)
       .map(x => [Object.keys(x.dataset)[0], x.textContent]);
 
-    results = calculateFromTokens(ast);
+    dispatch('change', calculateFromTokens(ast));
   }
 
   // we take the markup and inject HTML from it
@@ -277,5 +279,3 @@
     </div>
   {/if}
 </div>
-
-{#if results}{JSON.stringify(results, null, 2)}{/if}
