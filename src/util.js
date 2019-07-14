@@ -169,11 +169,20 @@ export function reduceOperations(input) {
 export function calculateFromTokens(tokens) {
   const groupedInput = [];
 
-  let fixedStack = [];
+  let offset = 0;
+  let fixedStack;
 
   tokens.forEach(token => {
-    if (['k', 'or', 'and', 'equal', 'result'].includes(token[0])) {
+    if (!fixedStack || token[0] === 'open') {
+      if (fixedStack) console.log('PREV', offset, fixedStack);
+      fixedStack = [];
+      offset += 1;
+      return;
+    }
+
+    if (['k', 'or', 'and', 'equal', 'result'].includes(token[0]) || token[0] === 'close') {
       groupedInput.push(fixedStack);
+      if (token[0] === 'close') offset -= 1;
       fixedStack = [];
       return;
     }
@@ -181,5 +190,7 @@ export function calculateFromTokens(tokens) {
     fixedStack.push(token[0] === 'number' ? parseNumber(token[1]) : token[1]);
   });
 
-  return groupedInput.map(reduceOperations);
+  console.log(groupedInput);
+
+  return groupedInput.reduce((prev, cur) => parseFloat(reduceOperations([prev, ...cur])), 0);
 }
