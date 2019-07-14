@@ -278,4 +278,4 @@
   {/if}
 </div>
 
-{#if results}{JSON.stringify(results.simplified, null, 2)}{/if}
+{#if results}{JSON.stringify(results, null, 2)}{/if}
