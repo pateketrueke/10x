@@ -8,6 +8,7 @@
     setCursor,
     getClipbordText,
     removeSelectedText,
+    calculateFromTokens,
   } from './util';
 
   const MODES = {
@@ -24,6 +25,7 @@
   let input;
   let overlay;
   let history = [];
+  let results = [];
   let revision = -1;
   let offset = -1;
   let search = '';
@@ -212,6 +214,13 @@
 
   function activate() {}
 
+  function calculate() {
+    const ast = [].slice.call(input.children)
+      .map(x => [Object.keys(x.dataset)[0], x.textContent]);
+
+    results = calculateFromTokens(ast);
+  }
+
   // render upon changes from props
   $: if (input && !enabled) render();
 </script>
@@ -257,3 +266,7 @@
     </div>
   {/if}
 </div>
+
+<button on:click={calculate}>Do math!</button>
+
+{JSON.stringify(results, null, 2)}

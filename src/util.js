@@ -122,3 +122,63 @@ export function setCursor(target, offset = 0) {
   range.setStart(pos.node, pos.position);
   selection.addRange(range);
 }
+
+export function parseNumber(text) {
+  if (text.includes('/')) {
+    const [a, b] = text.split('/');
+
+    return a / b;
+  }
+
+  if (text.charAt() === '$') {
+    text = text.substr(1);
+  }
+
+  text = text.replace(',', '');
+
+  return parseFloat(text);
+}
+
+export function truncateDecimals(value, length) {
+  return value.toFixed(length).replace(/\.0+$/, '');
+}
+
+export function reduceOperations(input) {
+  let currentOp = null;
+
+  return truncateDecimals(input.reduce((prev, cur) => {
+    if (currentOp) {
+      if (currentOp === '+') prev += cur;
+      if (currentOp === '-') prev += cur;
+      if (currentOp === '/') prev /= cur;
+      if (currentOp === '*') prev *= cur;
+
+      currentOp = null;
+
+      return prev;
+    }
+
+    if (typeof cur !== 'number') currentOp = cur;
+    else return prev || cur;
+
+    return prev;
+  }, 0), 2);
+}
+
+export function calculateFromTokens(tokens) {
+  const groupedInput = [];
+
+  let fixedStack = [];
+
+  tokens.forEach(token => {
+    if (['k', 'or', 'and', 'equal', 'result'].includes(token[0])) {
+      groupedInput.push(fixedStack);
+      fixedStack = [];
+      return;
+    }
+
+    fixedStack.push(token[0] === 'number' ? parseNumber(token[1]) : token[1]);
+  });
+
+  return groupedInput.map(reduceOperations);
+}
