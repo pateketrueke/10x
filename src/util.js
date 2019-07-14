@@ -27,7 +27,7 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`(-?[$€£¢]?(?:\\.\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?)(\\s*)(${keys.join('|')}|)([\\s\\])]*)([-+/*=;,.?]?)(?!\\5)`, 'ig');
+const RE_UNIT = new RegExp(`(-?[$€£¢]?\\.?(?:\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?)(\\s*)(${keys.join('|')}|)([\\s\\])]*)([-+/*=;,.?]?)(?!\\5)`, 'ig');
 
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')
@@ -144,16 +144,47 @@ export function truncateDecimals(value, length) {
   return value.toFixed(length).replace(/\.0+$/, '');
 }
 
+export function evaluateExpression(op, left, right) {
+  if (op === '+') return left + right;
+  if (op === '-') return left - right;
+  if (op === '*') return left * right;
+  if (op === '/') return left / right;
+}
+
+export function operateExpression(ops, expr) {
+  for (let i = 0, c = expr.length; i < c; i += 1) {
+    if (ops.indexOf(expr[i]) > -1) {
+      const cur = expr[i];
+      const prev = expr[i - 1];
+      const next = expr[i + 1];
+      const result = evaluateExpression(cur, prev, next);
+
+      expr.splice(i - 1, 3, result);
+
+      return operateExpression(ops, expr);
+    }
+  }
+
+  return expr;
+}
+
+export function appendOperators(map, index, children) {
+  map[index] = map[index] || [];
+
+  if (typeof map[index][0] === 'number'
+    && typeof map[index][map[index].length - 1] === 'number') {
+    map[index] = [parseFloat(reduceOperations(map[index])), ...children];
+  } else {
+    map[index].push(...children);
+  }
+}
+
 export function reduceOperations(input) {
   let currentOp = null;
 
   return truncateDecimals(input.reduce((prev, cur) => {
     if (currentOp) {
-      if (currentOp === '+') prev += cur;
-      if (currentOp === '-') prev -= cur;
-      if (currentOp === '/') prev /= cur;
-      if (currentOp === '*') prev *= cur;
-
+      prev = evaluateExpression(currentOp, prev, cur);
       currentOp = null;
 
       return prev;
@@ -166,16 +197,25 @@ export function reduceOperations(input) {
   }, 0), 2);
 }
 
+export function calculateFromString(expr) {
+  expr = expr.split(/\s+/);
+  expr = operateExpression(['*', '/'], expr);
+  expr = operateExpression(['+', '-'], expr);
+
+  return truncateDecimals(parseFloat(expr[0]), 2);
+}
+
 export function calculateFromTokens(tokens) {
   const groupedInput = [];
 
-  let offset = 0;
+  let offset = -1;
+  let index = 0;
   let fixedStack;
 
   tokens.forEach(token => {
     if (!fixedStack || token[0] === 'open') {
       if (fixedStack && fixedStack.length) {
-        groupedInput[offset] = [parseFloat(reduceOperations(groupedInput[offset])), ...fixedStack];
+        appendOperators(groupedInput, offset, fixedStack);
       }
 
       fixedStack = token[0] !== 'open' ? [parseNumber(token[1])] : [];
@@ -184,10 +224,8 @@ export function calculateFromTokens(tokens) {
     }
 
     if (['k', 'or', 'and', 'equal', 'result'].includes(token[0]) || token[0] === 'close') {
-      groupedInput.push(fixedStack);
+      appendOperators(groupedInput, offset, fixedStack);
       fixedStack = [];
-
-      if (token[0] === 'close') offset -= 1;
       return;
     }
 
@@ -201,19 +239,22 @@ export function calculateFromTokens(tokens) {
 
     return ops;
   }).reduce((prev, cur) => {
-    if (typeof cur === 'number') {
-      return prev.concat(cur);
+    prev[index] = prev[index] || [];
+
+    if (typeof prev[index][prev[index].length - 1] === 'number'
+      && typeof cur[0] === 'number') {
+      index += 1;
+      prev[index] = cur;
+      return prev;
     }
 
-    if (typeof prev[prev.length - 1] === 'number' && typeof cur[0] !== 'number') {
-      return prev.concat(parseFloat(reduceOperations([prev.pop(), ...cur])));
-    }
+    prev[index] = prev[index].concat(cur);
 
-    return prev.concat(cur);
+    return prev;
   }, []);
 
   return {
-    normalized: reduceOperations(reduced),
-    simplified: reduced.join(''),
+    normalized: reduced.map(x => calculateFromString(x.join(' '))),
+    simplified: reduced,
   };
 }
