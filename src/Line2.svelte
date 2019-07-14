@@ -51,6 +51,15 @@
     }
   }
 
+  // evaluate aftermath
+  function maths() {
+    const ast = [].slice.call(input.children)
+      .filter(x => x.textContent)
+      .map(x => [Object.keys(x.dataset)[0], x.textContent]);
+
+    results = calculateFromTokens(ast);
+  }
+
   // we take the markup and inject HTML from it
   function render() {
     // FIXME: instead of this, try render using vDOM?
@@ -61,11 +70,7 @@
 
     input.innerHTML = source + ' ';
 
-    // evaluate aftermath
-    const ast = [].slice.call(input.children)
-      .map(x => [Object.keys(x.dataset)[0], x.textContent]);
-
-    results = calculateFromTokens(ast);
+    maths();
   }
 
   // apply changes to current markup
@@ -166,6 +171,8 @@
 
         // append on given input
         if (e.key.length && e.keyCode !== 8) mutate(e.key);
+        else setTimeout(maths, 50);
+
         e.preventDefault();
         return;
       }
@@ -173,7 +180,12 @@
       // select-all, undo/redo buffer, sync after cutting
       if (e.metaKey && e.keyCode === 65) return;
       if (e.metaKey && e.keyCode === 90) revert(e);
-      if (e.metaKey && e.keyCode === 88) setTimeout(() => push() || sync({ selectedText }), 10);
+      if (e.metaKey && e.keyCode === 88) {
+        setTimeout(() => {
+          maths(push());
+          sync({ selectedText })
+        }, 10);
+      }
 
       // allow some keys for moving inside the contenteditable
       if (e.metaKey || e.key === 'Meta' || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return;
