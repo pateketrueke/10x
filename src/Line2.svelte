@@ -6,6 +6,7 @@
     getCursor,
     setCursor,
     getClipbordText,
+    removeSelectedText,
   } from './util';
 
   const MODES = {
@@ -29,23 +30,26 @@
 
   // we take the markup and inject HTML from it
   function render() {
-    let source = markup;
-
     // FIXME: instead of this, try render using vDOM?
-    source = simpleMarkdown(basicFormat(source));
-    source += !/\s$/.test(source) ? ' ' : '';
+    let source = simpleMarkdown(basicFormat(markup));
 
-    input.innerHTML = source;
+    // somehow, we need to hard-code ending white-space
+    source = source.replace(/\s$/, String.fromCharCode(160));
+
+    input.innerHTML = source + ' ';
   }
 
   // apply changes to current markup
   function mutate(text, length = 0) {
     const prefix = markup.substr(0, offset + length);
     const suffix = markup.substr(offset);
+    const change = prefix + text + suffix;
 
-    markup = prefix + text + suffix;
-    render();
-    setCursor(input, (offset + length) + text.length);
+    if (markup !== change) {
+      markup = change;
+      render();
+      setCursor(input, (offset + length) + text.length);
+    }
   }
 
   function disable() {
@@ -63,38 +67,95 @@
     }
   }
 
-  function sync(e) {
-    // update offset and reset cursor again,
-    // otherwise the cursor gets reset
-    offset = getCursor(input);
-    setCursor(input, offset);
-
-    if (e.key.length === 1) {
-      mutate(e.key);
-    } else if (e.keyCode === 8) {
-      mutate('', -1);
+  // normalize white-space back, see check()
+  function reset(e) {
+    if (e.keyCode === 8) {
+      removeSelectedText();
+      input.style.whiteSpace = 'normal';
     }
   }
 
+  // FIXME: handle undo...
+  function revert() {}
+
+  let t;
+
+  // extract source from current contenteditable
+  function sync(e) {
+    markup = input.textContent.substr(0, markup.length - e.selectedText.length);
+  }
+
+  // test input and mutate buffer, keep control-keys as is
   function check(e) {
     if (e) {
-      // allow to select-all the text
+      const selection = window.getSelection();
+      const selectedText = selection.toString();
+
+      // remove user-selection and sync buffer
+      if (!selection.isCollapsed && !e.metaKey && (e.keyCode === 8 || e.key.length === 1)) {
+        removeSelectedText();
+
+        // restore from updated cursor
+        offset = getCursor(input);
+        setCursor(input, offset);
+        sync({ selectedText });
+
+        // append on given input
+        if (e.key.length && e.keyCode !== 8) mutate(e.key);
+        e.preventDefault();
+        return;
+      }
+
+      // select-all, undo, sync after cutting
       if (e.metaKey && e.keyCode === 65) return;
+      if (e.metaKey && e.keyCode === 90) revert(e.preventDefault());
+      if (e.metaKey && e.keyCode === 88) setTimeout(() => sync({ selectedText }), 50);
 
       // allow some keys for moving inside the contenteditable
       if (e.metaKey || e.key === 'Meta' || [16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return;
       e.preventDefault();
+
+      // update offset and reset cursor again,
+      // otherwise the cursor gets reset
+      offset = getCursor(input);
+      setCursor(input, offset);
+
+      // append chars to buffer while trying to avoid system-replacements,
+      // e.g. on OSX when you press spacebar-twice there's no way to stopping from it...
+      if (e.key.length === 1) {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          mutate(e.keyCode === 32 ? String.fromCharCode(160) : e.key);
+        }, 50);
+        return;
+      }
+
+      if (e.keyCode === 8) {
+        // make white-space visible during this
+        input.style.whiteSpace = 'pre';
+        mutate('', -1);
+      }
     }
   }
 
+  // merge current buffer with inconmig user-input
   function insert(e) {
+    const selection = window.getSelection();
+    const selectedText = selection.toString();
+
+    if (selectedText) {
+      removeSelectedText();
+
+      offset = getCursor(input);
+      setCursor(input, offset);
+      sync({ selectedText });
+    }
+
     const text = getClipbordText(e);
-    const pos = getCursor(input);
 
-    markup = text;
-    render();
-
-    setCursor(input, pos);
+    offset = getCursor(input);
+    setCursor(input, offset);
+    mutate(text);
   }
 
   function update() {}
@@ -108,6 +169,7 @@
 <style>
   .editor {
     word-break: break-word;
+    /*white-space: pre;*/
     width: 100%;
     left: 0;
     top: 0;
@@ -135,9 +197,9 @@
   <div class="editor" spellcheck="false"
     bind:this={input}
     on:blur={disable}
-    on:paste|preventDefault={insert}
-    on:keyup|preventDefault={sync}
     on:keydown={check}
+    on:keyup|preventDefault={reset}
+    on:paste|preventDefault={insert}
     on:click|preventDefault={enable}
   />
   {#if usingMode}

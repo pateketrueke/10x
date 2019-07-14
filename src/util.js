@@ -70,14 +70,9 @@ export function simpleMarkdown(text) {
 export function getClipbordText(e) {
   e.preventDefault();
 
-  let content = window.clipboardData
+  const content = window.clipboardData
     ? window.clipboardData.getData('Text')
     : e.clipboardData.getData('text/plain');
-
-  // encode incoming HTML-chars for safety!
-  content = content.replace(/</g, '&lt;');
-  content = content.replace(/>/g, '&gt;');
-  content = content.replace(/&/g, '&amp;');
 
   return content;
 }
@@ -104,6 +99,13 @@ export function getSelectionStart() {
   const node = document.getSelection().anchorNode;
 
   return node.nodeType == 3 ? node.parentNode : node;
+}
+
+export function removeSelectedText() {
+  const selection = window.getSelection();
+  const range = selection.getRangeAt(0);
+
+  range.deleteContents();
 }
 
 export function getCursor(target) {
