@@ -205,6 +205,54 @@ export function calculateFromString(expr) {
   return truncateDecimals(parseFloat(expr[0]), 2);
 }
 
+export function buildTree(tokens) {
+  let root = [];
+
+  const tree = root;
+
+  for (let t; t = tokens.shift();) {
+    if (t[0] === 'open' || t[0] === 'close') {
+      if (t[0] === 'open') {
+        const leaf = [];
+        root.push(leaf);
+        Object.defineProperty(leaf, 'parent', { value: root });
+        root = leaf;
+      } else if (t[0] === 'close') {
+        root = root.parent;
+      }
+    } else if (!['k', 'or', 'and', 'equal', 'result'].includes(t[0])) {
+      root.push(t[0] === 'number' ? parseNumber(t[1]) : t[1]);
+    }
+  }
+
+  return tree;
+}
+
+function re(ast) {
+  const o = [];
+
+  ast.forEach(v => {
+    if (Array.isArray(v)) {
+      if (v.length >= 3) {
+        const a = v[0];
+        const b = v[v.length - 1];
+        const c = v.some(x => Array.isArray(x));
+        if (!c && typeof a === 'number' && typeof b === 'number') {
+          o.push(parseFloat(calculateFromString(v.join(' '))));
+        } else {
+          o.push(v.map(x => Array.isArray(x) ? re(x) : x))
+        }
+      } else {
+        o.push(re(v));
+      }
+    } else {
+      o.push(v);
+    }
+  });
+
+  return o;
+}
+
 export function calculateFromTokens(tokens) {
   const groupedInput = [];
 
@@ -212,51 +260,58 @@ export function calculateFromTokens(tokens) {
   let index = 0;
   let fixedStack;
 
-  tokens.forEach(token => {
-    if (!fixedStack || token[0] === 'open') {
-      if (fixedStack && fixedStack.length) {
-        appendOperators(groupedInput, offset, fixedStack);
-      }
+  // console.log(buildTree(tokens));
+  console.log(re(buildTree(tokens)));
 
-      fixedStack = token[0] !== 'open' ? [parseNumber(token[1])] : [];
-      offset += 1;
-      return;
-    }
+  return {simplified:[]};
 
-    if (['k', 'or', 'and', 'equal', 'result'].includes(token[0]) || token[0] === 'close') {
-      appendOperators(groupedInput, offset, fixedStack);
-      fixedStack = [];
-      return;
-    }
+  // tokens.forEach(token => {
+  //   if (!fixedStack || token[0] === 'open') {
+  //     if (fixedStack && fixedStack.length) {
+  //       appendOperators(groupedInput, offset, fixedStack);
+  //     }
 
-    fixedStack.push(token[0] === 'number' ? parseNumber(token[1]) : token[1]);
-  });
+  //     fixedStack = token[0] !== 'open' ? [parseNumber(token[1])] : [];
+  //     offset += 1;
+  //     return;
+  //   }
 
-  const reduced = groupedInput.map(ops => {
-    if (typeof ops[0] === 'number' && typeof ops[ops.length - 1] === 'number') {
-      return parseFloat(reduceOperations(ops));
-    }
+  //   if (['k', 'or', 'and', 'equal', 'result'].includes(token[0]) || token[0] === 'close') {
+  //     appendOperators(groupedInput, offset, fixedStack);
+  //     // if (!fixedStack.length && token[0] === 'close') offset -= 1;
+  //     // if (token[0] === 'and') offset -= 1;
+  //     fixedStack = [];
+  //     return;
+  //   }
 
-    return ops;
-  }).reduce((prev, cur) => {
-    prev[index] = prev[index] || [];
+  //   fixedStack.push(token[0] === 'number' ? parseNumber(token[1]) : token[1]);
+  // });
 
-    if (typeof prev[index][prev[index].length - 1] === 'number'
-      && typeof cur[0] === 'number') {
-      index += 1;
-      prev[index] = prev[index] || [];
-      prev[index].push(...cur);
+  // const reduced = groupedInput.map(ops => {
+  //   if (typeof ops[0] === 'number' && typeof ops[ops.length - 1] === 'number') {
+  //     return parseFloat(reduceOperations(ops));
+  //   }
 
-      return prev;
-    }
+  //   return ops;
+  // }).reduce((prev, cur) => {
+  //   prev[index] = prev[index] || [];
 
-    prev[index] = prev[index].concat(cur);
+  //   if (typeof prev[index][prev[index].length - 1] === 'number'
+  //     && typeof cur[0] === 'number') {
+  //     index += 1;
+  //     prev[index] = prev[index] || [];
+  //     prev[index].push(...cur);
 
-    return prev;
-  }, []);
+  //     return prev;
+  //   }
 
-  return {
-    normalized: reduced.map(x => calculateFromString(x.join(' '))),
-    simplified: reduced,
-  };
+  //   prev[index] = prev[index].concat(cur);
+
+  //   return prev;
+  // }, []);
+
+  // return {
+  //   normalized: reduced.map(x => calculateFromString(x.join(' '))),
+  //   simplified: reduced,
+  // };
 }
