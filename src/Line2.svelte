@@ -1,5 +1,6 @@
 <script context="module">
   import Emoji from './pick/Emoji.svelte';
+
   import {
     simpleMarkdown,
     basicFormat,
@@ -29,7 +30,6 @@
   let enabled = false;
   let selected = 0;
   let usingMode = null;
-
 
   // we take the markup and inject HTML from it
   function render(skip) {
@@ -201,7 +201,6 @@
 <style>
   .editor {
     word-break: break-word;
-    /*white-space: pre;*/
     width: 100%;
     left: 0;
     top: 0;

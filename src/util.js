@@ -2,6 +2,15 @@ import Convert from 'convert-units';
 
 const convert = new Convert();
 const groups = convert.measures();
+
+const types = {
+  '=': 'equal',
+  '+': 'plus',
+  '-': 'min',
+  '/': 'div',
+  '*': 'mul',
+};
+
 const keys = [];
 
 groups.forEach(group => {
@@ -19,22 +28,12 @@ const RE_UNIT = new RegExp(`(-?[$€£¢]?\\.?\\d[\\d,.]*[a-z%]?)(\\s*)(${keys.j
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')
     .replace(/<\/font[^<>]*>/ig, '')
+    .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/(\d+)\/(\d+)/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
     .replace(RE_UNIT, (_, pre, mid, post, suff, op) => {
-      let type;
-
-      switch (op) {
-        case '=': type = 'equal'; break;
-        case '+': type = 'plus'; break;
-        case '-': type = 'min'; break;
-        case '/': type = 'div'; break;
-        case '*': type = 'mul'; break;
-        default: type = 'unit'; break;
-      }
-
-      op = op ? `<var data-${type}>${op}</var>` : '';
+      op = op ? `<var data-${types[op] || 'unit'}>${op}</var>` : '';
 
       if (!post) {
         return `<var data-number>${pre}</var>${mid}${suff}${op}`;
@@ -46,18 +45,7 @@ export function basicFormat(text) {
       return `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`;
     })
     .replace(/(\s+|data-\w+>)([-+/*=])(\s+|<)/g, (_, ll, op, rr) => {
-      let type;
-
-      switch (op) {
-        case '=': type = 'equal'; break;
-        case '+': type = 'plus'; break;
-        case '-': type = 'min'; break;
-        case '/': type = 'div'; break;
-        case '*': type = 'mul'; break;
-        default: type = 'unit'; break;
-      }
-
-      return `${ll || ''}<var data-${type}>${op}</var>${rr || ''}`;
+      return `${ll || ''}<var data-${types[op] || 'unit'}>${op}</var>${rr || ''}`;
     });
 }
 
