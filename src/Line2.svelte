@@ -25,24 +25,32 @@
   let overlay;
   let history = [];
   let revision = -1;
-  let offset = 0;
+  let offset = -1;
   let search = '';
   let enabled = false;
   let selected = 0;
   let usingMode = null;
 
-  // we take the markup and inject HTML from it
-  function render(skip) {
-    if (!skip) {
-      // clean but keep at least one entry!
-      if (revision !== history.length - 1) {
-        history = history.slice(0, revision + 1);
-      }
-
-      revision = history.length;
-      history.push({ text: markup, pos: offset });
+  function push() {
+    // clean but keep at least one entry!
+    if (revision !== -1) {
+      history = history.slice(0, revision + 1);
     }
 
+    revision = history.length;
+
+    const fixedOffset = offset === -1 ? markup.length : offset;
+
+    // adding non-registered revisions, otherwise just update offset
+    if (!revision || (history[revision - 1] && history[revision - 1].text !== markup)) {
+      history.push({ text: markup, pos: fixedOffset });
+    } else {
+      history[revision - 1].pos = fixedOffset;
+    }
+  }
+
+  // we take the markup and inject HTML from it
+  function render() {
     // FIXME: instead of this, try render using vDOM?
     let source = simpleMarkdown(basicFormat(markup));
 
@@ -83,6 +91,7 @@
 
   // normalize white-space back, see check()
   function reset(e) {
+    if (e.key.length === 1) push();
     if (e.keyCode === 8) {
       removeSelectedText();
       input.style.whiteSpace = 'normal';
@@ -98,21 +107,27 @@
 
   // retrive latest state from current stack
   function revert(e) {
-    const fixedRevision = revision - (e.shiftKey ? -1 : 1);
-    const fixedOffset = Math.min(Math.max(0, fixedRevision), history.length - 1);
-
     e.preventDefault();
 
+    const maximum = history.length - 1;
+
+    revision += (e.shiftKey ? 1 : -1);
+    revision = Math.min(Math.max(0, revision), maximum);
+
     // re-render given revision only
-    if (history[fixedOffset]) {
-      const { text, pos } = history[fixedOffset];
+    if (history[revision]) {
+      const { text, pos } = history[revision];
 
       if (markup !== text) {
-        revision = fixedOffset;
         markup = text;
 
-        render(true);
-        setCursor(input, pos + (pos === text.length - 1 ? 1 : 0));
+        // re-adjust caret position
+        let newOffset = pos + (pos === text.length - 1 ? 1 : 0);
+
+        newOffset = Math.min(pos, Math.min(newOffset, markup.length));
+
+        render();
+        setCursor(input, newOffset);
       }
     }
   }
@@ -149,7 +164,7 @@
       // select-all, undo/redo buffer, sync after cutting
       if (e.metaKey && e.keyCode === 65) return;
       if (e.metaKey && e.keyCode === 90) revert(e);
-      if (e.metaKey && e.keyCode === 88) setTimeout(() => sync({ selectedText }), 10);
+      if (e.metaKey && e.keyCode === 88) setTimeout(() => push() || sync({ selectedText }), 10);
 
       // allow some keys for moving inside the contenteditable
       if (e.metaKey || e.key === 'Meta' || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return;
@@ -158,6 +173,7 @@
       // otherwise the cursor gets reset
       e.preventDefault();
       saveCursor();
+      push();
 
       // append chars to buffer while trying to avoid system-replacements,
       // e.g. on OSX when you press spacebar-twice there's no way to stopping from it...
@@ -194,7 +210,7 @@
   function activate() {}
 
   // render upon changes from props
-  $: if (input && !enabled) render(true);
+  $: if (input && !enabled) render();
 </script>
 
 <style>
