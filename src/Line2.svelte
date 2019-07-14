@@ -22,18 +22,23 @@
 
   let input;
   let overlay;
-  let revision;
+  let history = [];
+  let revision = -1;
   let offset = 0;
   let search = '';
   let enabled = false;
   let selected = 0;
   let usingMode = null;
 
-  const history = [];
 
   // we take the markup and inject HTML from it
   function render(skip) {
     if (!skip) {
+      // clean but keep at least one entry!
+      if (revision !== history.length - 1) {
+        history = history.slice(0, revision + 1);
+      }
+
       revision = history.length;
       history.push({ text: markup, pos: offset });
     }
@@ -41,7 +46,7 @@
     // FIXME: instead of this, try render using vDOM?
     let source = simpleMarkdown(basicFormat(markup));
 
-    // somehow, we need to hard-code ending white-space
+    // somehow, we need to hard-code ending/starting white-space
     source = source.replace(/^\s|\s$/, String.fromCharCode(160));
 
     input.innerHTML = source + ' ';
@@ -95,19 +100,17 @@
   }
 
   // retrive latest state from current stack
-  function revert() {
-    const current = Math.max(0, revision - 1);
-    const oldest = history[current];
+  function revert(e) {
+    const fixedRevision = revision - (e.shiftKey ? -1 : 1);
+    const fixedOffset = Math.min(Math.max(0, fixedRevision), history.length - 1);
 
-    if (oldest) {
-      const { text, pos } = oldest;
+    e.preventDefault();
 
-      // keep at least one entry!
-      if (history.length > 1) {
-        history.pop();
-      }
+    // re-render given revision only
+    if (history[fixedOffset]) {
+      const { text, pos } = history[fixedOffset];
 
-      revision = current;
+      revision = fixedOffset;
       markup = text;
 
       render(true);
@@ -144,9 +147,9 @@
         return;
       }
 
-      // select-all, undo buffer, sync after cutting
+      // select-all, undo/redo buffer, sync after cutting
       if (e.metaKey && e.keyCode === 65) return;
-      if (e.metaKey && e.keyCode === 90) revert(e.preventDefault());
+      if (e.metaKey && e.keyCode === 90) revert(e);
       if (e.metaKey && e.keyCode === 88) setTimeout(() => sync({ selectedText }), 10);
 
       // allow some keys for moving inside the contenteditable
