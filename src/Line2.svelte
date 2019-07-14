@@ -71,15 +71,12 @@
 
   function disable() {
     if (enabled) {
-      input.contentEditable = false;
       enabled = false;
     }
   }
 
   function enable() {
     if (!enabled) {
-      input.contentEditable = true;
-      input.focus();
       enabled = true;
     }
   }
@@ -153,7 +150,7 @@
       if (e.metaKey && e.keyCode === 88) setTimeout(() => sync({ selectedText }), 10);
 
       // allow some keys for moving inside the contenteditable
-      if (e.metaKey || e.key === 'Meta' || [16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return;
+      if (e.metaKey || e.key === 'Meta' || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return;
 
       // update offset and reset cursor again,
       // otherwise the cursor gets reset
@@ -225,13 +222,13 @@
 </style>
 
 <div class="main">
-  <div class="editor" spellcheck="false"
+  <div class="editor" spellcheck="false" contenteditable
     bind:this={input}
     on:blur={disable}
+    on:focus={enable}
     on:keydown={check}
     on:keyup|preventDefault={reset}
     on:paste|preventDefault={insert}
-    on:click|preventDefault={enable}
   />
   {#if usingMode}
     <div class="overlay" bind:this={overlay} on:click={activate}>

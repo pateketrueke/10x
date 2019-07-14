@@ -44,7 +44,7 @@ export function basicFormat(text) {
     .replace(/[([\])]/g, char => {
       return `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`;
     })
-    .replace(/(\s+|data-\w+>)([-+/*=])(\s+|<)/g, (_, ll, op, rr) => {
+    .replace(/(\s|\/\w+>)([-+/*=])(\s*|<)/g, (_, ll, op, rr) => {
       return `${ll || ''}<var data-${types[op] || 'unit'}>${op}</var>${rr || ''}`;
     });
 }
