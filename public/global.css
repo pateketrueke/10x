@@ -5,7 +5,8 @@
 .editor [data-result], .editor [data-equal], .editor [data-plus], .editor [data-min], .editor [data-and], .editor [data-or], .editor [data-k] { color: #D776C7; }
 .editor [data-div], .editor [data-mul], .editor [data-number] span { position: relative; color: transparent; display: inline-block; width: .5em; }
 .editor [data-div]::after, .editor [data-mul]::after { caret-color: #898E8A; color: #D776C7; position: absolute; left: -2px; bottom: 0; }
-.editor [data-number] span::after { content: '⁄'; color: #3B89C6; position: absolute; left: 4px; }
+.editor [data-number] span::after { content: '⁄'; color: #3B89C6; position: absolute; left: 3px; }
+.editor [data-number] { transform: scale(0.9); display: inline-block; }
 .editor [data-div]::after { content: '÷'; }
 .editor [data-mul]::after { content: '×'; }
 
