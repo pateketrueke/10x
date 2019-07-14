@@ -150,7 +150,7 @@ export function reduceOperations(input) {
   return truncateDecimals(input.reduce((prev, cur) => {
     if (currentOp) {
       if (currentOp === '+') prev += cur;
-      if (currentOp === '-') prev += cur;
+      if (currentOp === '-') prev -= cur;
       if (currentOp === '/') prev /= cur;
       if (currentOp === '*') prev *= cur;
 
@@ -175,15 +175,15 @@ export function calculateFromTokens(tokens) {
   tokens.forEach(token => {
     if (!fixedStack || token[0] === 'open') {
       if (fixedStack) console.log('PREV', offset, fixedStack);
-      fixedStack = [];
+      fixedStack = token[0] !== 'open' ? [parseNumber(token[1])] : [];
       offset += 1;
       return;
     }
 
     if (['k', 'or', 'and', 'equal', 'result'].includes(token[0]) || token[0] === 'close') {
       groupedInput.push(fixedStack);
-      if (token[0] === 'close') offset -= 1;
       fixedStack = [];
+      if (token[0] === 'close') offset -= 1;
       return;
     }
 
