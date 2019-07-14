@@ -107,11 +107,13 @@
     if (history[fixedOffset]) {
       const { text, pos } = history[fixedOffset];
 
-      revision = fixedOffset;
-      markup = text;
+      if (markup !== text) {
+        revision = fixedOffset;
+        markup = text;
 
-      render(true);
-      setCursor(input, pos + (pos === text.length - 1 ? 1 : 0));
+        render(true);
+        setCursor(input, pos + (pos === text.length - 1 ? 1 : 0));
+      }
     }
   }
 
