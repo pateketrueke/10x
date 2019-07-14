@@ -1,7 +1,12 @@
 <script context="module">
   import Emoji from './pick/Emoji.svelte';
-  import { simpleMarkdown, basicFormat } from './util';
-  // import { insertTextAtCursor, getSelectionStart, getCursor, setCursor, noMarkup } from './text';
+  import {
+    simpleMarkdown,
+    basicFormat,
+    getCursor,
+    setCursor,
+    getClipbordText,
+  } from './util';
 
   const MODES = {
     ':': {
@@ -32,12 +37,47 @@
     input.innerHTML = source;
   }
 
-  function disable() {}
-  function enable() {}
-  function sync() {}
-  function check() {}
-  function insert() {}
+  function disable() {
+    if (enabled) {
+      input.contentEditable = false;
+      enabled = false;
+    }
+  }
+
+  function enable() {
+    if (!enabled) {
+      input.contentEditable = true;
+      input.focus();
+      enabled = true;
+    }
+  }
+
+  function sync() {
+  }
+
+  function check(e) {
+    if (e) {
+      // allow to select-all the text
+      if (e.metaKey && e.keyCode === 65) return;
+
+      // allow some keys for moving inside the contenteditable
+      if (e.metaKey || e.key === 'Meta' || [16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return;
+      e.preventDefault();
+    }
+  }
+
+  function insert(e) {
+    const text = getClipbordText(e);
+    const pos = getCursor(input);
+
+    markup = text;
+    render();
+
+    setCursor(input, pos);
+  }
+
   function update() {}
+
   function activate() {}
 
   // render upon changes from props
@@ -76,7 +116,7 @@
     on:blur={disable}
     on:paste|preventDefault={insert}
     on:keyup|preventDefault={sync}
-    on:keydown|preventDefault={check}
+    on:keydown={check}
     on:click|preventDefault={enable}
   />
   {#if usingMode}
