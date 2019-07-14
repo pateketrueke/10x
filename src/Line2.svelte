@@ -57,7 +57,10 @@
     if (markup !== change) {
       markup = change;
       render();
-      setCursor(input, (offset + length) + text.length);
+
+      // recalculate offset from input
+      offset = (offset + length) + text.length;
+      setCursor(input, offset);
     }
   }
 
@@ -108,7 +111,7 @@
       markup = text;
 
       render(true);
-      setCursor(input, pos + 1);
+      setCursor(input, pos + (pos === text.length - 1 ? 1 : 0));
     }
   }
 
@@ -180,10 +183,8 @@
       clear(selectedText);
     }
 
-    const text = getClipbordText(e);
-
     saveCursor();
-    mutate(text);
+    mutate(getClipbordText(e));
   }
 
   function update() {}
