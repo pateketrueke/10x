@@ -22,14 +22,22 @@
 
   let input;
   let overlay;
+  let revision;
   let offset = 0;
   let search = '';
   let enabled = false;
   let selected = 0;
   let usingMode = null;
 
+  const history = [];
+
   // we take the markup and inject HTML from it
-  function render() {
+  function render(skip) {
+    if (!skip) {
+      revision = history.length;
+      history.push({ text: markup, pos: offset });
+    }
+
     // FIXME: instead of this, try render using vDOM?
     let source = simpleMarkdown(basicFormat(markup));
 
@@ -45,6 +53,7 @@
     const suffix = markup.substr(offset);
     const change = prefix + text + suffix;
 
+    // make sure we don't render twice!
     if (markup !== change) {
       markup = change;
       render();
@@ -82,8 +91,26 @@
     setCursor(input, offset);
   }
 
-  // FIXME: handle undo...
-  function revert() {}
+  // retrive latest state from current stack
+  function revert() {
+    const current = Math.max(0, revision - 1);
+    const oldest = history[current];
+
+    if (oldest) {
+      const { text, pos } = oldest;
+
+      // keep at least one entry!
+      if (history.length > 1) {
+        history.pop();
+      }
+
+      revision = current;
+      markup = text;
+
+      render(true);
+      setCursor(input, pos + 1);
+    }
+  }
 
   // extract source from current contenteditable
   function sync(e) {
@@ -164,7 +191,7 @@
   function activate() {}
 
   // render upon changes from props
-  $: if (input && !enabled) render();
+  $: if (input && !enabled) render(true);
 </script>
 
 <style>
