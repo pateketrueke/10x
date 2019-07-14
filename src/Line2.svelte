@@ -24,8 +24,8 @@
 
   let input;
   let overlay;
+  let results;
   let history = [];
-  let results = [];
   let revision = -1;
   let offset = -1;
   let search = '';

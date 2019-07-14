@@ -174,7 +174,10 @@ export function calculateFromTokens(tokens) {
 
   tokens.forEach(token => {
     if (!fixedStack || token[0] === 'open') {
-      if (fixedStack) console.log('PREV', offset, fixedStack);
+      if (fixedStack && fixedStack.length) {
+        groupedInput[offset] = [parseFloat(reduceOperations(groupedInput[offset])), ...fixedStack];
+      }
+
       fixedStack = token[0] !== 'open' ? [parseNumber(token[1])] : [];
       offset += 1;
       return;
@@ -183,6 +186,7 @@ export function calculateFromTokens(tokens) {
     if (['k', 'or', 'and', 'equal', 'result'].includes(token[0]) || token[0] === 'close') {
       groupedInput.push(fixedStack);
       fixedStack = [];
+
       if (token[0] === 'close') offset -= 1;
       return;
     }
@@ -190,7 +194,26 @@ export function calculateFromTokens(tokens) {
     fixedStack.push(token[0] === 'number' ? parseNumber(token[1]) : token[1]);
   });
 
-  console.log(groupedInput);
+  const reduced = groupedInput.map(ops => {
+    if (typeof ops[0] === 'number' && typeof ops[ops.length - 1] === 'number') {
+      return parseFloat(reduceOperations(ops));
+    }
 
-  return groupedInput.reduce((prev, cur) => parseFloat(reduceOperations([prev, ...cur])), 0);
+    return ops;
+  }).reduce((prev, cur) => {
+    if (typeof cur === 'number') {
+      return prev.concat(cur);
+    }
+
+    if (typeof prev[prev.length - 1] === 'number' && typeof cur[0] !== 'number') {
+      return prev.concat(parseFloat(reduceOperations([prev.pop(), ...cur])));
+    }
+
+    return prev.concat(cur);
+  }, []);
+
+  return {
+    normalized: reduceOperations(reduced),
+    simplified: reduced.join(''),
+  };
 }
