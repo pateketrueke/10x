@@ -27,7 +27,7 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`(-?[$€£¢]?(?:\\.\d+|\\d+(?:[,.]\\d+)?)[a-z%]?)(\\s*)(${keys.join('|')}|)([\\s\\])]*)([-+/*=;,.?]?)(?!\\5)`, 'ig');
+const RE_UNIT = new RegExp(`(-?[$€£¢]?(?:\\.\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?)(\\s*)(${keys.join('|')}|)([\\s\\])]*)([-+/*=;,.?]?)(?!\\5)`, 'ig');
 
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')
@@ -135,7 +135,7 @@ export function parseNumber(text) {
   //   text = text.substr(1);
   // }
 
-  text = text.replace(/[^\d.]/g, '');
+  text = text.replace(/[^\d.-]/g, '');
 
   return parseFloat(text);
 }
