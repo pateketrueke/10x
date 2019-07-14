@@ -75,14 +75,27 @@
     }
   }
 
+  // store current cursor, notice setCursor() is required afterwards!
+  // otherwise, the cursor will move back to the beginning...
+  function saveCursor() {
+    offset = getCursor(input);
+    setCursor(input, offset);
+  }
+
   // FIXME: handle undo...
   function revert() {}
-
-  let t;
 
   // extract source from current contenteditable
   function sync(e) {
     markup = input.textContent.substr(0, markup.length - e.selectedText.length);
+  }
+
+  function clear(selectedText) {
+    removeSelectedText();
+
+    // restore from updated cursor
+    saveCursor();
+    sync({ selectedText });
   }
 
   // test input and mutate buffer, keep control-keys as is
@@ -93,12 +106,7 @@
 
       // remove user-selection and sync buffer
       if (!selection.isCollapsed && !e.metaKey && (e.keyCode === 8 || e.key.length === 1)) {
-        removeSelectedText();
-
-        // restore from updated cursor
-        offset = getCursor(input);
-        setCursor(input, offset);
-        sync({ selectedText });
+        clear(selectedText);
 
         // append on given input
         if (e.key.length && e.keyCode !== 8) mutate(e.key);
@@ -106,27 +114,26 @@
         return;
       }
 
-      // select-all, undo, sync after cutting
+      // select-all, undo buffer, sync after cutting
       if (e.metaKey && e.keyCode === 65) return;
       if (e.metaKey && e.keyCode === 90) revert(e.preventDefault());
-      if (e.metaKey && e.keyCode === 88) setTimeout(() => sync({ selectedText }), 50);
+      if (e.metaKey && e.keyCode === 88) setTimeout(() => sync({ selectedText }), 10);
 
       // allow some keys for moving inside the contenteditable
       if (e.metaKey || e.key === 'Meta' || [16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return;
-      e.preventDefault();
 
       // update offset and reset cursor again,
       // otherwise the cursor gets reset
-      offset = getCursor(input);
-      setCursor(input, offset);
+      e.preventDefault();
+      saveCursor();
 
       // append chars to buffer while trying to avoid system-replacements,
       // e.g. on OSX when you press spacebar-twice there's no way to stopping from it...
       if (e.key.length === 1) {
-        clearTimeout(t);
-        t = setTimeout(() => {
+        clearTimeout(check.t);
+        check.t = setTimeout(() => {
           mutate(e.keyCode === 32 ? String.fromCharCode(160) : e.key);
-        }, 50);
+        }, 10);
         return;
       }
 
@@ -140,21 +147,15 @@
 
   // merge current buffer with inconmig user-input
   function insert(e) {
-    const selection = window.getSelection();
-    const selectedText = selection.toString();
+    const selectedText = window.getSelection().toString();
 
     if (selectedText) {
-      removeSelectedText();
-
-      offset = getCursor(input);
-      setCursor(input, offset);
-      sync({ selectedText });
+      clear(selectedText);
     }
 
     const text = getClipbordText(e);
 
-    offset = getCursor(input);
-    setCursor(input, offset);
+    saveCursor();
     mutate(text);
   }
 
