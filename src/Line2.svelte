@@ -34,7 +34,7 @@
     let source = simpleMarkdown(basicFormat(markup));
 
     // somehow, we need to hard-code ending white-space
-    source = source.replace(/\s$/, String.fromCharCode(160));
+    source = source.replace(/^\s|\s$/, String.fromCharCode(160));
 
     input.innerHTML = source + ' ';
   }
