@@ -74,6 +74,7 @@
       // recalculate offset from input
       offset = (offset + length) + text.length;
       setCursor(input, offset);
+      push();
     }
   }
 
@@ -91,7 +92,6 @@
 
   // normalize white-space back, see check()
   function reset(e) {
-    if (e.key.length === 1) push();
     if (e.keyCode === 8) {
       removeSelectedText();
       input.style.whiteSpace = 'normal';
@@ -153,6 +153,7 @@
 
       // remove user-selection and sync buffer
       if (!selection.isCollapsed && !e.metaKey && (e.keyCode === 8 || e.key.length === 1)) {
+        push();
         clear(selectedText);
 
         // append on given input
@@ -196,6 +197,8 @@
   // merge current buffer with inconmig user-input
   function insert(e) {
     const selectedText = window.getSelection().toString();
+
+    push();
 
     if (selectedText) {
       clear(selectedText);
