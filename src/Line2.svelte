@@ -60,6 +60,12 @@
     source = source.replace(/^\s|\s$/, String.fromCharCode(160));
 
     input.innerHTML = source + ' ';
+
+    // evaluate aftermath
+    const ast = [].slice.call(input.children)
+      .map(x => [Object.keys(x.dataset)[0], x.textContent]);
+
+    results = calculateFromTokens(ast);
   }
 
   // apply changes to current markup
@@ -214,13 +220,6 @@
 
   function activate() {}
 
-  function calculate() {
-    const ast = [].slice.call(input.children)
-      .map(x => [Object.keys(x.dataset)[0], x.textContent]);
-
-    results = calculateFromTokens(ast);
-  }
-
   // render upon changes from props
   $: if (input && !enabled) render();
 </script>
@@ -266,7 +265,5 @@
     </div>
   {/if}
 </div>
-
-<button on:click={calculate}>Do math!</button>
 
 {JSON.stringify(results, null, 2)}

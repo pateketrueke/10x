@@ -130,11 +130,12 @@ export function parseNumber(text) {
     return a / b;
   }
 
-  if (text.charAt() === '$') {
-    text = text.substr(1);
-  }
+  // FIXME: how handle these stuff?
+  // if (text.charAt() === '$') {
+  //   text = text.substr(1);
+  // }
 
-  text = text.replace(',', '');
+  text = text.replace(/[^\d.]/g, '');
 
   return parseFloat(text);
 }

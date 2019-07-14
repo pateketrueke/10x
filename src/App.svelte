@@ -3,6 +3,4 @@
   let markup = '1 + 2, 3 + 4; 3/5 * 7/8. $3,500 / 6=';
 </script>
 
-<input type="text" bind:value={markup} />
 <Line2 bind:markup />
-<pre>{markup}</pre>
