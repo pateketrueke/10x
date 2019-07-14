@@ -4,11 +4,15 @@ const convert = new Convert();
 const groups = convert.measures();
 
 const types = {
+  '?': 'result',
   '=': 'equal',
   '+': 'plus',
   '-': 'min',
   '/': 'div',
   '*': 'mul',
+  ',': 'and',
+  ';': 'or',
+  '.': 'k',
 };
 
 const keys = [];
@@ -23,7 +27,7 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`(-?[$€£¢]?\\.?\\d[\\d,.]*[a-z%]?)(\\s*)(${keys.join('|')}|)([\\s\\])]*)([-+/*=]?)(?!\\5)`, 'ig');
+const RE_UNIT = new RegExp(`(-?[$€£¢]?\\.?\\d[\\d,.]*[a-z%]?)(\\s*)(${keys.join('|')}|)([\\s\\])]*)([-+/*=;,.?]?)(?!\\5)`, 'ig');
 
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')
@@ -44,7 +48,7 @@ export function basicFormat(text) {
     .replace(/[([\])]/g, char => {
       return `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`;
     })
-    .replace(/(\s|\/\w+>)([-+/*=])(\s*|<)/g, (_, ll, op, rr) => {
+    .replace(/(\s|\/\w+>)([-+/*=;,.?])(\s*|<)/g, (_, ll, op, rr) => {
       return `${ll || ''}<var data-${types[op] || 'unit'}>${op}</var>${rr || ''}`;
     });
 }
