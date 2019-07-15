@@ -173,7 +173,7 @@ export function buildTree(tokens) {
       } else if (t[0] === 'close') {
         root = stack.pop();
       }
-    } else if (!['k', 'or', 'and', 'equal', 'result'].includes(t[0])) {
+    } else {
       root.push(t[0] === 'number' ? parseNumber(t[1]) : t[1]);
     }
   }
@@ -210,7 +210,7 @@ export function calculateFromTokens(tokens) {
     chunks[offset] = chunks[offset] || [];
     chunks[offset].push(cur);
 
-    if (typeof next === 'number' && typeof cur === 'number') {
+    if (typeof next === 'number' && typeof cur === 'number' || cur === '=') {
       offset += 1;
     }
   }

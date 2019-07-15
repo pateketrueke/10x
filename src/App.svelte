@@ -1,7 +1,7 @@
 <script>
   import Line2 from './Line2.svelte';
 
-  let markup = '-1 * ( 3/2 ), ( .5 * ( 76 / -.12 ) ) = **OSOMS**';
+  let markup = '-1 * ( 3/2 ), ( .5 * ( 76 / -.12 ) ) = **OSOMS** AND __FUNZ__!!';
   let results = [];
 
   function onUpdate(e) {
