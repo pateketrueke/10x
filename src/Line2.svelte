@@ -28,6 +28,7 @@
 
   let node;
   let input;
+  let error;
   let overlay;
   let history = [];
   let revision = -1;
@@ -72,6 +73,7 @@
 
       // somehow, we need to hard-code ending/starting white-space
       source = source.replace(/^\s|\s$/, String.fromCharCode(160));
+      error = null;
 
       input.innerHTML = source + ' ';
 
@@ -80,8 +82,10 @@
       input.innerHTML =
         simpleMarkdown(basicFormat(markup.substr(0, e.offset)))
         + `<span style="background-color:red;color:white">${
-          markup.substr(e.offset, 1).replace(/\s/g, String.fromCharCode(160))
-        }</span>${markup.substr(e.offset + 1).replace(/\s/g, String.fromCharCode(160))} `;
+          markup.substr(e.offset).replace(/\s/g, String.fromCharCode(160))
+        }</span> `;
+
+      error = e;
 
       maths();
     }
@@ -336,6 +340,11 @@
     on:keyup|preventDefault={reset}
     on:paste|preventDefault={insert}
   />
+  {#if error}
+    <pre>{markup}
+{Array.from({ length: error.offset + 1 }).join(' ')}^
+{error.message}</pre>
+  {/if}
   {#if usingMode}
     <div class="overlay" bind:this={overlay} on:click={activate}>
       <svelte:component bind:search bind:selected on:change={update} this={usingMode.component} />

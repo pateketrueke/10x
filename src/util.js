@@ -1,5 +1,12 @@
 import Convert from 'convert-units';
 
+class TError extends Error {
+  constructor(message, offset) {
+    super(message);
+    this.offset = offset;
+  }
+}
+
 const convert = new Convert();
 const groups = convert.measures();
 
@@ -49,14 +56,9 @@ function toChunks(input) {
     // allow skip from open/close chars
     if (open && isFmt(cur) && last === cur) open -= 1;
     else if (!open && isFmt(cur) && last === cur) {
-      if (buffer[buffer.length - 2]) {
-        const T = new Error(`Bad at: ${i}`);
-        T.offset = i;
-        throw T;
-      }
+      if (buffer[buffer.length - 2]) throw new TError(`Invalid terminator for: ${buffer.join('') + cur}`, i);
       open += 1;
     }
-
 
     // otherwise, we just add anything to the current buffer line
     if (open || typeof last === 'undefined') buffer.push(cur);
@@ -94,6 +96,9 @@ export function basicFormat(text) {
   return toChunks(text).map(line => {
     return line.replace(/&nbsp;/ig, ' ')
       .replace(/<\/font[^<>]*>/ig, '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
       .replace(/\s/g, String.fromCharCode(160))
       // FIXME: markdown-like is not working...
       .replace(/^[-+*=/]$/g, op => `<var data-${types[op]}>${op}</var>`)
