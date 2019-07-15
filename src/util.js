@@ -27,7 +27,8 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`(-?[$€£¢]?\\.?(?:\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?)(\\s*)(${keys.join('|')}|)([\\s\\])]*)([-+/*=;,.?]?)(?!\\5)`, 'ig');
+// FIXME: re-apply units...
+const RE_UNIT = new RegExp(`(-?[$€£¢]?\\.?(?:\\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?)(\\s*)(${keys.join('|')}|)([\\s\\])]*)([-+/*=]?)(?!\\5)`, 'ig');
 
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')
@@ -36,21 +37,9 @@ export function basicFormat(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/(\d+)\/(\d+)/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
-    .replace(RE_UNIT, (_, pre, mid, post, suff, op) => {
-      op = op ? `<var data-${types[op] || 'unit'}>${op}</var>` : '';
-
-      if (!post) {
-        return `<var data-number>${pre}</var>${mid}${suff}${op}`;
-      }
-
-      return `<var data-number>${pre}${mid}${post}</var>${suff}${op}`;
-    })
-    .replace(/[([\])]/g, char => {
-      return `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`;
-    })
-    .replace(/(\s|\/\w+>)([-+/*=;,.?])(\s*|<)/g, (_, ll, op, rr) => {
-      return `${ll || ''}<var data-${types[op] || 'unit'}>${op}</var>${rr || ''}`;
-    });
+    .replace(/(?!>)-?[$€£¢]?\.?(?:\d+|\d+(?:[_,.]\d+)*)[a-z%]?(?!<)/g, '<var data-number>$&</var>')
+    .replace(/[([\])]/g, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
+    .replace(/(\s*|data-[^<>]*>)([-+/*=])(?=[\s\d]|<var)/g, (_, ll, op) => `${ll || ''}<var data-${types[op] || 'unit'}>${op}</var>`);
 }
 
 export function simpleMarkdown(text) {
