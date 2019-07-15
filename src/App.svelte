@@ -1,8 +1,7 @@
 <script>
   import Line2 from './Line2.svelte';
 
-  // let markup = '1 * ( 3/2 ), ( .5 * ( 76 / .12 ) ) = 1/3';
-  let markup = '1*(3/2),(.5*(76/.12))=1/3';
+  let markup = '-1 * ( 3/2 ), ( .5 * ( 76 / -.12 ) ) = 1/3';
   let results = [];
 
   function onUpdate(e) {
