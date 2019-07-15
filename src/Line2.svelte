@@ -233,8 +233,8 @@
       // e.g. on OSX when you press spacebar-twice there's no way to stopping from it...
       if (e.key.length === 1) {
         if (!usingMode && MODES[e.key]) {
-          clearTimeout(check.t);
-          check.t = setTimeout(() => {
+          clearTimeout(check.t2);
+          check.t2 = setTimeout(() => {
             saveCursor();
             usingMode = MODES[e.key];
             search = '';
