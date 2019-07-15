@@ -66,15 +66,25 @@
 
   // we take the markup and inject HTML from it
   function render() {
-    // FIXME: instead of this, try render using vDOM?
-    let source = simpleMarkdown(basicFormat(markup));
+    try {
+      // FIXME: instead of this, try render using vDOM?
+      let source = simpleMarkdown(basicFormat(markup));
 
-    // somehow, we need to hard-code ending/starting white-space
-    source = source.replace(/^\s|\s$/, String.fromCharCode(160));
+      // somehow, we need to hard-code ending/starting white-space
+      source = source.replace(/^\s|\s$/, String.fromCharCode(160));
 
-    input.innerHTML = source + ' ';
+      input.innerHTML = source + ' ';
 
-    maths();
+      maths();
+    } catch (e) {
+      input.innerHTML =
+        simpleMarkdown(basicFormat(markup.substr(0, e.offset)))
+        + `<span style="background-color:red;color:white">${
+          markup.substr(e.offset, 1).replace(/\s/g, String.fromCharCode(160))
+        }</span>${markup.substr(e.offset + 1).replace(/\s/g, String.fromCharCode(160))} `;
+
+      maths();
+    }
   }
 
   // apply changes to current markup

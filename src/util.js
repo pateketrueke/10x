@@ -28,22 +28,61 @@ const RE_UNIT = new RegExp(`-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?\\
 // FIXME: try a parser/tokenizer instead...
 
 function toChunks(input) {
+  let mayNumber = false;
+  let oldChar = '';
   let offset = 0;
+  let open = 0;
 
   const chars = input.replace(/\s/g, ' ').split('');
 
+  const isOp = (a, b) => /[-+=*/]/.test(a) && a !== b;
   const isSep = x => /[([\])]/.test(x) || x === ' ';
+  const isNum = x => /\d/.test(x);
+  const isFmt = x => /[_*~]/.test(x);
+  const isAny = x => /[^a-zA-Z\d\s]/.test(x);
+  const isWord = x => /[a-zA-Z]/.test(x);
 
-  const tokens = chars.reduce((prev, cur) => {
+  const tokens = chars.reduce((prev, cur, i) => {
     const buffer = prev[offset] || (prev[offset] = []);
     const last = buffer[buffer.length - 1];
 
-    if (typeof last === 'undefined') buffer.push(cur);
-    else if (last === cur) buffer.push(cur);
-    else if (isSep(cur) || isSep(last)) {
+    // allow skip from open/close chars
+    if (open && isFmt(cur) && last === cur) open -= 1;
+    else if (!open && isFmt(cur) && last === cur) {
+      if (buffer[buffer.length - 2]) {
+        const T = new Error(`Bad at: ${i}`);
+        T.offset = i;
+        throw T;
+      }
+      open += 1;
+    }
+
+
+    // otherwise, we just add anything to the current buffer line
+    if (open || typeof last === 'undefined') buffer.push(cur);
+    else if (last === '/' && isNum(cur)) buffer.push(cur);
+    else if (
+      // skip separators
+      isSep(cur) || isSep(last)
+
+      // skip possible numbers
+      || (isNum(last) && isOp(cur, '/'))
+      || (isOp(last) && !isNum(cur) && mayNumber)
+      || (isOp(last, '-') && isNum(cur) && !mayNumber)
+
+      // skip markdown-like open/close chars
+      || (last === oldChar && cur !== oldChar || last !== oldChar && cur === oldChar)
+    ) {
       offset += 1;
+      mayNumber = false;
       prev[offset] = [cur];
     } else buffer.push(cur);
+
+    // flag possible negative numbers
+    mayNumber = last === '-' && isNum(cur);
+
+    // flag from open/close chars
+    if (isFmt(cur)) oldChar = cur;
 
     return prev;
   }, []);
@@ -55,10 +94,11 @@ export function basicFormat(text) {
   return toChunks(text).map(line => {
     return line.replace(/&nbsp;/ig, ' ')
       .replace(/<\/font[^<>]*>/ig, '')
+      .replace(/\s/g, String.fromCharCode(160))
       // FIXME: markdown-like is not working...
       .replace(/^[-+*=/]$/g, op => `<var data-${types[op]}>${op}</var>`)
-      .replace(/(\d+)\/(\d+)/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
-      .replace(/[([\])]/g, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
+      .replace(/^(\d+)\/(\d+)$/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
+      .replace(/^[([\])]$/g, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
       .replace(RE_UNIT, '<var data-number>$&</var>');
   }).join('');
 }
