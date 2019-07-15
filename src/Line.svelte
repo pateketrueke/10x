@@ -72,7 +72,7 @@
   function enable() {
     if (!enabled) {
       input.contentEditable = true;
-      input.focus();
+      input.focusNode;
 
       enabled = true;
     }

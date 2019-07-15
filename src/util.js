@@ -140,10 +140,6 @@ export function parseNumber(text) {
   return parseFloat(text);
 }
 
-export function truncateDecimals(value, length) {
-  return value.toFixed(length).replace(/\.0+$/, '');
-}
-
 export function evaluateExpression(op, left, right) {
   if (op === '+') return left + right;
   if (op === '-') return left - right;
@@ -173,7 +169,7 @@ export function calculateFromString(expr) {
   expr = operateExpression(['*', '/'], expr);
   expr = operateExpression(['+', '-'], expr);
 
-  return truncateDecimals(parseFloat(expr[0]), 2);
+  return parseFloat(expr[0]);
 }
 
 export function buildTree(tokens) {
@@ -200,26 +196,46 @@ export function buildTree(tokens) {
   return tree;
 }
 
-export function reduceFromAST(token) {
-  return token.reduce((prev, cur) => {
+export function reduceFromAST(tokens) {
+  return tokens.reduce((prev, cur) => {
     if (Array.isArray(cur)) {
-      prev.push(calculateFromString((cur.some(x => Array.isArray(x)) ? reduceFromAST(cur) : cur).join(' ')));
-    } else {
+      const ops = reduceFromAST(cur);
+
+      if (ops.length) {
+        prev.push(calculateFromString(ops.join(' ')));
+      }
+    } else if (!(typeof cur === 'number' && isNaN(cur))) {
       prev.push(cur);
     }
+
     return prev;
   }, []);
 }
 
 export function calculateFromTokens(tokens) {
-  const groupedInput = [];
-
-  let offset = -1;
-  let index = 0;
-  let fixedStack;
-
   const simplified = reduceFromAST(buildTree(tokens));
-  const normalized = calculateFromString(simplified.join(' '));
+  const chunks = [];
 
-  return { simplified, normalized };
+  let offset = 0;
+
+  for (let i = 0; i < simplified.length; i += 1) {
+    const cur = simplified[i];
+    const next = simplified[i + 1];
+
+    chunks[offset] = chunks[offset] || [];
+    chunks[offset].push(cur);
+
+    if (typeof next === 'number' && typeof cur === 'number') {
+      offset += 1;
+    }
+  }
+
+  const results = chunks.map(ops => {
+    return calculateFromString(ops.join(' '));
+  });
+
+  return {
+    chunks,
+    results,
+  };
 }

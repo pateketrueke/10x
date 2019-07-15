@@ -8,6 +8,7 @@
 .editor [data-number] span::after { content: '⁄'; color: #3B89C6; position: absolute; left: 3px; }
 .editor [data-div]::after { content: '÷'; }
 .editor [data-mul]::after { content: '×'; }
+.editor sub, .editor sup { font-size: .75em; }
 
 /* montserrat-regular - latin */
 @font-face {
