@@ -26,14 +26,41 @@ keys.sort((a, b) => b.length - a.length);
 const RE_UNIT = new RegExp(`-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?\\s*(?:${keys.join('|')})?(?!<\\/)`, 'ig');
 
 // FIXME: try a parser/tokenizer instead...
+
+function toChunks(input) {
+  let offset = 0;
+
+  const chars = input.replace(/\s/g, ' ').split('');
+
+  const isSep = x => /[([\])]/.test(x) || x === ' ';
+
+  const tokens = chars.reduce((prev, cur) => {
+    const buffer = prev[offset] || (prev[offset] = []);
+    const last = buffer[buffer.length - 1];
+
+    if (typeof last === 'undefined') buffer.push(cur);
+    else if (last === cur) buffer.push(cur);
+    else if (isSep(cur) || isSep(last)) {
+      offset += 1;
+      prev[offset] = [cur];
+    } else buffer.push(cur);
+
+    return prev;
+  }, []);
+
+  return tokens.map(l => l.join(''));
+}
+
 export function basicFormat(text) {
-  return text.replace(/&nbsp;/ig, ' ')
-    .replace(/<\/font[^<>]*>/ig, '')
-    // FIXME: markdown-like is not working...
-    .replace(/([+*=])(?!\1|\w|$)|[/-](?!\.?\d)/g, _ => `<var data-${types[_]}>${_}</var>`)
-    .replace(/(\d+)\/(\d+)/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
-    .replace(/[([\])]/g, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
-    .replace(RE_UNIT, '<var data-number>$&</var>');
+  return toChunks(text).map(line => {
+    return line.replace(/&nbsp;/ig, ' ')
+      .replace(/<\/font[^<>]*>/ig, '')
+      // FIXME: markdown-like is not working...
+      .replace(/^[-+*=/]$/g, op => `<var data-${types[op]}>${op}</var>`)
+      .replace(/(\d+)\/(\d+)/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
+      .replace(/[([\])]/g, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
+      .replace(RE_UNIT, '<var data-number>$&</var>');
+  }).join('');
 }
 
 export function simpleMarkdown(text) {
