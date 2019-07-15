@@ -25,6 +25,7 @@
 
   const dispatch = createEventDispatcher();
 
+  let t;
   let input;
   let overlay;
   let history = [];
@@ -163,6 +164,13 @@
   // test input and mutate buffer, keep control-keys as is
   function check(e) {
     if (e) {
+      if (usingMode) {
+        e.preventDefault();
+
+        // disable overlay on any non-words
+        if (/\W/.test(e.key)) usingMode = false;
+      }
+
       const selection = window.getSelection();
       const selectedText = selection.toString();
 
@@ -185,7 +193,7 @@
       if (e.metaKey && e.keyCode === 88) {
         setTimeout(() => {
           maths(push());
-          sync({ selectedText })
+          sync({ selectedText });
         }, 10);
       }
 
@@ -201,6 +209,15 @@
       // append chars to buffer while trying to avoid system-replacements,
       // e.g. on OSX when you press spacebar-twice there's no way to stopping from it...
       if (e.key.length === 1) {
+        if (!usingMode && MODES[e.key]) {
+          clearTimeout(t);
+          t = setTimeout(() => {
+            saveCursor();
+            usingMode = MODES[e.key];
+            search = '';
+          }, 180);
+        }
+
         clearTimeout(check.t);
         check.t = setTimeout(() => {
           mutate(e.keyCode === 32 ? String.fromCharCode(160) : e.key);
@@ -209,11 +226,18 @@
       }
 
       if (e.keyCode === 8) {
+        if (usingMode && MODES[markup.charAt(offset - 1)]) usingMode = false;
+
         // make white-space visible during this
         input.style.whiteSpace = 'pre';
         mutate('', -1);
       }
     }
+  }
+
+  // this will cancel overlays on-click
+  function cursor(e) {
+    if (usingMode) usingMode = false;
   }
 
   // merge current buffer with inconmig user-input
@@ -257,7 +281,9 @@
     outline: 1px dotted silver;
   }
   .overlay {
+    position: absolute;
     cursor: pointer;
+    min-width: 280px;
   }
   .main {
     position: relative;
@@ -270,6 +296,7 @@
     on:blur={disable}
     on:focus={enable}
     on:keydown={check}
+    on:click|preventDefault={cursor}
     on:keyup|preventDefault={reset}
     on:paste|preventDefault={insert}
   />

@@ -150,14 +150,16 @@ export function evaluateExpression(op, left, right) {
 export function operateExpression(ops, expr) {
   for (let i = 0, c = expr.length; i < c; i += 1) {
     if (ops.indexOf(expr[i]) > -1) {
+      const old = expr;
       const cur = expr[i];
-      const prev = expr[i - 1];
-      const next = expr[i + 1];
+      const prev = parseFloat(expr[i - 1]);
+      const next = parseFloat(expr[i + 1]);
       const result = evaluateExpression(cur, prev, next);
 
+      // FIXME: analyze this...
       expr.splice(i - 1, 3, result);
 
-      return operateExpression(ops, expr);
+      if (old.length !== expr.length) return operateExpression(ops, expr);
     }
   }
 
