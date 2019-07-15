@@ -287,9 +287,13 @@ export function calculateFromTokens(tokens) {
     }
   }
 
-  const results = chunks.map(ops => {
-    return calculateFromString(ops.join(' '));
-  });
+  const results = chunks.reduce((prev, cur) => {
+    if (typeof cur[0] === 'number' && (cur[cur.length - 1] === '=')) {
+      prev.push(calculateFromString(cur.join(' ')));
+    }
+
+    return prev;
+  }, []);
 
   return {
     chunks,
