@@ -4,15 +4,11 @@ const convert = new Convert();
 const groups = convert.measures();
 
 const types = {
-  '?': 'result',
   '=': 'equal',
   '+': 'plus',
   '-': 'min',
   '/': 'div',
   '*': 'mul',
-  ',': 'and',
-  ';': 'or',
-  '.': 'k',
 };
 
 const keys = [];
@@ -27,19 +23,15 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-// FIXME: re-apply units...
-const RE_UNIT = new RegExp(`(-?[$€£¢]?\\.?(?:\\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?)(\\s*)(${keys.join('|')}|)([\\s\\])]*)([-+/*=]?)(?!\\5)`, 'ig');
+const RE_UNIT = new RegExp(`-?[$€£¢]?\\.?(?:\\d+|\\d+(?:[_,.]\\d+)*)%?\\s*(?:${keys.join('|')})?(?!<)`, 'ig');
 
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')
     .replace(/<\/font[^<>]*>/ig, '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+    .replace(/([-+/*=])(?!\1)(?=\D)/g, (_, op) => `<var data-${types[op]}>${op}</var>`)
     .replace(/(\d+)\/(\d+)/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
-    .replace(/(?!>)-?[$€£¢]?\.?(?:\d+|\d+(?:[_,.]\d+)*)[a-z%]?(?!<)/g, '<var data-number>$&</var>')
     .replace(/[([\])]/g, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
-    .replace(/(\s*|data-[^<>]*>)([-+/*=])(?=[\s\d]|<var)/g, (_, ll, op) => `${ll || ''}<var data-${types[op] || 'unit'}>${op}</var>`);
+    .replace(RE_UNIT, '<var data-number>$&</var>');
 }
 
 export function simpleMarkdown(text) {

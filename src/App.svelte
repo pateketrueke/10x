@@ -1,6 +1,7 @@
 <script>
   import Line2 from './Line2.svelte';
 
+  // let markup = '1 * ( 3/2 ), ( .5 * ( 76 / .12 ) ) = 1/3';
   let markup = '1*(3/2),(.5*(76/.12))=1/3';
   let results = [];
 
@@ -11,10 +12,14 @@
 
 <style>
   .row { display: flex; align-items: center; }
-  .data { padding-left: 20px; }
+  .data { padding-left: 20px; display: flex; }
 </style>
 
 <div class="row">
   <Line2 bind:markup on:change={onUpdate} />
-  <div class="data">{results.join(', ')}</div>
+  <div class="result">
+    {#each results as value}
+      <span data-result>{value}</span>
+    {/each}
+  </div>
 </div>
