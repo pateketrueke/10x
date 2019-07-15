@@ -7,6 +7,7 @@
     getCursor,
     setCursor,
     getClipbordText,
+    getSelectionStart,
     removeSelectedText,
     calculateFromTokens,
   } from './util';
@@ -25,7 +26,7 @@
 
   const dispatch = createEventDispatcher();
 
-  let t;
+  let node;
   let input;
   let overlay;
   let history = [];
@@ -104,6 +105,28 @@
     if (!enabled) {
       enabled = true;
     }
+  }
+
+  function sel() {
+    if (sel.t) return;
+
+    setTimeout(() => {
+      if (node) node.classList.remove('selected');
+
+      const sub = getSelectionStart();
+
+      if (['SPAN', 'SUB', 'SUP'].includes(sub.tagName)) {
+        node = sub.parentNode;
+      } else if (sub !== input) {
+        node = sub;
+      } else {
+        node = null;
+      }
+
+      if (node) node.classList.add('selected');
+    });
+
+    sel.t = setTimeout(() => { sel.t = null; }, 50);
   }
 
   // normalize white-space back, see check()
@@ -198,7 +221,7 @@
       }
 
       // allow some keys for moving inside the contenteditable
-      if (e.metaKey || e.key === 'Meta' || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return;
+      if (e.metaKey || e.key === 'Meta' || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return sel();
 
       // update offset and reset cursor again,
       // otherwise the cursor gets reset
@@ -210,8 +233,8 @@
       // e.g. on OSX when you press spacebar-twice there's no way to stopping from it...
       if (e.key.length === 1) {
         if (!usingMode && MODES[e.key]) {
-          clearTimeout(t);
-          t = setTimeout(() => {
+          clearTimeout(check.t);
+          check.t = setTimeout(() => {
             saveCursor();
             usingMode = MODES[e.key];
             search = '';
@@ -221,6 +244,7 @@
         clearTimeout(check.t);
         check.t = setTimeout(() => {
           mutate(e.keyCode === 32 ? String.fromCharCode(160) : e.key);
+          sel();
         }, 10);
         return;
       }
@@ -231,6 +255,7 @@
         // make white-space visible during this
         input.style.whiteSpace = 'pre';
         mutate('', -1);
+        sel();
       }
     }
   }
@@ -238,6 +263,7 @@
   // this will cancel overlays on-click
   function cursor(e) {
     if (usingMode) usingMode = false;
+    sel();
   }
 
   // merge current buffer with inconmig user-input

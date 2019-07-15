@@ -29,7 +29,8 @@ const RE_UNIT = new RegExp(`-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?\\
 export function basicFormat(text) {
   return text.replace(/&nbsp;/ig, ' ')
     .replace(/<\/font[^<>]*>/ig, '')
-    .replace(/([+*=])(?!\1)|[/-](?!\.?\d)/g, _ => `<var data-${types[_]}>${_}</var>`)
+    // FIXME: markdown-like is not working...
+    .replace(/([+*=])(?!\1|\w|$)|[/-](?!\.?\d)/g, _ => `<var data-${types[_]}>${_}</var>`)
     .replace(/(\d+)\/(\d+)/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
     .replace(/[([\])]/g, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
     .replace(RE_UNIT, '<var data-number>$&</var>');

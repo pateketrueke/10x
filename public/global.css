@@ -9,6 +9,7 @@
 .editor [data-div]::after { content: '÷'; }
 .editor [data-mul]::after { content: '×'; }
 .editor sub, .editor sup { font-size: .75em; }
+.editor .selected { background-color: #FFDEFF; }
 [data-result] { margin-left: 12px; background-color: #D4D8D5; padding: 0 .3em; border-radius: 5px; }
 [data-result] + [data-result] { margin-left: .3em; }
 
