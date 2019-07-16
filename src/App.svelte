@@ -1,24 +1,15 @@
 <script>
-  import Line2 from './Line2.svelte';
-
-  let markup = '7d*4, (1+2)) - 3/2 = **1+2** __A___ AND **IT*x+** S__U**C**K__S?';
-  let results = [];
-
-  function onUpdate(e) {
-    results = e.detail.results.map(x => x.toFixed(2).replace(/\.0+$/, ''));
-  }
+  import In from './In.svelte';
 </script>
 
-<style>
-  .row { display: flex; align-items: center; }
-  .data { padding-left: 20px; display: flex; }
-</style>
+<In markup="$15,000 MXN / 14 days of work" />
 
-<div class="row">
-  <Line2 bind:markup on:change={onUpdate} />
-  <div class="result">
-    {#each results as value}
-      <span data-result>{value}</span>
-    {/each}
-  </div>
-</div>
+<In markup="10 inches in cm" />
+<In markup="450 km in miles" />
+<In markup="160 pounds in kg " />
+<In markup="Today + 3 weeks 2 days" />
+<In markup="3:35 am + 9 hours 20 minutes" />
+<In markup="30 + 20%" />
+<In markup="100k" />
+<In markup="20M" />
+<In markup="3G" />

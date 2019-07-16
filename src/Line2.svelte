@@ -139,7 +139,8 @@
         node = null;
       }
 
-      if (node) node.classList.add('selected');
+      // highlight number-values only
+      if (node && 'number' in node.dataset) node.classList.add('selected');
     });
 
     sel.t = setTimeout(() => { sel.t = null; }, 50);

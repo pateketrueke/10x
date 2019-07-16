@@ -18,7 +18,7 @@ const types = {
   '*': 'mul',
 };
 
-const keys = [];
+const keys = ['usd', 'mxn'];
 
 groups.forEach(group => {
   convert.list(group).forEach(unit => {
@@ -30,9 +30,10 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`^-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?\\s*(?:${keys.join('|')})?(?!<\\/)$`, 'ig');
+const RE_DIGIT = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
+const RE_UNIT = new RegExp(`^${RE_DIGIT}\\s*(?:${keys.join('|')})?$`, 'i');
 
-// FIXME: try a parser/tokenizer instead...
+// FIXME: missing HH:MM:SS numbers, date-keywords (e.g. today, march, etc.)
 const isOp = (a, b) => /[-+=*/_]/.test(a) && a !== b;
 const isSep = x => /[([\])]/.test(x) || x === ' ';
 const isNum = x => /\d/.test(x);
@@ -52,17 +53,24 @@ function toChunks(input) {
     const last = buffer[buffer.length - 1];
 
     // otherwise, we just add anything to the current buffer line
-    if (inFormat || typeof last === 'undefined') buffer.push(cur);
-    else if (last === '/' && isNum(cur)) buffer.push(cur);
-    else if (
+    if (
+      inFormat || typeof last === 'undefined'
+
+      // add possible numbers
+      || (last === '/' && isNum(cur))
+      || (isNum(last) && (cur === '%' || cur === ' '))
+      || (isNum(oldChar) && last === ' ' && isWord(cur))
+    ) {
+      buffer.push(cur);
+    } else if (
       // skip separators
       isSep(cur) || isSep(last)
 
       // skip possible numbers
       || (isOp(last) && !isNum(cur) && mayNumber)
-      || (isNum(last) && (isAny(cur) && cur !== '/'))
       || (isOp(last, '-') && isNum(cur) && !mayNumber)
       || (!isNum(last) && isOp(cur) && oldChar !== cur)
+      || (isNum(last) && (isAny(cur) && cur !== '/' && cur !== ','))
     ) {
       offset += 1;
       mayNumber = false;
@@ -73,13 +81,11 @@ function toChunks(input) {
     mayNumber = last === '-' && isNum(cur);
 
     // allow skip from open/close chars
-    if (isFmt(cur)) {
-      if (last === cur && isFmt(cur)) {
-        inFormat = !inFormat;
-        oldChar = '';
-      } else {
-        oldChar = cur;
-      }
+    if (last === cur && isFmt(cur)) {
+      inFormat = !inFormat;
+      oldChar = '';
+    } else {
+      oldChar = last;
     }
 
     return prev;
@@ -88,23 +94,33 @@ function toChunks(input) {
   return tokens.map(l => l.join(''));
 }
 
+export function lineFormat(text) {
+  // hardcode white-space
+  return text.replace(/\s/g, String.fromCharCode(160))
+    // escape for HTML
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+    // bold and italics
+    .replace(/\*\*(.+?)\*\*/, '<b><span>**</span>$1<span>**</span></b>')
+    .replace(/__(.+?)__/, '<i><span>__</span>$1<span>__</span></i>')
+
+    // basic operators
+    .replace(/^[-+*=/]$/, op => `<var data-${types[op]}>${op}</var>`)
+
+    // fractions
+    .replace(/^(\d+)\/(\d+)$/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
+
+    // separators
+    .replace(/^[([\])]$/, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
+
+    // numbers and units
+    .replace(RE_UNIT, '<var data-number>$&</var>');
+}
+
 export function basicFormat(text) {
-  console.log(toChunks(text));
-  return toChunks(text).map(line => {
-    return line.replace(/&nbsp;/ig, ' ')
-      .replace(/<\/font[^<>]*>/ig, '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\s/g, String.fromCharCode(160))
-      // FIXME: markdown-like is not working...
-      .replace(/^[-+*=/]$/g, op => `<var data-${types[op]}>${op}</var>`)
-      .replace(/^(\d+)\/(\d+)$/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
-      .replace(/^[([\])]$/g, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
-      .replace(RE_UNIT, '<var data-number>$&</var>')
-      .replace(/\*\*(.+?)\*\*/g, '<b><span>**</span>$1<span>**</span></b>')
-      .replace(/__(.+?)__/g, '<i><span>__</span>$1<span>__</span></i>');
-  }).join('');
+  return toChunks(text).map(lineFormat).join('');
 }
 
 export function getClipbordText(e) {
@@ -242,6 +258,7 @@ export function buildTree(tokens) {
         root = stack.pop();
       }
     } else if (root) {
+      // FIXME: extract unit-types and such?
       root.push(t[0] === 'number' ? parseNumber(t[1]) : t[1]);
     } else {
       throw new TError(`Invalid terminator for: ${
@@ -287,13 +304,7 @@ export function calculateFromTokens(tokens) {
     }
   }
 
-  const results = chunks.reduce((prev, cur) => {
-    if (typeof cur[0] === 'number' && (cur[cur.length - 1] === '=')) {
-      prev.push(calculateFromString(cur.join(' ')));
-    }
-
-    return prev;
-  }, []);
+  const results = chunks.map(x => calculateFromString(x.join(' ')));
 
   return {
     chunks,
