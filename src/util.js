@@ -104,8 +104,7 @@ export function toChunks(input) {
 }
 
 export function simpleMarkdown(text) {
-  // hardcode white-space
-  return text.replace(/\s/g, String.fromCharCode(160))
+  return text
     // escape for HTML
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -117,13 +116,18 @@ export function simpleMarkdown(text) {
 }
 
 export function simpleNumbers(text) {
-  // regular units/dates
-  return text.replace(RE_UNIT, '<var data-number>$&</var>');
+  return text
+    // hardcode white-space boundaries
+    .replace(/^\s|\s$/, String.fromCharCode(160))
+
+    // regular units/dates
+    .replace(RE_UNIT, '<var data-number>$&</var>');
 }
 
 export function lineFormat(text) {
-  // basic operators
-  return text.replace(/^[-+*=/]$/, op => `<var data-${types[op]}>${op}</var>`)
+  return text
+    // basic operators
+    .replace(/^[-+*=/]$/, op => `<var data-${types[op]}>${op}</var>`)
 
     // fractions
     .replace(/^(\d+)\/(\d+)$/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
