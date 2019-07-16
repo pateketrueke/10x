@@ -116,6 +116,11 @@ export function simpleMarkdown(text) {
     .replace(/__(.+?)__/, '<i><span>__</span>$1<span>__</span></i>');
 }
 
+export function simpleNumbers(text) {
+  // regular units/dates
+  return text.replace(RE_UNIT, '<var data-number>$&</var>');
+}
+
 export function lineFormat(text) {
   // basic operators
   return text.replace(/^[-+*=/]$/, op => `<var data-${types[op]}>${op}</var>`)
@@ -124,10 +129,7 @@ export function lineFormat(text) {
     .replace(/^(\d+)\/(\d+)$/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
 
     // separators
-    .replace(/^[([\])]$/, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
-
-    // regular units/dates
-    .replace(RE_UNIT, '<var data-number>$&</var>');
+    .replace(/^[([\])]$/, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`);
 }
 
 export function basicFormat(text) {
@@ -136,9 +138,9 @@ export function basicFormat(text) {
   return toChunks(text).reduce((prev, cur) => {
     // highlight all expressions near numbers only
     if (isSep(cur) || /\d/.test(cur) || /\d/.test(prevToken)) {
-      prev.push(lineFormat(cur));
+      prev.push(simpleNumbers(lineFormat(cur)));
     } else {
-      prev.push(simpleMarkdown(cur));
+      prev.push(simpleNumbers(simpleMarkdown(cur)));
     }
 
     if (!isSep(cur)) prevToken = cur;
