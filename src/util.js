@@ -127,7 +127,7 @@ export function simpleMarkdown(text) {
     .replace(/__([^<>]+?)__/, '<i><span>__</span>$1<span>__</span></i>')
 
     // inline code
-    .replace(/`([^<>]+?)`/, '<code><span>`</span>$1<span>`</span></code>');
+    .replace(/`(.+?)`/, '<code><span>`</span>$1<span>`</span></code>');
 }
 
 export function simpleNumbers(text) {
@@ -145,19 +145,25 @@ export function lineFormat(text) {
     .replace(/^[-+*=/]$/, op => `<var data-${types[op]}>${op}</var>`)
 
     // fractions
-    .replace(/^(\d+)\/(\d+)$/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
+    .replace(/(\d+)\/(\d+)/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
 
     // separators
     .replace(/^[([\])]$/, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`);
 }
 
 export function basicFormat(text) {
+  const all = toChunks(text);
   let prevToken = '';
-  console.log(toChunks(text));
-  return toChunks(text).reduce((prev, cur) => {
-    // highlight all expressions near numbers only
-    if (isSep(cur) || /\d/.test(cur) || /\d/.test(prevToken)) {
-      prev.push(simpleNumbers(lineFormat(cur)));
+  console.log(all);
+  return all.reduce((prev, cur, i) => {
+    let nextToken;
+
+    do {
+      nextToken = all[++i];
+    } while (nextToken === ' ');
+
+    if (isSep(cur) || /\d/.test(cur) || (isNum(prevToken) && /\d/.test(nextToken))) {
+      prev.push(simpleNumbers(lineFormat(cur)))
     } else {
       prev.push(simpleNumbers(simpleMarkdown(cur)));
     }
