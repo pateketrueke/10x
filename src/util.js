@@ -32,7 +32,7 @@ keys.sort((a, b) => b.length - a.length);
 
 const RE_DIGIT = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
 const RE_HOURS = 'tomorrow|yesterday|today|now|\\d+(?::\\d+)*(?:\\s*[ap]m)?';
-const RE_DATES = '(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\\s*\\d+';
+const RE_DATES = '(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\\s*\\d{1,2}(,\\s+\\d{4})?';
 const RE_UNIT = new RegExp(`^(?:${RE_DIGIT}\\s*(?:${keys.join('|')})?|${RE_HOURS}|${RE_DATES})$`, 'i');
 
 // FIXME: cleanup...
@@ -41,12 +41,11 @@ const isSep = x => /[([\])]/.test(x) || x === ' ';
 const isNum = x => /\d/.test(x);
 const isFmt = x => /[_*~]/.test(x);
 const isWord = x => /[a-zA-Z]/.test(x);
-const isMonth = x => /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)$/i.test(x);
+const hasDate = x => /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i.test(x);
 
 export function toChunks(input) {
   let mayNumber = false;
   let inFormat = false;
-  let prevToken = '';
   let oldChar = '';
   let offset = 0;
 
@@ -57,11 +56,16 @@ export function toChunks(input) {
     const next = chars[i + 1];
 
     // normalize well-known dates
-    if (isMonth(prevToken)) {
-      prev[offset - 1].push(last, cur);
-      prevToken = '';
-      offset -= 1;
-      return prev;
+    if (hasDate(buffer.join(''))) {
+      if (cur === ',' || (cur === ' ' && isNum(next)) || isNum(cur)) {
+        buffer.push(cur);
+        return prev;
+      }
+
+      if (!isNum(cur)) {
+        prev[++offset] = [cur];
+        return prev;
+      }
     }
 
     // otherwise, we just add anything to the current buffer line
@@ -89,9 +93,6 @@ export function toChunks(input) {
       || (isOp(last, '-') && isNum(cur) && !mayNumber)
       || (!isNum(last) && isOp(cur) && oldChar !== cur)
     ) {
-      // we store the previously added token, if is not empty
-      prevToken = buffer.join('').trim() || prevToken;
-      mayNumber = false;
       prev[++offset] = [cur];
     } else buffer.push(cur);
 
@@ -145,7 +146,7 @@ export function lineFormat(text) {
     .replace(/^[-+*=/]$/, op => `<var data-${types[op]}>${op}</var>`)
 
     // fractions
-    .replace(/(\d+)\/(\d+)/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
+    .replace(/^(\d+)\/(\d+)$/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
 
     // separators
     .replace(/^[([\])]$/, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`);
@@ -154,7 +155,7 @@ export function lineFormat(text) {
 export function basicFormat(text) {
   const all = toChunks(text);
   let prevToken = '';
-  console.log(all);
+
   return all.reduce((prev, cur, i) => {
     let nextToken;
 
