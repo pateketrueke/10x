@@ -31,16 +31,17 @@ groups.forEach(group => {
 keys.sort((a, b) => b.length - a.length);
 
 const RE_DIGIT = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
-const RE_DATE = 'tomorrow|yesterday|today|now|\\d+(?::\\d+)*(?:\\s*[ap]m)?';
-const RE_UNIT = new RegExp(`^(?:${RE_DIGIT}\\s*(?:${keys.join('|')})?|${RE_DATE})$`, 'i');
+const RE_HOURS = 'tomorrow|yesterday|today|now|\\d+(?::\\d+)*(?:\\s*[ap]m)?';
+const RE_DATES = '(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\\s*\\d+';
+const RE_UNIT = new RegExp(`^((?:${RE_DIGIT}\\s*(?:${keys.join('|')})?|${RE_HOURS}|${RE_DATES}))((?!:).*?)$`, 'i');
 
-// FIXME: for date-keywords, e.g. ["Jun", " ", "10", ", ", "1987"]
-// we need to reduce to a well-known format... e.g. "June 10, 1987"
+// FIXME: cleanup...
 const isOp = (a, b) => /[-+=*/_]/.test(a) && a !== b;
 const isSep = x => /[([\])]/.test(x) || x === ' ';
 const isNum = x => /\d/.test(x);
 const isFmt = x => /[_*~]/.test(x);
 const isWord = x => /[a-zA-Z]/.test(x);
+const isMonth = x => /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)$/i.test(x);
 
 export function toChunks(input) {
   let mayNumber = false;
@@ -54,6 +55,14 @@ export function toChunks(input) {
     const buffer = prev[offset] || (prev[offset] = []);
     const last = buffer[buffer.length - 1];
     const next = chars[i + 1];
+
+    // normalize well-known dates
+    if (isMonth(prevToken)) {
+      prev[offset - 1].push(last, cur);
+      prevToken = '';
+      offset -= 1;
+      return prev;
+    }
 
     // otherwise, we just add anything to the current buffer line
     if (
@@ -127,7 +136,7 @@ export function simpleNumbers(text) {
     .replace(/^\s|\s$/, String.fromCharCode(160))
 
     // regular units/dates
-    .replace(RE_UNIT, '<var data-number>$&</var>');
+    .replace(RE_UNIT, '<var data-number>$1</var>$2');
 }
 
 export function lineFormat(text) {
