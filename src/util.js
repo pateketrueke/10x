@@ -1,4 +1,5 @@
 import Convert from 'convert-units';
+import currencySymbols from 'currency-symbol.js';
 
 class TError extends Error {
   constructor(message, offset) {
@@ -18,22 +19,22 @@ const types = {
   '*': 'mul',
 };
 
-const keys = ['usd', 'mxn'];
+const keywords = Object.keys(currencySymbols.settings.symbols);
 
 groups.forEach(group => {
   convert.list(group).forEach(unit => {
-    keys.push(unit.abbr);
-    keys.push(unit.plural);
-    keys.push(unit.singular);
+    keywords.push(unit.abbr);
+    keywords.push(unit.plural);
+    keywords.push(unit.singular);
   });
 });
 
-keys.sort((a, b) => b.length - a.length);
+keywords.sort((a, b) => b.length - a.length);
 
 const RE_DIGIT = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
 const RE_HOURS = 'tomorrow|yesterday|today|now|\\d+(?::\\d+)*(?:\\s*[ap]m)?';
 const RE_DATES = '(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\\s*\\d{1,2}(,\\s+\\d{4})?';
-const RE_UNIT = new RegExp(`^(?:${RE_DIGIT}\\s*(?:${keys.join('|')})?|${RE_HOURS}|${RE_DATES})$`, 'i');
+const RE_UNIT = new RegExp(`^(?:${RE_DIGIT}\\s*(?:${keywords.join('|')})?|${RE_HOURS}|${RE_DATES})$`, 'i');
 
 // FIXME: cleanup...
 const isOp = (a, b) => /[-+=*/_]/.test(a) && a !== b;
