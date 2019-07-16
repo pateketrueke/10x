@@ -33,7 +33,7 @@ keys.sort((a, b) => b.length - a.length);
 const RE_DIGIT = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
 const RE_HOURS = 'tomorrow|yesterday|today|now|\\d+(?::\\d+)*(?:\\s*[ap]m)?';
 const RE_DATES = '(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\\s*\\d+';
-const RE_UNIT = new RegExp(`^((?:${RE_DIGIT}\\s*(?:${keys.join('|')})?|${RE_HOURS}|${RE_DATES}))((?!:).*?)$`, 'i');
+const RE_UNIT = new RegExp(`^(?:${RE_DIGIT}\\s*(?:${keys.join('|')})?|${RE_HOURS}|${RE_DATES})$`, 'i');
 
 // FIXME: cleanup...
 const isOp = (a, b) => /[-+=*/_]/.test(a) && a !== b;
@@ -136,7 +136,7 @@ export function simpleNumbers(text) {
     .replace(/^\s|\s$/, String.fromCharCode(160))
 
     // regular units/dates
-    .replace(RE_UNIT, '<var data-number>$1</var>$2');
+    .replace(RE_UNIT, '<var data-number>$&</var>');
 }
 
 export function lineFormat(text) {
@@ -153,7 +153,7 @@ export function lineFormat(text) {
 
 export function basicFormat(text) {
   let prevToken = '';
-
+  console.log(toChunks(text));
   return toChunks(text).reduce((prev, cur) => {
     // highlight all expressions near numbers only
     if (isSep(cur) || /\d/.test(cur) || /\d/.test(prevToken)) {

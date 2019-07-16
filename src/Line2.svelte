@@ -139,14 +139,6 @@
     sel.t = setTimeout(() => { sel.t = null; }, 50);
   }
 
-  // normalize white-space back, see check()
-  function reset(e) {
-    if (e.keyCode === 8) {
-      removeSelectedText();
-      input.style.whiteSpace = 'normal';
-    }
-  }
-
   // store current cursor, notice setCursor() is required afterwards!
   // otherwise, the cursor will move back to the beginning...
   function saveCursor() {
@@ -194,8 +186,24 @@
     sync({ selectedText });
   }
 
+  let isDead;
+
+  // normalize white-space back, see check()
+  function reset(e) {
+    e.preventDefault();
+
+    if (e.keyCode === 8) {
+      removeSelectedText();
+      input.style.whiteSpace = 'normal';
+    }
+  }
+
   // test input and mutate buffer, keep control-keys as is
   function check(e) {
+    if (e.key === 'Dead') {
+      isDead = true;
+    }
+
     if (e) {
       if (usingMode) {
         e.preventDefault();
@@ -232,6 +240,24 @@
 
       // allow some keys for moving inside the contenteditable
       if (e.metaKey || e.key === 'Meta' || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return sel();
+
+      // handle backticks and such
+      if (isDead) {
+        if (e.key !== 'Dead') {
+          setTimeout(() => {
+            saveCursor();
+
+            // retrive buffer con rendered content
+            markup = input.textContent;
+            isDead = false;
+
+            push();
+            render();
+            setCursor(input, offset);
+          });
+        }
+        return;
+      }
 
       // update offset and reset cursor again,
       // otherwise the cursor gets reset
