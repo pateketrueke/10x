@@ -89,6 +89,9 @@ export function toChunks(input) {
     // flag possible negative numbers
     mayNumber = last === '-' && isNum(cur);
 
+    // handle backticks for inline-code
+    if (cur === '`') inFormat = !inFormat;
+
     // allow skip from open/close chars
     if (last === cur && isFmt(cur)) {
       inFormat = !inFormat;
@@ -111,8 +114,11 @@ export function simpleMarkdown(text) {
     .replace(/>/g, '&gt;')
 
     // bold and italics
-    .replace(/\*\*(.+?)\*\*/, '<b><span>**</span>$1<span>**</span></b>')
-    .replace(/__(.+?)__/, '<i><span>__</span>$1<span>__</span></i>');
+    .replace(/\*\*([^<>]+?)\*\*/, '<b><span>**</span>$1<span>**</span></b>')
+    .replace(/__([^<>]+?)__/, '<i><span>__</span>$1<span>__</span></i>')
+
+    // inline code
+    .replace(/`([^<>]+?)`/, '<code><span>`</span>$1<span>`</span></code>');
 }
 
 export function simpleNumbers(text) {
