@@ -1,7 +1,7 @@
 <script>
   import Line2 from './Line2.svelte';
 
-  let markup = '(1+2)) - 3 = **1+2** __A___ AND **IT*x+** SUCKS?';
+  let markup = '7d*4, (1+2)) - 3/2 = **1+2** __A___ AND **IT*x+** S__U**C**K__S?';
   let results = [];
 
   function onUpdate(e) {

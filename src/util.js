@@ -30,10 +30,10 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`^-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?\\s*(?:${keys.join('|')})?(?!<\\/)$`, 'ig');
+const RE_UNIT = new RegExp(`^-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?\\s*(?:${keys.join('|')})?(?!<\\/)$`, 'ig');
 
 // FIXME: try a parser/tokenizer instead...
-const isOp = (a, b) => /[-+=*/]/.test(a) && a !== b;
+const isOp = (a, b) => /[-+=*/_]/.test(a) && a !== b;
 const isSep = x => /[([\])]/.test(x) || x === ' ';
 const isNum = x => /\d/.test(x);
 const isFmt = x => /[_*~]/.test(x);
@@ -42,9 +42,9 @@ const isWord = x => /[a-zA-Z]/.test(x);
 
 function toChunks(input) {
   let mayNumber = false;
+  let inFormat = false;
   let oldChar = '';
   let offset = 0;
-  let open = 0;
 
   const chars = input.replace(/\s/g, ' ').split('');
   const tokens = chars.reduce((prev, cur, i) => {
@@ -52,31 +52,35 @@ function toChunks(input) {
     const last = buffer[buffer.length - 1];
 
     // otherwise, we just add anything to the current buffer line
-    if (open || typeof last === 'undefined') buffer.push(cur);
+    if (inFormat || typeof last === 'undefined') buffer.push(cur);
     else if (last === '/' && isNum(cur)) buffer.push(cur);
     else if (
       // skip separators
       isSep(cur) || isSep(last)
 
       // skip possible numbers
-      || (isNum(last) && isOp(cur, '/'))
       || (isOp(last) && !isNum(cur) && mayNumber)
+      || (isNum(last) && (isAny(cur) && cur !== '/'))
       || (isOp(last, '-') && isNum(cur) && !mayNumber)
+      || (!isNum(last) && isOp(cur) && oldChar !== cur)
     ) {
       offset += 1;
       mayNumber = false;
       prev[offset] = [cur];
     } else buffer.push(cur);
 
-    // allow skip from open/close chars
-    if (open && isFmt(cur) && last === cur) open -= 1;
-    else if (isFmt(cur) && last === cur) open += 1;
-
     // flag possible negative numbers
     mayNumber = last === '-' && isNum(cur);
 
-    // flag from open/close chars
-    if (isFmt(cur)) oldChar = cur;
+    // allow skip from open/close chars
+    if (isFmt(cur)) {
+      if (last === cur && isFmt(cur)) {
+        inFormat = !inFormat;
+        oldChar = '';
+      } else {
+        oldChar = cur;
+      }
+    }
 
     return prev;
   }, []);
@@ -85,6 +89,7 @@ function toChunks(input) {
 }
 
 export function basicFormat(text) {
+  console.log(toChunks(text));
   return toChunks(text).map(line => {
     return line.replace(/&nbsp;/ig, ' ')
       .replace(/<\/font[^<>]*>/ig, '')
@@ -96,14 +101,10 @@ export function basicFormat(text) {
       .replace(/^[-+*=/]$/g, op => `<var data-${types[op]}>${op}</var>`)
       .replace(/^(\d+)\/(\d+)$/g, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
       .replace(/^[([\])]$/g, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
-      .replace(RE_UNIT, '<var data-number>$&</var>');
+      .replace(RE_UNIT, '<var data-number>$&</var>')
+      .replace(/\*\*(.+?)\*\*/g, '<b><span>**</span>$1<span>**</span></b>')
+      .replace(/__(.+?)__/g, '<i><span>__</span>$1<span>__</span></i>');
   }).join('');
-}
-
-export function simpleMarkdown(text) {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<b><span>**</span>$1<span>**</span></b>')
-    .replace(/__(.+?)__/g, '<i><span>__</span>$1<span>__</span></i>');
 }
 
 export function getClipbordText(e) {

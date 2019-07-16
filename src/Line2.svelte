@@ -2,7 +2,6 @@
   import Emoji from './pick/Emoji.svelte';
 
   import {
-    simpleMarkdown,
     basicFormat,
     getCursor,
     setCursor,
@@ -66,6 +65,8 @@
     } catch (e) {
       input.children[e.offset - 1].style.backgroundColor = 'red';
       input.children[e.offset - 1].style.color = 'white';
+
+      dispatch('change', calculateFromTokens(ast.slice(0, e.offset)));
     }
   }
 
@@ -73,7 +74,7 @@
   function render() {
     try {
       // FIXME: instead of this, try render using vDOM?
-      let source = simpleMarkdown(basicFormat(markup));
+      let source = basicFormat(markup);
 
       // somehow, we need to hard-code ending/starting white-space
       source = source.replace(/^\s|\s$/, String.fromCharCode(160));
@@ -83,7 +84,7 @@
       maths();
     } catch (e) {
       input.innerHTML =
-        simpleMarkdown(basicFormat(markup.substr(0, e.offset)))
+        basicFormat(markup.substr(0, e.offset))
         + `<span style="background-color:red;color:white">${
           markup.substr(e.offset).replace(/\s/g, String.fromCharCode(160))
         }</span> `;
