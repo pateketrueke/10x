@@ -31,9 +31,11 @@ groups.forEach(group => {
 keys.sort((a, b) => b.length - a.length);
 
 const RE_DIGIT = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
-const RE_UNIT = new RegExp(`^${RE_DIGIT}\\s*(?:${keys.join('|')})?$`, 'i');
+const RE_DATE = 'tomorrow|yesterday|today|now|\\d+(?::\\d+)*(?:\\s*[ap]m)?';
+const RE_UNIT = new RegExp(`^(?:${RE_DIGIT}\\s*(?:${keys.join('|')})?|${RE_DATE})$`, 'i');
 
-// FIXME: missing HH:MM:SS numbers, date-keywords (e.g. today, march, etc.)
+// FIXME: for date-keywords, e.g. ["Jun", " ", "10", ", ", "1987"]
+// we need to reduce to a well-known format... e.g. "June 10, 1987"
 const isOp = (a, b) => /[-+=*/_]/.test(a) && a !== b;
 const isSep = x => /[([\])]/.test(x) || x === ' ';
 const isNum = x => /\d/.test(x);
@@ -52,12 +54,20 @@ function toChunks(input) {
     const buffer = prev[offset] || (prev[offset] = []);
     const last = buffer[buffer.length - 1];
 
+    // keep numbers separated with commas
+    if (last === ',' && !isNum(cur)) {
+      prev[++offset] = [buffer.pop(), cur];
+      mayNumber = false;
+      return prev;
+    }
+
     // otherwise, we just add anything to the current buffer line
     if (
       inFormat || typeof last === 'undefined'
 
       // add possible numbers
-      || (last === '/' && isNum(cur))
+      || (isNum(cur) && last === '/')
+      || (isNum(last) && cur === ':')
       || (isNum(last) && (cur === '%' || cur === ' '))
       || (isNum(oldChar) && last === ' ' && isWord(cur))
     ) {
@@ -72,13 +82,12 @@ function toChunks(input) {
       || (!isNum(last) && isOp(cur) && oldChar !== cur)
       || (isNum(last) && (isAny(cur) && cur !== '/' && cur !== ','))
     ) {
-      offset += 1;
       mayNumber = false;
-      prev[offset] = [cur];
+      prev[++offset] = [cur];
     } else buffer.push(cur);
 
     // flag possible negative numbers
-    mayNumber = last === '-' && isNum(cur);
+    mayNumber = (last === '-' && isNum(cur)) || (isNum(last) && cur === ',');
 
     // allow skip from open/close chars
     if (last === cur && isFmt(cur)) {
@@ -115,7 +124,7 @@ export function lineFormat(text) {
     // separators
     .replace(/^[([\])]$/, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`)
 
-    // numbers and units
+    // regular units/dates
     .replace(RE_UNIT, '<var data-number>$&</var>');
 }
 
