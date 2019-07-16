@@ -40,12 +40,12 @@ const isOp = (a, b) => /[-+=*/_]/.test(a) && a !== b;
 const isSep = x => /[([\])]/.test(x) || x === ' ';
 const isNum = x => /\d/.test(x);
 const isFmt = x => /[_*~]/.test(x);
-const isAny = x => /[^a-zA-Z\d\s]/.test(x);
 const isWord = x => /[a-zA-Z]/.test(x);
 
-function toChunks(input) {
+export function toChunks(input) {
   let mayNumber = false;
   let inFormat = false;
+  let prevToken = '';
   let oldChar = '';
   let offset = 0;
 
@@ -53,23 +53,20 @@ function toChunks(input) {
   const tokens = chars.reduce((prev, cur, i) => {
     const buffer = prev[offset] || (prev[offset] = []);
     const last = buffer[buffer.length - 1];
-
-    // keep numbers separated with commas
-    if (last === ',' && !isNum(cur)) {
-      prev[++offset] = [buffer.pop(), cur];
-      mayNumber = false;
-      return prev;
-    }
+    const next = chars[i + 1];
 
     // otherwise, we just add anything to the current buffer line
     if (
       inFormat || typeof last === 'undefined'
 
+      // add consecutive format-chars
+      || (isFmt(last) && isFmt(cur) && last === cur)
+
       // add possible numbers
       || (isNum(cur) && last === '/')
       || (isNum(last) && cur === ':')
-      || (isNum(last) && (cur === '%' || cur === ' '))
       || (isNum(oldChar) && last === ' ' && isWord(cur))
+      || (isNum(last) && (cur === '%' || cur === ' ') && isWord(next))
     ) {
       buffer.push(cur);
     } else if (
@@ -77,23 +74,26 @@ function toChunks(input) {
       isSep(cur) || isSep(last)
 
       // skip possible numbers
-      || (isOp(last) && !isNum(cur) && mayNumber)
+      || (isNum(last) && isOp(cur) && cur !== '/')
+      || (isNum(last) && cur === '/' && !isNum(next))
+      || (isNum(last) && cur === ',' && !isNum(next))
       || (isOp(last, '-') && isNum(cur) && !mayNumber)
       || (!isNum(last) && isOp(cur) && oldChar !== cur)
-      || (isNum(last) && (isAny(cur) && cur !== '/' && cur !== ','))
     ) {
+      // we store the previously added token, if is not empty
+      prevToken = buffer.join('').trim() || prevToken;
       mayNumber = false;
       prev[++offset] = [cur];
     } else buffer.push(cur);
 
     // flag possible negative numbers
-    mayNumber = (last === '-' && isNum(cur)) || (isNum(last) && cur === ',');
+    mayNumber = last === '-' && isNum(cur);
 
     // allow skip from open/close chars
     if (last === cur && isFmt(cur)) {
       inFormat = !inFormat;
       oldChar = '';
-    } else {
+    } else if (last !== ' ') {
       oldChar = last;
     }
 
@@ -103,7 +103,7 @@ function toChunks(input) {
   return tokens.map(l => l.join(''));
 }
 
-export function lineFormat(text) {
+export function simpleMarkdown(text) {
   // hardcode white-space
   return text.replace(/\s/g, String.fromCharCode(160))
     // escape for HTML
@@ -113,10 +113,12 @@ export function lineFormat(text) {
 
     // bold and italics
     .replace(/\*\*(.+?)\*\*/, '<b><span>**</span>$1<span>**</span></b>')
-    .replace(/__(.+?)__/, '<i><span>__</span>$1<span>__</span></i>')
+    .replace(/__(.+?)__/, '<i><span>__</span>$1<span>__</span></i>');
+}
 
-    // basic operators
-    .replace(/^[-+*=/]$/, op => `<var data-${types[op]}>${op}</var>`)
+export function lineFormat(text) {
+  // basic operators
+  return text.replace(/^[-+*=/]$/, op => `<var data-${types[op]}>${op}</var>`)
 
     // fractions
     .replace(/^(\d+)\/(\d+)$/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
@@ -129,7 +131,19 @@ export function lineFormat(text) {
 }
 
 export function basicFormat(text) {
-  return toChunks(text).map(lineFormat).join('');
+  let prevToken = '';
+
+  return toChunks(text).reduce((prev, cur) => {
+    // highlight all expressions near numbers only
+    if (isSep(cur) || /\d/.test(cur) || /\d/.test(prevToken)) {
+      prev.push(lineFormat(cur));
+    } else {
+      prev.push(simpleMarkdown(cur));
+    }
+
+    if (!isSep(cur)) prevToken = cur;
+    return prev;
+  }, []).join('');
 }
 
 export function getClipbordText(e) {

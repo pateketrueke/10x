@@ -2,7 +2,8 @@
   import In from './In.svelte';
 </script>
 
-<In markup="$15,000 MXN / 14 days of work" />
+<In markup="$15,000 MXN / 14 days of **work**" />
+<In markup="(1+2) - 3, 4/2, 7/-.12, * / - + =" />
 <In markup="10 inches in cm" />
 <In markup="450 km in miles" />
 <In markup="160 pounds in kg " />
