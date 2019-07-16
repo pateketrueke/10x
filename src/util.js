@@ -8,10 +8,7 @@ class TError extends Error {
   }
 }
 
-const convert = new Convert();
-const groups = convert.measures();
-
-const types = {
+const OP_TYPES = {
   '=': 'equal',
   '+': 'plus',
   '-': 'min',
@@ -19,6 +16,8 @@ const types = {
   '*': 'mul',
 };
 
+const convert = new Convert();
+const groups = convert.measures();
 const keywords = Object.keys(currencySymbols.settings.symbols);
 
 groups.forEach(group => {
@@ -144,7 +143,7 @@ export function simpleNumbers(text) {
 export function lineFormat(text) {
   return text
     // basic operators
-    .replace(/^[-+*=/]$/, op => `<var data-${types[op]}>${op}</var>`)
+    .replace(/^[-+*=/]$/, op => `<var data-${OP_TYPES[op]}>${op}</var>`)
 
     // fractions
     .replace(/^(\d+)\/(\d+)$/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
@@ -310,12 +309,9 @@ export function buildTree(tokens) {
         root = stack.pop();
       }
     } else if (root) {
-      // FIXME: extract unit-types and such?
       root.push(t[0] === 'number' ? parseNumber(t[1]) : t[1]);
     } else {
-      throw new TError(`Invalid terminator for: ${
-        tokens.slice(0, i).map(x => x[1])
-      }`, i);
+      throw new TError(`Invalid terminator for: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
     }
   }
 
