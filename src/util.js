@@ -30,9 +30,15 @@ groups.forEach(group => {
 
 keys.sort((a, b) => b.length - a.length);
 
-const RE_UNIT = new RegExp(`-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?\\s*(?:${keys.join('|')})?(?!<\\/)`, 'ig');
+const RE_UNIT = new RegExp(`^-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)[a-z%]?\\s*(?:${keys.join('|')})?(?!<\\/)$`, 'ig');
 
 // FIXME: try a parser/tokenizer instead...
+const isOp = (a, b) => /[-+=*/]/.test(a) && a !== b;
+const isSep = x => /[([\])]/.test(x) || x === ' ';
+const isNum = x => /\d/.test(x);
+const isFmt = x => /[_*~]/.test(x);
+const isAny = x => /[^a-zA-Z\d\s]/.test(x);
+const isWord = x => /[a-zA-Z]/.test(x);
 
 function toChunks(input) {
   let mayNumber = false;
@@ -41,24 +47,9 @@ function toChunks(input) {
   let open = 0;
 
   const chars = input.replace(/\s/g, ' ').split('');
-
-  const isOp = (a, b) => /[-+=*/]/.test(a) && a !== b;
-  const isSep = x => /[([\])]/.test(x) || x === ' ';
-  const isNum = x => /\d/.test(x);
-  const isFmt = x => /[_*~]/.test(x);
-  const isAny = x => /[^a-zA-Z\d\s]/.test(x);
-  const isWord = x => /[a-zA-Z]/.test(x);
-
   const tokens = chars.reduce((prev, cur, i) => {
     const buffer = prev[offset] || (prev[offset] = []);
     const last = buffer[buffer.length - 1];
-
-    // allow skip from open/close chars
-    if (open && isFmt(cur) && last === cur) open -= 1;
-    else if (!open && isFmt(cur) && last === cur) {
-      if (buffer[buffer.length - 2]) throw new TError(`Invalid terminator for: ${buffer.join('') + cur}`, i);
-      open += 1;
-    }
 
     // otherwise, we just add anything to the current buffer line
     if (open || typeof last === 'undefined') buffer.push(cur);
@@ -71,14 +62,15 @@ function toChunks(input) {
       || (isNum(last) && isOp(cur, '/'))
       || (isOp(last) && !isNum(cur) && mayNumber)
       || (isOp(last, '-') && isNum(cur) && !mayNumber)
-
-      // skip markdown-like open/close chars
-      || (last === oldChar && cur !== oldChar || last !== oldChar && cur === oldChar)
     ) {
       offset += 1;
       mayNumber = false;
       prev[offset] = [cur];
     } else buffer.push(cur);
+
+    // allow skip from open/close chars
+    if (open && isFmt(cur) && last === cur) open -= 1;
+    else if (isFmt(cur) && last === cur) open += 1;
 
     // flag possible negative numbers
     mayNumber = last === '-' && isNum(cur);
@@ -110,8 +102,8 @@ export function basicFormat(text) {
 
 export function simpleMarkdown(text) {
   return text
-    .replace(/\*\*([^<>*]+?)\*\*/g, '<b><span>**</span>$1<span>**</span></b>')
-    .replace(/__([^<>_]+?)__/g, '<i><span>__</span>$1<span>__</span></i>');
+    .replace(/\*\*(.+?)\*\*/g, '<b><span>**</span>$1<span>**</span></b>')
+    .replace(/__(.+?)__/g, '<i><span>__</span>$1<span>__</span></i>');
 }
 
 export function getClipbordText(e) {
@@ -235,18 +227,25 @@ export function buildTree(tokens) {
   const tree = root;
   const stack = [];
 
-  for (let t; t = tokens.shift();) {
+  for (let i = 0; i < tokens.length; i += 1) {
+    const t = tokens[i];
+
     if (t[0] === 'open' || t[0] === 'close') {
       if (t[0] === 'open') {
         const leaf = [];
+
         root.push(leaf);
         stack.push(root);
         root = leaf;
       } else if (t[0] === 'close') {
         root = stack.pop();
       }
-    } else {
+    } else if (root) {
       root.push(t[0] === 'number' ? parseNumber(t[1]) : t[1]);
+    } else {
+      throw new TError(`Invalid terminator for: ${
+        tokens.slice(0, i).map(x => x[1])
+      }`, i);
     }
   }
 

@@ -1,7 +1,7 @@
 <script>
   import Line2 from './Line2.svelte';
 
-  let markup = 'a+bdef  1+2-3 -5*6.  = **FOO** BAR __BAZ  BUZZ___? 3/2 OR 72 / -.12';
+  let markup = '(1+2)) - 3 = **1+2** __A___ AND **IT*x+** SUCKS?';
   let results = [];
 
   function onUpdate(e) {
