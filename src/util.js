@@ -30,18 +30,24 @@ groups.forEach(group => {
 
 keywords.sort((a, b) => b.length - a.length);
 
-const RE_DIGIT = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
+const RE_NUM = /\d/;
+const RE_FMT = /^[_*~]$/;
+const RE_OPS = /^[-+=*/_]$/;
+const RE_WORD = /^[a-zA-Z]$/;
+const RE_PAIRS = /^[([\])]$/;
+const RE_VALUE = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
 const RE_HOURS = 'tomorrow|yesterday|today|now|\\d+(?::\\d+)*(?:\\s*[ap]m)?';
-const RE_DATES = '(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\\s*\\d{1,2}(,\\s+\\d{4})?';
-const RE_UNIT = new RegExp(`^(?:${RE_DIGIT}\\s*(?:${keywords.join('|')})?|${RE_HOURS}|${RE_DATES})$`, 'i');
+const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
+const RE_DATES = `${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,\\s+\\d{4})?`;
+const RE_UNIT = new RegExp(`^(?:${RE_VALUE}\\s*(?:${keywords.join('|')})?|${RE_HOURS}|${RE_DATES})$`, 'i');
 
 // FIXME: cleanup...
-const isOp = (a, b) => /[-+=*/_]/.test(a) && a !== b;
-const isSep = x => /[([\])]/.test(x) || x === ' ';
-const isNum = x => /\d/.test(x);
-const isFmt = x => /[_*~]/.test(x);
-const isWord = x => /[a-zA-Z]/.test(x);
-const hasDate = x => /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i.test(x);
+const isOp = (a, b) => RE_OPS.test(a) && a !== b;
+const isSep = x => RE_PAIRS.test(x) || x === ' ';
+const isFmt = x => RE_FMT.test(x);
+const isWord = x => RE_WORD.test(x);
+const hasNum = x => RE_NUM.test(x);
+const hasDate = x => RE_MONTHS.test(x);
 
 export function toChunks(input) {
   let mayNumber = false;
@@ -57,12 +63,12 @@ export function toChunks(input) {
 
     // normalize well-known dates
     if (hasDate(buffer.join(''))) {
-      if (cur === ',' || (cur === ' ' && isNum(next)) || isNum(cur)) {
+      if (cur === ',' || (cur === ' ' && hasNum(next)) || hasNum(cur)) {
         buffer.push(cur);
         return prev;
       }
 
-      if (!isNum(cur)) {
+      if (!hasNum(cur)) {
         prev[++offset] = [cur];
         return prev;
       }
@@ -76,10 +82,10 @@ export function toChunks(input) {
       || (isFmt(last) && isFmt(cur) && last === cur)
 
       // add possible numbers
-      || (isNum(cur) && last === '/')
-      || (isNum(last) && cur === ':')
-      || (isNum(oldChar) && last === ' ' && isWord(cur))
-      || (isNum(last) && (cur === '%' || cur === ' ') && isWord(next))
+      || (hasNum(cur) && last === '/')
+      || (hasNum(last) && cur === ':')
+      || (hasNum(oldChar) && last === ' ' && isWord(cur))
+      || (hasNum(last) && (cur === '%' || cur === ' ') && isWord(next))
     ) {
       buffer.push(cur);
     } else if (
@@ -87,17 +93,17 @@ export function toChunks(input) {
       isSep(cur) || isSep(last)
 
       // skip possible numbers
-      || (isNum(last) && isOp(cur) && cur !== '/')
-      || (isNum(last) && cur === '/' && !isNum(next))
-      || (isNum(last) && cur === ',' && !isNum(next))
-      || (isOp(last, '-') && isNum(cur) && !mayNumber)
-      || (!isNum(last) && isOp(cur) && oldChar !== cur)
+      || (hasNum(last) && isOp(cur) && cur !== '/')
+      || (hasNum(last) && cur === '/' && !hasNum(next))
+      || (hasNum(last) && cur === ',' && !hasNum(next))
+      || (isOp(last, '-') && hasNum(cur) && !mayNumber)
+      || (!hasNum(last) && isOp(cur) && oldChar !== cur)
     ) {
       prev[++offset] = [cur];
     } else buffer.push(cur);
 
     // flag possible negative numbers
-    mayNumber = last === '-' && isNum(cur);
+    mayNumber = last === '-' && hasNum(cur);
 
     // handle backticks for inline-code
     if (cur === '`') inFormat = !inFormat;
@@ -161,9 +167,14 @@ export function basicFormat(text) {
 
     do {
       nextToken = all[++i];
-    } while (nextToken === ' ');
+    } while (nextToken && nextToken.charAt() === ' ');
 
-    if (isSep(cur) || /\d/.test(cur) || (isNum(prevToken) && /\d/.test(nextToken))) {
+    if (
+      isSep(cur)
+      || hasNum(cur)
+      || (hasNum(prevToken) && hasNum(nextToken))
+      || (RE_UNIT.test(prevToken) && hasNum(nextToken))
+    ) {
       prev.push(simpleNumbers(lineFormat(cur)))
     } else {
       prev.push(simpleNumbers(simpleMarkdown(cur)));

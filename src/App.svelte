@@ -19,3 +19,6 @@
 <In markup="Jun 10, 1987" />
 <In markup="Jun 10" />
 <In markup="Jun 1" />
+
+<In markup="1 2 3 4 5 = 15" />
+<In markup="1 2 3 / 4 5 = 0.667" />
