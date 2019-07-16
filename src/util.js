@@ -313,7 +313,9 @@ export function calculateFromTokens(tokens) {
     }
   }
 
-  const results = chunks.map(x => calculateFromString(x.join(' ')));
+  const results = chunks
+    .map(x => calculateFromString(x.join(' ')))
+    .filter(x => !isNaN(x));
 
   return {
     chunks,

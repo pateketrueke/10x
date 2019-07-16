@@ -74,23 +74,16 @@
   function render() {
     try {
       // FIXME: instead of this, try render using vDOM?
-      let source = basicFormat(markup);
-
-      // somehow, we need to hard-code ending/starting white-space
-      source = source.replace(/^\s|\s$/, String.fromCharCode(160));
-
-      input.innerHTML = source + ' ';
-
-      maths();
+      input.innerHTML = basicFormat(markup) + ' ';
     } catch (e) {
       input.innerHTML =
         basicFormat(markup.substr(0, e.offset))
         + `<span style="background-color:red;color:white">${
           markup.substr(e.offset).replace(/\s/g, String.fromCharCode(160))
         }</span> `;
-
-      maths();
     }
+
+    maths();
   }
 
   // apply changes to current markup
