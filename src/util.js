@@ -43,7 +43,7 @@ const RE_FMT = /^[_*~]$/;
 const RE_OPS = /^[-+=*/_]$/;
 const RE_WORD = /^[a-zA-Z]$/;
 const RE_PAIRS = /^[([\])]$/;
-const RE_EXPRS = /^(?:of|a[ts]|in)$/;
+const RE_EXPRS = /^(?:of|a[ts]|in)$/i;
 const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)?$/i;
@@ -59,6 +59,7 @@ const isWord = x => RE_WORD.test(x);
 const hasNum = x => RE_NUM.test(x);
 const hasDate = x => RE_MONTHS.test(x);
 const hasValue = x => x instanceof Date || hasNum(x);
+const hasKeyword = x => x && (!keywords.includes(x) ? mappings[x.toLowerCase()] : x);
 
 export function toChunks(input) {
   let mayNumber = false;
@@ -173,6 +174,12 @@ export function simpleNumbers(text) {
 }
 
 export function lineFormat(text) {
+  const fixedUnit = hasKeyword(text);
+
+  if (fixedUnit) {
+    return `<var data-op="unit" data-unit="${fixedUnit}">${text}</var>`;
+  }
+
   return text
     // basic operators
     .replace(/^[-+*=/]$/, op => `<var data-op="${OP_TYPES[op]}">${op}</var>`)
@@ -203,8 +210,9 @@ export function basicFormat(text) {
       nextToken = all[++i];
     } while (nextToken && nextToken.charAt() === ' ');
 
-    if (RE_EXPRS.test(cur)) {
+    if (RE_EXPRS.test(cur) && (hasKeyword(nextToken) || hasNum(nextToken))) {
       prev.push(`<var data-op="expr">${cur}</var>`);
+      prevToken = cur;
       return prev;
     }
 
@@ -213,6 +221,9 @@ export function basicFormat(text) {
 
       // handle equal symbols
       || (hasNum(prevToken) && cur === '=')
+
+      // handle units after expressions
+      || (RE_EXPRS.test(prevToken) && hasKeyword(cur))
 
       // handle operators between expressions
       || (hasNum(prevToken) && isOp(cur) && isSep(nextToken))
