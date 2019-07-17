@@ -1,33 +1,53 @@
 <script>
   import In from './In.svelte';
+
+  let tests = [
+    [0, '$15,000 MXN / 14 days of **work**'],
+    [0, '10 inches in cm'],
+    [0, '450 km in miles'],
+    [0, '160 pounds as kg'],
+    [0, '3 weeks as days'],
+    [0, 'Yesterday + 3 weeks 2 days'],
+    [0, '3:35 am + 9 hours 20 minutes'],
+    [0, 'Now at 6:00 pm - 3 days + 15 min'],
+    [0, 'Jun 10, 1987 - 1 week'],
+    [1, '1+2-3+4/2+7/-.12 ='],
+    [0, '(1+2) - (3 + 4/2) + (7/-.12) ='],
+    [0, '(1 + 2) - (3 + (4 / 2)) + (7 / -.12) ='],
+    [0, '30 + 20%'],
+    [0, '100k'],
+    [0, '20M'],
+    [0, '3G'],
+    [0, '1 2 3 / 4 5 ='],
+    [0, '1 2 3 4 5 ='],
+    [0, '1 2 3 - 4 5 ='],
+    [0, '# today + tomorrow'],
+    [0, 'Jun 10 of 1987'],
+    [0, 'Jun 10 1987'],
+    [0, 'Jun 10'],
+    [0, 'Jun 1'],
+  ];
+
+  function toggle(text) {
+    tests = tests.map(([x, y]) => [text === y ? !x : x, y]);
+  }
 </script>
 
-<In markup="$15,000 MXN / 14 days of **work**" />
-<In markup="10 inches in cm" />
-<In markup="450 km in miles" />
-<In markup="160 pounds in kg " />
+<style>
+  ul { padding: 0; }
+  li input { margin-right: 10px; }
+  li { display: flex; min-height: 26px; align-items: center; }
+</style>
 
-<In markup="Yesterday + 3 weeks 2 days" />
-<In markup="3:35 am + 9 hours 20 minutes" />
-<In markup="Now at 6:00 pm - 3 days + 15 min" />
-<In markup="Jun 10, 1987 - 1 week" />
-
-<!-- <In markup="1+2-3+4/2+7/-.12 =" />
-<In markup="(1+2) - (3 + 4/2) + (7/-.12) =" />
-<In markup="(1 + 2) - (3 + (4 / 2)) + (7 / -.12) =" />
-
-<In markup="30 + 20%" />
-<In markup="100k" />
-<In markup="20M" />
-<In markup="3G" />
-
-<In markup="1 2 3 / 4 5 =" />
-<In markup="1 2 3 4 5 =" />
-<In markup="1 2 3 - 4 5 =" />
-
-<In markup="# today + tomorrow" />
-<In markup="Jun 10 of 1987" />
-<In markup="Jun 10 1987" />
-<In markup="Jun 10" />
-<In markup="Jun 1" />
- -->
+<ul>
+  {#each tests as [on, text]}
+    <li>
+      <input type="checkbox" checked={on} on:click={e => toggle(text)} />
+      {#if on}
+        <In markup={text} />
+      {:else}
+        {text}
+      {/if}
+    </li>
+  {/each}
+</ul>

@@ -58,7 +58,7 @@
   function maths() {
     const ast = [].slice.call(input.children)
       .filter(x => 'op' in x.dataset)
-      .map(x => [x.dataset.op, x.textContent, x.dataset.unit]);
+      .map(x => [x.dataset.op, x.textContent, x.dataset.unit || '']);
 
     try {
       input.classList.remove('errored');
