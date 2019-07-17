@@ -25,6 +25,7 @@ const mappings = {};
 
 groups.forEach(group => {
   convert.list(group).forEach(unit => {
+    // FIXME: ignore hard-to-recognize ones?
     keywords.push(unit.abbr);
     keywords.push(unit.plural);
     keywords.push(unit.singular);
@@ -42,9 +43,10 @@ const RE_FMT = /^[_*~]$/;
 const RE_OPS = /^[-+=*/_]$/;
 const RE_WORD = /^[a-zA-Z]$/;
 const RE_PAIRS = /^[([\])]$/;
+const RE_EXPRS = /^(?:of|at|(?:as|in)\s+([a-zA-Z]+))$/;
 const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
 const RE_HOURS = /^\d+(?::\d+){1,2}(?:\s*[ap]m)?$/i;
-const RE_DAYS = /^now|today|tonight|tomorrow|yesterday|weekend$/i;
+const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 const RE_DATES = `${RE_HOURS.source.substr(1, RE_HOURS.source.length - 2)}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,\\s+\\d{4})?`;
 const RE_UNIT = new RegExp(`^(?:${RE_DIGIT.source}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
@@ -201,6 +203,11 @@ export function basicFormat(text) {
       nextToken = all[++i];
     } while (nextToken && nextToken.charAt() === ' ');
 
+    if (RE_EXPRS.test(cur)) {
+      prev.push(`<var data-op="expr">${cur}</var>`);
+      return prev;
+    }
+
     if (
       isSep(cur) || hasNum(cur)
 
@@ -309,6 +316,8 @@ export function parseNumber(text, unit) {
     if (text.toLowerCase() === 'tomorrow') return (now.setDate(now.getDate() + 1), now);
     if (text.toLowerCase() === 'yesterday') return (now.setDate(now.getDate() - 1), now);
     if (text.includes(':')) return new Date(`${today} ${text}`);
+
+    return new Date(!text.includes(',') ? `${text}, ${year}` : text);
   }
 
   // FIXME: how calculate all of these?
@@ -318,20 +327,19 @@ export function parseNumber(text, unit) {
 
 export function evaluateExpression(op, left, right) {
   if (left instanceof Date) {
-    const s = left.getSeconds();
+    const oldYear = left.getFullYear();
+    const oldMonth = left.getMonth();
+    const oldDate = left.getDate();
+    const oldHours = left.getHours();
+    const oldMinutes = left.getMinutes();
+    const oldSeconds = left.getSeconds();
 
     if (right instanceof Date) {
-      const oldYear = left.getFullYear();
       const newYear = right.getFullYear();
-      const oldMonth = left.getMonth();
       const newMonth = right.getMonth();
-      const oldDate = left.getDate();
       const newDate = right.getDate();
-      const oldHours = left.getHours();
       const newHours = right.getHours();
-      const oldMinutes = left.getMinutes();
       const newMinutes = right.getMinutes();
-      const oldSeconds = left.getSeconds();
       const newSeconds = right.getSeconds();
 
       // FIXME: how op */ dates?
@@ -363,9 +371,20 @@ export function evaluateExpression(op, left, right) {
         if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes - newMinutes);
         if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds - newSeconds);
       }
+
+      if (op === 'at') {
+        if (oldYear !== newYear) right.setYear(oldYear);
+        if (oldMonth !== newMonth) right.setMonth(oldMonth);
+        if (oldHours !== newHours) right.setHours(oldHours);
+        if (oldMinutes !== newMinutes) right.setMinutes(oldMinutes);
+        if (oldSeconds !== newSeconds) right.setSeconds(oldSeconds);
+
+        return right;
+      }
     } else if (!isNaN(right)) {
-      if (op === '+') left.setSeconds(s + right);
-      if (op === '-') left.setSeconds(s - right);
+      if (op === '+') left.setSeconds(oldSeconds + right);
+      if (op === '-') left.setSeconds(oldSeconds - right);
+      if (op === 'of') left.setYear(right);
     }
 
     return left;
@@ -418,12 +437,9 @@ export function operateExpression(ops, expr) {
 export function calculateFromString(expr) {
   expr = operateExpression(['*', '/'], expr);
   expr = operateExpression(['+', '-'], expr);
+  expr = operateExpression(['of', 'at'], expr);
 
-  if (expr[0] instanceof Date) {
-    return expr[0];
-  }
-
-  return parseFloat(expr[0]);
+  return expr[0];
 }
 
 export function buildTree(tokens) {
@@ -481,8 +497,8 @@ export function calculateFromTokens(tokens) {
   // operate all possible expressions...
   const normalized = simplified.reduce((prev, cur, i) => {
     if (hasValue(prev[prev.length - 1]) && hasValue(cur)) prev.push(lastOp, cur);
-    else if (hasValue(cur) || isOp(cur)) prev.push(cur);
-    if (isOp(cur, '/*')) lastOp = cur;
+    else if (hasValue(cur) || isOp(cur) || RE_EXPRS.test(cur)) prev.push(cur);
+    if (isOp(cur, '/*') && !RE_EXPRS.test(cur)) lastOp = cur;
     return prev;
   }, []);
 

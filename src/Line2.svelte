@@ -142,7 +142,7 @@
       }
 
       // highlight number-values only
-      if (node && 'unit' in node.dataset) node.classList.add('selected');
+      if (node && node.dataset.op === 'number') node.classList.add('selected');
     });
 
     sel.t = setTimeout(() => { sel.t = null; }, 50);

@@ -2,8 +2,8 @@
   import In from './In.svelte';
 </script>
 
-<!--
-<In markup="1+2-3+4/2+7/-.12 =" />
+
+<!-- <In markup="1+2-3+4/2+7/-.12 =" />
 <In markup="(1+2) - (3 + 4/2) + (7/-.12) =" />
 <In markup="(1 + 2) - (3 + (4 / 2)) + (7 / -.12) =" />
 <In markup="$15,000 MXN / 14 days of **work**" />
@@ -17,16 +17,17 @@
 <In markup="20M" />
 <In markup="3G" />
 
-<In markup="Jun 10 of 1987" />
-<In markup="Jun 10, 1987" />
-<In markup="Jun 10" />
-<In markup="Jun 1" />
-
 <In markup="1 2 3 / 4 5 =" />
 <In markup="1 2 3 4 5 =" />
-<In markup="1 2 3 - 4 5 =" /> -->
+<In markup="1 2 3 - 4 5 =" />
 
 <In markup="# today + tomorrow" />
 <In markup="Yesterday + 3 weeks 2 days" />
-<In markup="3:35 am + 9 hours 20 minutes" />
+<In markup="3:35 am + 9 hours 20 minutes" /> -->
+
 <In markup="Now at 6:00 pm - 3 days + 15 min" />
+<In markup="Jun 10, 1987 - 1 week" />
+<In markup="Jun 10 of 1987" />
+<In markup="Jun 10 1987" />
+<In markup="Jun 10" />
+<In markup="Jun 1" />
