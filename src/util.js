@@ -45,6 +45,7 @@ const RE_WORD = /^[a-zA-Z]$/;
 const RE_PAIRS = /^[([\])]$/;
 const RE_EXPRS = /^(?:of|a[ts]|in)$/i;
 const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
+const RE_TOKEN = /^(?:number|plus|min|mul|div|expr|unit)$/;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)?$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
@@ -340,97 +341,37 @@ export function parseNumber(text, unit, old) {
 }
 
 export function evaluateExpression(op, left, right) {
-  if (left instanceof Date) {
-    const oldYear = left.getFullYear();
-    const oldMonth = left.getMonth();
-    const oldDate = left.getDate();
-    const oldHours = left.getHours();
-    const oldMinutes = left.getMinutes();
-    const oldSeconds = left.getSeconds();
-
-    if (right instanceof Date) {
-      const newYear = right.getFullYear();
-      const newMonth = right.getMonth();
-      const newDate = right.getDate();
-      const newHours = right.getHours();
-      const newMinutes = right.getMinutes();
-      const newSeconds = right.getSeconds();
-
-      // FIXME: how op */ dates?
-
-      if (op === '+' || op === 'at') {
-        let isToday = true;
-
-        if (oldYear !== newYear) isToday = !left.setYear(oldYear + newYear);
-        if (oldMonth !== newMonth) isToday = !left.setMonth(oldMonth + newMonth);
-        if (oldDate !== newDate) isToday = !left.setDate(oldDate + newDate);
-
-        // operate only when both dates are not from same day!
-        if (!isToday) {
-          if (oldHours !== newHours) left.setHours(oldHours + newHours);
-          if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes + newMinutes);
-          if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds + newSeconds);
-        } else {
-          if (oldHours !== newHours) left.setHours(newHours);
-          if (oldMinutes !== newMinutes) left.setMinutes(newMinutes);
-          if (oldSeconds !== newSeconds) left.setSeconds(newSeconds);
-        }
-      }
-
-      if (op === '-') {
-        if (oldYear !== newYear) left.setYear(oldYear - newYear);
-        if (oldMonth !== newMonth) left.setMonth(oldMonth - newMonth);
-        if (oldDate !== newDate) left.setDate(oldDate - newDate);
-        if (oldHours !== newHours) left.setHours(oldHours - newHours);
-        if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes - newMinutes);
-        if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds - newSeconds);
-      }
-    } else if (!isNaN(right)) {
-      if (op === '+') left.setSeconds(oldSeconds + right);
-      if (op === '-') left.setSeconds(oldSeconds - right);
-      if (op === 'of') left.setYear(right);
-    }
-
-    return left;
+  if (left[0] === 'number' && right[0] === 'number') {
+    if (op === '+') return left[1] + right[1];
+    if (op === '-') return left[1] - right[1];
+    if (op === '*') return left[1] * right[1];
+    if (op === '/') return left[1] / right[1];
   }
 
-  if (op === '+') return left + right;
-  if (op === '-') return left - right;
-  if (op === '*') return left * right;
-  if (op === '/') return left / right;
+  if (left[0] === 'number' && right[0] === 'unit') {
+    return new Convert(left[1]).from(left[2]).to(right[2]);
+  }
+
+  console.log(left, op, right);
+
+  return left;
 }
 
 export function operateExpression(ops, expr) {
   for (let i = 0, c = expr.length; i < c; i += 1) {
-    if (ops.indexOf(expr[i]) > -1) {
-      const old = expr;
+    if (ops.indexOf(expr[i][i]) > -1) {
       const cur = expr[i];
+      const prev = expr[i - 1];
+      const next = expr[i + 1];
 
-      const prev = typeof expr[i - 1] === 'string'
-        ? parseFloat(expr[i - 1])
-        : expr[i - 1];
-
-      // calculate from percentages
-      if (typeof expr[i + 1] === 'string' && expr[i + 1].charAt(expr[i + 1].length - 1) === '%') {
-        const result = prev * (parseFloat(expr[i + 1]) / 100);
-
-        expr.splice(i - 1, 3, evaluateExpression(cur, prev, result));
-
-        return operateExpression(ops, expr);
-      }
-
-      const next = typeof expr[i + 1] === 'string'
-        ? parseFloat(expr[i + 1])
-        : expr[i + 1];
-
-      const result = evaluateExpression(cur, prev, next);
+      const result = evaluateExpression(cur[1], prev, next);
 
       if (!isNaN(result)) {
         expr.splice(i - 1, 3, result);
 
         return operateExpression(ops, expr);
       } else {
-        throw new TError(`Invalid expression around: ${prev} ${cur} ${next}`, i + 1);
+        throw new TError(`Invalid expression around: ${prev[1]} ${cur[1]} ${next[1]}`, i + 1);
       }
     }
   }
@@ -440,7 +381,7 @@ export function operateExpression(ops, expr) {
 
 export function calculateFromString(expr) {
   expr = operateExpression(['*', '/'], expr);
-  expr = operateExpression(['at', 'of', '+', '-', 'in', 'as'], expr);
+  expr = operateExpression(['at', 'of', 'in', 'as', '+', '-'], expr);
 
   return expr[0];
 }
@@ -479,23 +420,27 @@ export function buildTree(tokens) {
 }
 
 export function reduceFromAST(tokens) {
-  return tokens.reduce((prev, cur) => {
+  return calculateFromString(tokens.reduce((prev, cur) => {
     if (Array.isArray(cur)) {
-      const ops = reduceFromAST(cur);
+      if (!RE_TOKEN.test(cur[0])) {
+        const ops = reduceFromAST(cur);
 
-      if (ops.length) {
-        prev.push(calculateFromString(ops));
+        if (ops.length) {
+          prev.push(calculateFromString(ops));
+        }
+      } else {
+        prev.push(cur);
       }
     } else if (!(typeof cur === 'number' && isNaN(cur))) {
       prev.push(cur);
     }
 
     return prev;
-  }, []);
+  }, []));
 }
 
 export function calculateFromTokens(tokens) {
-  const simplified = buildTree(tokens);
+  const simplified = reduceFromAST(buildTree(tokens));
   console.log(simplified);
 
   // const chunks = [];
