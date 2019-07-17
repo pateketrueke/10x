@@ -454,7 +454,11 @@ export function buildTree(tokens) {
         root = stack.pop();
       }
     } else if (root) {
-      root.push(t[0] === 'number' ? parseNumber(t[1], t[2], root[root.length - 2]) : t[1]);
+      const matches = t[1].match(/(%|[ap]m)$/i);
+      const type = matches ? matches[1] : t[2];
+      const val = t[1].replace(/[^\d-]/g, '');
+
+      root.push([t[0], /^[a-z-+*/]/i.test(t[1]) ? t[1] : parseFloat(val), type]);
     } else {
       throw new TError(`Invalid terminator around: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
     }
@@ -480,39 +484,41 @@ export function reduceFromAST(tokens) {
 }
 
 export function calculateFromTokens(tokens) {
-  const simplified = reduceFromAST(buildTree(tokens));
-  const chunks = [];
+  const simplified = buildTree(tokens);
+  console.log(simplified);
 
-  let offset = 0;
-  let lastOp = '+';
+  // const chunks = [];
 
-  // operate all possible expressions...
-  const normalized = simplified.reduce((prev, cur, i) => {
-    if (hasValue(prev[prev.length - 1]) && hasValue(cur)) prev.push(lastOp, cur);
-    else if (hasValue(cur) || isOp(cur) || RE_EXPRS.test(cur)) prev.push(cur);
-    if (isOp(cur, '/*') && !RE_EXPRS.test(cur)) lastOp = cur;
-    return prev;
-  }, []);
+  // let offset = 0;
+  // let lastOp = '+';
 
-  for (let i = 0; i < normalized.length; i += 1) {
-    const cur = normalized[i];
-    const next = normalized[i + 1];
+  // // operate all possible expressions...
+  // const normalized = simplified.reduce((prev, cur, i) => {
+  //   if (hasValue(prev[prev.length - 1]) && hasValue(cur)) prev.push(lastOp, cur);
+  //   else if (hasValue(cur) || isOp(cur)) prev.push(cur);
+  //   if (isOp(cur, '/*')) lastOp = cur;
+  //   return prev;
+  // }, []);
 
-    chunks[offset] = chunks[offset] || [];
-    chunks[offset].push(cur);
+  // for (let i = 0; i < normalized.length; i += 1) {
+  //   const cur = normalized[i];
+  //   const next = normalized[i + 1];
 
-    if (typeof next === 'number' && typeof cur === 'number' || cur === '=') {
-      if (cur === '=') chunks[offset].pop();
-      offset += 1;
-    }
-  }
+  //   chunks[offset] = chunks[offset] || [];
+  //   chunks[offset].push(cur);
 
-  const results = chunks
-    .map(x => calculateFromString(x))
-    .filter(x => typeof x === 'string' || !isNaN(x));
+  //   if (typeof next === 'number' && typeof cur === 'number' || cur === '=') {
+  //     if (cur === '=') chunks[offset].pop();
+  //     offset += 1;
+  //   }
+  // }
+
+  // const results = chunks
+  //   .map(x => calculateFromString(x))
+  //   .filter(x => typeof x === 'string' || !isNaN(x));
 
   return {
-    chunks,
-    results,
+    chunks: [],
+    results: [],
   };
 }
