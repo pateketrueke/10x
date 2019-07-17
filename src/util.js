@@ -43,7 +43,7 @@ const RE_DATES = `${RE_HOURS.source}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,
 const RE_UNIT = new RegExp(`^(?:${RE_VALUE}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
 
 // FIXME: cleanup...
-const isOp = (a, b) => RE_OPS.test(a) && a !== b;
+const isOp = (a, b = '') => RE_OPS.test(a) && !b.includes(a);
 const isSep = x => RE_PAIRS.test(x) || x === ' ';
 const isFmt = x => RE_FMT.test(x);
 const isWord = x => RE_WORD.test(x);
@@ -93,12 +93,14 @@ export function toChunks(input) {
       // skip separators
       isSep(cur) || isSep(last)
 
+
       // skip possible numbers
       || (hasNum(last) && isOp(cur) && cur !== '/')
       || (hasNum(last) && cur === '/' && !hasNum(next))
       || (hasNum(last) && cur === ',' && !hasNum(next))
       || (isOp(last, '-') && hasNum(cur) && !mayNumber)
       || (!hasNum(last) && isOp(cur) && oldChar !== cur)
+      || (hasNum(oldChar) && last === '-' && hasNum(cur))
     ) {
       prev[++offset] = [cur];
     } else buffer.push(cur);
@@ -282,10 +284,13 @@ export function operateExpression(ops, expr) {
       const next = parseFloat(expr[i + 1]);
       const result = evaluateExpression(cur, prev, next);
 
-      // FIXME: analyze this...
-      expr.splice(i - 1, 3, result);
+      if (!isNaN(result)) {
+        expr.splice(i - 1, 3, result);
 
-      if (old.length !== expr.length) return operateExpression(ops, expr);
+        return operateExpression(ops, expr);
+      } else {
+        throw new TError(`Invalid expression at: ${expr.join('')}`, i + 1);
+      }
     }
   }
 
@@ -351,20 +356,12 @@ export function calculateFromTokens(tokens) {
 
   let offset = 0;
   let lastOp = '+';
-  let isDate = false;
 
   // operate all possible expressions...
   const normalized = simplified.reduce((prev, cur, i) => {
-    if (isDate) {
-      if (hasNum(prev[prev.length - 1]) && hasNum(cur)) prev.push(lastOp, cur);
-      else if (hasNum(cur) || isOp(cur)) prev.push(cur);
-    } else {
-      prev.push(cur);
-    }
-
-    // FIXME: how build-and-operate these values?
-    if (cur instanceof Date) isDate = true;
-    else if (isOp(cur)) lastOp = cur;
+    if (hasNum(prev[prev.length - 1]) && hasNum(cur)) prev.push(lastOp, cur);
+    else if (hasNum(cur) || isOp(cur)) prev.push(cur);
+    if (isOp(cur, '/*')) lastOp = cur;
     return prev;
   }, []);
 
@@ -376,6 +373,7 @@ export function calculateFromTokens(tokens) {
     chunks[offset].push(cur);
 
     if (typeof next === 'number' && typeof cur === 'number' || cur === '=') {
+      if (cur === '=') chunks[offset].pop();
       offset += 1;
     }
   }

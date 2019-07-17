@@ -63,10 +63,19 @@
     try {
       dispatch('change', calculateFromTokens(ast));
     } catch (e) {
-      input.children[e.offset - 1].style.backgroundColor = 'red';
-      input.children[e.offset - 1].style.color = 'white';
+      const ops = [].slice.call(input.children)
+        .filter(x => 'number' in x.dataset
+          || 'plus' in x.dataset
+          || 'min' in x.dataset
+          || 'mul' in x.dataset
+          || 'open' in x.dataset
+          || 'close' in x.dataset
+          || 'div' in x.dataset);
 
-      dispatch('change', calculateFromTokens(ast.slice(0, e.offset)));
+      if (e.offset > 0) {
+        ops[e.offset - 1].style.backgroundColor = 'red';
+        ops[e.offset - 1].style.color = 'white';
+      }
     }
   }
 
