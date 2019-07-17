@@ -8,6 +8,8 @@ class TError extends Error {
   }
 }
 
+const TIME_UNITS = ['week', 'min', 'd', 'h', 's'];
+
 const OP_TYPES = {
   '=': 'equal',
   '+': 'plus',
@@ -200,6 +202,9 @@ export function basicFormat(text) {
       // handle operators between expressions
       || (hasNum(prevToken) && isOp(cur) && isSep(nextToken))
 
+      // handle operators between dates
+      || (RE_DAYS.test(prevToken) && RE_DAYS.test(nextToken) && isOp(cur))
+
       // handle operators between numbers
       || ((RE_UNIT.test(prevToken) || hasNum(prevToken)) && hasNum(nextToken))
     ) {
@@ -285,19 +290,21 @@ export function parseNumber(text, unit) {
   }
 
   const num = text.replace(/[^%\d.-]/g, '');
-  const now = new Date();
 
   if (unit === 'datetime') {
+    const now = new Date();
     const year = now.getFullYear();
     const today = now.toISOString().substr(0, 10);
 
     if (text.toLowerCase() === 'now') return now;
-    if (text.toLowerCase() === 'today') return new Date(today);
+    if (text.toLowerCase() === 'today') return new Date(`${today} 00:00:00`);
+    if (text.toLowerCase() === 'tomorrow') return (now.setDate(now.getDate() + 1), now);
+    if (text.toLowerCase() === 'yesterday') return (now.setDate(now.getDate() - 1), now);
     if (text.includes(':')) return new Date(`${today} ${text}`);
   }
 
   // FIXME: how calculate all of these?
-  if (['week', 'min', 'd', 'h', 's'].includes(unit)) return new Convert(num).from(unit).to('s');
+  if (TIME_UNITS.includes(unit)) return new Convert(num).from(unit).to('s');
   return num;
 }
 
@@ -306,10 +313,48 @@ export function evaluateExpression(op, left, right) {
     const s = left.getSeconds();
 
     if (right instanceof Date) {
-      const S = right.getSeconds();
+      const oldYear = left.getFullYear();
+      const newYear = right.getFullYear();
+      const oldMonth = left.getMonth();
+      const newMonth = right.getMonth();
+      const oldDate = left.getDate();
+      const newDate = right.getDate();
+      const oldHours = left.getHours();
+      const newHours = right.getHours();
+      const oldMinutes = left.getMinutes();
+      const newMinutes = right.getMinutes();
+      const oldSeconds = left.getSeconds();
+      const newSeconds = right.getSeconds();
 
-      if (op === '+') left.setSeconds(s + S);
-      if (op === '-') left.setSeconds(s - S);
+      // FIXME: how op */ dates?
+
+      if (op === '+') {
+        let isToday = true;
+
+        if (oldYear !== newYear) isToday = !left.setYear(oldYear + newYear);
+        if (oldMonth !== newMonth) isToday = !left.setMonth(oldMonth + newMonth);
+        if (oldDate !== newDate) isToday = !left.setDate(oldDate + newDate);
+
+        // operate only when both dates are not from same day!
+        if (!isToday) {
+          if (oldHours !== newHours) left.setHours(oldHours + newHours);
+          if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes + newMinutes);
+          if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds + newSeconds);
+        } else {
+          if (oldHours !== newHours) left.setHours(newHours);
+          if (oldMinutes !== newMinutes) left.setMinutes(newMinutes);
+          if (oldSeconds !== newSeconds) left.setSeconds(newSeconds);
+        }
+      }
+
+      if (op === '-') {
+        if (oldYear !== newYear) left.setYear(oldYear - newYear);
+        if (oldMonth !== newMonth) left.setMonth(oldMonth - newMonth);
+        if (oldDate !== newDate) left.setDate(oldDate - newDate);
+        if (oldHours !== newHours) left.setHours(oldHours - newHours);
+        if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes - newMinutes);
+        if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds - newSeconds);
+      }
     } else if (!isNaN(right)) {
       if (op === '+') left.setSeconds(s + right);
       if (op === '-') left.setSeconds(s - right);

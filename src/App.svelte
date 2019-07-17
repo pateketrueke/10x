@@ -26,6 +26,7 @@
 <In markup="1 2 3 4 5 =" />
 <In markup="1 2 3 - 4 5 =" /> -->
 
-<In markup="Today + 3 weeks 2 days" />
+<In markup="today + tomorrow" />
+<In markup="Yesterday + 3 weeks 2 days" />
 <In markup="3:35 am + 9 hours 20 minutes" />
 <In markup="Now at 6:00 pm - 3 days + 15 min" />
