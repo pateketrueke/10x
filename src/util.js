@@ -36,10 +36,11 @@ const RE_OPS = /^[-+=*/_]$/;
 const RE_WORD = /^[a-zA-Z]$/;
 const RE_PAIRS = /^[([\])]$/;
 const RE_VALUE = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
-const RE_HOURS = 'tomorrow|yesterday|today|now|\\d+(?::\\d+)*(?:\\s*[ap]m)?';
+const RE_HOURS = /\d+(?::\d+){1,2}(?:\s*[ap]m)?/i;
+const RE_DAYS = /^today|tomorrow|yesterday$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
-const RE_DATES = `${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,\\s+\\d{4})?`;
-const RE_UNIT = new RegExp(`^(?:${RE_VALUE}\\s*(?:${keywords.join('|')})?|${RE_HOURS}|${RE_DATES})$`, 'i');
+const RE_DATES = `${RE_HOURS.source}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,\\s+\\d{4})?`;
+const RE_UNIT = new RegExp(`^(?:${RE_VALUE}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
 
 // FIXME: cleanup...
 const isOp = (a, b) => RE_OPS.test(a) && a !== b;
@@ -160,11 +161,11 @@ export function lineFormat(text) {
 
 export function basicFormat(text) {
   const all = toChunks(text);
-  let prevToken = '';
+
+  let prevToken;
+  let nextToken;
 
   return all.reduce((prev, cur, i) => {
-    let nextToken;
-
     do {
       nextToken = all[++i];
     } while (nextToken && nextToken.charAt() === ' ');
@@ -350,10 +351,27 @@ export function calculateFromTokens(tokens) {
   const chunks = [];
 
   let offset = 0;
+  let lastOp = '+';
+  let isDate = false;
 
-  for (let i = 0; i < simplified.length; i += 1) {
-    const cur = simplified[i];
-    const next = simplified[i + 1];
+  // operate all possible expressions...
+  const normalized = simplified.reduce((prev, cur, i) => {
+    if (isDate) {
+      if (hasNum(prev[prev.length - 1]) && hasNum(cur)) prev.push(lastOp, cur);
+      else if (hasNum(cur) || isOp(cur)) prev.push(cur);
+    } else {
+      prev.push(cur);
+    }
+
+    // FIXME: how build-and-operate these values?
+    if (cur instanceof Date) isDate = true;
+    else if (isOp(cur)) lastOp = cur;
+    return prev;
+  }, []);
+
+  for (let i = 0; i < normalized.length; i += 1) {
+    const cur = normalized[i];
+    const next = normalized[i + 1];
 
     chunks[offset] = chunks[offset] || [];
     chunks[offset].push(cur);
