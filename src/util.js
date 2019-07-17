@@ -1,6 +1,11 @@
 import Convert from 'convert-units';
 import currencySymbols from 'currency-symbol.js';
 
+const convert = new Convert();
+const groups = convert.measures();
+const keywords = Object.keys(currencySymbols.settings.symbols);
+const mappings = {};
+
 class TError extends Error {
   constructor(message, offset) {
     super(message);
@@ -8,7 +13,7 @@ class TError extends Error {
   }
 }
 
-const TIME_UNITS = ['week', 'min', 'd', 'h', 's'];
+const TIME_UNITS = convert.list('time').map(x => x.abbr).sort();
 
 const OP_TYPES = {
   '=': 'equal',
@@ -17,11 +22,6 @@ const OP_TYPES = {
   '/': 'div',
   '*': 'mul',
 };
-
-const convert = new Convert();
-const groups = convert.measures();
-const keywords = Object.keys(currencySymbols.settings.symbols);
-const mappings = {};
 
 groups.forEach(group => {
   convert.list(group).forEach(unit => {
