@@ -183,6 +183,14 @@ export function lineFormat(text) {
 }
 
 export function basicFormat(text) {
+  // handle markdown-like headings
+  if (text.charAt() === '#') {
+    const matches = text.match(/^(#+)(.+?)$/);
+    const nth = Math.min(matches[1].length, 6);
+
+    return `<h${nth}><span>${matches[1]}</span>${matches[2]}</h${nth}>`;
+  }
+
   const all = toChunks(text);
 
   let prevToken;
