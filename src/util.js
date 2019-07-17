@@ -297,7 +297,7 @@ export function setCursor(target, offset = 0) {
   selection.addRange(range);
 }
 
-export function parseNumber(text, unit) {
+export function parseNumber(text, unit, old) {
   if (text.includes('/')) {
     const [a, b] = text.split('/');
 
@@ -321,7 +321,10 @@ export function parseNumber(text, unit) {
   }
 
   // FIXME: how calculate all of these?
-  if (TIME_UNITS.includes(unit)) return new Convert(num).from(unit).to('s');
+  if (old instanceof Date && TIME_UNITS.includes(unit)) {
+    return new Convert(num).from(unit).to('s');
+  }
+
   return num;
 }
 
@@ -451,7 +454,7 @@ export function buildTree(tokens) {
         root = stack.pop();
       }
     } else if (root) {
-      root.push(t[0] === 'number' ? parseNumber(t[1], t[2]) : t[1]);
+      root.push(t[0] === 'number' ? parseNumber(t[1], t[2], root[root.length - 2]) : t[1]);
     } else {
       throw new TError(`Invalid terminator around: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
     }
