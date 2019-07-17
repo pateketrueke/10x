@@ -269,21 +269,23 @@ export function setCursor(target, offset = 0) {
   selection.addRange(range);
 }
 
-export function parseNumber(text) {
+export function parseNumber(text, unit) {
   if (text.includes('/')) {
     const [a, b] = text.split('/');
 
     return a / b;
   }
 
+  const num = text.replace(/[^%\d.-]/g, '');
+
+  // console.log('>>>', text, unit);
+
   // FIXME: how handle these stuff?
   // if (text.charAt() === '$') {
   //   text = text.substr(1);
   // }
 
-  text = text.replace(/[^\d.-]/g, '');
-
-  return parseFloat(text);
+  return num;
 }
 
 export function evaluateExpression(op, left, right) {
@@ -299,6 +301,16 @@ export function operateExpression(ops, expr) {
       const old = expr;
       const cur = expr[i];
       const prev = parseFloat(expr[i - 1]);
+
+      // calculate from percentages
+      if (typeof expr[i + 1] === 'string' && expr[i + 1].charAt(expr[i + 1].length - 1) === '%') {
+        const result = prev * (parseFloat(expr[i + 1]) / 100);
+
+        expr.splice(i - 1, 3, evaluateExpression(cur, prev, result));
+
+        return operateExpression(ops, expr);
+      }
+
       const next = parseFloat(expr[i + 1]);
       const result = evaluateExpression(cur, prev, next);
 
@@ -316,7 +328,6 @@ export function operateExpression(ops, expr) {
 }
 
 export function calculateFromString(expr) {
-  expr = expr.split(/\s+/);
   expr = operateExpression(['*', '/'], expr);
   expr = operateExpression(['+', '-'], expr);
 
@@ -343,7 +354,7 @@ export function buildTree(tokens) {
         root = stack.pop();
       }
     } else if (root) {
-      root.push(t[0] === 'number' ? parseNumber(t[1]) : t[1]);
+      root.push(t[0] === 'number' ? parseNumber(t[1], t[2]) : t[1]);
     } else {
       throw new TError(`Invalid terminator around: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
     }
@@ -358,7 +369,7 @@ export function reduceFromAST(tokens) {
       const ops = reduceFromAST(cur);
 
       if (ops.length) {
-        prev.push(calculateFromString(ops.join(' ')));
+        prev.push(calculateFromString(ops));
       }
     } else if (!(typeof cur === 'number' && isNaN(cur))) {
       prev.push(cur);
@@ -397,7 +408,7 @@ export function calculateFromTokens(tokens) {
   }
 
   const results = chunks
-    .map(x => calculateFromString(x.join(' ')))
+    .map(x => calculateFromString(x))
     .filter(x => !isNaN(x));
 
   return {
