@@ -344,7 +344,7 @@ export function evaluateExpression(op, left, right) {
 
       // FIXME: how op */ dates?
 
-      if (op === '+') {
+      if (op === '+' || op === 'at') {
         let isToday = true;
 
         if (oldYear !== newYear) isToday = !left.setYear(oldYear + newYear);
@@ -370,16 +370,6 @@ export function evaluateExpression(op, left, right) {
         if (oldHours !== newHours) left.setHours(oldHours - newHours);
         if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes - newMinutes);
         if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds - newSeconds);
-      }
-
-      if (op === 'at') {
-        if (oldYear !== newYear) right.setYear(oldYear);
-        if (oldMonth !== newMonth) right.setMonth(oldMonth);
-        if (oldHours !== newHours) right.setHours(oldHours);
-        if (oldMinutes !== newMinutes) right.setMinutes(oldMinutes);
-        if (oldSeconds !== newSeconds) right.setSeconds(oldSeconds);
-
-        return right;
       }
     } else if (!isNaN(right)) {
       if (op === '+') left.setSeconds(oldSeconds + right);
@@ -436,8 +426,7 @@ export function operateExpression(ops, expr) {
 
 export function calculateFromString(expr) {
   expr = operateExpression(['*', '/'], expr);
-  expr = operateExpression(['+', '-'], expr);
-  expr = operateExpression(['of', 'at'], expr);
+  expr = operateExpression(['at', 'of', '+', '-', 'in', 'as'], expr);
 
   return expr[0];
 }
