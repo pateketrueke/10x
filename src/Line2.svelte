@@ -231,7 +231,7 @@
 
         // append on given input
         if (e.key.length && e.keyCode !== 8) mutate(e.key);
-        else setTimeout(maths, 50);
+        else setTimeout(render);
 
         e.preventDefault();
         return;
