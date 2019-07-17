@@ -276,19 +276,28 @@ export function parseNumber(text, unit) {
     return a / b;
   }
 
-  const num = text.replace(/[^%\d.-]/g, '');
+  if (unit === 'datetime') {
+    const year = new Date().getFullYear();
 
-  // console.log('>>>', text, unit);
+    if (text.toLowerCase() === 'today') return new Date();
+    if (text.includes(':')) return new Date(`${year} ${text}`);
+  }
 
-  // FIXME: how handle these stuff?
-  // if (text.charAt() === '$') {
-  //   text = text.substr(1);
-  // }
+  // FIXME: how calculate all of these?
+  // if (unit === 'week')
+  // if (unit === 'min')
+  // if (unit === 'd')
+  // if (unit === 'h')
 
-  return num;
+  return text.replace(/[^%\d.-]/g, '');
 }
 
 export function evaluateExpression(op, left, right) {
+  if (left instanceof Date) {
+    left.setSeconds(right);
+    return left;
+  }
+
   if (op === '+') return left + right;
   if (op === '-') return left - right;
   if (op === '*') return left * right;
@@ -300,7 +309,10 @@ export function operateExpression(ops, expr) {
     if (ops.indexOf(expr[i]) > -1) {
       const old = expr;
       const cur = expr[i];
-      const prev = parseFloat(expr[i - 1]);
+
+      const prev = typeof expr[i - 1] === 'string'
+        ? parseFloat(expr[i - 1])
+        : expr[i - 1];
 
       // calculate from percentages
       if (typeof expr[i + 1] === 'string' && expr[i + 1].charAt(expr[i + 1].length - 1) === '%') {
@@ -330,6 +342,10 @@ export function operateExpression(ops, expr) {
 export function calculateFromString(expr) {
   expr = operateExpression(['*', '/'], expr);
   expr = operateExpression(['+', '-'], expr);
+
+  if (expr[0] instanceof Date) {
+    return expr[0].toISOString();
+  }
 
   return parseFloat(expr[0]);
 }
@@ -409,7 +425,7 @@ export function calculateFromTokens(tokens) {
 
   const results = chunks
     .map(x => calculateFromString(x))
-    .filter(x => !isNaN(x));
+    .filter(x => typeof x === 'string' || !isNaN(x));
 
   return {
     chunks,

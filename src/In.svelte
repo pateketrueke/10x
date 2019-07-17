@@ -5,7 +5,7 @@
   let results = [];
 
   function onUpdate(e) {
-    results = e.detail.results.map(x => x.toFixed(2).replace(/\.0+$/, ''));
+    results = e.detail.results;
   }
 </script>
 
