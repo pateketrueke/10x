@@ -37,7 +37,7 @@ const RE_WORD = /^[a-zA-Z]$/;
 const RE_PAIRS = /^[([\])]$/;
 const RE_VALUE = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
 const RE_HOURS = /\d+(?::\d+){1,2}(?:\s*[ap]m)?/i;
-const RE_DAYS = /^today|tomorrow|yesterday$/i;
+const RE_DAYS = /^today|tonight|tomorrow|yesterday$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 const RE_DATES = `${RE_HOURS.source}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,\\s+\\d{4})?`;
 const RE_UNIT = new RegExp(`^(?:${RE_VALUE}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
@@ -171,10 +171,9 @@ export function basicFormat(text) {
     } while (nextToken && nextToken.charAt() === ' ');
 
     if (
-      isSep(cur)
-      || hasNum(cur)
-      || (hasNum(prevToken) && hasNum(nextToken))
-      || (RE_UNIT.test(prevToken) && hasNum(nextToken))
+      isSep(cur) || hasNum(cur)
+      || ((RE_UNIT.test(prevToken)) && hasNum(nextToken))
+      || (hasNum(prevToken) && (isOp(cur) || hasNum(nextToken)))
     ) {
       prev.push(simpleNumbers(lineFormat(cur)))
     } else {
