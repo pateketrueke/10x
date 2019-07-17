@@ -61,6 +61,9 @@
       .map(x => [x.dataset.op, x.textContent, x.dataset.unit]);
 
     try {
+      input.classList.remove('errored');
+      input.removeAttribute('title');
+
       dispatch('change', calculateFromTokens(ast));
     } catch (e) {
       const ops = [].slice.call(input.children)
@@ -69,6 +72,9 @@
       if (e.offset > 0) {
         ops[e.offset - 1].classList.add('errored');
         ops[e.offset - 1].setAttribute('title', e.message);
+      } else {
+        input.classList.add('errored');
+        input.setAttribute('title', e.message);
       }
     }
   }

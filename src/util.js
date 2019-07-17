@@ -42,7 +42,7 @@ const RE_WORD = /^[a-zA-Z]$/;
 const RE_PAIRS = /^[([\])]$/;
 const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
 const RE_HOURS = /\d+(?::\d+){1,2}(?:\s*[ap]m)?/i;
-const RE_DAYS = /^today|tonight|tomorrow|yesterday$/i;
+const RE_DAYS = /^now|today|tonight|tomorrow|yesterday|weekend$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 const RE_DATES = `${RE_HOURS.source}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,\\s+\\d{4})?`;
 const RE_UNIT = new RegExp(`^(?:${RE_DIGIT.source}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
@@ -276,25 +276,27 @@ export function parseNumber(text, unit) {
     return a / b;
   }
 
-  if (unit === 'datetime') {
-    const year = new Date().getFullYear();
+  const num = text.replace(/[^%\d.-]/g, '');
+  const now = new Date();
 
-    if (text.toLowerCase() === 'today') return new Date();
-    if (text.includes(':')) return new Date(`${year} ${text}`);
+  if (unit === 'datetime') {
+    const year = now.getFullYear();
+    const today = now.toISOString().substr(0, 10);
+
+    if (text.toLowerCase() === 'now') return now;
+    if (text.toLowerCase() === 'today') return new Date(today);
+    if (text.includes(':')) return new Date(`${today} ${text}`);
   }
 
   // FIXME: how calculate all of these?
-  // if (unit === 'week')
-  // if (unit === 'min')
-  // if (unit === 'd')
-  // if (unit === 'h')
-
-  return text.replace(/[^%\d.-]/g, '');
+  if (['week', 'min', 'd', 'h', 's'].includes(unit)) return new Convert(num).from(unit).to('s');
+  return num;
 }
 
 export function evaluateExpression(op, left, right) {
   if (left instanceof Date) {
-    left.setSeconds(right);
+    if (right instanceof Date) left.setTime(right.getTime());
+    else if (!isNaN(right)) left.setSeconds(right);
     return left;
   }
 
@@ -323,7 +325,10 @@ export function operateExpression(ops, expr) {
         return operateExpression(ops, expr);
       }
 
-      const next = parseFloat(expr[i + 1]);
+      const next = typeof expr[i + 1] === 'string'
+        ? parseFloat(expr[i + 1])
+        : expr[i + 1];
+
       const result = evaluateExpression(cur, prev, next);
 
       if (!isNaN(result)) {
@@ -344,7 +349,7 @@ export function calculateFromString(expr) {
   expr = operateExpression(['+', '-'], expr);
 
   if (expr[0] instanceof Date) {
-    return expr[0].toISOString();
+    return expr[0];
   }
 
   return parseFloat(expr[0]);
