@@ -303,8 +303,18 @@ export function parseNumber(text, unit) {
 
 export function evaluateExpression(op, left, right) {
   if (left instanceof Date) {
-    if (right instanceof Date) left.setTime(right.getTime());
-    else if (!isNaN(right)) left.setSeconds(right);
+    const s = left.getSeconds();
+
+    if (right instanceof Date) {
+      const S = right.getSeconds();
+
+      if (op === '+') left.setSeconds(s + S);
+      if (op === '-') left.setSeconds(s - S);
+    } else if (!isNaN(right)) {
+      if (op === '+') left.setSeconds(s + right);
+      if (op === '-') left.setSeconds(s - right);
+    }
+
     return left;
   }
 
