@@ -19,12 +19,17 @@ const OP_TYPES = {
 const convert = new Convert();
 const groups = convert.measures();
 const keywords = Object.keys(currencySymbols.settings.symbols);
+const mappings = {};
 
 groups.forEach(group => {
   convert.list(group).forEach(unit => {
     keywords.push(unit.abbr);
     keywords.push(unit.plural);
     keywords.push(unit.singular);
+
+    // memoize for fast look-up
+    mappings[unit.plural.toLowerCase()] = unit.abbr;
+    mappings[unit.singular.toLowerCase()] = unit.abbr;
   });
 });
 
@@ -35,12 +40,12 @@ const RE_FMT = /^[_*~]$/;
 const RE_OPS = /^[-+=*/_]$/;
 const RE_WORD = /^[a-zA-Z]$/;
 const RE_PAIRS = /^[([\])]$/;
-const RE_VALUE = '-?[$€£¢]?(?:\\.\\d+|\\d+(?:[_,.]\\d+)*)%?';
+const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
 const RE_HOURS = /\d+(?::\d+){1,2}(?:\s*[ap]m)?/i;
 const RE_DAYS = /^today|tonight|tomorrow|yesterday$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 const RE_DATES = `${RE_HOURS.source}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,\\s+\\d{4})?`;
-const RE_UNIT = new RegExp(`^(?:${RE_VALUE}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
+const RE_UNIT = new RegExp(`^(?:${RE_DIGIT.source}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
 
 // FIXME: cleanup...
 const isOp = (a, b = '') => RE_OPS.test(a) && !b.includes(a);
@@ -146,19 +151,32 @@ export function simpleNumbers(text) {
     .replace(/^\s|\s$/, String.fromCharCode(160))
 
     // regular units/dates
-    .replace(RE_UNIT, '<var data-number>$&</var>');
+    .replace(RE_UNIT, chunk => {
+      if (RE_MONTHS.test(chunk) || RE_DAYS.test(chunk) || RE_HOURS.test(chunk)) {
+        return `<var data-op="number" data-unit="datetime">${chunk}</var>`;
+      }
+
+      if (RE_DIGIT.test(chunk)) {
+        const unit = chunk.replace(RE_DIGIT, '').trim();
+        const fixed = mappings[unit.toLowerCase()] || unit;
+
+        return `<var data-op="number" data-unit="${fixed}">${chunk}</var>`;
+      }
+
+      return `<var data-op="number">${chunk}</var>`;
+    });
 }
 
 export function lineFormat(text) {
   return text
     // basic operators
-    .replace(/^[-+*=/]$/, op => `<var data-${OP_TYPES[op]}>${op}</var>`)
+    .replace(/^[-+*=/]$/, op => `<var data-op="${OP_TYPES[op]}">${op}</var>`)
 
     // fractions
-    .replace(/^(\d+)\/(\d+)$/, '<var data-number><sup>$1</sup><span>/</span><sub>$2</sub></var>')
+    .replace(/^(\d+)\/(\d+)$/, '<var data-op="number"><sup>$1</sup><span>/</span><sub>$2</sub></var>')
 
     // separators
-    .replace(/^[([\])]$/, char => `<var data-${(char === '[' || char === '(') ? 'open' : 'close'}>${char}</var>`);
+    .replace(/^[([\])]$/, char => `<var data-op="${(char === '[' || char === '(') ? 'open' : 'close'}">${char}</var>`);
 }
 
 export function basicFormat(text) {
@@ -289,7 +307,7 @@ export function operateExpression(ops, expr) {
 
         return operateExpression(ops, expr);
       } else {
-        throw new TError(`Invalid expression at: ${expr.join('')}`, i + 1);
+        throw new TError(`Invalid expression around: ${prev} ${cur} ${next}`, i + 1);
       }
     }
   }
@@ -327,7 +345,7 @@ export function buildTree(tokens) {
     } else if (root) {
       root.push(t[0] === 'number' ? parseNumber(t[1]) : t[1]);
     } else {
-      throw new TError(`Invalid terminator for: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
+      throw new TError(`Invalid terminator around: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
     }
   }
 

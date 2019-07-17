@@ -57,24 +57,18 @@
   // evaluate aftermath
   function maths() {
     const ast = [].slice.call(input.children)
-      .filter(x => Object.keys(x.dataset).length === 1)
-      .map(x => [Object.keys(x.dataset)[0], x.textContent]);
+      .filter(x => 'op' in x.dataset)
+      .map(x => [x.dataset.op, x.textContent, x.dataset.unit]);
 
     try {
       dispatch('change', calculateFromTokens(ast));
     } catch (e) {
       const ops = [].slice.call(input.children)
-        .filter(x => 'number' in x.dataset
-          || 'plus' in x.dataset
-          || 'min' in x.dataset
-          || 'mul' in x.dataset
-          || 'open' in x.dataset
-          || 'close' in x.dataset
-          || 'div' in x.dataset);
+        .filter(x => x.dataset.op);
 
       if (e.offset > 0) {
-        ops[e.offset - 1].style.backgroundColor = 'red';
-        ops[e.offset - 1].style.color = 'white';
+        ops[e.offset - 1].classList.add('errored');
+        ops[e.offset - 1].setAttribute('title', e.message);
       }
     }
   }
@@ -142,7 +136,7 @@
       }
 
       // highlight number-values only
-      if (node && 'number' in node.dataset) node.classList.add('selected');
+      if (node && 'unit' in node.dataset) node.classList.add('selected');
     });
 
     sel.t = setTimeout(() => { sel.t = null; }, 50);
