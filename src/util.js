@@ -35,16 +35,16 @@ groups.forEach(group => {
 
 keywords.sort((a, b) => b.length - a.length);
 
-const RE_NUM = /\d/;
+const RE_NUM = /^\d|\d$/;
 const RE_FMT = /^[_*~]$/;
 const RE_OPS = /^[-+=*/_]$/;
 const RE_WORD = /^[a-zA-Z]$/;
 const RE_PAIRS = /^[([\])]$/;
 const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
-const RE_HOURS = /\d+(?::\d+){1,2}(?:\s*[ap]m)?/i;
+const RE_HOURS = /^\d+(?::\d+){1,2}(?:\s*[ap]m)?$/i;
 const RE_DAYS = /^now|today|tonight|tomorrow|yesterday|weekend$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
-const RE_DATES = `${RE_HOURS.source}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,\\s+\\d{4})?`;
+const RE_DATES = `${RE_HOURS.source.substr(1, RE_HOURS.source.length - 2)}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,\\s+\\d{4})?`;
 const RE_UNIT = new RegExp(`^(?:${RE_DIGIT.source}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
 
 // FIXME: cleanup...
@@ -54,6 +54,7 @@ const isFmt = x => RE_FMT.test(x);
 const isWord = x => RE_WORD.test(x);
 const hasNum = x => RE_NUM.test(x);
 const hasDate = x => RE_MONTHS.test(x);
+const hasValue = x => x instanceof Date || hasNum(x);
 
 export function toChunks(input) {
   let mayNumber = false;
@@ -192,8 +193,15 @@ export function basicFormat(text) {
 
     if (
       isSep(cur) || hasNum(cur)
-      || ((RE_UNIT.test(prevToken)) && hasNum(nextToken))
-      || (hasNum(prevToken) && (isOp(cur) || hasNum(nextToken)))
+
+      // handle equal symbols
+      || (hasNum(prevToken) && cur === '=')
+
+      // handle operators between expressions
+      || (hasNum(prevToken) && isOp(cur) && isSep(nextToken))
+
+      // handle operators between numbers
+      || ((RE_UNIT.test(prevToken) || hasNum(prevToken)) && hasNum(nextToken))
     ) {
       prev.push(simpleNumbers(lineFormat(cur)))
     } else {
@@ -409,8 +417,8 @@ export function calculateFromTokens(tokens) {
 
   // operate all possible expressions...
   const normalized = simplified.reduce((prev, cur, i) => {
-    if (hasNum(prev[prev.length - 1]) && hasNum(cur)) prev.push(lastOp, cur);
-    else if (hasNum(cur) || isOp(cur)) prev.push(cur);
+    if (hasValue(prev[prev.length - 1]) && hasValue(cur)) prev.push(lastOp, cur);
+    else if (hasValue(cur) || isOp(cur)) prev.push(cur);
     if (isOp(cur, '/*')) lastOp = cur;
     return prev;
   }, []);

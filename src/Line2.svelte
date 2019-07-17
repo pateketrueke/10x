@@ -69,7 +69,7 @@
       const ops = [].slice.call(input.children)
         .filter(x => x.dataset.op);
 
-      if (e.offset > 0) {
+      if (e.offset > 0 && ops[e.offset - 1]) {
         ops[e.offset - 1].classList.add('errored');
         ops[e.offset - 1].setAttribute('title', e.message);
       } else {
