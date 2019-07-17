@@ -45,9 +45,9 @@ const RE_WORD = /^[a-zA-Z]$/;
 const RE_PAIRS = /^[([\])]$/;
 const RE_EXPRS = /^(?:of|a[ts]|in)$/i;
 const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
-const RE_TOKEN = /^(?:number|plus|min|mul|div|expr|unit)$/;
+const RE_TOKEN = /^(?:number|equal|plus|min|mul|div|expr|unit)$/;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
-const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)?$/i;
+const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 const RE_DATES = `${RE_HOURS.source.substr(1, RE_HOURS.source.length - 2)}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,?\\s+\\d{4})?`;
 const RE_UNIT = new RegExp(`^(?:${RE_DIGIT.source}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
@@ -408,9 +408,9 @@ export function buildTree(tokens) {
     } else if (root) {
       const matches = t[1].match(/(%|[ap]m)$/i);
       const type = matches ? matches[1] : t[2];
-      const val = t[1].replace(/[^\d-]/g, '');
+      const val = t[1].replace(/[^\d.-]/g, '');
 
-      root.push([t[0], /^[a-z-+*/]/i.test(t[1]) ? t[1] : parseFloat(val), type]);
+      root.push([t[0], /^[a-z-+=*/](?!\.?\d|\s)/i.test(t[1]) ? t[1] : parseFloat(val), type]);
     } else {
       throw new TError(`Invalid terminator around: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
     }
@@ -420,28 +420,24 @@ export function buildTree(tokens) {
 }
 
 export function reduceFromAST(tokens) {
-  return calculateFromString(tokens.reduce((prev, cur) => {
-    if (Array.isArray(cur)) {
-      if (!RE_TOKEN.test(cur[0])) {
-        const ops = reduceFromAST(cur);
+  for (let i = 0, c = tokens.length; i < c; i += 1) {
+    const op = tokens[i];
+    const left = tokens[i - 1];
+    const right = tokens[i + 1];
 
-        if (ops.length) {
-          prev.push(calculateFromString(ops));
-        }
-      } else {
-        prev.push(cur);
-      }
-    } else if (!(typeof cur === 'number' && isNaN(cur))) {
-      prev.push(cur);
+    if (left) {
+      console.log(left, op, right);
     }
-
-    return prev;
-  }, []));
+  }
 }
+
+// FIXME: there are two reducers, one from tokens into arrays of coerced types
+// and the last one, is the one that performs simple math on resolved values
 
 export function calculateFromTokens(tokens) {
   const simplified = reduceFromAST(buildTree(tokens));
-  console.log(simplified);
+  // console.log(tokens);
+  // console.log(simplified);
 
   // const chunks = [];
 
