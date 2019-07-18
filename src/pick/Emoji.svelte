@@ -14,7 +14,7 @@
 
   $: filtered = !disabled && images
       .filter(x => x.name.toLowerCase().includes(search.toLowerCase()))
-      .slice(0, 100);
+      .slice(0, 50);
 
   $: if (filtered) {
     dispatch('change', { data: filtered, offset: selected = Math.max(0, Math.min(filtered.length - 1, selected)) });

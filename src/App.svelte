@@ -60,7 +60,7 @@
       <label>
         <input type="checkbox" checked={on} on:click={e => toggle(text)} />
         {#if on}
-          <In markup={text} />
+          <In bind:markup={text} />
         {:else}
           <span>{text}</span>
         {/if}
