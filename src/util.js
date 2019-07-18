@@ -56,6 +56,7 @@ const RE_UNIT = new RegExp(`^(?:${RE_DIGIT.source}\\s*(?:${keywords.join('|')})?
 const isOp = (a, b = '') => RE_OPS.test(a) && !b.includes(a);
 const isSep = x => RE_PAIRS.test(x) || x === ' ';
 const isFmt = x => RE_FMT.test(x);
+const isExpr = x => RE_EXPRS.test(x);
 const isWord = x => RE_WORD.test(x);
 const hasNum = x => RE_NUM.test(x);
 const hasDate = x => RE_MONTHS.test(x);
@@ -210,7 +211,7 @@ export function basicFormat(text) {
       nextToken = all[++i];
     } while (nextToken && nextToken.charAt() === ' ');
 
-    if (RE_EXPRS.test(cur) && (hasKeyword(nextToken) || hasNum(nextToken))) {
+    if (isExpr(cur) && (hasKeyword(nextToken) || hasNum(nextToken))) {
       prev.push(`<var data-op="expr">${cur}</var>`);
       prevToken = cur;
       return prev;
@@ -223,7 +224,7 @@ export function basicFormat(text) {
       || (hasNum(prevToken) && cur === '=')
 
       // handle units after expressions
-      || (RE_EXPRS.test(prevToken) && hasKeyword(cur))
+      || (isExpr(prevToken) && hasKeyword(cur))
 
       // handle operators between expressions
       || (hasNum(prevToken) && isOp(cur) && isSep(nextToken))
@@ -330,7 +331,7 @@ export function parseFromValue(token) {
 
   const now = new Date();
   const year = now.getFullYear();
-  const today = now.toISOString().substr(0, 10);
+  const today = now.toString().split(' ').slice(0, 4).join(' ');
 
   if (text.includes(':')) return new Date(`${today} ${text}`);
   if (hasDate(text)) return new Date(!text.includes(',') ? `${text}, ${year}` : text);
@@ -440,7 +441,7 @@ export function operateExpression(ops, expr) {
 
 export function calculateFromString(expr) {
   expr = operateExpression(['*', '/'], expr);
-  expr = operateExpression(['at', 'of', 'in', 'as', '+', '-'], expr);
+  expr = operateExpression(['at', 'of', '+', '-', 'as', 'in'], expr);
 
   return expr[0];
 }
@@ -478,20 +479,25 @@ export function buildTree(tokens) {
 }
 
 export function reduceFromAST(tokens) {
-  for (let i = 0, c = tokens.length; i < c; i += 1) {
-    const op = tokens[i];
+  let isDate;
 
-    if (Array.isArray(op[0])) {
-      tokens[i] = calculateFromString(reduceFromAST(op));
+  for (let i = 0, c = tokens.length; i < c; i += 1) {
+    const cur = tokens[i];
+
+    if (Array.isArray(cur[0])) {
+      tokens[i] = calculateFromString(reduceFromAST(cur));
+    } else if (cur && /(?:datetime|a[mp])/.test(cur[2])) {
+      cur[1] = parseFromValue(cur);
+      isDate = true;
     } else {
       const left = tokens[i - 1];
       const right = tokens[i + 1];
 
-      if (left && isOp(op[1])) {
-        if (left[2] === 'datetime') {
-          left[1] = parseFromValue(left);
+      if (isDate && right) {
+        if (TIME_UNITS.includes(right[2])) {
           right[1] = new Convert(right[1]).from(right[2]).to('s');
-          right[2] = 's';
+        } else {
+          right[1] = parseFromValue(right);
         }
       }
     }
@@ -516,6 +522,7 @@ export function calculateFromTokens(tokens) {
 
     if (lastValue[0] === 'number' && cur[0] === 'number') prev.push(lastOp, cur);
     else if (cur[0] === 'number' || isOp(cur[1])) prev.push(cur);
+    else if (isExpr(cur[1])) prev.push(cur);
 
     if (isOp(cur[1], '/*')) lastOp = cur;
     return prev;
@@ -528,7 +535,7 @@ export function calculateFromTokens(tokens) {
     normalized[offset] = normalized[offset] || [];
     normalized[offset].push(cur);
 
-    if (cur[1] === '=') {
+    if (cur[0] === 'equal') {
       normalized[offset].pop();
       offset += 1;
     }
