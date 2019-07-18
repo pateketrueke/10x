@@ -309,18 +309,24 @@ export function setCursor(target, offset = 0) {
   selection.addRange(range);
 }
 
-export function parseNumber(token) {
+export function toNumber(value) {
+  value = value.replace(/[^\/\d.-]/g, '');
+
+  if (value.includes('/')) {
+    const [a, b] = value.split('/');
+
+    return a / b;
+  }
+
+  return parseFloat(value);
+}
+
+export function parseToken(token) {
   let text = token[1];
 
   if (typeof text === 'number') {
     text = text.toString().split(/(?=\d{2})/).join(':');
     text += token[2] ? ` ${token[2]}` : '';
-  }
-
-  if (text.includes('/')) {
-    const [a, b] = text.split('/');
-
-    return a / b;
   }
 
   const now = new Date();
@@ -476,9 +482,8 @@ export function buildTree(tokens) {
     } else if (root) {
       const matches = t[1].match(/(%|[ap]m)$/i);
       const type = matches ? matches[1] : t[2];
-      const val = t[1].replace(/[^\d.-]/g, '');
 
-      root.push([t[0], /^[a-z-+=*/](?!\.?\d|\s)/i.test(t[1]) ? t[1] : parseFloat(val), type]);
+      root.push([t[0], /^[a-z-+=*/](?!\.?\d|\s)/i.test(t[1]) ? t[1] : toNumber(t[1]), type]);
     } else {
       throw new TError(`Invalid terminator around: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
     }
@@ -495,7 +500,7 @@ export function reduceFromAST(tokens) {
 
     if (left && isOp(op)) {
       if (left[2] === 'datetime') {
-        left[1] = parseNumber(left);
+        left[1] = parseToken(left);
         right[1] = new Convert(right[1]).from(right[2]).to('s');
         right[2] = 's';
       }
