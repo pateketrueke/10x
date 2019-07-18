@@ -296,7 +296,7 @@ export function getTextNodeAtPosition(target, offset = 0) {
 export function getSelectionStart() {
   const node = document.getSelection().anchorNode;
 
-  return node.nodeType == 3 ? node.parentNode : node;
+  return (node && node.nodeType == 3) ? node.parentNode : node;
 }
 
 export function removeSelectedText() {
@@ -325,8 +325,10 @@ export function setCursor(target, offset = 0) {
 
   const range = new Range();
 
-  range.setStart(pos.node, pos.position);
-  selection.addRange(range);
+  try {
+    range.setStart(pos.node, pos.position);
+    selection.addRange(range);
+  } catch (e) {}
 }
 
 export function parseNumber(value) {

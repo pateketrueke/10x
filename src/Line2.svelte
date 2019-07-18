@@ -132,16 +132,21 @@
     if (sel.t) return;
 
     setTimeout(() => {
-      if (node) node.classList.remove('selected');
+      if (node) {
+        node.classList.remove('selected');
+        node = null;
+      }
 
       const sub = getSelectionStart();
 
-      if (['SPAN', 'SUB', 'SUP'].includes(sub.tagName)) {
-        node = sub.parentNode;
-      } else if (sub !== input) {
-        node = sub;
-      } else {
-        node = null;
+      if (sub) {
+        if (['SPAN', 'SUB', 'SUP'].includes(sub.tagName)) {
+          node = sub.parentNode;
+        } else if (sub !== input) {
+          node = sub;
+        } else {
+          node = null;
+        }
       }
 
       // highlight number-values only
@@ -337,6 +342,15 @@
         let x = 0;
         let n = 2;
         let k = offset;
+
+        // first, try regular offset looking for emojis
+        const char = markup.substr(offset - 2, 2);
+
+        if (!RE_EMOJI.test(char)) {
+          mutate('', -1);
+          sel();
+          return;
+        }
 
         // you cannot simple remove single-chars in case of emojis,
         // so we need to detect how much to delete from...

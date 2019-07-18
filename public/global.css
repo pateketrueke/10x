@@ -22,7 +22,7 @@ body { font-family: Montserrat; }
 .editor sub, .editor sup { font-size: .75em; }
 .editor .selected { background-color: #FFDEFF; }
 
-[data-result] { margin-left: 12px; background-color: #D4D8D5; padding: 0 .3em; border-radius: 5px; }
+[data-result] { font-size: .85em; margin-left: 12px; border: 1px solid #E4E8E5; background-color: #F4F8F5; padding: 0 .3em; border-radius: 5px; }
 [data-result] + [data-result] { margin-left: .3em; }
 
 

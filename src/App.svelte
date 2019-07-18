@@ -1,6 +1,8 @@
 <script>
   import In from './In.svelte';
 
+  let debug = false;
+
   let tests = [
     [0, '$15,000 MXN / 14 days of **work** 😅😇👋🏿'],
     [0, '10 inches in cm'],
@@ -8,7 +10,7 @@
     [0, '160 pounds as kg'],
     [0, '3 weeks as days'],
     [0, 'Yesterday + 3 weeks 2 days'],
-    [1, '3:35 am + 9 hours 20 minutes'],
+    [0, '3:35 am + 9 hours 20 minutes'],
     [0, 'Now at 6:00 pm - 3 days + 15 min'],
     [0, 'Now at 6:00 pm - Apr 15 2019'],
     [0, 'Jun 10, 1987 - 1 week'],
@@ -55,17 +57,17 @@
   }
 </style>
 
+<input type="checkbox" bind:value={debug} />
+
 <ul>
   {#each tests as [on, text]}
     <li>
-      <label>
-        <input type="checkbox" checked={on} on:click={e => toggle(text)} />
-        {#if on}
-          <In bind:markup={text} />
-        {:else}
-          <span>{text}</span>
-        {/if}
-      </label>
+      {#if debug}<input type="checkbox" checked={on} on:click={e => toggle(text)} />{/if}
+      {#if !debug || on}
+        <In bind:markup={text} />
+      {:else}
+        <span>{text}</span>
+      {/if}
     </li>
   {/each}
 </ul>
