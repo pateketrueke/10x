@@ -400,7 +400,7 @@ export function evaluateExpression(op, left, right) {
   if (op === '/') return left / right;
 }
 
-export function operateExpression(ops, expr, steps = []) {
+export function operateExpression(ops, expr) {
   for (let i = 1, c = expr.length - 1; i < c; i += 1) {
     if (ops.indexOf(expr[i][1]) > -1) {
       const cur = expr[i];
@@ -417,10 +417,9 @@ export function operateExpression(ops, expr, steps = []) {
 
       if (!isNaN(result)) {
         expr.splice(i - 1, 3, ['number', result]);
-        steps.push(expr.map(x => x[1]));
 
         if (expr.length >= 3) {
-          return operateExpression(ops, expr, steps);
+          return operateExpression(ops, expr);
         }
       } else {
         throw new TError(`Invalid expression around: ${prev[1]} ${cur[1]} ${next[1]}`, i + 1);
@@ -432,15 +431,10 @@ export function operateExpression(ops, expr, steps = []) {
 }
 
 export function calculateFromString(expr) {
-  const steps = [expr.map(x => x[1])];
+  expr = operateExpression(['*', '/'], expr);
+  expr = operateExpression(['at', 'of', 'in', 'as', '+', '-'], expr);
 
-  expr = operateExpression(['*', '/'], expr, steps);
-  expr = operateExpression(['at', 'of', 'in', 'as', '+', '-'], expr, steps);
-
-  return {
-    value: expr[0],
-    steps,
-  };
+  return expr[0];
 }
 
 export function buildTree(tokens) {
@@ -480,7 +474,7 @@ export function reduceFromAST(tokens) {
     const op = tokens[i];
 
     if (Array.isArray(op[0])) {
-      tokens[i] = calculateFromString(op).value;
+      tokens[i] = calculateFromString(reduceFromAST(op));
     } else {
       const left = tokens[i - 1];
       const right = tokens[i + 1];

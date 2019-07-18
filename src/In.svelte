@@ -17,8 +17,8 @@
 <div class="row">
   <Line2 bind:markup on:change={onUpdate} />
   <div class="result">
-    {#each results as { value }}
-      <span data-result>{value[1]}</span>
+    {#each results as [type, value]}
+      <span data-result={type}>{value}</span>
     {/each}
   </div>
 </div>
