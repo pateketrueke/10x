@@ -13,7 +13,9 @@
       return value.toString().split(' ').slice(0, 5).join(' ');
     }
 
-    value = value.toFixed(2).replace(/\.0+$/, '');
+    if (typeof value === 'number') {
+      value = value.toFixed(2).replace(/\.0+$/, '');
+    }
 
     if (unit) {
       return `${value} ${unit}`;

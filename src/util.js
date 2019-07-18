@@ -25,9 +25,9 @@ const OP_TYPES = {
 
 groups.forEach(group => {
   convert.list(group).forEach(unit => {
-    const abbr = unit.abbr.replace(/-/g, '_');
-    const plural = unit.plural.replace(/-/g, '_');
-    const singular = unit.singular.replace(/-/g, '_');
+    const abbr = unit.abbr.replace('-', '_');
+    const plural = unit.plural.replace('-', '_');
+    const singular = unit.singular.replace('-', '_');
 
     if (!abbr.includes('/')) {
       keywords.push(abbr);
@@ -464,7 +464,7 @@ export function operateExpression(ops, expr) {
 
       // convert supported units
       if (RE_TOKEN.test(cur[0]) && next[0] === 'unit') {
-        result = new Convert(prev[1]).from(prev[2]).to(next[2]);
+        result = new Convert(prev[1]).from(prev[2].replace('_', '-')).to(next[2]);
       }
 
       if (!isNaN(result)) {
@@ -542,7 +542,7 @@ export function reduceFromAST(tokens) {
       // handle unit-conversion to seconds
       if (isDate && right && right[0] === 'number') {
         if (TIME_UNITS.includes(right[2])) {
-          right[1] = new Convert(right[1]).from(right[2]).to('s');
+          right[1] = new Convert(right[1]).from(right[2].replace('_', '-')).to('s');
         } else if (right[2]) {
           right[1] = parseFromValue(right);
         } else {
