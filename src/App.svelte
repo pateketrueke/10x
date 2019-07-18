@@ -11,7 +11,7 @@
     [0, '3:35 am + 9 hours 20 minutes'],
     [0, 'Now at 6:00 pm - 3 days + 15 min'],
     [0, 'Jun 10, 1987 - 1 week'],
-    [1, '1+2-3+4/2+7/-.12 ='],
+    [0, '1+2-3+4/2+7/-.12 ='],
     [0, '(1+2) - (3 + 4/2) + (7/-.12) ='],
     [0, '(1 + 2) - (3 + (4 / 2)) + (7 / -.12) ='],
     [0, '30 + 20%'],
@@ -34,20 +34,36 @@
 </script>
 
 <style>
-  ul { padding: 0; }
-  li input { margin-right: 10px; }
-  li { display: flex; min-height: 26px; align-items: center; }
+  ul {
+    padding: 0;
+  }
+  li input {
+    margin-right: 5px;
+  }
+  li label {
+    display: flex;
+    min-height: 26px;
+    align-items: center;
+  }
+  span {
+    font-size: 1em;
+    min-height: 26px;
+    line-height: 26px;
+    padding: 0 3px;
+  }
 </style>
 
 <ul>
   {#each tests as [on, text]}
     <li>
-      <input type="checkbox" checked={on} on:click={e => toggle(text)} />
-      {#if on}
-        <In markup={text} />
-      {:else}
-        {text}
-      {/if}
+      <label>
+        <input type="checkbox" checked={on} on:click={e => toggle(text)} />
+        {#if on}
+          <In markup={text} />
+        {:else}
+          <span>{text}</span>
+        {/if}
+      </label>
     </li>
   {/each}
 </ul>
