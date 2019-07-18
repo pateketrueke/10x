@@ -59,7 +59,6 @@ const isFmt = x => RE_FMT.test(x);
 const isWord = x => RE_WORD.test(x);
 const hasNum = x => RE_NUM.test(x);
 const hasDate = x => RE_MONTHS.test(x);
-const hasValue = x => x instanceof Date || typeof x === 'number';
 const hasKeyword = x => x && (!keywords.includes(x) ? mappings[x.toLowerCase()] : x);
 
 export function toChunks(input) {
@@ -509,8 +508,8 @@ export function calculateFromTokens(tokens) {
   const chunks = simplified.reduce((prev, cur, i) => {
     const lastValue = prev[prev.length - 1] || [];
 
-    if (hasValue(lastValue[1]) && hasValue(cur[1])) prev.push(lastOp, cur);
-    else if (hasValue(cur[1]) || isOp(cur[i])) prev.push(cur);
+    if (lastValue[0] === 'number' && cur[0] === 'number') prev.push(lastOp, cur);
+    else if (cur[0] === 'number' || isOp(cur[1])) prev.push(cur);
 
     if (isOp(cur[1], '/*')) lastOp = cur;
     return prev;
