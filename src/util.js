@@ -357,7 +357,7 @@ export function parseFromValue(token) {
   if (hasMonths(text)) return new Date(!text.includes(',') ? `${text}, ${year}` : text);
   if (text.toLowerCase() === 'yesterday') return (now.setDate(now.getDate() - 1), now);
   if (text.toLowerCase() === 'tomorrow') return (now.setDate(now.getDate() + 1), now);
-  if (text.toLowerCase() === 'today') return new Date(`${today} 00:00:00`);
+  if (text.toLowerCase() === 'today') return new Date(`${today} 00:00`);
   if (text.toLowerCase() === 'now') return now;
 
   return text;
@@ -531,7 +531,7 @@ export function reduceFromAST(tokens) {
         } else if (right[2]) {
           right[1] = parseFromValue(right);
         } else {
-          right[1] = new Date(right[1]);
+          right[1] = new Date(`${right[1]} 00:00`);
         }
       }
     }

@@ -10,7 +10,7 @@
 
   function toValue(value, unit) {
     if (value instanceof Date) {
-      return value.toISOString();
+      return value.toString().split(' ').slice(0, 5).join(' ');
     }
 
     value = value.toFixed(2).replace(/\.0+$/, '');
