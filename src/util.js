@@ -72,6 +72,14 @@ const hasMonths = x => RE_MONTHS.test(x);
 const hasKeyword = x => x && (!keywords.includes(x) ? mappings[x.toLowerCase()] : x);
 const hasDatetime = x => RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x);
 
+export function toNumber(token, unit) {
+  const key = token[2].replace('_', '-');
+  const num = key.replace(RE_DIGIT, '').trim();
+  const fixed = mappings[num.toLowerCase()] || num;
+
+  return new Convert(token[1]).from(fixed).to(unit);
+}
+
 export function toChunks(input) {
   let mayNumber = false;
   let inFormat = false;
@@ -464,7 +472,7 @@ export function operateExpression(ops, expr) {
 
       // convert supported units
       if (RE_TOKEN.test(cur[0]) && next[0] === 'unit') {
-        result = new Convert(prev[1]).from(prev[2].replace('_', '-')).to(next[2]);
+        result = toNumber(prev, next[2]);
       }
 
       if (!isNaN(result)) {
@@ -542,7 +550,7 @@ export function reduceFromAST(tokens) {
       // handle unit-conversion to seconds
       if (isDate && right && right[0] === 'number') {
         if (TIME_UNITS.includes(right[2])) {
-          right[1] = new Convert(right[1]).from(right[2].replace('_', '-')).to('s');
+          right[1] = toNumber(right, 's');
         } else if (right[2]) {
           right[1] = parseFromValue(right);
         } else {
