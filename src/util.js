@@ -59,14 +59,16 @@ const isFmt = x => RE_FMT.test(x);
 const isExpr = x => RE_EXPRS.test(x);
 const isWord = x => RE_WORD.test(x);
 const hasNum = x => RE_NUM.test(x);
-const hasDate = x => RE_MONTHS.test(x);
+const hasMonths = x => RE_MONTHS.test(x);
 const hasKeyword = x => x && (!keywords.includes(x) ? mappings[x.toLowerCase()] : x);
+const hasDatetime = x => RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x);
 
 export function toChunks(input) {
   let mayNumber = false;
   let inFormat = false;
   let oldChar = '';
   let offset = 0;
+  let open = 0;
 
   const chars = input.replace(/\s/g, ' ').split('');
   const tokens = chars.reduce((prev, cur, i) => {
@@ -74,8 +76,17 @@ export function toChunks(input) {
     const last = buffer[buffer.length - 1];
     const next = chars[i + 1];
 
+    // skip closing chars if they're not well paired
+    if (!open && (cur === ']' || cur === ')')) {
+      buffer.push(cur);
+      return prev;
+    }
+
+    if (cur === '[' || cur === '(') open += 1;
+    if (cur === ']' || cur === ')') open -= 1;
+
     // normalize well-known dates
-    if (hasDate(buffer.join(''))) {
+    if (hasMonths(buffer.join(''))) {
       if (cur === ',' || (cur === ' ' && hasNum(next)) || hasNum(cur)) {
         buffer.push(cur);
         return prev;
@@ -159,7 +170,7 @@ export function simpleNumbers(text) {
 
     // regular units/dates
     .replace(RE_UNIT, chunk => {
-      if (RE_MONTHS.test(chunk) || RE_DAYS.test(chunk) || RE_HOURS.test(chunk)) {
+      if (hasDatetime(chunk)) {
         return `<var data-op="number" data-unit="datetime">${chunk}</var>`;
       }
 
@@ -207,13 +218,22 @@ export function basicFormat(text) {
   let nextToken;
 
   return all.reduce((prev, cur, i) => {
+    let key = i;
+
     do {
-      nextToken = all[++i];
+      nextToken = all[++key];
     } while (nextToken && nextToken.charAt() === ' ');
 
+    // some basic keywords: at, of, as, in
     if (isExpr(cur) && (hasKeyword(nextToken) || hasNum(nextToken))) {
       prev.push(`<var data-op="expr">${cur}</var>`);
       prevToken = cur;
+      return prev;
+    }
+
+    // skip number inside parens/brackets (however sorrounding chars are highlighted)
+    if ((all[i - 1] === '[' || all[i - 1] === '(') && (nextToken === ']' || nextToken === ')')) {
+      prev.push(simpleMarkdown(cur));
       return prev;
     }
 
@@ -334,7 +354,7 @@ export function parseFromValue(token) {
   const today = now.toString().split(' ').slice(0, 4).join(' ');
 
   if (text.includes(':')) return new Date(`${today} ${text}`);
-  if (hasDate(text)) return new Date(!text.includes(',') ? `${text}, ${year}` : text);
+  if (hasMonths(text)) return new Date(!text.includes(',') ? `${text}, ${year}` : text);
   if (text.toLowerCase() === 'yesterday') return (now.setDate(now.getDate() - 1), now);
   if (text.toLowerCase() === 'tomorrow') return (now.setDate(now.getDate() + 1), now);
   if (text.toLowerCase() === 'today') return new Date(`${today} 00:00:00`);
