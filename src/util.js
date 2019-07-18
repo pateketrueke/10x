@@ -25,14 +25,23 @@ const OP_TYPES = {
 
 groups.forEach(group => {
   convert.list(group).forEach(unit => {
-    // FIXME: ignore hard-to-recognize ones?
-    keywords.push(unit.abbr);
-    keywords.push(unit.plural);
-    keywords.push(unit.singular);
+    const abbr = unit.abbr.replace(/-/g, '_');
+    const plural = unit.plural.replace(/-/g, '_');
+    const singular = unit.singular.replace(/-/g, '_');
 
-    // memoize for fast look-up
-    mappings[unit.plural.toLowerCase()] = unit.abbr;
-    mappings[unit.singular.toLowerCase()] = unit.abbr;
+    if (!abbr.includes('/')) {
+      keywords.push(abbr);
+    }
+
+    // FIXME: ignore hard-to-recognize ones?
+    if (!/[_\s/]/.test(plural)) {
+      keywords.push(plural);
+      keywords.push(singular);
+
+      // memoize for fast look-up
+      mappings[plural.toLowerCase()] = abbr;
+      mappings[singular.toLowerCase()] = abbr;
+    }
   });
 });
 
@@ -110,6 +119,9 @@ export function toChunks(input) {
       || (hasNum(last) && cur === ':')
       || (hasNum(oldChar) && last === ' ' && isWord(cur))
       || (hasNum(last) && (cur === '%' || cur === ' ') && isWord(next))
+
+      // underscores as number separators
+      || (last === '_' && hasNum(cur)) || (hasNum(last) && cur === '_' && hasNum(next))
     ) {
       buffer.push(cur);
     } else if (
@@ -332,7 +344,7 @@ export function setCursor(target, offset = 0) {
 }
 
 export function parseNumber(value) {
-  value = value.replace(/[^\/\d.-]/g, '');
+  value = value.replace(/[^\/a-z\d.-]/ig, '').split(/[^\d/.-]/)[0];
 
   if (value.includes('/')) {
     const [a, b] = value.split('/');
