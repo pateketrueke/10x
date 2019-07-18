@@ -10,15 +10,14 @@
 </script>
 
 <style>
-  .row { display: flex; align-items: center; }
-  .data { padding-left: 20px; display: flex; }
+  div { display: flex; align-items: center; }
 </style>
 
-<div class="row">
+<div>
   <Line2 bind:markup on:change={onUpdate} />
-  <div class="result">
+  <span>
     {#each results as [type, value]}
       <span data-result={type}>{value}</span>
     {/each}
-  </div>
+  </span>
 </div>

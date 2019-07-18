@@ -353,12 +353,12 @@
     cursor: pointer;
     min-width: 280px;
   }
-  .main {
+  .wrapper {
     position: relative;
   }
 </style>
 
-<div class="main">
+<div class="wrapper">
   <div class="editor" spellcheck="false" contenteditable
     bind:this={input}
     on:blur={disable}
