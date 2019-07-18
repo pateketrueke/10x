@@ -222,6 +222,11 @@
 
     if (e) {
       if (usingMode) {
+        if (e.keyCode === 9) {
+          usingMode = null;
+          return;
+        }
+
         e.preventDefault();
 
         if (e.keyCode === 13) {
@@ -241,6 +246,8 @@
         else if (e.keyCode === 8) search = search.substr(0, search.length - 1);
         else if (e.key.length === 1) search += e.key;
       }
+
+      if (e.keyCode === 9) return;
 
       const selection = window.getSelection();
       const selectedText = selection.toString();
@@ -271,7 +278,7 @@
       // allow some keys for moving inside the contenteditable
       if (
         e.metaKey || e.key === 'Meta'
-        || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)
+        || [16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)
       ) {
         // we can't save immediately or the cursor will reset!
         if (!(e.altKey || e.shiftKey || e.metaKey)) setTimeout(saveCursor);
