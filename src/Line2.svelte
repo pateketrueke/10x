@@ -231,7 +231,7 @@
 
         // append on given input
         if (e.key.length && e.keyCode !== 8) mutate(e.key);
-        else setTimeout(render);
+        else setTimeout(() => maths(push()));
 
         e.preventDefault();
         return;
@@ -248,7 +248,14 @@
       }
 
       // allow some keys for moving inside the contenteditable
-      if (e.metaKey || e.key === 'Meta' || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)) return sel();
+      if (
+        e.metaKey || e.key === 'Meta'
+        || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)
+      ) {
+        // we can't save immediately or the cursor will reset!
+        if (!e.altKey) setTimeout(saveCursor);
+        return sel();
+      }
 
       // handle backticks and such
       if (isDead) {
