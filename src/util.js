@@ -400,28 +400,27 @@ export function evaluateExpression(op, left, right) {
   if (op === '/') return left / right;
 }
 
-export function operateExpression(ops, expr) {
-  for (let i = 0, c = expr.length; i < c; i += 1) {
-    const cur = expr[i];
-    const prev = expr[i - 1];
-    const next = expr[i + 1];
+export function operateExpression(ops, expr, steps = []) {
+  for (let i = 1, c = expr.length - 1; i < c; i += 1) {
+    if (ops.indexOf(expr[i][1]) > -1) {
+      const cur = expr[i];
+      const prev = expr[i - 1];
+      const next = expr[i + 1];
 
-    if (prev && next) {
       let result;
 
-      if (typeof prev === 'number') {
-        result = evaluateExpression(cur[1], prev, next[1]);
-      } else if (prev[1] instanceof Date) {
+      if (prev[1] instanceof Date) {
         result = calculateFromDate(cur[1], prev[1], next[1]);
       } else if (typeof prev[1] === 'number' && typeof next[1] === 'number') {
         result = evaluateExpression(cur[1], prev[1], next[1]);
       }
 
       if (!isNaN(result)) {
-        expr.splice(i - 1, 3, result);
+        expr.splice(i - 1, 3, ['number', result]);
+        steps.push(expr.map(x => x[1]));
 
         if (expr.length >= 3) {
-          return operateExpression(ops, expr);
+          return operateExpression(ops, expr, steps);
         }
       } else {
         throw new TError(`Invalid expression around: ${prev[1]} ${cur[1]} ${next[1]}`, i + 1);
@@ -433,10 +432,15 @@ export function operateExpression(ops, expr) {
 }
 
 export function calculateFromString(expr) {
-  expr = operateExpression(['*', '/'], expr);
-  expr = operateExpression(['at', 'of', 'in', 'as', '+', '-'], expr);
+  const steps = [expr.map(x => x[1])];
 
-  return expr[0];
+  expr = operateExpression(['*', '/'], expr, steps);
+  expr = operateExpression(['at', 'of', 'in', 'as', '+', '-'], expr, steps);
+
+  return {
+    value: expr[0],
+    steps,
+  };
 }
 
 export function buildTree(tokens) {
@@ -476,7 +480,7 @@ export function reduceFromAST(tokens) {
     const op = tokens[i];
 
     if (Array.isArray(op[0])) {
-      tokens[i] = ['number', calculateFromString(op), op[0][2]];
+      tokens[i] = calculateFromString(op).value;
     } else {
       const left = tokens[i - 1];
       const right = tokens[i + 1];
@@ -522,15 +526,14 @@ export function calculateFromTokens(tokens) {
     normalized[offset] = normalized[offset] || [];
     normalized[offset].push(cur);
 
-    if (typeof next === 'number' && typeof cur === 'number' || cur === '=') {
-      if (cur === '=') normalized[offset].pop();
+    if (cur[1] === '=') {
+      normalized[offset].pop();
       offset += 1;
     }
   }
 
   const results = normalized
-    .map(x => calculateFromString(x))
-    .filter(x => typeof x === 'string' || !isNaN(x));
+    .map(x => calculateFromString(x));
 
   return {
     chunks,
