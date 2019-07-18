@@ -425,11 +425,8 @@
     outline: none;
     box-shadow: none;
   }
-  .editor:focus {
-    outline: 1px dotted silver;
-  }
   .overlay {
-    outline: 1px dotted silver;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
     background-color: white;
     padding: 0 3px 3px 3px;
     position: absolute;
