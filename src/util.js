@@ -120,8 +120,9 @@ export function toChunks(input) {
       || (hasNum(oldChar) && last === ' ' && isWord(cur))
       || (hasNum(last) && (cur === '%' || cur === ' ') && isWord(next))
 
-      // underscores as number separators
-      || (last === '_' && hasNum(cur)) || (hasNum(last) && cur === '_' && hasNum(next))
+      // underscores as unit/number separators
+      || (isWord(last) && cur === '_' && hasNum(next)) || (last === '_' && hasNum(cur))
+      || (hasNum(last) && cur === '_' && hasNum(next)) || (isWord(last) && cur === '_' && isWord(next))
     ) {
       buffer.push(cur);
     } else if (
