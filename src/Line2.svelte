@@ -213,12 +213,15 @@
       isDead = true;
     }
 
+    clearTimeout(check.t);
+    clearTimeout(check.t2);
+
     if (e) {
       if (usingMode) {
         e.preventDefault();
 
         // disable overlay on any non-words
-        if (/\W/.test(e.key)) usingMode = false;
+        if (/[^a-zA-Z\d]/.test(e.key) || e.keyCode === 27) usingMode = false;
       }
 
       const selection = window.getSelection();
@@ -253,7 +256,7 @@
         || [9, 16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)
       ) {
         // we can't save immediately or the cursor will reset!
-        if (!e.altKey) setTimeout(saveCursor);
+        if (!(e.altKey || e.shiftKey || e.metaKey)) setTimeout(saveCursor);
         return sel();
       }
 
@@ -290,7 +293,7 @@
             saveCursor();
             usingMode = MODES[e.key];
             search = '';
-          }, 180);
+          }, 320);
         }
 
         clearTimeout(check.t);
