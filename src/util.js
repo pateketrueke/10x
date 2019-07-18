@@ -409,15 +409,23 @@ export function operateExpression(ops, expr) {
 
       let result;
 
+      // operate datetime
       if (prev[1] instanceof Date) {
         result = calculateFromDate(cur[1], prev[1], next[1]);
-      } else if (typeof prev[1] === 'number' && typeof next[1] === 'number') {
+      } else if (prev[0] === 'number' && next[0] === 'number') {
+        // apply percentage
+        if (next[2] === '%') {
+          next[1] = prev[1] * (next[1] / 100);
+        }
+
+        // ideally both values are integers
         result = evaluateExpression(cur[1], prev[1], next[1]);
       }
 
       if (!isNaN(result)) {
         expr.splice(i - 1, 3, ['number', result]);
 
+        // if tokens are left...
         if (expr.length >= 3) {
           return operateExpression(ops, expr);
         }
