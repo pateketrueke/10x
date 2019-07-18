@@ -26,7 +26,7 @@
     background-color: gray;
   }
   span {
-    padding: 0 2px 5px 2px;
+    padding: 0 2px 2px 2px;
     transition: all .3s;
     transform-origin: 50% 50%;
     display: inline-block;
@@ -35,6 +35,10 @@
     width: 20px;
     height: 20px;
   }
+  div {
+    display: flex;
+    flex-wrap: wrap;
+  }
   small {
     color: silver;
   }
@@ -42,8 +46,9 @@
 
 {#if !disabled}
   <small>{filtered[selected] ? filtered[selected].name : `"${search}" was not found`}</small>
-  {#each filtered as emoji, key (emoji.codes)}
-    {#if (key % 10) === 0}<br />{/if}
-    <span class={selected === key ? 'on' : 'off'} title={emoji.name}>{emoji.char}</span>
-  {/each}
+  <div>
+    {#each filtered as emoji, key (emoji.codes)}
+      <span class={selected === key ? 'on' : 'off'} title={emoji.name}>{emoji.char}</span>
+    {/each}
+  </div>
 {/if}

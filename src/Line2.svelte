@@ -356,9 +356,12 @@
     outline: 1px dotted silver;
   }
   .overlay {
+    outline: 1px dotted silver;
+    background-color: white;
+    padding: 0 3px 3px 3px;
     position: absolute;
     cursor: pointer;
-    min-width: 280px;
+    width: 240px;
   }
   .wrapper {
     position: relative;
