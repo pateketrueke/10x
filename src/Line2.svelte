@@ -1,5 +1,6 @@
 <script context="module">
-  import Emoji from './pick/Emoji.svelte';
+  import emojiRegex from 'emoji-regex';
+  import EmojiPicker from './pick/Emoji.svelte';
 
   import {
     basicFormat,
@@ -13,10 +14,12 @@
 
   const MODES = {
     ':': {
-      component: Emoji,
+      component: EmojiPicker,
       pagination: 10,
     },
   };
+
+  const RE_EMOJI = emojiRegex();
 </script>
 
 <script>
@@ -28,12 +31,13 @@
   let node;
   let input;
   let overlay;
+  let sources = [];
+  let selected = 0;
   let history = [];
   let revision = -1;
   let offset = -1;
   let search = '';
   let enabled = false;
-  let selected = 0;
   let usingMode = null;
 
   function push() {
@@ -220,8 +224,22 @@
       if (usingMode) {
         e.preventDefault();
 
+        if (e.keyCode === 13) {
+          mutate(sources[selected].char, -(search.length + 1));
+          usingMode = null;
+          return;
+        }
+
+        if (e.keyCode === 37 || e.keyCode === 38) {
+          selected = Math.max(0, selected - (e.keyCode === 38 ? usingMode.pagination : 1));
+        } else if (e.keyCode === 39 || e.keyCode === 40) {
+          selected = Math.min(sources.length - 1, selected + (e.keyCode === 40 ? usingMode.pagination : 1));
+        }
+
         // disable overlay on any non-words
-        if (/[^a-zA-Z\d]/.test(e.key) || e.keyCode === 27) usingMode = false;
+        if (/[^a-zA-Z\d]/.test(e.key) || e.keyCode === 27) usingMode = null;
+        else if (e.keyCode === 8) search = search.substr(0, search.length - 1);
+        else if (e.key.length === 1) search += e.key;
       }
 
       const selection = window.getSelection();
@@ -291,8 +309,8 @@
           clearTimeout(check.t2);
           check.t2 = setTimeout(() => {
             saveCursor();
-            usingMode = MODES[e.key];
             search = '';
+            usingMode = MODES[e.key];
           }, 320);
         }
 
@@ -305,11 +323,28 @@
       }
 
       if (e.keyCode === 8) {
-        if (usingMode && MODES[markup.charAt(offset - 1)]) usingMode = false;
+        if (usingMode && MODES[markup.charAt(offset - 1)]) usingMode = null;
 
         // make white-space visible during this
         input.style.whiteSpace = 'pre';
-        mutate('', -1);
+
+        let x = 0;
+        let n = 2;
+        let k = offset;
+
+        // you cannot simple remove single-chars in case of emojis,
+        // so we need to detect how much to delete from...
+        do {
+          const tt = markup.substr(--k);
+          const mm = tt.match(RE_EMOJI);
+
+          if (mm) {
+            x = mm[0].length;
+            break;
+          }
+        } while (--n);
+
+        mutate('', x ? x * -1 : -1);
         sel();
       }
     }
@@ -317,7 +352,7 @@
 
   // this will cancel overlays on-click
   function cursor(e) {
-    if (usingMode) usingMode = false;
+    if (usingMode) usingMode = null;
     sel();
   }
 
@@ -335,9 +370,24 @@
     mutate(getClipbordText(e));
   }
 
-  function update() {}
+  function update(e) {
+    sources = e.detail.data;
+    selected = e.detail.offset;
+  }
 
-  function activate() {}
+  function pick(e) {
+    enable();
+
+    if (e.target.tagName === 'SPAN') {
+      const fixedOffset = [].slice.call(overlay.querySelectorAll('span')).indexOf(e.target);
+
+      if (fixedOffset !== -1) {
+        mutate(sources[fixedOffset].char, -(search.length + 1));
+        selected = fixedOffset;
+        usingMode = null;
+      }
+    }
+  }
 
   // render upon changes from props
   $: if (input && !enabled) render();
@@ -365,6 +415,7 @@
     position: absolute;
     cursor: pointer;
     width: 240px;
+    z-index: 2;
   }
   .wrapper {
     position: relative;
@@ -382,7 +433,7 @@
     on:paste|preventDefault={insert}
   />
   {#if usingMode}
-    <div class="overlay" bind:this={overlay} on:click={activate}>
+    <div class="overlay" bind:this={overlay} on:click|preventDefault={pick}>
       <svelte:component bind:search bind:selected on:change={update} this={usingMode.component} />
     </div>
   {/if}
