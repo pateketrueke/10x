@@ -1,5 +1,4 @@
 <script context="module">
-  import emojiRegex from 'emoji-regex';
   import EmojiPicker from './pick/Emoji.svelte';
 
   import {
@@ -19,7 +18,7 @@
     },
   };
 
-  const RE_EMOJI = emojiRegex();
+  const RE_EMOJI = /[\uD800-\uDBFF][\uDC00-\uDFFF]/;
 </script>
 
 <script>

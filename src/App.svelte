@@ -2,7 +2,7 @@
   import In from './In.svelte';
 
   let tests = [
-    [1, '$15,000 MXN / 14 days of **work**'],
+    [1, '$15,000 MXN / 14 days of **work** 😅😇👋🏿'],
     [0, '10 inches in cm'],
     [0, '450 km in miles'],
     [0, '160 pounds as kg'],
