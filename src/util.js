@@ -453,7 +453,9 @@ export function operateExpression(ops, expr) {
       }
 
       if (!isNaN(result)) {
-        expr.splice(i - 1, 3, ['number', result]);
+        const unit = expr.find(x => x[0] === 'unit');
+
+        expr.splice(i - 1, 3, ['number', result, unit ? unit[1] : prev[2]]);
 
         // if tokens are left...
         if (expr.length >= 3) {

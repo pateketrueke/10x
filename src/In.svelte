@@ -7,6 +7,20 @@
   function onUpdate(e) {
     results = e.detail.results;
   }
+
+  function toValue(value, unit) {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    value = value.toFixed(2).replace(/\.0+$/, '');
+
+    if (unit) {
+      return `${value} ${unit}`;
+    }
+
+    return value;
+  }
 </script>
 
 <style>
@@ -16,8 +30,8 @@
 <div>
   <Line2 bind:markup on:change={onUpdate} />
   <span>
-    {#each results as [type, value]}
-      <span data-result={type}>{value}</span>
+    {#each results as [type, value, unit]}
+      <span data-result={type}>{toValue(value, unit)}</span>
     {/each}
   </span>
 </div>
