@@ -447,6 +447,11 @@ export function operateExpression(ops, expr) {
         result = evaluateExpression(cur[1], prev[1], next[1]);
       }
 
+      // convert supported units
+      if (RE_TOKEN.test(cur[0]) && next[0] === 'unit') {
+        result = new Convert(prev[1]).from(prev[2]).to(next[2]);
+      }
+
       if (!isNaN(result)) {
         expr.splice(i - 1, 3, ['number', result]);
 
@@ -511,19 +516,20 @@ export function reduceFromAST(tokens) {
     if (Array.isArray(cur[0])) {
       tokens[i] = calculateFromString(reduceFromAST(cur));
     } else if (cur && /(?:datetime|a[mp])/.test(cur[2])) {
-      cur[1] = parseFromValue(cur);
+      cur[1] = !(cur[1] instanceof Date) ? parseFromValue(cur) : cur[1];
       isDate = true;
     } else {
       const left = tokens[i - 1];
       const right = tokens[i + 1];
 
-      if (isDate && right) {
+      // handle unit-conversion to seconds
+      if (isDate && right && right[0] === 'number') {
         if (TIME_UNITS.includes(right[2])) {
           right[1] = new Convert(right[1]).from(right[2]).to('s');
         } else if (right[2]) {
           right[1] = parseFromValue(right);
         } else {
-          right[1] = new Date(right);
+          right[1] = new Date(right[1]);
         }
       }
     }
@@ -544,8 +550,7 @@ export function calculateFromTokens(tokens) {
     const lastValue = prev[prev.length - 1] || [];
 
     if (lastValue[0] === 'number' && cur[0] === 'number') prev.push(lastOp, cur);
-    else if (cur[0] === 'number' || isOp(cur[1])) prev.push(cur);
-    else if (isExpr(cur[1])) prev.push(cur);
+    else if (RE_TOKEN.test(cur[0])) prev.push(cur);
 
     if (isOp(cur[1], '/*')) lastOp = cur;
     return prev;

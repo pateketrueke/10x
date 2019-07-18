@@ -2,14 +2,15 @@
   import In from './In.svelte';
 
   let tests = [
-    [1, '$15,000 MXN / 14 days of **work** 😅😇👋🏿'],
+    [0, '$15,000 MXN / 14 days of **work** 😅😇👋🏿'],
     [0, '10 inches in cm'],
     [0, '450 km in miles'],
     [0, '160 pounds as kg'],
-    [0, '3 weeks as days'],
+    [1, '3 weeks as days'],
     [0, 'Yesterday + 3 weeks 2 days'],
     [0, '3:35 am + 9 hours 20 minutes'],
     [0, 'Now at 6:00 pm - 3 days + 15 min'],
+    [0, 'Now at 6:00 pm - Apr 15 2019'],
     [0, 'Jun 10, 1987 - 1 week'],
     [0, '1+2-3+4/2+7/-.12 ='],
     [0, '(1+2) - (3 + 4/2) + (7/-.12) ='],
