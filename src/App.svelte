@@ -37,18 +37,19 @@
   ul {
     padding: 0;
   }
-  li input {
+  input {
     margin-right: 5px;
   }
-  li label {
+  label {
     display: flex;
-    min-height: 26px;
     align-items: center;
   }
-  span {
+  li {
     font-size: 1em;
     min-height: 26px;
     line-height: 26px;
+  }
+  span {
     padding: 0 3px;
   }
 </style>

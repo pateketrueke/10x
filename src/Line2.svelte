@@ -341,9 +341,6 @@
     top: 0;
     z-index: 1;
     cursor: text;
-    font-size: 1em;
-    min-height: 26px;
-    line-height: 26px;
     padding: 0 3px;
     outline: none;
     box-shadow: none;

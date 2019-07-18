@@ -512,9 +512,6 @@ export function reduceFromAST(tokens) {
   return tokens;
 }
 
-// FIXME: there are two reducers, one from tokens into arrays of coerced types
-// and the last one, is the one that performs simple math on resolved values
-
 export function calculateFromTokens(tokens) {
   const simplified = reduceFromAST(buildTree(tokens));
   const normalized = [];
@@ -534,6 +531,7 @@ export function calculateFromTokens(tokens) {
     return prev;
   }, []);
 
+  // join chunks into final expressions
   for (let i = 0; i < chunks.length; i += 1) {
     const cur = chunks[i];
     const next = chunks[i + 1];
@@ -547,6 +545,7 @@ export function calculateFromTokens(tokens) {
     }
   }
 
+  // evaluate them all!
   const results = normalized
     .map(x => calculateFromString(x));
 
