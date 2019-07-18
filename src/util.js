@@ -359,6 +359,10 @@ export function calculateFromDate(op, left, right) {
     const newMinutes = right.getMinutes();
     const newSeconds = right.getSeconds();
 
+    if (op === 'of') {
+      if (oldYear !== newYear) left.setYear(newYear);
+    }
+
     if (op === '+' || op === 'at') {
       let isToday = true;
 
@@ -496,8 +500,10 @@ export function reduceFromAST(tokens) {
       if (isDate && right) {
         if (TIME_UNITS.includes(right[2])) {
           right[1] = new Convert(right[1]).from(right[2]).to('s');
-        } else {
+        } else if (right[2]) {
           right[1] = parseFromValue(right);
+        } else {
+          right[1] = new Date(right);
         }
       }
     }
