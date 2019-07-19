@@ -44,7 +44,7 @@ groups.forEach(group => {
 
 keywords.sort((a, b) => b.length - a.length);
 
-const RE_NUM = /^\d|\d$/;
+const RE_NUM = /^-?\.?\d|\d$/;
 const RE_FMT = /^[_*~]$/;
 const RE_OPS = /^[-+=*/_]$/;
 const RE_WORD = /^[a-zA-Z]$/;

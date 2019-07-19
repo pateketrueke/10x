@@ -20,6 +20,7 @@
     (1 + 2) - (3 + (4 / 2)) + (7 / -.12) =
     30 + 20%
     100_000
+    1ft - .3ft
     1ft-us - 1 l/s as inches
     min/km km/h deg/s yd3/h' fl-oz
     3G
