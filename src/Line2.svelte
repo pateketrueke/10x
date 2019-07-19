@@ -151,7 +151,7 @@
       }
 
       // highlight number-values only
-      if (node && node.dataset.op === 'number') node.classList.add('selected');
+      if (node && ['number', 'unit'].includes(node.dataset.op)) node.classList.add('selected');
     });
 
     sel.t = setTimeout(() => { sel.t = null; }, 50);

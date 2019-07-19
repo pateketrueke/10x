@@ -13,6 +13,7 @@ body { font-family: Montserrat; }
 .editor var { font-style: normal; }
 .editor span, .editor [data-op=open], .editor [data-op=close] { color: #D4D8D5; font-weight: normal; }
 .editor [data-op=number] { color: #3B89C6; }
+.editor [data-op=unit] { border-bottom: 1px dashed #D4D8D5; }
 .editor [data-op=equal], .editor [data-op=plus], .editor [data-op=min] { color: #D776C7; }
 .editor [data-op=div], .editor [data-op=mul], .editor [data-op=number] span { position: relative; color: transparent; display: inline-block; width: .5em; }
 .editor [data-op=div]::after, .editor [data-op=mul]::after { caret-color: #898E8A; color: #D776C7; position: absolute; left: -2px; bottom: 0; }
