@@ -93,7 +93,7 @@
     } catch (e) {
       info.errored = e;
 
-      const ops = all();;
+      const ops = all();
 
       if (e.offset > 0 && ops[e.offset - 1]) {
         ops[e.offset - 1].classList.add('errored');
@@ -351,6 +351,7 @@
         }
         return;
       }
+
       if (e.keyCode === 8) {
         saveCursor();
 

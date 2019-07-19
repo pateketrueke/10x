@@ -291,12 +291,6 @@ export function basicFormat(text) {
       return prev;
     }
 
-    // just collect white-space
-    // if (cur === ' ') {
-    //   prev.push(cur);
-    //   return prev;
-    // }
-
     if (
       isSep(cur) || hasNum(cur)
 
