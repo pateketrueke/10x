@@ -1,7 +1,21 @@
 <script>
+  import { createEventDispatcher } from 'svelte';
+
   export let input = [];
   export let tokens = [];
   export let errored = null;
+
+  let mode = 'input';
+
+  const dispatch = createEventDispatcher();
+
+  function focus(offset) {
+    dispatch('focus', offset);
+  }
+
+  function set(e) {
+    mode = e.target.value;
+  }
 </script>
 
 <style>
@@ -47,7 +61,9 @@
 </style>
 
 <div class="debug">
-  {#if input.length}
+  <input checked name="mode" value="input" type="radio" on:click={set} />
+  <input name="mode" value="tokens" type="radio" on:click={set} />
+  {#if mode === 'input' && input.length}
     <p>
       {#each input as chunk}
         <small>
@@ -57,10 +73,10 @@
       {/each}
     </p>
   {/if}
-  {#if tokens.length}
+  {#if mode === 'tokens' && tokens.length}
     <p>
-      {#each tokens as chunk}
-        <small>
+      {#each tokens as chunk, i}
+        <small on:click={() => focus(i)}>
           <em>{chunk[0]}</em>
           <var>{chunk[1]}</var>
           {#if chunk[2]}<span>{chunk[2]}</span>{/if}

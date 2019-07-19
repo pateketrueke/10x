@@ -51,6 +51,14 @@
   let enabled = false;
   let usingMode = null;
 
+  function all(cb) {
+    const nodes = [].slice.call(input.children).filter(x => 'op' in x.dataset);
+
+    if (typeof cb === 'function') return nodes.map(cb);
+
+    return nodes;
+  }
+
   function push() {
     // clean but keep at least one entry!
     if (revision !== -1) {
@@ -72,9 +80,7 @@
   // evaluate aftermath
   function maths() {
     info.errored = undefined;
-    info.tokens = [].slice.call(input.children)
-      .filter(x => 'op' in x.dataset)
-      .map(x => [x.dataset.op, x.textContent, x.dataset.unit || undefined]);
+    info.tokens = all(x => [x.dataset.op, x.textContent, x.dataset.unit || undefined]);
 
     try {
       input.classList.remove('errored');
@@ -87,8 +93,7 @@
     } catch (e) {
       info.errored = e;
 
-      const ops = [].slice.call(input.children)
-        .filter(x => x.dataset.op);
+      const ops = all();;
 
       if (e.offset > 0 && ops[e.offset - 1]) {
         ops[e.offset - 1].classList.add('errored');
@@ -439,6 +444,15 @@
     }
   }
 
+  function select(e) {
+    clearTimeout(select.t);
+
+    if (node) node.classList.remove('selected');
+    if (node = all()[e.detail]) node.classList.add('selected');
+
+    select.t = setTimeout(() => { node.classList.remove('selected'); }, 260);
+  }
+
   // render upon changes from props
   $: if (input && !enabled) render();
 </script>
@@ -500,6 +514,6 @@
     </div>
   {/if}
   {#if debug}
-    <DebugInfo {...info} />
+    <DebugInfo {...info} on:focus={select} />
   {/if}
 </div>
