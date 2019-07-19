@@ -355,6 +355,7 @@
         // first, try regular offset looking for emojis
         const char = markup.substr(offset - 2, 2);
 
+        // no luck, just remove a single character
         if (!RE_EMOJI_BASE.test(char)) {
           mutate('', -1);
           sel();

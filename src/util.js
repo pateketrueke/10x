@@ -276,7 +276,7 @@ export function basicFormat(text) {
       // handle operators between numbers
       || ((RE_UNIT.test(prevToken) || hasNum(prevToken)) && hasNum(nextToken))
     ) {
-      prev.push(simpleNumbers(lineFormat(cur)))
+      prev.push(simpleNumbers(lineFormat(cur)));
     } else {
       prev.push(simpleNumbers(simpleMarkdown(cur)));
     }
@@ -297,19 +297,16 @@ export function getClipbordText(e) {
 }
 
 export function getTextNodeAtPosition(target, offset = 0) {
-  let lastNode = null;
-
   const c = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, elem => {
     if (offset >= elem.textContent.length) {
       offset -= elem.textContent.length;
-      lastNode = elem;
       return NodeFilter.FILTER_REJECT;
     }
     return NodeFilter.FILTER_ACCEPT;
   }).nextNode();
 
   return {
-    node: c ? c : target,
+    node: c || target,
     position: c ? offset : 0,
   };
 }
@@ -317,7 +314,7 @@ export function getTextNodeAtPosition(target, offset = 0) {
 export function getSelectionStart() {
   const node = document.getSelection().anchorNode;
 
-  return (node && node.nodeType == 3) ? node.parentNode : node;
+  return (node && node.nodeType === 3) ? node.parentNode : node;
 }
 
 export function removeSelectedText() {
@@ -349,11 +346,13 @@ export function setCursor(target, offset = 0) {
   try {
     range.setStart(pos.node, pos.position);
     selection.addRange(range);
-  } catch (e) {}
+  } catch (e) {
+    // do nothing
+  }
 }
 
 export function parseNumber(value) {
-  value = value.replace(/[^\/a-z\d.-]/ig, '').split(/[^\d/.-]/)[0];
+  value = value.replace(/[^/a-z\d.-]/ig, '').split(/[^\d/.-]/)[0];
 
   if (value.includes('/')) {
     const [a, b] = value.split('/');
@@ -544,17 +543,16 @@ export function reduceFromAST(tokens) {
       cur[1] = !(cur[1] instanceof Date) ? parseFromValue(cur) : cur[1];
       isDate = true;
     } else {
-      const left = tokens[i - 1];
-      const right = tokens[i + 1];
+      const next = tokens[i + 1];
 
       // handle unit-conversion to seconds
-      if (isDate && right && right[0] === 'number') {
-        if (TIME_UNITS.includes(right[2])) {
-          right[1] = toNumber(right, 's');
-        } else if (right[2]) {
-          right[1] = parseFromValue(right);
+      if (isDate && next && next[0] === 'number') {
+        if (TIME_UNITS.includes(next[2])) {
+          next[1] = toNumber(next, 's');
+        } else if (next[2]) {
+          next[1] = parseFromValue(next);
         } else {
-          right[1] = new Date(`${right[1]} 00:00`);
+          next[1] = new Date(`${next[1]} 00:00`);
         }
       }
     }
@@ -571,7 +569,7 @@ export function calculateFromTokens(tokens) {
   let lastOp = ['plus', '+'];
 
   // operate all possible expressions...
-  const chunks = simplified.reduce((prev, cur, i) => {
+  const chunks = simplified.reduce((prev, cur) => {
     const lastValue = prev[prev.length - 1] || [];
 
     if (lastValue[0] === 'number' && cur[0] === 'number') prev.push(lastOp, cur);
@@ -584,7 +582,6 @@ export function calculateFromTokens(tokens) {
   // join chunks into final expressions
   for (let i = 0; i < chunks.length; i += 1) {
     const cur = chunks[i];
-    const next = chunks[i + 1];
 
     normalized[offset] = normalized[offset] || [];
     normalized[offset].push(cur);
