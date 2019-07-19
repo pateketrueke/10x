@@ -88,6 +88,7 @@ export function toChunks(input) {
   const tokens = chars.reduce((prev, cur, i) => {
     const buffer = prev[offset] || (prev[offset] = []);
     const last = buffer[buffer.length - 1];
+    const text = buffer.join('');
     const next = chars[i + 1];
 
     // skip closing chars if they're not well paired
@@ -100,7 +101,7 @@ export function toChunks(input) {
     if (cur === ']' || cur === ')') open -= 1;
 
     // normalize well-known dates
-    if (hasMonths(buffer.join(''))) {
+    if (hasMonths(text)) {
       if (cur === ',' || (cur === ' ' && hasNum(next)) || hasNum(cur)) {
         buffer.push(cur);
         return prev;
@@ -139,6 +140,8 @@ export function toChunks(input) {
       // skip separators
       isSep(cur) || isSep(last)
 
+      // skip after words
+      || (isWord(last) && cur === ',')
 
       // skip possible numbers
       || (hasNum(last) && isOp(cur) && cur !== '/')
@@ -148,6 +151,15 @@ export function toChunks(input) {
       || (!hasNum(last) && isOp(cur) && oldChar !== cur)
       || (hasNum(oldChar) && last === '-' && hasNum(cur))
     ) {
+      // make sure we split from unknown units
+      if (text !== ' ' && text.includes(' ') && !RE_UNIT.test(text)) {
+        const [num, unit] = text.split(' ');
+
+        prev[offset] = [num];
+        prev[++offset] = [' '];
+        prev[++offset] = [unit];
+      }
+
       prev[++offset] = [cur];
     } else buffer.push(cur);
 
@@ -262,6 +274,12 @@ export function basicFormat(text) {
       prev.push(simpleMarkdown(cur));
       return prev;
     }
+
+    // just collect white-space
+    // if (cur === ' ') {
+    //   prev.push(cur);
+    //   return prev;
+    // }
 
     if (
       isSep(cur) || hasNum(cur)

@@ -1,5 +1,6 @@
 <script context="module">
   import EmojiPicker from './pick/Emoji.svelte';
+  import DebugInfo from './Debug.svelte';
 
   import {
     basicFormat,
@@ -450,38 +451,6 @@
   .wrapper {
     position: relative;
   }
-  .debug {
-    padding: 0 3px;
-  }
-  p {
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    margin-top: 5px;
-  }
-  em {
-    color: silver;
-  }
-  span {
-    padding: 0 .3em;
-    border-radius: 3px;
-    background-color: silver;
-  }
-  small {
-    white-space: nowrap;
-    margin-right: 5px;
-    margin-bottom: 5px;
-    padding: 0 .3em;
-    font-size: .75em;
-    border-radius: 3px;
-    border: 1px dashed silver;
-  }
-  small:hover {
-    border-color: gray;
-  }
-  .active {
-    font-weight: bold;
-  }
 </style>
 
 <div class="wrapper">
@@ -495,28 +464,7 @@
     on:paste|preventDefault={insert}
   />
   {#if debug}
-    <div class="debug">
-      <p>
-        {#each info.input as chunk}
-          <small>
-            {chunk === ' ' ? String.fromCharCode(160) : chunk}
-            {#if chunk !== ' '}<span>{chunk.length}</span>{/if}
-          </small>
-        {/each}
-      </p>
-      <p>
-        {#each info.tokens as chunk}
-          <small>
-            <em>{chunk[0]}</em>
-            <var>{chunk[1]}</var>
-            {#if chunk[2]}<span>{chunk[2]}</span>{/if}
-          </small>
-        {/each}
-      </p>
-      {#if info.errored}
-        <p>{info.errored}</p>
-      {/if}
-    </div>
+    <DebugInfo {...info} />
   {/if}
   {#if usingMode}
     <div class="overlay" bind:this={overlay} on:click|preventDefault={pick}>
