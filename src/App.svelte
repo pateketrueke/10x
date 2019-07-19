@@ -24,6 +24,10 @@
     1ft-us - 1 l/s as inches
     min/km km/h deg/s yd3/h' fl-oz
     3G
+    in cm 2+3
+    in cm, 2+3
+    2+3 as cm
+    2+3, as cm
     1 2 3 / 4 5 =
     1 2 3 4 5 =
     1 2 3 - 4 5 =

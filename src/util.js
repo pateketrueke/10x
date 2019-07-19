@@ -530,6 +530,10 @@ export function buildTree(tokens) {
     }
   }
 
+  if (stack.length) {
+    throw new TError(`Invalid terminator around: ${tokens.map(x => x[1]).join('')}`, tokens.length);
+  }
+
   return tree;
 }
 
