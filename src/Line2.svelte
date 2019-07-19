@@ -18,7 +18,8 @@
     },
   };
 
-  const RE_EMOJI = /[\uD800-\uDBFF][\uDC00-\uDFFF]/;
+  const RE_EMOJI_BASE = /[\uD83C-\uDBFF\uDC00-\uDFFF]/;
+  const RE_EMOJI_PAIRS = /[\uD800-\uDBFF][\uDC00-\uDFFF]/;
 </script>
 
 <script>
@@ -203,6 +204,12 @@
     sync({ selectedText });
   }
 
+  function pull() {
+    push();
+    render();
+    setCursor(input, offset);
+  }
+
   let isDead;
 
   // normalize white-space back, see check()
@@ -259,13 +266,17 @@
       // remove user-selection and sync buffer
       if (!selection.isCollapsed && !e.metaKey && (e.keyCode === 8 || e.key.length === 1)) {
         push();
-        clear(selectedText);
+        e.preventDefault();
+
+        if (selectedText) {
+          push();
+          clear(selectedText);
+          if (history[revision - 1]) history[revision - 1].pos = offset;
+        }
 
         // append on given input
         if (e.key.length && e.keyCode !== 8) mutate(e.key);
-        else setTimeout(() => maths(push()));
-
-        e.preventDefault();
+        else setTimeout(pull);
         return;
       }
 
@@ -299,9 +310,7 @@
             markup = input.textContent;
             isDead = false;
 
-            push();
-            render();
-            setCursor(input, offset);
+            pull();
           });
         }
         return;
@@ -346,7 +355,7 @@
         // first, try regular offset looking for emojis
         const char = markup.substr(offset - 2, 2);
 
-        if (!RE_EMOJI.test(char)) {
+        if (!RE_EMOJI_BASE.test(char)) {
           mutate('', -1);
           sel();
           return;
@@ -356,10 +365,13 @@
         // so we need to detect how much to delete from...
         do {
           const tt = markup.substr(--k);
-          const mm = tt.match(RE_EMOJI);
+          const mm = tt.match(RE_EMOJI_PAIRS);
 
           if (mm) {
             x = mm[0].length;
+            break;
+          } else if (RE_EMOJI_BASE.test(tt)) {
+            x = 1 + (offset -  k);
             break;
           }
         } while (--n);

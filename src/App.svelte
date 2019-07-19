@@ -5,7 +5,7 @@
 
   let tests = `
     # today + tomorrow
-    $15,000 MXN / 14 days of **work** 😅😇👋🏿
+    $15,000 MXN / 14 days of **work** 😅😇👋🏿👨‍👩‍👧‍👦
     10 inches in cm
     450 km in miles
     160 pounds as kg
