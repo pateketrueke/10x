@@ -226,24 +226,24 @@ export function lineFormat(text) {
     .replace(/^[([\])]$/, char => `<var data-op="${(char === '[' || char === '(') ? 'open' : 'close'}">${char}</var>`);
 }
 
-export function basicFormat(text, debug) {
+export function basicFormat(text) {
   // handle markdown-like headings
   if (text.charAt() === '#') {
     const matches = text.match(/^(#+)(.+?)$/);
     const nth = Math.min(matches[1].length, 6);
 
-    return `<h${nth}><span>${matches[1]}</span>${matches[2]}</h${nth}>`;
+    return {
+      input: [text],
+      output: `<h${nth}><span>${matches[1]}</span>${matches[2]}</h${nth}>`,
+    };
   }
 
   const all = toChunks(text);
 
-  // debug AST if possible
-  if (debug) console.log(all);
-
   let prevToken;
   let nextToken;
 
-  return all.reduce((prev, cur, i) => {
+  const body = all.reduce((prev, cur, i) => {
     let key = i;
 
     do {
@@ -289,6 +289,11 @@ export function basicFormat(text, debug) {
     if (!isSep(cur)) prevToken = cur;
     return prev;
   }, []).join('');
+
+  return {
+    input: all,
+    output: body,
+  };
 }
 
 export function getClipbordText(e) {

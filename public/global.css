@@ -18,6 +18,7 @@ body { font-family: Montserrat; }
 .editor [data-op=div], .editor [data-op=mul], .editor [data-op=number] span { position: relative; color: transparent; display: inline-block; width: .5em; }
 .editor [data-op=div]::after, .editor [data-op=mul]::after { caret-color: #898E8A; color: #D776C7; position: absolute; left: -2px; bottom: 0; }
 .editor [data-op=number] span::after { content: '⁄'; color: #3B89C6; position: absolute; left: 3px; }
+.editor [data-op=mul], .editor [data-op=div] { width: .3em;  }
 .editor [data-op=div]::after { content: '÷'; }
 .editor [data-op=mul]::after { content: '×'; }
 .editor sub, .editor sup { font-size: .75em; }

@@ -18,8 +18,7 @@
     },
   };
 
-  const RE_EMOJI_BASE = /[\uD83C-\uDBFF\uDC00-\uDFFF]/;
-  const RE_EMOJI_PAIRS = /[\uD800-\uDBFF][\uDC00-\uDFFF]/;
+  const RE_EMOJI = /[\uD83C-\uDBFF\uDC00-\uDFFF]/;
 </script>
 
 <script>
@@ -33,6 +32,13 @@
   let node;
   let input;
   let overlay;
+
+  let info = {
+    input: [],
+    output: '',
+    tokens: [],
+  };
+
   let sources = [];
   let selected = 0;
   let history = [];
@@ -62,21 +68,18 @@
 
   // evaluate aftermath
   function maths() {
-    const ast = [].slice.call(input.children)
+    info.errored = undefined;
+    info.tokens = [].slice.call(input.children)
       .filter(x => 'op' in x.dataset)
       .map(x => [x.dataset.op, x.textContent, x.dataset.unit || undefined]);
-
-    // debug AST if possible
-    if (debug) console.log(ast);
 
     try {
       input.classList.remove('errored');
       input.removeAttribute('title');
 
-      dispatch('change', calculateFromTokens(ast));
+      dispatch('change', calculateFromTokens(info.tokens));
     } catch (e) {
-      // debug errors if possible
-      if (debug) console.error(e);
+      info.errored = e;
 
       const ops = [].slice.call(input.children)
         .filter(x => x.dataset.op);
@@ -93,16 +96,19 @@
 
   // we take the markup and inject HTML from it
   function render() {
+    let suffix = '';
+
+    // FIXME: instead of this, try render using vDOM?
     try {
-      // FIXME: instead of this, try render using vDOM?
-      input.innerHTML = basicFormat(markup, debug) + ' ';
+      info = basicFormat(markup);
     } catch (e) {
-      input.innerHTML =
-        basicFormat(markup.substr(0, e.offset), debug)
-        + `<span style="background-color:red;color:white">${
-          markup.substr(e.offset).replace(/\s/g, String.fromCharCode(160))
-        }</span> `;
+      info = basicFormat(markup.substr(0, e.offset));
+      suffix = `<span style="background-color:red;color:white">${
+        markup.substr(e.offset).replace(/\s/g, String.fromCharCode(160))
+      }</span>`;
     }
+
+    input.innerHTML = `${info.output} `;
 
     maths();
   }
@@ -323,6 +329,21 @@
         }
         return;
       }
+      if (e.keyCode === 8) {
+        saveCursor();
+
+        // let's the browser do his job...
+        if (RE_EMOJI.test(markup.substr(offset -2, 2))) {
+          push();
+          setTimeout(() => {
+            markup = input.textContent.substr(0, markup.length);
+            saveCursor();
+            pull();
+            sel();
+          });
+          return;
+        }
+      }
 
       // update offset and reset cursor again,
       // otherwise the cursor gets reset
@@ -356,36 +377,7 @@
         // make white-space visible during this
         input.style.whiteSpace = 'pre';
 
-        let x = 0;
-        let n = 2;
-        let k = offset;
-
-        // first, try regular offset looking for emojis
-        const char = markup.substr(offset - 2, 2);
-
-        // no luck, just remove a single character
-        if (!RE_EMOJI_BASE.test(char)) {
-          mutate('', -1);
-          sel();
-          return;
-        }
-
-        // you cannot simple remove single-chars in case of emojis,
-        // so we need to detect how much to delete from...
-        do {
-          const tt = markup.substr(--k);
-          const mm = tt.match(RE_EMOJI_PAIRS);
-
-          if (mm) {
-            x = mm[0].length;
-            break;
-          } else if (RE_EMOJI_BASE.test(tt)) {
-            x = 1 + (offset -  k);
-            break;
-          }
-        } while (--n);
-
-        mutate('', x ? x * -1 : -1);
+        mutate('', -1);
         sel();
       }
     }
@@ -458,6 +450,38 @@
   .wrapper {
     position: relative;
   }
+  .debug {
+    padding: 0 3px;
+  }
+  p {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 5px;
+  }
+  em {
+    color: silver;
+  }
+  span {
+    padding: 0 .3em;
+    border-radius: 3px;
+    background-color: silver;
+  }
+  small {
+    white-space: nowrap;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    padding: 0 .3em;
+    font-size: .75em;
+    border-radius: 3px;
+    border: 1px dashed silver;
+  }
+  small:hover {
+    border-color: gray;
+  }
+  .active {
+    font-weight: bold;
+  }
 </style>
 
 <div class="wrapper">
@@ -470,6 +494,30 @@
     on:keyup|preventDefault={reset}
     on:paste|preventDefault={insert}
   />
+  {#if debug}
+    <div class="debug">
+      <p>
+        {#each info.input as chunk}
+          <small>
+            {chunk === ' ' ? String.fromCharCode(160) : chunk}
+            {#if chunk !== ' '}<span>{chunk.length}</span>{/if}
+          </small>
+        {/each}
+      </p>
+      <p>
+        {#each info.tokens as chunk}
+          <small>
+            <em>{chunk[0]}</em>
+            <var>{chunk[1]}</var>
+            {#if chunk[2]}<span>{chunk[2]}</span>{/if}
+          </small>
+        {/each}
+      </p>
+      {#if info.errored}
+        <p>{info.errored}</p>
+      {/if}
+    </div>
+  {/if}
   {#if usingMode}
     <div class="overlay" bind:this={overlay} on:click|preventDefault={pick}>
       <svelte:component bind:search bind:selected on:change={update} this={usingMode.component} />
