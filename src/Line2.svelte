@@ -147,6 +147,7 @@
     if (!enabled) {
       enabled = true;
     }
+    sel();
   }
 
   function sel() {
@@ -439,9 +440,9 @@
     top: 0;
     z-index: 1;
     cursor: text;
-    padding: 0 3px;
     outline: none;
     box-shadow: none;
+    padding-left: 1px;
   }
   .editor {
     display: flex;

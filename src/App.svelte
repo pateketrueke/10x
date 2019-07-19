@@ -52,14 +52,16 @@
     margin-right: 5px;
   }
   li {
-    display: flex;
     font-size: 1em;
     min-height: 1.5em;
     line-height: 1.5em;
     align-items: center;
   }
-  span {
+  label {
+    z-index: 1;
+    float: left;
     padding: 0 3px;
+    position: relative;
   }
 </style>
 
@@ -67,12 +69,18 @@
   {#each tests as [on, text]}
     <li>
       {#if debug}
-        <input tabIndex="-1" type="checkbox" checked={on} on:click={e => toggle(text)} />
+        <label>
+          <input
+            on:click={e => toggle(text)}
+            type="checkbox"
+            checked={on}
+            tabIndex="-1"
+          />
+          {#if !on}{text}{/if}
+        </label>
       {/if}
       {#if !debug || on}
         <In {debug} bind:markup={text} />
-      {:else}
-        <span>{text}</span>
       {/if}
     </li>
   {/each}
