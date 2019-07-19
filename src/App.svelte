@@ -23,9 +23,11 @@
     1ft - .3ft
     1ft-us - 1 l/s as inches
     min/km km/h deg/s yd3/h' fl-oz
+    365 days as years
     3G
     in cm 2+3
     in cm, 2+3
+    1 inch + 1cm
     2+3 as cm
     2+3, as cm
     1 2 3 / 4 5 =
@@ -68,7 +70,7 @@
         <input tabIndex="-1" type="checkbox" checked={on} on:click={e => toggle(text)} />
       {/if}
       {#if !debug || on}
-        <In bind:markup={text} />
+        <In {debug} bind:markup={text} />
       {:else}
         <span>{text}</span>
       {/if}

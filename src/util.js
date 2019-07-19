@@ -226,7 +226,7 @@ export function lineFormat(text) {
     .replace(/^[([\])]$/, char => `<var data-op="${(char === '[' || char === '(') ? 'open' : 'close'}">${char}</var>`);
 }
 
-export function basicFormat(text) {
+export function basicFormat(text, debug) {
   // handle markdown-like headings
   if (text.charAt() === '#') {
     const matches = text.match(/^(#+)(.+?)$/);
@@ -236,6 +236,9 @@ export function basicFormat(text) {
   }
 
   const all = toChunks(text);
+
+  // debug AST if possible
+  if (debug) console.log(all);
 
   let prevToken;
   let nextToken;
@@ -502,6 +505,7 @@ export function calculateFromString(expr) {
 }
 
 export function buildTree(tokens) {
+  let ops = false;
   let root = [];
 
   const tree = root;
@@ -517,6 +521,7 @@ export function buildTree(tokens) {
         root.push(leaf);
         stack.push(root);
         root = leaf;
+        ops = false;
       } else if (t[0] === 'close') {
         root = stack.pop();
       }
@@ -524,13 +529,15 @@ export function buildTree(tokens) {
       const matches = t[1].match(/(%|[ap]m)$/i);
       const type = matches ? matches[1] : t[2];
 
+      if (isOp(t[1])) ops = true;
+
       root.push([t[0], /^[a-z-+=*/](?!\.?\d|\s)/i.test(t[1]) ? t[1] : parseNumber(t[1]), type]);
     } else {
       throw new TError(`Invalid terminator around: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
     }
   }
 
-  if (stack.length) {
+  if (stack.length && ops) {
     throw new TError(`Invalid terminator around: ${tokens.map(x => x[1]).join('')}`, tokens.length);
   }
 

@@ -24,6 +24,8 @@
 
 <script>
   import { createEventDispatcher } from 'svelte';
+
+  export let debug = false;
   export let markup = '';
 
   const dispatch = createEventDispatcher();
@@ -64,12 +66,18 @@
       .filter(x => 'op' in x.dataset)
       .map(x => [x.dataset.op, x.textContent, x.dataset.unit || undefined]);
 
+    // debug AST if possible
+    if (debug) console.log(ast);
+
     try {
       input.classList.remove('errored');
       input.removeAttribute('title');
 
       dispatch('change', calculateFromTokens(ast));
     } catch (e) {
+      // debug errors if possible
+      if (debug) console.error(e);
+
       const ops = [].slice.call(input.children)
         .filter(x => x.dataset.op);
 
@@ -87,10 +95,10 @@
   function render() {
     try {
       // FIXME: instead of this, try render using vDOM?
-      input.innerHTML = basicFormat(markup) + ' ';
+      input.innerHTML = basicFormat(markup, debug) + ' ';
     } catch (e) {
       input.innerHTML =
-        basicFormat(markup.substr(0, e.offset))
+        basicFormat(markup.substr(0, e.offset), debug)
         + `<span style="background-color:red;color:white">${
           markup.substr(e.offset).replace(/\s/g, String.fromCharCode(160))
         }</span> `;

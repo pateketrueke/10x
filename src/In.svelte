@@ -1,5 +1,7 @@
 <script>
   import Line2 from './Line2.svelte';
+
+  export let debug = false;
   export let markup = '';
 
   let results = [];
@@ -30,7 +32,7 @@
 </style>
 
 <div>
-  <Line2 bind:markup on:change={onUpdate} />
+  <Line2 {debug} bind:markup on:change={onUpdate} />
   <span>
     {#each results as [type, value, unit]}
       <span data-result={type}>{toValue(value, unit)}</span>
