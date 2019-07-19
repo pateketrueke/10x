@@ -356,10 +356,12 @@
         saveCursor();
 
         // let's the browser do his job...
-        if (RE_EMOJI.test(markup.substr(offset -2, 2))) {
+        if (RE_EMOJI.test(markup.substr(offset - 2, 2))) {
           push();
           setTimeout(() => {
-            markup = input.textContent.substr(0, markup.length);
+            // remove last white-space to preserve length
+            markup = input.textContent.substr(0, input.textContent.length - 1);
+
             saveCursor();
             pull();
             sel();
@@ -515,6 +517,6 @@
     </div>
   {/if}
   {#if debug}
-    <DebugInfo {...info} on:focus={select} />
+    <DebugInfo on:focus={select} input={info.input} tokens={info.tokens} />
   {/if}
 </div>

@@ -3,6 +3,7 @@
 
   export let input = [];
   export let tokens = [];
+  export let messages = [];
   export let errored = null;
 
   let mode = 'input';
