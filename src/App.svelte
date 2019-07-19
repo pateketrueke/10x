@@ -60,9 +60,13 @@
   label {
     z-index: 1;
     float: left;
-    cursor: text;
+    opacity: 0.6;
     padding: 0 3px;
+    cursor: pointer;
     position: relative;
+  }
+  label:hover {
+    opacity: 1;
   }
 </style>
 

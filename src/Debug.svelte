@@ -10,6 +10,7 @@
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+    margin-bottom: 3px;
     padding: 0 3px 3px 3px;
     box-shadow: 0 2px 3px rgba(0, 0, 0, .1);
   }
@@ -22,6 +23,9 @@
   }
   em {
     color: silver;
+  }
+  var {
+    font-style: normal;
   }
   span {
     color: gray;

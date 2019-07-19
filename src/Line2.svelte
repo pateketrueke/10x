@@ -319,7 +319,7 @@
       ) {
         // we can't save immediately or the cursor will reset!
         setTimeout(() => {
-          saveCursor();
+          if (!e.shiftKey) saveCursor();
 
           // we adjust the cursor due emojis at the end...
           if (offset > markup.length) {
