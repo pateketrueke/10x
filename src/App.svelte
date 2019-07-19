@@ -1,5 +1,5 @@
 <script>
-  import In from './In.svelte';
+  import In from './Line2.svelte';
 
   export let debug = false;
 

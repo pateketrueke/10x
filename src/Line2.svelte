@@ -433,9 +433,8 @@
 </script>
 
 <style>
-  .editor {
+  .input {
     word-break: break-word;
-    width: 100%;
     left: 0;
     top: 0;
     z-index: 1;
@@ -443,6 +442,9 @@
     padding: 0 3px;
     outline: none;
     box-shadow: none;
+  }
+  .editor {
+    display: flex;
   }
   .overlay {
     box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
@@ -454,7 +456,6 @@
     z-index: 2;
   }
   .wrapper {
-    display: flex;
     position: relative;
   }
   .results {
@@ -464,30 +465,30 @@
 </style>
 
 <div class="wrapper">
-  <div class="editor" spellcheck="false" contenteditable
-    bind:this={input}
-    on:blur={disable}
-    on:focus={enable}
-    on:keydown={check}
-    on:click|preventDefault={cursor}
-    on:keyup|preventDefault={reset}
-    on:paste|preventDefault={insert}
-  />
-  <div class="results">
-    <span>
-      {#each info.results as [type, value, unit]}
-        <span data-result={type}>{toValue(value, unit)}</span>
-      {/each}
-    </span>
+  <div class="editor">
+    <div class="input" spellcheck="false" contenteditable
+      bind:this={input}
+      on:blur={disable}
+      on:focus={enable}
+      on:keydown={check}
+      on:click|preventDefault={cursor}
+      on:keyup|preventDefault={reset}
+      on:paste|preventDefault={insert}
+    />
+    <div class="results">
+      <span>
+        {#each info.results as [type, value, unit]}
+          <span data-result={type}>{toValue(value, unit)}</span>
+        {/each}
+      </span>
+    </div>
   </div>
+  {#if usingMode}
+    <div class="overlay" bind:this={overlay} on:click|preventDefault={pick}>
+      <svelte:component bind:search bind:selected on:change={update} this={usingMode.component} />
+    </div>
+  {/if}
+  {#if debug}
+    <DebugInfo {...info} />
+  {/if}
 </div>
-
-{#if usingMode}
-  <div class="overlay" bind:this={overlay} on:click|preventDefault={pick}>
-    <svelte:component bind:search bind:selected on:change={update} this={usingMode.component} />
-  </div>
-{/if}
-
-{#if debug}
-  <DebugInfo {...info} />
-{/if}
