@@ -24,6 +24,7 @@
     color: silver;
   }
   span {
+    color: gray;
     padding: 0 .3em;
     border-radius: 3px;
     background-color: silver;

@@ -69,6 +69,22 @@ const hasMonths = x => RE_MONTHS.test(x);
 const hasKeyword = x => x && (!keywords.includes(x) ? mappings[x.toLowerCase()] : x);
 const hasDatetime = x => RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x);
 
+export function toValue(value, unit) {
+  if (value instanceof Date) {
+    return value.toString().split(' ').slice(0, 5).join(' ');
+  }
+
+  if (typeof value === 'number') {
+    value = value.toFixed(2).replace(/\.0+$/, '');
+  }
+
+  if (unit) {
+    return `${value} ${unit}`;
+  }
+
+  return value;
+}
+
 export function toNumber(token, unit) {
   const key = token[2].replace('_', '-');
   const num = key.replace(RE_DIGIT, '').trim();

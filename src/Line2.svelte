@@ -6,6 +6,7 @@
     basicFormat,
     getCursor,
     setCursor,
+    toValue,
     getClipbordText,
     getSelectionStart,
     removeSelectedText,
@@ -38,6 +39,7 @@
     input: [],
     output: '',
     tokens: [],
+    results: [],
   };
 
   let sources = [];
@@ -78,7 +80,10 @@
       input.classList.remove('errored');
       input.removeAttribute('title');
 
-      dispatch('change', calculateFromTokens(info.tokens));
+      info = {
+        ...info,
+        ...calculateFromTokens(info.tokens),
+      };
     } catch (e) {
       info.errored = e;
 
@@ -449,7 +454,12 @@
     z-index: 2;
   }
   .wrapper {
+    display: flex;
     position: relative;
+  }
+  .results {
+    display: flex;
+    align-items: center;
   }
 </style>
 
@@ -463,12 +473,21 @@
     on:keyup|preventDefault={reset}
     on:paste|preventDefault={insert}
   />
-  {#if debug}
-    <DebugInfo {...info} />
-  {/if}
-  {#if usingMode}
-    <div class="overlay" bind:this={overlay} on:click|preventDefault={pick}>
-      <svelte:component bind:search bind:selected on:change={update} this={usingMode.component} />
-    </div>
-  {/if}
+  <div class="results">
+    <span>
+      {#each info.results as [type, value, unit]}
+        <span data-result={type}>{toValue(value, unit)}</span>
+      {/each}
+    </span>
+  </div>
 </div>
+
+{#if usingMode}
+  <div class="overlay" bind:this={overlay} on:click|preventDefault={pick}>
+    <svelte:component bind:search bind:selected on:change={update} this={usingMode.component} />
+  </div>
+{/if}
+
+{#if debug}
+  <DebugInfo {...info} />
+{/if}
