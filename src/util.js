@@ -25,16 +25,13 @@ const OP_TYPES = {
 
 groups.forEach(group => {
   convert.list(group).forEach(unit => {
-    const abbr = unit.abbr.replace('-', '_');
-    const plural = unit.plural.replace('-', '_');
-    const singular = unit.singular.replace('-', '_');
+    const abbr = unit.abbr;
+    const plural = unit.plural;
+    const singular = unit.singular;
 
-    if (!abbr.includes('/')) {
-      keywords.push(abbr);
-    }
+    keywords.push(abbr);
 
-    // FIXME: ignore hard-to-recognize ones?
-    if (!/[_\s/]/.test(plural)) {
+    if (!plural.includes(' ') && singular !== plural) {
       keywords.push(plural);
       keywords.push(singular);
 
@@ -121,6 +118,11 @@ export function toChunks(input) {
 
       // add consecutive format-chars
       || (isFmt(last) && isFmt(cur) && last === cur)
+
+      // add from other units
+      || (isWord(last) && cur === '/')
+      || (hasNum(last) && cur === '/' && isWord(next))
+      || (isWord(last) && cur === '-' && isWord(next))
 
       // add possible numbers
       || (hasNum(cur) && last === '/')
