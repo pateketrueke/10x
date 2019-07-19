@@ -60,6 +60,7 @@
   label {
     z-index: 1;
     float: left;
+    cursor: text;
     padding: 0 3px;
     position: relative;
   }

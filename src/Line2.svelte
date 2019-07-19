@@ -147,6 +147,7 @@
     if (!enabled) {
       enabled = true;
     }
+
     sel();
   }
 
@@ -317,7 +318,16 @@
         || [16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)
       ) {
         // we can't save immediately or the cursor will reset!
-        if (!(e.altKey || e.shiftKey || e.metaKey)) setTimeout(saveCursor);
+        setTimeout(() => {
+          saveCursor();
+
+          // we adjust the cursor due emojis at the end...
+          if (offset > markup.length) {
+            offset = Math.min(markup.length, offset);
+            setCursor(input, offset);
+          }
+        });
+
         return sel();
       }
 
