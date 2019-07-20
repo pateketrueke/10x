@@ -91,6 +91,9 @@
         ...calculateFromTokens(info.tokens),
       };
     } catch (e) {
+      // always debug on console
+      if (debug) console.log(e);
+
       info.errored = {
         offset: e.offset,
         message: e.message,

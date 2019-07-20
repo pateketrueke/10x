@@ -27,7 +27,7 @@
     3G
     in cm 2+3
     in cm, 2+3
-    1 inch + 1cm
+    2 + 1 inch + 1cm
     2+3 as cm
     2+3, as cm
     1 2 3 / 4 5 =

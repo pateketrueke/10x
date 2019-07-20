@@ -484,11 +484,11 @@ export function evaluateExpression(op, left, right) {
 
 export function operateExpression(ops, expr) {
   for (let i = 1, c = expr.length - 1; i < c; i += 1) {
-    if (expr[i] && ops.indexOf(expr[i][1]) > -1) {
-      const cur = expr[i];
-      const prev = expr[i - 1];
-      const next = expr[i + 1];
+    const cur = expr[i];
+    const prev = expr[i - 1];
+    const next = expr[i + 1];
 
+    if (cur && ops.indexOf(expr[i][1]) > -1) {
       let result;
 
       // operate datetime
@@ -498,6 +498,15 @@ export function operateExpression(ops, expr) {
         // apply percentage
         if (next[2] === '%') {
           next[1] = prev[1] * (next[1] / 100);
+        }
+
+        // apply conversions
+        if ((prev[2] || next[2]) && prev[2] !== next[2]) {
+          if (prev[2] && next[2]) {
+            next[1] = new Convert(next[1]).from(next[2]).to(prev[2]);
+          } else {
+            prev[2] = next[2];
+          }
         }
 
         // ideally both values are integers
@@ -586,7 +595,7 @@ export function reduceFromAST(tokens) {
   for (let i = 0, c = tokens.length; i < c; i += 1) {
     const cur = tokens[i];
 
-    if (Array.isArray(cur[0])) {
+    if (cur && Array.isArray(cur[0])) {
       tokens[i] = calculateFromString(reduceFromAST(cur));
     } else if (cur && /(?:datetime|a[mp])/.test(cur[2])) {
       cur[1] = !(cur[1] instanceof Date) ? parseFromValue(cur) : cur[1];
@@ -603,6 +612,12 @@ export function reduceFromAST(tokens) {
         } else {
           next[1] = new Date(`${next[1]} 00:00`);
         }
+      }
+
+      // convert preceding units from expressions
+      if (next && cur[0] === 'unit' && tokens[i - 1][0] === 'expr') {
+        tokens[i + 3][2] = cur[2];
+        tokens.splice(0, i + 1);
       }
     }
   }
