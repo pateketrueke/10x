@@ -59,6 +59,7 @@
     margin-right: 5px;
   }
   li {
+    clear: both;
     font-size: 1em;
     min-height: 1.5em;
   }

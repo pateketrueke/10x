@@ -555,11 +555,12 @@ export function operateExpression(ops, expr) {
               // handle relationships n:m, otherwise just operate
               // FIXME: conversions are not going wel....
               if (RE_EXPRS.test(cur[1])) {
-                const base = new Convert(next[1]).from(next[2]).to(prev[2]);
-                result = prev[1] + (base / prev[1]);
+                // const base = new Convert(next[1]).from(next[2]).to(prev[2]);
+                // result = prev[1] + (base / next[1]);
+
+                const base = new Convert(prev[1]).from(prev[2]).to(next[2]);
+                result = base / next[1];
                 prev[2] = next[2];
-                // const base = new Convert(prev[1]).from(prev[2]).to(next[2]);
-                // result = prev[1] / base;
               }
               else {
                 const base = new Convert(next[1]).from(next[2]).to(prev[2]);

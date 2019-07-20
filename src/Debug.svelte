@@ -29,6 +29,7 @@
     box-shadow: 0 2px 3px rgba(0, 0, 0, .1);
   }
   .error {
+    padding-bottom: .2em;
     font-size: .85em;
     color: red;
     margin: 0;
@@ -44,6 +45,7 @@
     color: silver;
   }
   var {
+    margin: 0 .2em;
     font-style: normal;
   }
   p span {
@@ -54,7 +56,9 @@
   }
   p small {
     white-space: nowrap;
-    padding: 0 .3em;
+    align-items: center;
+    display: flex;
+    padding: 2px;
     font-size: .75em;
     border: 1px solid rgba(0, 0, 0, .1);
     margin-top: -1px;
