@@ -328,6 +328,9 @@
         e.metaKey || e.key === 'Meta'
         || [16, 18, 37, 38, 39, 40, 91].includes(e.keyCode)
       ) {
+        // keep selection as normal
+        if (!window.getSelection().isCollapsed) return;
+
         // we can't save immediately or the cursor will reset!
         setTimeout(() => {
           if (!e.shiftKey || [16, 18, 91].includes(e.keyCode)) saveCursor();
