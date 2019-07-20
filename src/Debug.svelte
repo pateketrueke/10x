@@ -26,7 +26,7 @@
     -ms-user-select: none;
     user-select: none;
     margin-bottom: 3px;
-    padding: 0 3px 3px 3px;
+    padding: 0 3px;
     box-shadow: 0 2px 3px rgba(0, 0, 0, .1);
   }
   p {
@@ -42,13 +42,13 @@
   var {
     font-style: normal;
   }
-  span {
+  p span {
     color: gray;
     padding: 0 .3em;
     border-radius: 3px;
     background-color: silver;
   }
-  small {
+  p small {
     white-space: nowrap;
     padding: 0 .3em;
     font-size: .75em;
@@ -56,18 +56,29 @@
     margin-top: -1px;
     margin-left: -1px;
   }
-  small:hover {
+  p small:hover {
     background-color: rgba(0, 0, 0, .05);
+  }
+  label {
+    color: gray;
+    cursor: pointer;
+  }
+  label:hover {
+    text-decoration: underline;
+  }
+  input {
+    display: none;
+  }
+  input:checked + span {
+    font-weight: bold;
   }
 </style>
 
 <div class="debug">
-  <input checked name="mode" value="input" type="radio" on:click={set} />
-  <input name="mode" value="tokens" type="radio" on:click={set} />
   {#if mode === 'input' && input.length}
     <p>
-      {#each input as chunk}
-        <small>
+      {#each input as chunk, i}
+        <small on:click={() => focus(['input', i])}>
           {chunk === ' ' ? String.fromCharCode(160) : chunk}
           {#if chunk !== ' '}<span>{chunk.length}</span>{/if}
         </small>
@@ -77,7 +88,7 @@
   {#if mode === 'tokens' && tokens.length}
     <p>
       {#each tokens as chunk, i}
-        <small on:click={() => focus(i)}>
+        <small on:click={() => focus(['tokens', i])}>
           <em>{chunk[0]}</em>
           <var>{chunk[1]}</var>
           {#if chunk[2]}<span>{chunk[2]}</span>{/if}
@@ -85,6 +96,16 @@
       {/each}
     </p>
   {/if}
+  <small>
+    <label>
+      <input checked name="mode" value="input" type="radio" on:click={set} />
+      <span>input</span>
+    </label>
+    <label>
+      <input name="mode" value="tokens" type="radio" on:click={set} />
+      <span>tokens</span>
+    </label>
+  </small>
   {#if errored}
     <p>{errored}</p>
   {/if}

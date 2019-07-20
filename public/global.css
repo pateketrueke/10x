@@ -23,6 +23,8 @@ body { font-family: Montserrat; }
 .editor [data-op=mul]::after { content: '×'; }
 .editor sub, .editor sup { font-size: .75em; }
 .editor .selected { background-color: #FFDEFF; }
+.editor [data-op=mul].highlighted, .editor [data-op=div].highlighted { color: #F5FFA0; }
+.editor .highlighted, .editor .highlighted::after { background-color: #F5FFA0; }
 .editor * { transition: all .2s; }
 
 [data-result] { font-size: .85em; margin-left: 12px; border: 1px solid #E4E8E5; background-color: #F4F8F5; padding: 0 .3em; border-radius: 5px; }

@@ -237,6 +237,10 @@ export function simpleNumbers(text) {
 }
 
 export function lineFormat(text) {
+  if (text === ' ') {
+    return '<var>&nbsp;</var>';
+  }
+
   const fixedUnit = hasKeyword(text);
 
   if (fixedUnit) {

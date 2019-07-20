@@ -450,10 +450,41 @@
   function select(e) {
     clearTimeout(select.t);
 
-    if (node) node.classList.remove('selected');
-    if (node = all()[e.detail]) node.classList.add('selected');
+    const [type, nth] = e.detail;
 
-    select.t = setTimeout(() => { node.classList.remove('selected'); }, 260);
+    if (node) node.classList.remove('highlighted');
+
+    // patch parsed input as regular nodes, or text nodes...
+    if (type === 'input') {
+      const sub = input.childNodes[nth];
+
+      // highlight regular nodes
+      if (sub && sub.nodeType === 1) {
+        node = sub;
+      }
+
+      // patch current DOM to highlight text nodes
+      if (sub && sub.nodeType === 3) {
+        const target = document.createElement('var');
+
+        target.textContent = sub.textContent;
+
+        sub.parentNode.insertBefore(target, sub);
+        sub.parentNode.removeChild(sub);
+
+        node = target;
+      }
+    }
+
+    // otherwise, we highlight all well-known nodes
+    if (type === 'tokens') node = all()[nth];
+
+    if (node) {
+      node.classList.add('highlighted');
+      select.t = setTimeout(() => {
+        node.classList.remove('highlighted');
+      }, 260);
+    }
   }
 
   // render upon changes from props
