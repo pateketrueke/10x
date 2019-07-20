@@ -4,8 +4,12 @@
   export let debug = false;
 
   let tests = `
-    # today + tomorrow
-    $15,000 MXN / 14 days of **work** 😅😇👋🏿👨‍👩‍👧‍👦
+    2 cm of 3 inch = [9.62 cm]
+    365 days / 2years = [0.4996577687]
+    2TB + 25GB = [2.025TB]
+    3GB / 1MB = [3,000]
+    2 + 1 inch + 1cm = [3.394 inches]
+    $15,000 MXN / 14 days of **work** 😅😇👋🏿👨‍👨‍👧‍👧
     10 inches in cm
     450 km in miles
     160 pounds as kg
@@ -27,13 +31,9 @@
     -1 week as 1990
     12 from 1987
     now as 10 of Jun from 1987
-    365 days as years
-    3GB as 1MB
-    2TB + 25GB
     3in / 2 cm
     in cm 2+3
     in cm, 2+3
-    2 + 1 inch + 1cm
     2+3 as cm
     2+3, as cm
     1 2 3 / 4 5 =
