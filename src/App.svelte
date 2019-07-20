@@ -23,10 +23,14 @@
     1ft - .3ft
     3 days in 4 years
     1 month from today
-    1ft-us - 1 l/s as inches
-    min/km km/h deg/s yd3/h' fl-oz
+    2 cm in 3 in
+    -1 week as 1990
+    12 from 1987
+    now as 10 of Jun from 1987
     365 days as years
-    3G
+    3GB as 1MB
+    2TB + 25GB
+    3in / 2 cm
     in cm 2+3
     in cm, 2+3
     2 + 1 inch + 1cm
@@ -57,8 +61,6 @@
   li {
     font-size: 1em;
     min-height: 1.5em;
-    line-height: 1.5em;
-    align-items: center;
   }
   label {
     z-index: 1;

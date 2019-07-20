@@ -71,7 +71,11 @@ export function toValue(value, unit) {
   }
 
   if (typeof value === 'number') {
-    value = value.toFixed(2).replace(/\.0+$/, '');
+    const sub = value.toString().match(/^.*?\.0+\d{1,3}/);
+
+    if (!sub) {
+      value = value.toFixed(2).replace(/\.0+$/, '');
+    } else value = sub[0];
   }
 
   if (unit) {
@@ -213,6 +217,11 @@ export function simpleMarkdown(text) {
 }
 
 export function simpleNumbers(text) {
+  // handle single month names
+  if (RE_MONTHS.test(text) && !hasNum(text)) {
+    return `<var data-op="number" data-unit="datetime">${text}</var>`;
+  }
+
   return text
     // hardcode white-space boundaries
     .replace(/^\s|\s$/, String.fromCharCode(160))
@@ -441,7 +450,7 @@ export function calculateFromDate(op, left, right) {
     }
 
     // otherwise, just take the year
-    if (typeof left === 'number') left = new Date(`${nowMonth} ${nowDate}, ${left}`);
+    if (typeof left === 'number') left = new Date(`${nowMonth} ${nowDate}, ${left} 00:00`);
   }
 
   const oldYear = left.getFullYear();
@@ -461,6 +470,7 @@ export function calculateFromDate(op, left, right) {
 
     if (op !== 'at' && RE_EXPRS.test(op)) {
       if (oldYear !== newYear) left.setYear(newYear);
+      if (oldMonth !== newMonth) left.setMonth(newMonth);
     }
 
     if (op === '-') {
@@ -525,29 +535,50 @@ export function operateExpression(ops, expr) {
 
         // apply conversions
         if ((prev[2] || next[2]) && prev[2] !== next[2]) {
+          // console.log('OTHER', prev, cur, next);
+
           if (prev[2] && next[2] && next[2] !== 'datetime') {
             if (TIME_UNITS.includes(prev[2]) && TIME_UNITS.includes(next[2])) {
               // handle: 3 days in 4 years, 1 week
-              if (cur[1] === 'in') {
+              if (cur[1] === 'in' || cur === 'from') {
                 result = calculateFromDate('+', next, new Convert(prev[1]).from(prev[2]).to('s'));
               } else {
-                console.log('TIME', prev, cur, next);
+                // catch time conversions
+                result = new Convert(next[1]).from(next[2]).to(prev[2]);
+
+                // handle regular math
+                if (!RE_EXPRS.test(cur[1])) {
+                  result = evaluateExpression(cur[1], prev[1], result);
+                }
               }
             } else if (KNOWN_UNITS.includes(prev[2]) && KNOWN_UNITS.includes(next[2])) {
-              const base = new Convert(next[1]).from(next[2]).to(prev[2]);
-
-              // handle relationships n:m, otherwise set base to next token
-              if (RE_EXPRS.test(cur[1])) result = base / prev[1];
-              else next[1] = base;
-            } else {
-              console.log('OTHER', prev, cur, next);
+              // handle relationships n:m, otherwise just operate
+              // FIXME: conversions are not going wel....
+              if (RE_EXPRS.test(cur[1])) {
+                const base = new Convert(next[1]).from(next[2]).to(prev[2]);
+                result = prev[1] + (base / prev[1]);
+                prev[2] = next[2];
+                // const base = new Convert(prev[1]).from(prev[2]).to(next[2]);
+                // result = prev[1] / base;
+              }
+              else {
+                const base = new Convert(next[1]).from(next[2]).to(prev[2]);
+                // const base = new Convert(prev[1]).from(prev[2]).to(next[2]);
+                prev[1] = prev[1] + evaluateExpression(cur[1], prev[1], base);
+                prev[2] = '';
+              }
             }
           } else if (TIME_UNITS.includes(prev[2])) {
             result = calculateFromDate(cur[1], next[1], new Convert(prev[1]).from(prev[2]).to('s'));
+          } else if (!prev[2] && next[1] instanceof Date) {
+            result = calculateFromDate('+', next[1], new Convert(prev[1] - 1).from('d').to('s'));
           } else {
             // unit fallback
             prev[2] = next[2];
           }
+        } else if (RE_EXPRS.test(cur[1])) {
+          // handle relationships n:m (percentage)
+          result = prev[1] * (100 / next[1]);
         }
 
         // ideally both values are integers, if they're not resolved yet...
@@ -642,6 +673,7 @@ export function reduceFromAST(tokens) {
       cur[1] = !(cur[1] instanceof Date) ? parseFromValue(cur) : cur[1];
       isDate = true;
     } else {
+      const prev = tokens[i - 1];
       const next = tokens[i + 1];
 
       // handle unit-conversion to seconds
@@ -650,8 +682,10 @@ export function reduceFromAST(tokens) {
           next[1] = toNumber(next, 's');
         } else if (next[2]) {
           next[1] = parseFromValue(next);
-        } else {
-          next[1] = new Date(`${next[1]} 00:00`);
+        } else if (prev[1] instanceof Date) {
+          // adjust guessing year first, otherwise try day
+          if (next[1] > 31) prev[1].setFullYear(next[1]);
+          else prev[1].setDate(next[1]);
         }
       }
 
