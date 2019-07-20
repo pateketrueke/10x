@@ -11,7 +11,7 @@ body { font-family: Montserrat; }
 .editor h6 { font-size: 1em; }
 .editor { color: #414A52; caret-color: #898E8A; overflow: hidden; }
 .editor var { font-style: normal; }
-.editor span, .editor [data-op=open], .editor [data-op=close] { color: #D4D8D5; font-weight: normal; }
+.editor * span, .editor [data-op=open], .editor [data-op=close] { color: #D4D8D5; font-weight: normal; }
 .editor [data-op=number] { color: #3B89C6; }
 .editor [data-op=unit] { border-bottom: 1px dashed #D4D8D5; }
 .editor [data-op=equal], .editor [data-op=plus], .editor [data-op=min] { color: #D776C7; }

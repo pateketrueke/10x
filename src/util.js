@@ -6,13 +6,6 @@ const groups = convert.measures();
 const keywords = Object.keys(currencySymbols.settings.symbols);
 const mappings = {};
 
-class TError extends Error {
-  constructor(message, offset) {
-    super(message);
-    this.offset = offset;
-  }
-}
-
 const TIME_UNITS = convert.list('time').map(x => x.abbr).sort();
 
 const OP_TYPES = {
@@ -491,7 +484,7 @@ export function evaluateExpression(op, left, right) {
 
 export function operateExpression(ops, expr) {
   for (let i = 1, c = expr.length - 1; i < c; i += 1) {
-    if (ops.indexOf(expr[i][1]) > -1) {
+    if (expr[i] && ops.indexOf(expr[i][1]) > -1) {
       const cur = expr[i];
       const prev = expr[i - 1];
       const next = expr[i + 1];
@@ -526,7 +519,7 @@ export function operateExpression(ops, expr) {
           return operateExpression(ops, expr);
         }
       } else {
-        throw new TError(`Invalid expression around: ${prev[1]} ${cur[1]} ${next[1]}`, i + 1);
+        throw new Error(`Invalid expression: ${prev[1]} ${cur[1]} ${next[1]}`);
       }
     }
   }
@@ -554,13 +547,14 @@ export function buildTree(tokens) {
     if (t[0] === 'open' || t[0] === 'close') {
       if (t[0] === 'open') {
         const leaf = [];
-
+        root._depth = i;
         root.push(leaf);
         stack.push(root);
         root = leaf;
         ops = false;
       } else if (t[0] === 'close') {
         root = stack.pop();
+        ops = false;
       }
     } else if (root) {
       const matches = t[1].match(/(%|[ap]m)$/i);
@@ -569,13 +563,18 @@ export function buildTree(tokens) {
       if (isOp(t[1])) ops = true;
 
       root.push([t[0], /^[a-z-+=*/](?!\.?\d|\s)/i.test(t[1]) ? t[1] : parseNumber(t[1]), type]);
-    } else {
-      throw new TError(`Invalid terminator around: ${tokens.slice(0, i).map(x => x[1]).join('')}`, i);
-    }
+    } else break;
   }
 
   if (stack.length && ops) {
-    throw new TError(`Invalid terminator around: ${tokens.map(x => x[1]).join('')}`, tokens.length);
+    const depth = stack[0]._depth;
+    const prefix = depth === 0 ? '^' : '';
+    const expr = tokens.slice(0, depth + 1).map(x => x[1]).join(' ');
+    const err = new Error(`Missing terminator for \`${prefix}${expr}\``);
+
+    err.offset = depth;
+
+    throw err;
   }
 
   return tree;

@@ -3,7 +3,6 @@
 
   export let input = [];
   export let tokens = [];
-  export let messages = [];
   export let errored = null;
 
   let mode = 'input';
@@ -28,6 +27,11 @@
     margin-bottom: 3px;
     padding: 0 3px;
     box-shadow: 0 2px 3px rgba(0, 0, 0, .1);
+  }
+  .error {
+    font-size: .85em;
+    color: red;
+    margin: 0;
   }
   p {
     margin: 0;
@@ -80,7 +84,7 @@
       {#each input as chunk, i}
         <small on:click={() => focus(['input', i])}>
           {chunk === ' ' ? String.fromCharCode(160) : chunk}
-          {#if chunk !== ' '}<span>{chunk.length}</span>{/if}
+          {#if chunk !== ' ' && chunk.length > 5}<span>{chunk.length}</span>{/if}
         </small>
       {/each}
     </p>
@@ -97,16 +101,20 @@
     </p>
   {/if}
   <small>
-    <label>
-      <input checked name="mode" value="input" type="radio" on:click={set} />
-      <span>input</span>
-    </label>
-    <label>
-      <input name="mode" value="tokens" type="radio" on:click={set} />
-      <span>tokens</span>
-    </label>
+    {#if input.length}
+      <label>
+        <input checked name="mode" value="input" type="radio" on:click={set} />
+        <span>input</span>
+      </label>
+    {/if}
+    {#if tokens.length}
+      <label>
+        <input name="mode" value="tokens" type="radio" on:click={set} />
+        <span>tokens</span>
+      </label>
+    {/if}
   </small>
   {#if errored}
-    <p>{errored}</p>
+    <p class="error">{errored.message}</p>
   {/if}
 </div>

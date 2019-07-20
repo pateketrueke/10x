@@ -49,6 +49,7 @@
     padding: 0;
   }
   input {
+    cursor: pointer;
     margin-right: 5px;
   }
   li {

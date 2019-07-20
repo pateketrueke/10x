@@ -91,13 +91,16 @@
         ...calculateFromTokens(info.tokens),
       };
     } catch (e) {
-      info.errored = e;
+      info.errored = {
+        offset: e.offset,
+        message: e.message,
+      };
 
       const ops = all();
 
-      if (e.offset > 0 && ops[e.offset - 1]) {
-        ops[e.offset - 1].classList.add('errored');
-        ops[e.offset - 1].setAttribute('title', e.message);
+      if (e.offset > 0 && ops[e.offset]) {
+        ops[e.offset].classList.add('errored');
+        ops[e.offset].setAttribute('title', e.message);
       } else {
         input.classList.add('errored');
         input.setAttribute('title', e.message);
@@ -499,6 +502,7 @@
     z-index: 1;
     cursor: text;
     outline: none;
+    min-width: 5px;
     box-shadow: none;
     padding-left: 1px;
   }
@@ -534,13 +538,13 @@
       on:keyup|preventDefault={reset}
       on:paste|preventDefault={insert}
     />
-    <div class="results">
-      <span>
+    {#if info.results}
+      <div class="results">
         {#each info.results as [type, value, unit]}
-          <span data-result={type}>{toValue(value, unit)}</span>
+          <var data-result={type}>{toValue(value, unit)}</var>
         {/each}
-      </span>
-    </div>
+      </div>
+    {/if}
   </div>
   {#if usingMode}
     <div class="overlay" bind:this={overlay} on:click|preventDefault={pick}>
@@ -548,6 +552,6 @@
     </div>
   {/if}
   {#if debug}
-    <DebugInfo on:focus={select} input={info.input} tokens={info.tokens} />
+    <DebugInfo on:focus={select} input={info.input} tokens={info.tokens} errored={info.errored} />
   {/if}
 </div>
