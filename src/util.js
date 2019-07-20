@@ -41,7 +41,6 @@ const RE_NUM = /^-?\.?\d|\d$/;
 const RE_FMT = /^[_*~]$/;
 const RE_OPS = /^[-+=*/_]$/;
 const RE_WORD = /^[a-zA-Z]$/;
-const RE_PAIRS = /^[([\])]$/;
 const RE_EXPRS = /^(?:of|a[ts]|in)$/i;
 const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
 const RE_TOKEN = /^(?:number|equal|plus|min|mul|div|expr|unit)$/;
@@ -53,7 +52,7 @@ const RE_UNIT = new RegExp(`^(?:${RE_DIGIT.source}\\s*(?:${keywords.join('|')})?
 
 // FIXME: cleanup...
 const isOp = (a, b = '') => RE_OPS.test(a) && !b.includes(a);
-const isSep = x => RE_PAIRS.test(x) || x === ' ';
+const isSep = x => x === '(' || x === ')' || x === ' ';
 const isFmt = x => RE_FMT.test(x);
 const isExpr = x => RE_EXPRS.test(x);
 const isWord = x => RE_WORD.test(x);
@@ -234,6 +233,10 @@ export function lineFormat(text) {
     return '<var>&nbsp;</var>';
   }
 
+  if (isSep(text)) {
+    return `<var data-op="${text === '(' ? 'open' : 'close'}">${text}</var>`;
+  }
+
   const fixedUnit = hasKeyword(text);
 
   if (fixedUnit) {
@@ -246,9 +249,6 @@ export function lineFormat(text) {
 
     // fractions
     .replace(/^(\d+)\/(\d+)$/, '<var data-op="number"><sup>$1</sup><span>/</span><sub>$2</sub></var>')
-
-    // separators
-    .replace(/^[([\])]$/, char => `<var data-op="${(char === '[' || char === '(') ? 'open' : 'close'}">${char}</var>`);
 }
 
 export function basicFormat(text) {
