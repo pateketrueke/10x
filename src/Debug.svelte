@@ -50,13 +50,13 @@
     color: gray;
     padding: 0 .3em;
     border-radius: 3px;
-    background-color: silver;
+    background-color: rgba(0, 0, 0, .1);
   }
   p small {
     white-space: nowrap;
     padding: 0 .3em;
     font-size: .75em;
-    border: 1px solid silver;
+    border: 1px solid rgba(0, 0, 0, .1);
     margin-top: -1px;
     margin-left: -1px;
   }

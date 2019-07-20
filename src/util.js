@@ -3,10 +3,12 @@ import currencySymbols from 'currency-symbol.js';
 
 const convert = new Convert();
 const groups = convert.measures();
-const keywords = Object.keys(currencySymbols.settings.symbols);
+const keywords = [];
 const mappings = {};
 
+const CURRENCY_SYMBOLS = Object.keys(currencySymbols.settings.symbols);
 const TIME_UNITS = convert.list('time').map(x => x.abbr).sort();
+const KNOWN_UNITS = [];
 
 const OP_TYPES = {
   '=': 'equal',
@@ -22,6 +24,7 @@ groups.forEach(group => {
     const plural = unit.plural;
     const singular = unit.singular;
 
+    KNOWN_UNITS.push(abbr);
     keywords.push(abbr);
 
     if (!plural.includes(' ') && singular !== plural) {
@@ -35,6 +38,7 @@ groups.forEach(group => {
   });
 });
 
+keywords.push(...CURRENCY_SYMBOLS);
 keywords.sort((a, b) => b.length - a.length);
 
 const RE_NUM = /^-?\.?\d|\d$/;
@@ -526,17 +530,22 @@ export function operateExpression(ops, expr) {
               // handle: 3 days in 4 years, 1 week
               if (cur[1] === 'in') {
                 result = calculateFromDate('+', next, new Convert(prev[1]).from(prev[2]).to('s'));
+              } else {
+                console.log('TIME', prev, cur, next);
               }
-            } else {
+            } else if (KNOWN_UNITS.includes(prev[2]) && KNOWN_UNITS.includes(next[2])) {
               const base = new Convert(next[1]).from(next[2]).to(prev[2]);
 
               // handle relationships n:m, otherwise set base to next token
               if (RE_EXPRS.test(cur[1])) result = base / prev[1];
               else next[1] = base;
+            } else {
+              console.log('OTHER', prev, cur, next);
             }
           } else if (TIME_UNITS.includes(prev[2])) {
             result = calculateFromDate(cur[1], next[1], new Convert(prev[1]).from(prev[2]).to('s'));
           } else {
+            // unit fallback
             prev[2] = next[2];
           }
         }
