@@ -41,7 +41,7 @@ const RE_NUM = /^-?\.?\d|\d$/;
 const RE_FMT = /^[_*~]$/;
 const RE_OPS = /^[-+=*/_]$/;
 const RE_WORD = /^[a-zA-Z]$/;
-const RE_EXPRS = /^(?:of|a[ts]|in)$/i;
+const RE_EXPRS = /^(?:from|of|a[ts]|in)$/i;
 const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
 const RE_TOKEN = /^(?:number|equal|plus|min|mul|div|expr|unit)$/;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
@@ -78,6 +78,8 @@ export function toValue(value, unit) {
 }
 
 export function toNumber(token, unit) {
+  if (!token[2]) return token[1];
+
   const key = token[2].replace('_', '-');
   const num = key.replace(RE_DIGIT, '').trim();
   const fixed = mappings[num.toLowerCase()] || num;
@@ -275,15 +277,15 @@ export function basicFormat(text) {
       nextToken = all[++key];
     } while (nextToken && nextToken.charAt() === ' ');
 
-    // some basic keywords: at, of, as, in
-    if (isExpr(cur) && (hasKeyword(nextToken) || hasNum(nextToken))) {
+    // some basic keywords: at, of, from, as, in
+    if (isExpr(cur) && (hasKeyword(nextToken) || hasNum(nextToken) || hasNum(prevToken))) {
       prev.push(`<var data-op="expr">${cur}</var>`);
       prevToken = cur;
       return prev;
     }
 
     // skip number inside parens/brackets (however sorrounding chars are highlighted)
-    if ((all[i - 1] === '[' || all[i - 1] === '(') && (nextToken === ']' || nextToken === ')')) {
+    if (all[i - 1] === '(' && nextToken === ')') {
       prev.push(simpleMarkdown(cur));
       return prev;
     }
@@ -440,6 +442,15 @@ export function calculateFromDate(op, left, right) {
       if (oldYear !== newYear) left.setYear(newYear);
     }
 
+    if (op === '-') {
+      if (oldYear !== newYear) left.setYear(oldYear - newYear);
+      if (oldMonth !== newMonth) left.setMonth(oldMonth - newMonth);
+      if (oldDate !== newDate) left.setDate(oldDate - newDate);
+      if (oldHours !== newHours) left.setHours(oldHours - newHours);
+      if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes - newMinutes);
+      if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds - newSeconds);
+    }
+
     if (op === '+' || op === 'at') {
       let isToday = true;
 
@@ -458,18 +469,9 @@ export function calculateFromDate(op, left, right) {
         if (oldSeconds !== newSeconds) left.setSeconds(newSeconds);
       }
     }
-
-    if (op === '-') {
-      if (oldYear !== newYear) left.setYear(oldYear - newYear);
-      if (oldMonth !== newMonth) left.setMonth(oldMonth - newMonth);
-      if (oldDate !== newDate) left.setDate(oldDate - newDate);
-      if (oldHours !== newHours) left.setHours(oldHours - newHours);
-      if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes - newMinutes);
-      if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds - newSeconds);
-    }
   } else {
-    if (op === '+') left.setSeconds(left.getSeconds() + right);
     if (op === '-') left.setSeconds(left.getSeconds() - right);
+    if (op === '+' || op === 'from') left.setSeconds(left.getSeconds() + right);
   }
 
   return left;
@@ -502,15 +504,17 @@ export function operateExpression(ops, expr) {
 
         // apply conversions
         if ((prev[2] || next[2]) && prev[2] !== next[2]) {
-          if (prev[2] && next[2]) {
+          if (prev[2] && next[2] && next[2] !== 'datetime') {
             next[1] = new Convert(next[1]).from(next[2]).to(prev[2]);
+          } else if (cur[0] === 'expr' && next[1] instanceof Date) {
+            result = calculateFromDate(cur[1], next[1], new Convert(prev[1]).from(prev[2]).to('s'));
           } else {
             prev[2] = next[2];
           }
         }
 
-        // ideally both values are integers
-        result = evaluateExpression(cur[1], prev[1], next[1]);
+        // ideally both values are integers, if they're not resolved yet...
+        result = result || evaluateExpression(cur[1], prev[1], next[1]);
       }
 
       // convert supported units
@@ -538,7 +542,7 @@ export function operateExpression(ops, expr) {
 
 export function calculateFromString(expr) {
   expr = operateExpression(['*', '/'], expr);
-  expr = operateExpression(['at', 'of', '+', '-', 'as', 'in'], expr);
+  expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in'], expr);
 
   return expr[0];
 }

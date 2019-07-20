@@ -21,6 +21,7 @@
     30 + 20%
     100_000
     1ft - .3ft
+    1 month from today
     1ft-us - 1 l/s as inches
     min/km km/h deg/s yd3/h' fl-oz
     365 days as years
