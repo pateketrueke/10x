@@ -423,6 +423,23 @@ export function parseFromValue(token) {
 }
 
 export function calculateFromDate(op, left, right) {
+  if (!(left instanceof Date)) {
+    const now = new Date();
+    const nowMonth = now.toString().split(' ')[1];
+    const nowDate = now.getDate();
+
+    // convert from given units
+    if (Array.isArray(left)) {
+      const secs = new Convert(left[1]).from(left[2]).to('s');
+
+      left = new Date();
+      left.setSeconds(secs);
+    }
+
+    // otherwise, just take the year
+    if (typeof left === 'number') left = new Date(`${nowMonth} ${nowDate}, ${left}`);
+  }
+
   const oldYear = left.getFullYear();
   const oldMonth = left.getMonth();
   const oldDate = left.getDate();
@@ -438,7 +455,7 @@ export function calculateFromDate(op, left, right) {
     const newMinutes = right.getMinutes();
     const newSeconds = right.getSeconds();
 
-    if (op === 'of') {
+    if (op !== 'at' && RE_EXPRS.test(op)) {
       if (oldYear !== newYear) left.setYear(newYear);
     }
 
@@ -471,7 +488,7 @@ export function calculateFromDate(op, left, right) {
     }
   } else {
     if (op === '-') left.setSeconds(left.getSeconds() - right);
-    if (op === '+' || op === 'from') left.setSeconds(left.getSeconds() + right);
+    if (op === '+' || RE_EXPRS.test(op)) left.setSeconds(left.getSeconds() + right);
   }
 
   return left;
@@ -505,8 +522,19 @@ export function operateExpression(ops, expr) {
         // apply conversions
         if ((prev[2] || next[2]) && prev[2] !== next[2]) {
           if (prev[2] && next[2] && next[2] !== 'datetime') {
-            next[1] = new Convert(next[1]).from(next[2]).to(prev[2]);
-          } else if (cur[0] === 'expr' && next[1] instanceof Date) {
+            if (TIME_UNITS.includes(prev[2]) && TIME_UNITS.includes(next[2])) {
+              // handle: 3 days in 4 years, 1 week
+              if (cur[1] === 'in') {
+                result = calculateFromDate('+', next, new Convert(prev[1]).from(prev[2]).to('s'));
+              }
+            } else {
+              const base = new Convert(next[1]).from(next[2]).to(prev[2]);
+
+              // handle relationships n:m, otherwise set base to next token
+              if (RE_EXPRS.test(cur[1])) result = base / prev[1];
+              else next[1] = base;
+            }
+          } else if (TIME_UNITS.includes(prev[2])) {
             result = calculateFromDate(cur[1], next[1], new Convert(prev[1]).from(prev[2]).to('s'));
           } else {
             prev[2] = next[2];
