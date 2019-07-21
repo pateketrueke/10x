@@ -46,13 +46,11 @@ const RE_FMT = /^[_*~]$/;
 const RE_OPS = /^[-+=*/_]$/;
 const RE_WORD = /^[a-zA-Z]$/;
 const RE_EXPRS = /^(?:from|of|a[ts]|in)$/i;
-const RE_DIGIT = /-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
+const RE_DIGIT = /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
 const RE_TOKEN = /^(?:number|equal|plus|min|mul|div|expr|unit)$/;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
-const RE_DATES = `${RE_HOURS.source.substr(1, RE_HOURS.source.length - 2)}|${RE_MONTHS.source.substr(1)}\\s*\\d{1,2}(,?\\s+\\d{4})?`;
-const RE_UNIT = new RegExp(`^(?:${RE_DIGIT.source}\\s*(?:${keywords.join('|')})?|${RE_DATES}|${RE_DAYS.source.substr(1, RE_DAYS.source.length - 2)})$`, 'i');
 
 // FIXME: cleanup...
 const isOp = (a, b = '') => RE_OPS.test(a) && !b.includes(a);
@@ -60,9 +58,11 @@ const isSep = x => x === '(' || x === ')' || x === ' ';
 const isFmt = x => RE_FMT.test(x);
 const isExpr = x => RE_EXPRS.test(x);
 const isWord = x => RE_WORD.test(x);
+
 const hasNum = x => RE_NUM.test(x);
 const hasMonths = x => RE_MONTHS.test(x);
-const hasKeyword = x => x && (!keywords.includes(x) ? mappings[x.toLowerCase()] : x);
+
+const hasKeyword = (x, units) => x && units[x.replace(/[^a-z]/ig, '')];
 const hasDatetime = x => RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x);
 
 export function toValue(value, unit) {
@@ -95,18 +95,18 @@ export function toNumber(token, unit) {
   return new Convert(token[1]).from(fixed).to(unit);
 }
 
-export function toChunks(input) {
+export function toChunks(text) {
   let mayNumber = false;
   let inFormat = false;
   let oldChar = '';
   let offset = 0;
   let open = 0;
 
-  const chars = input.replace(/\s/g, ' ').split('');
+  const chars = text.replace(/\s/g, ' ').split('');
   const tokens = chars.reduce((prev, cur, i) => {
     const buffer = prev[offset] || (prev[offset] = []);
     const last = buffer[buffer.length - 1];
-    const text = buffer.join('');
+    const line = buffer.join('');
     const next = chars[i + 1];
 
     // skip closing chars if they're not well paired
@@ -119,7 +119,7 @@ export function toChunks(input) {
     if (cur === ']' || cur === ')') open -= 1;
 
     // normalize well-known dates
-    if (hasMonths(text)) {
+    if (hasMonths(line)) {
       if (cur === ',' || (cur === ' ' && hasNum(next)) || hasNum(cur)) {
         buffer.push(cur);
         return prev;
@@ -169,17 +169,10 @@ export function toChunks(input) {
       || (!hasNum(last) && isOp(cur) && oldChar !== cur)
       || (hasNum(oldChar) && last === '-' && hasNum(cur))
     ) {
-      // make sure we split from unknown units
-      if (text !== ' ' && text.includes(' ') && !RE_UNIT.test(text)) {
-        const [num, unit] = text.split(' ');
-
-        prev[offset] = [num];
-        prev[++offset] = [' '];
-        prev[++offset] = [unit];
-      }
-
       prev[++offset] = [cur];
-    } else buffer.push(cur);
+    } else {
+      buffer.push(cur);
+    }
 
     // flag possible negative numbers
     mayNumber = last === '-' && hasNum(cur);
@@ -216,34 +209,39 @@ export function simpleMarkdown(text) {
     .replace(/`(.+?)`/, '<code><span>`</span>$1<span>`</span></code>');
 }
 
-export function simpleNumbers(text) {
+export function simpleNumbers(text, units) {
+  // hardcode white-space boundaries
+  text = text.replace(/^\s|\s$/, String.fromCharCode(160))
+
   // handle single month names
   if (RE_MONTHS.test(text) && !hasNum(text)) {
     return `<var data-op="number" data-unit="datetime">${text}</var>`;
   }
 
-  return text
-    // hardcode white-space boundaries
-    .replace(/^\s|\s$/, String.fromCharCode(160))
+  const fixedUnit = hasKeyword(text, units);
+
+  if (fixedUnit && hasNum(text)) {
+    return `<var data-op="number" data-unit="${fixedUnit}">${text}</var>`;
+  }
+
+  if (RE_DIGIT.test(text)) {
+    console.log(text, text.replace(RE_DIGIT, '').trim());
+    return `<var data-op="number">${text}</var>`;
+  }
+
+  return text;
 
     // regular units/dates
-    .replace(RE_UNIT, chunk => {
-      if (hasDatetime(chunk)) {
-        return `<var data-op="number" data-unit="datetime">${chunk}</var>`;
-      }
+    // .replace(RE_UNIT, chunk => {
+    //   if (hasDatetime(chunk)) {
+    //     return `<var data-op="number" data-unit="datetime">${chunk}</var>`;
+    //   }
 
-      if (RE_DIGIT.test(chunk)) {
-        const unit = chunk.replace(RE_DIGIT, '').trim();
-        const fixed = mappings[unit.toLowerCase()] || unit;
-
-        return `<var data-op="number" data-unit="${fixed}">${chunk}</var>`;
-      }
-
-      return `<var data-op="number">${chunk}</var>`;
-    });
+    //   return `<var data-op="number">${chunk}</var>`;
+    // });
 }
 
-export function lineFormat(text) {
+export function lineFormat(text, units) {
   if (text === ' ') {
     return '<var>&nbsp;</var>';
   }
@@ -252,11 +250,11 @@ export function lineFormat(text) {
     return `<var data-op="${text === '(' ? 'open' : 'close'}">${text}</var>`;
   }
 
-  const fixedUnit = hasKeyword(text);
+  // const fixedUnit = hasKeyword(text, units);
 
-  if (fixedUnit) {
-    return `<var data-op="unit" data-unit="${fixedUnit}">${text}</var>`;
-  }
+  // if (fixedUnit) {
+  //   return `<var data-op="unit" data-unit="${fixedUnit}">${text}</var>`;
+  // }
 
   return text
     // basic operators
@@ -266,7 +264,7 @@ export function lineFormat(text) {
     .replace(/^(\d+)\/(\d+)$/, '<var data-op="number"><sup>$1</sup><span>/</span><sub>$2</sub></var>')
 }
 
-export function basicFormat(text) {
+export function basicFormat(text, units = {}) {
   // handle markdown-like headings
   if (text.charAt() === '#') {
     const matches = text.match(/^(#+)(.+?)$/);
@@ -291,11 +289,11 @@ export function basicFormat(text) {
     } while (nextToken && nextToken.charAt() === ' ');
 
     // some basic keywords: at, of, from, as, in
-    if (isExpr(cur) && (hasKeyword(nextToken) || hasNum(nextToken) || hasNum(prevToken))) {
-      prev.push(`<var data-op="expr">${cur}</var>`);
-      prevToken = cur;
-      return prev;
-    }
+    // if (isExpr(cur) && (hasKeyword(nextToken) || hasNum(nextToken) || hasNum(prevToken))) {
+    //   prev.push(`<var data-op="expr">${cur}</var>`);
+    //   prevToken = cur;
+    //   return prev;
+    // }
 
     // skip number inside parens/brackets (however sorrounding chars are highlighted)
     if (all[i - 1] === '(' && nextToken === ')') {
@@ -310,7 +308,7 @@ export function basicFormat(text) {
       || (hasNum(prevToken) && cur === '=')
 
       // handle units after expressions
-      || (isExpr(prevToken) && hasKeyword(cur))
+      || (isExpr(prevToken) && hasKeyword(cur, units))
 
       // handle operators between expressions
       || (hasNum(prevToken) && isOp(cur) && isSep(nextToken))
@@ -319,11 +317,11 @@ export function basicFormat(text) {
       || (RE_DAYS.test(prevToken) && RE_DAYS.test(nextToken) && isOp(cur))
 
       // handle operators between numbers
-      || ((RE_UNIT.test(prevToken) || hasNum(prevToken)) && hasNum(nextToken))
+      || ((hasKeyword(prevToken, units) || hasNum(prevToken)) && hasNum(nextToken))
     ) {
-      prev.push(simpleNumbers(lineFormat(cur)));
+      prev.push(simpleNumbers(lineFormat(cur), units));
     } else {
-      prev.push(simpleNumbers(simpleMarkdown(cur)));
+      prev.push(simpleNumbers(simpleMarkdown(cur), units));
     }
 
     if (!isSep(cur)) prevToken = cur;
@@ -691,10 +689,10 @@ export function reduceFromAST(tokens) {
       }
 
       // convert preceding units from expressions
-      if (next && cur[0] === 'unit' && tokens[i - 1][0] === 'expr') {
-        tokens[i + 3][2] = cur[2];
-        tokens.splice(0, i + 1);
-      }
+      // if (next && cur[0] === 'unit' && tokens[i - 1][0] === 'expr') {
+      //   tokens[i + 3][2] = cur[2];
+      //   tokens.splice(0, i + 1);
+      // }
     }
   }
 

@@ -4,6 +4,7 @@
   export let debug = false;
 
   let tests = `
+    2 cm / 35mm
     2 cm of 3 inch = [9.62 cm]
     365 days / 2years = [0.4996577687]
     2TB + 25GB = [2.025TB]
