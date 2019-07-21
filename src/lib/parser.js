@@ -168,14 +168,38 @@ export function buildTree(tokens) {
 
   const tree = root;
   const stack = [];
+  const calls = [];
 
   for (let i = 0; i < tokens.length; i += 1) {
+    const fn = calls[calls.length - 1];
     const t = tokens[i];
 
+    // group functions and calls
+    if (fn) {
+      fn[2].push(t);
+
+      // handle closing chars
+      if (t[0] === 'expr' && t[1] === ';') {
+        fn[2] = buildTree(fn[2]);
+        root.push(fn);
+        calls.pop();
+      }
+      continue;
+    }
+
+    // handle opening chars
+    if (t[0] === 'def' || t[0] === 'call') {
+      const leaf = [t[0], t[1], []];
+      leaf._offset = i;
+      calls.push(leaf);
+      continue;
+    }
+
+    // handle nesting
     if (t[0] === 'open' || t[0] === 'close') {
       if (t[0] === 'open') {
         const leaf = [];
-        root._depth = i;
+        root._offset = i;
         root.push(leaf);
         stack.push(root);
         root = leaf;
@@ -190,8 +214,9 @@ export function buildTree(tokens) {
     } else break;
   }
 
+  // handle exceptions
   if (stack.length && ops) {
-    const depth = stack[0]._depth;
+    const depth = stack[0]._offset;
     const prefix = depth === 0 ? '^' : '';
     const expr = tokens.slice(0, depth + 1).map(x => x[1]).join(' ');
     const err = new Error(`Missing terminator for \`${prefix}${expr}\``);
