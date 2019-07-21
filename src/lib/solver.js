@@ -4,7 +4,17 @@ import {
   isExpr,
 } from './parser';
 
-export function parseFromValue(token) {
+export function toNumber(token) {
+  if (token[2] === 'fraction') {
+    const [a, b] = token[1].split('/');
+
+    return a / b;
+  }
+
+  return parseFloat(token[1]);
+}
+
+export function fromValue(token) {
   let text = token[1];
 
   if (typeof text === 'number') {
@@ -114,6 +124,10 @@ export function operateExpression(ops, expr) {
 
     if (cur && ops.indexOf(cur[1]) > -1) {
       let result;
+
+      if (prev[0] === 'number' && next[0] === 'number') {
+        result = evaluateExpression(cur[1], toNumber(prev), toNumber(next));
+      }
 
       console.log(prev, cur, next);
 

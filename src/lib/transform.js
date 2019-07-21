@@ -49,7 +49,7 @@ function fromSymbols(text, units, expression) {
   }
 
   if (expression) {
-    if (isWord(text)) {
+    if (units[text]) {
       return ['unit', text];
     }
 
