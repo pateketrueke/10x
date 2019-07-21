@@ -115,14 +115,11 @@
   function render() {
     let suffix = '';
 
-    // FIXME: get default ones...
-    const units = { cm: 'cm', mm: 'mm' };
-
     // FIXME: instead of this, try render using vDOM?
     try {
-      info = basicFormat(markup, units);
+      info = basicFormat(markup);
     } catch (e) {
-      info = basicFormat(markup.substr(0, e.offset), units);
+      info = basicFormat(markup.substr(0, e.offset));
       suffix = `<span style="background-color:red;color:white">${
         markup.substr(e.offset).replace(/\s/g, String.fromCharCode(160))
       }</span>`;
@@ -512,6 +509,7 @@
     cursor: text;
     outline: none;
     min-width: 5px;
+    min-height: 20px;
     box-shadow: none;
     padding-left: 1px;
   }
