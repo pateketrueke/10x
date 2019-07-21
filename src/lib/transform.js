@@ -102,7 +102,7 @@ function fromSymbols(text, units, expression) {
   return ['text', text];
 }
 
-export default function transform(text, { units }) {
+export default function transform(text, units) {
   const all = parseBuffer(text, units);
   const stack = [];
 

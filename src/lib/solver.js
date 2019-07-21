@@ -129,8 +129,6 @@ export function operateExpression(ops, expr) {
         result = evaluateExpression(cur[1], toNumber(prev), toNumber(next));
       }
 
-      console.log(prev, cur, next);
-
       if (!isNaN(result)) {
         const unit = expr.find(x => x[0] === 'unit');
 
@@ -156,13 +154,31 @@ export function calculateFromTokens(expr) {
   return expr[0];
 }
 
-export function reduceFromAST(tokens) {
+export function reduceFromAST(tokens, convert) {
+  let isDate;
+
   for (let i = 0, c = tokens.length; i < c; i += 1) {
     const cur = tokens[i];
+    const prev = tokens[i - 1];
+    const next = tokens[i + 1];
 
     if (cur && Array.isArray(cur[0])) {
-      tokens[i] = calculateFromTokens(reduceFromAST(cur));
+      tokens[i] = calculateFromTokens(reduceFromAST(cur, convert));
     } else {
+      if (prev && next) {
+        if (cur[2] === 'datetime') {
+          isDate = true;
+          cur[1] = fromValue(cur);
+        }
+
+        // convert between units
+        if (prev[2] !== next[2]) {
+          prev[1] = toNumber(prev);
+          next[1] = convert(toNumber(next), next[2], prev[2]);
+          next[2] = prev[2];
+        }
+      }
+
       tokens[i] = cur;
     }
   }

@@ -188,6 +188,8 @@ export function buildTree(tokens) {
       // handle definitions (end)
       if (t[0] === 'expr' && t[1] === ';') {
         if (depth !== 0) break;
+
+        // build sub-tree and merge
         fn[2] = buildTree(fn[2]);
         root.push(fn);
         calls.pop();

@@ -30,5 +30,5 @@ groups.forEach(group => {
 });
 
 export function convertFrom(num, base, target) {
-  // FIXME: implements...
+  return new Convert(num).from(base).to(target);
 }

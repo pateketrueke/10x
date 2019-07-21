@@ -16,17 +16,16 @@ import {
 
 const argv = process.argv.slice(Math.max(2, process.argv.indexOf('--') + 1));
 
-const opts = {
-  units: {
-    ...DEFAULT_MAPPINGS,
-  },
-  convert: (num, base, target) => {
-    console.log('HANDLE', num, base, target);
-    console.log('DEFAULTS', convertFrom(num, base, target));
-  },
+const units = {
+  ...DEFAULT_MAPPINGS,
 };
 
-const tokens = transform(argv.join(' '), opts);
+// try built-ins first
+const convert = (num, base, target) => {
+  return convertFrom(num, base, target);
+};
+
+const tokens = transform(argv.join(' '), units);
 
 // OK, now we have tokens, and they're transformed into a validated sequence
 // next, is transform that into a tree... and finally, resolve everything inside
@@ -44,7 +43,7 @@ const tokens = transform(argv.join(' '), opts);
 let lastOp = ['plus', '+'];
 
 // operate all possible expressions...
-const chunks = reduceFromAST(tokens.tree).reduce((prev, cur) => {
+const chunks = reduceFromAST(tokens.tree, convert).reduce((prev, cur) => {
   const lastValue = prev[prev.length - 1] || [];
 
   if (lastValue[0] === 'number' && cur[0] === 'number') prev.push(lastOp, cur);
