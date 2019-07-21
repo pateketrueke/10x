@@ -74,7 +74,7 @@ function fromSymbols(text, units, expression) {
   }
 
   // handle fraction numbers
-  if (text.includes('/')) {
+  if (/^\d+\/\d+$/.test(text)) {
     return ['number', text, 'fraction'];
   }
 
@@ -102,14 +102,16 @@ function fromSymbols(text, units, expression) {
   return ['text', text];
 }
 
-export default function transform(text, { units }) {
+export default function transform(text, { units, values }) {
   const all = parseBuffer(text, units);
+  const stack = [];
 
-  let inExpression;
+  let inCall;
   let prevToken;
   let nextToken;
 
   const body = all.reduce((prev, cur, i) => {
+    let inExpr = stack[stack.length - 1];
     let key = i;
 
     do {
@@ -123,22 +125,36 @@ export default function transform(text, { units }) {
     }
 
     // handle expression blocks
-    if (inExpression) {
-      prev.push(fromSymbols(cur, units, inExpression));
-      if (cur === ';' || (cur === ')' && units[cur])) inExpression = null;
+    if (inExpr) {
+      prev.push(fromSymbols(cur, units, inExpr));
+
+      if (!inCall) values[inExpr].push(prev[prev.length - 1]);
+
+      // ensure we close and continue eating...
+      if (cur === ';' || (inCall && cur === ')')) {
+        prevToken = !inCall ? 'def' : 'call';
+        stack.pop();
+      }
+
       return prev;
     }
 
     if (isWord(cur) && (nextToken === '=' || nextToken === '(')) {
-      inExpression = nextToken === '=' ? 'variable' : 'expression';
       prev.push([!units[cur] ? 'def' : 'call', cur]);
 
-      if (!units[cur]) units[cur] = cur;
+      inCall = units[cur];
+      stack.push(cur);
+
+      if (!units[cur]) {
+        values[cur] = [];
+        units[cur] = cur;
+      }
+
       return prev;
     }
 
     if (
-      isSep(cur) || hasNum(cur)
+      isSep(cur) || hasNum(cur) || prevToken === 'call'
 
       // handle units after expressions
       || (hasNum(prevToken) && hasKeyword(nextToken, units))

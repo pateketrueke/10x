@@ -11,6 +11,9 @@ const tokens = transform(argv.join(' '), {
   units: {
     ...DEFAULT_MAPPINGS,
   },
+  values: {
+    'π': [['number', Math.PI]],
+  },
   convert: (num, base, target) => {
     console.log('HANDLE', num, base, target);
     console.log('DEFAULTS', convertFrom(num, base, target));

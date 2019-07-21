@@ -8,27 +8,22 @@ const OP_TYPES = {
   ';': 'k',
 };
 
-const RE_NUM = /\d/;
-const RE_FMT = /^[_*~]$/;
-const RE_OPS = /^[-+=*/;_]$/;
-const RE_WORD = /^[a-zA-Z]+$/;
-const RE_EXPRS = /^(?:from|of|a[ts]|in)$/i;
-const RE_DIGIT = /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
-export const isOp = (a, b = '') => RE_OPS.test(a) && !b.includes(a);
+export const isOp = (a, b = '') => /^[-+=*/;_]$/.test(a) && !b.includes(a);
 export const isSep = (a, b = '') => a === '(' || a === ')' || a === ' ' || b.includes(a);
 
-export const isFmt = x => RE_FMT.test(x);
-export const isNum = x => RE_DIGIT.test(x);
-export const isExpr = x => RE_EXPRS.test(x);
-export const isWord = x => RE_WORD.test(x);
+export const isInt = x => /^\d+$/.test(x);
+export const isFmt = x => /^[_*~]$/.test(x);
+export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
+export const isExpr = x => /^(?:from|of|a[ts]|in)$/i.test(x);
+export const isWord = x => /^[a-zA-Z]+$/.test(x);
 
 export const getOp = x => OP_TYPES[x];
 
-export const hasNum = x => RE_NUM.test(x);
+export const hasNum = x => /\d/.test(x);
 export const hasDays = x => RE_DAYS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
 
@@ -90,9 +85,11 @@ export function parseBuffer(text, units) {
       || (isFmt(last) && isFmt(cur) && last === cur)
 
       // add from other units
-      || (isWord(last) && cur === '/')
-      || (hasNum(last) && cur === '/' && isWord(next))
+      || (isInt(line) && cur === '/')
+      || (hasNum(line) && isWord(cur))
       || (isWord(last) && cur === '-' && isWord(next))
+      || (hasNum(oldChar) && last === '/' && isWord(next))
+      || (cur === '/' && isWord(next) && hasNum(last) && !isNum(line))
 
       // add possible numbers
       || (hasNum(cur) && last === '/')
@@ -113,6 +110,7 @@ export function parseBuffer(text, units) {
       || (isOp(last) && isWord(cur))
       || (isWord(cur) && last === '=')
       || (isWord(last) && cur === ',')
+      // || (hasNum(last) && cur === '/' && isWord(next))
 
       // skip possible numbers
       || (hasNum(last) && isOp(cur) && cur !== '/')
@@ -131,9 +129,6 @@ export function parseBuffer(text, units) {
           prev[offset] = [pre];
           prev[++offset] = [word];
         }
-      } else if (line.charAt(line.length - 1) === '/') {
-        prev[offset] = prev[offset].slice(0, line.length - 1);
-        prev[++offset] = ['/'];
       }
 
       prev[++offset] = [cur];
