@@ -165,6 +165,7 @@ export function parseBuffer(text, units) {
 export function buildTree(tokens) {
   let ops = false;
   let root = [];
+  let depth = 0;
 
   const tree = root;
   const stack = [];
@@ -174,22 +175,31 @@ export function buildTree(tokens) {
     const fn = calls[calls.length - 1];
     const t = tokens[i];
 
+    // skip text-nodes
+    if (t[0] === 'text') continue;
+
     // group functions and calls
     if (fn) {
       fn[2].push(t);
 
-      // handle closing chars
+      if (t[0] === 'open') depth++;
+      if (t[0] === 'close') depth--;
+
+      // handle definitions (end)
       if (t[0] === 'expr' && t[1] === ';') {
+        if (depth !== 0) break;
         fn[2] = buildTree(fn[2]);
         root.push(fn);
         calls.pop();
       }
+
       continue;
     }
 
-    // handle opening chars
-    if (t[0] === 'def' || t[0] === 'call') {
+    // handle definitions (begin)
+    if (t[0] === 'def') {
       const leaf = [t[0], t[1], []];
+
       leaf._offset = i;
       calls.push(leaf);
       continue;
@@ -199,6 +209,7 @@ export function buildTree(tokens) {
     if (t[0] === 'open' || t[0] === 'close') {
       if (t[0] === 'open') {
         const leaf = [];
+
         root._offset = i;
         root.push(leaf);
         stack.push(root);
@@ -215,11 +226,12 @@ export function buildTree(tokens) {
   }
 
   // handle exceptions
-  if (stack.length && ops) {
-    const depth = stack[0]._offset;
-    const prefix = depth === 0 ? '^' : '';
-    const expr = tokens.slice(0, depth + 1).map(x => x[1]).join(' ');
-    const err = new Error(`Missing terminator for \`${prefix}${expr}\``);
+  if (depth || (stack.length && ops)) {
+    depth = depth || stack[0]._offset;
+
+    const err = new Error(`Missing terminator for \`${
+      tokens.slice(0, Math.max(1, depth - 1)).map(x => x[1]).join(' ')
+    }\``);
 
     err.offset = depth;
 

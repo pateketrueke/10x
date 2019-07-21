@@ -120,7 +120,14 @@ export default function transform(text, { units }) {
 
     // handle expression blocks
     if (inExpr) {
-      prev.push(fromSymbols(cur, units, inExpr));
+      const token = fromSymbols(cur, units, inExpr);
+
+      // handle nested calls
+      if (token[0] === 'unit' && nextToken === '(') {
+        token[0] = 'call';
+      }
+
+      prev.push(token);
 
       // ensure we close and continue eating...
       if (cur === ';' || (inCall && cur === ')')) {
