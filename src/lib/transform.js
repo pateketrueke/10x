@@ -1,6 +1,6 @@
 import {
   isOp, isSep, isNum, hasNum, isWord, isExpr, hasKeyword, hasDatetime, hasDays,
-  getOp, parseBuffer,
+  getOp, parseBuffer, buildTree,
 } from './parser';
 
 function fromMarkdown(text) {
@@ -102,7 +102,7 @@ function fromSymbols(text, units, expression) {
   return ['text', text];
 }
 
-export default function transform(text, { units, values }) {
+export default function transform(text, { units }) {
   const all = parseBuffer(text, units);
   const stack = [];
 
@@ -118,17 +118,9 @@ export default function transform(text, { units, values }) {
       nextToken = all[++key];
     } while (nextToken && nextToken.charAt() === ' ');
 
-    // skip number inside parens/brackets (however sorrounding chars are highlighted)
-    if (all[i - 1] === '(' && nextToken === ')') {
-      prev.push(fromMarkdown(cur));
-      return prev;
-    }
-
     // handle expression blocks
     if (inExpr) {
       prev.push(fromSymbols(cur, units, inExpr));
-
-      if (!inCall) values[inExpr].push(prev[prev.length - 1]);
 
       // ensure we close and continue eating...
       if (cur === ';' || (inCall && cur === ')')) {
@@ -146,10 +138,15 @@ export default function transform(text, { units, values }) {
       stack.push(cur);
 
       if (!units[cur]) {
-        values[cur] = [];
         units[cur] = cur;
       }
 
+      return prev;
+    }
+
+    // skip number inside parens/brackets (however sorrounding chars are highlighted)
+    if (all[i - 1] === '(' && nextToken === ')') {
+      prev.push(fromMarkdown(cur));
       return prev;
     }
 
@@ -165,7 +162,6 @@ export default function transform(text, { units, values }) {
       // handle operators between expressions
       || (hasKeyword(cur, units) && isOp(prevToken))
       || (hasNum(prevToken) && isOp(cur) && isSep(nextToken))
-      || (isOp(cur) && isExpr(prevToken) && hasKeyword(cur, units))
 
       // handle operators between dates
       || (hasDays(prevToken) && hasDays(nextToken) && isOp(cur))
@@ -186,6 +182,7 @@ export default function transform(text, { units, values }) {
   }, []);
 
   return {
+    tree: buildTree(body),
     input: all,
     output: body,
   };

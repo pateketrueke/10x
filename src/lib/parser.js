@@ -101,6 +101,20 @@ export function parseBuffer(text, units) {
       || (isWord(last) && cur === '_' && hasNum(next)) || (last === '_' && hasNum(cur))
       || (hasNum(last) && cur === '_' && hasNum(next)) || (isWord(last) && cur === '_' && isWord(next))
     ) {
+      // break on unknown units, or expressions
+      if (last !== ' ' && line.includes(' ')) {
+        const [pre, word] = line.split(' ');
+        const key = word + cur;
+
+        // make sure we're ignoring unknown units
+        if (isExpr(key) || !hasKeyword(key, units)) {
+          prev[offset] = pre.split('');
+          prev[++offset] = key.split('');
+
+          return prev;
+        }
+      }
+
       buffer.push(cur);
     } else if (
       // skip separators
@@ -120,17 +134,6 @@ export function parseBuffer(text, units) {
       || (!hasNum(last) && isOp(cur) && oldChar !== cur)
       || (hasNum(oldChar) && last === '-' && hasNum(cur))
     ) {
-      // break on unknown units, or expressions
-      if (last !== ' ' && line.includes(' ')) {
-        const [pre, word] = line.split(' ');
-
-        // make sure we're ignoring unknown units
-        if (isExpr(word) || !hasKeyword(word, units)) {
-          prev[offset] = [pre];
-          prev[++offset] = [word];
-        }
-      }
-
       prev[++offset] = [cur];
     } else {
       buffer.push(cur);
