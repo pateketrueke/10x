@@ -19,7 +19,7 @@ export const isInt = x => /^\d+$/.test(x);
 export const isFmt = x => /^[_*~]$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|of|a[ts]|in)$/i.test(x);
-export const isWord = x => /^[a-zA-Z]+$/.test(x);
+export const isChar = x => /^[a-zA-Z]+$/.test(x);
 
 export const getOp = x => OP_TYPES[x];
 
@@ -86,23 +86,23 @@ export function parseBuffer(text, units) {
 
       // add from other units
       || (isInt(line) && cur === '/')
-      || (hasNum(line) && isWord(cur))
-      || (isWord(last) && cur === '-' && isWord(next))
-      || (hasNum(oldChar) && last === '/' && isWord(next))
-      || (cur === '/' && isWord(next) && hasNum(last) && !isNum(line))
+      || (hasNum(line) && isChar(cur))
+      || (isChar(last) && cur === '-' && isChar(next))
+      || (hasNum(oldChar) && last === '/' && isChar(next))
+      || (cur === '/' && isChar(next) && hasNum(last) && !isNum(line))
 
       // add possible numbers
       || (hasNum(cur) && last === '/')
       || (hasNum(last) && cur === ':')
-      || (hasNum(oldChar) && last === ' ' && isWord(cur))
-      || (hasNum(last) && (cur === '%' || cur === ' ') && isWord(next))
+      || (hasNum(oldChar) && last === ' ' && isChar(cur))
+      || (hasNum(last) && (cur === '%' || cur === ' ') && isChar(next))
 
       // underscores as unit/number separators
-      || (isWord(last) && cur === '_' && hasNum(next)) || (last === '_' && hasNum(cur))
-      || (hasNum(last) && cur === '_' && hasNum(next)) || (isWord(last) && cur === '_' && isWord(next))
+      || (isChar(last) && cur === '_' && hasNum(next)) || (last === '_' && hasNum(cur))
+      || (hasNum(last) && cur === '_' && hasNum(next)) || (isChar(last) && cur === '_' && isChar(next))
     ) {
       // break on unknown units, or expressions
-      if (last !== ' ' && line.includes(' ')) {
+      if (last !== ' ' && !isChar(cur) && line.includes(' ')) {
         const [pre, word] = line.split(' ');
         const key = word + cur;
 
@@ -121,10 +121,9 @@ export function parseBuffer(text, units) {
       isSep(cur, '/') || isSep(last, '*/') || line.charAt() === ','
 
       // skip after words
-      || (isOp(last) && isWord(cur))
-      || (isWord(cur) && last === '=')
-      || (isWord(last) && cur === ',')
-      // || (hasNum(last) && cur === '/' && isWord(next))
+      || (isOp(last) && isChar(cur))
+      || (isChar(cur) && last === '=')
+      || (isChar(last) && cur === ',')
 
       // skip possible numbers
       || (hasNum(last) && isOp(cur) && cur !== '/')

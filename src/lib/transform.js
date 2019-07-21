@@ -1,5 +1,5 @@
 import {
-  isOp, isSep, isNum, hasNum, isWord, isExpr, hasKeyword, hasDatetime, hasDays,
+  isOp, isSep, isNum, hasNum, isChar, isExpr, hasKeyword, hasDatetime, hasDays,
   getOp, parseBuffer, buildTree,
 } from './parser';
 
@@ -138,7 +138,7 @@ export default function transform(text, units) {
       return prev;
     }
 
-    if (isWord(cur) && (nextToken === '=' || nextToken === '(')) {
+    if (isChar(cur) && (nextToken === '=' || nextToken === '(')) {
       prev.push([!units[cur] ? 'def' : 'call', cur]);
 
       inCall = units[cur];

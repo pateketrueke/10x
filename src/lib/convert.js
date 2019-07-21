@@ -4,10 +4,11 @@ import currencySymbols from 'currency-symbol.js';
 const convert = new Convert();
 const groups = convert.measures();
 
+export const CURRENCY_SYMBOLS = currencySymbols.settings.symbols;
 export const DEFAULT_MAPPINGS = {};
 
 // assign currency-codes as mappings
-Object.keys(currencySymbols.settings.symbols)
+Object.keys(CURRENCY_SYMBOLS)
   .map(k => {
     DEFAULT_MAPPINGS[k] = k;
   });
@@ -30,5 +31,10 @@ groups.forEach(group => {
 });
 
 export function convertFrom(num, base, target) {
+  if (CURRENCY_SYMBOLS[base] || CURRENCY_SYMBOLS[target]) {
+    // FIXME: not supported yet...
+    return num;
+  }
+
   return new Convert(num).from(base).to(target);
 }

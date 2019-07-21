@@ -11,7 +11,7 @@ export function toNumber(token) {
     return a / b;
   }
 
-  return parseFloat(token[1]);
+  return parseFloat(token[1].replace(/[^a-z\s\d.-]/ig, ''));
 }
 
 export function fromValue(token) {
@@ -126,7 +126,7 @@ export function operateExpression(ops, expr) {
       let result;
 
       if (prev[0] === 'number' && next[0] === 'number') {
-        result = evaluateExpression(cur[1], toNumber(prev), toNumber(next));
+        result = evaluateExpression(cur[1], prev[1], next[1]);
       }
 
       if (!isNaN(result)) {
@@ -175,7 +175,7 @@ export function reduceFromAST(tokens, convert) {
         if (prev[2] !== next[2]) {
           prev[1] = toNumber(prev);
           next[1] = convert(toNumber(next), next[2], prev[2]);
-          next[2] = prev[2];
+          next.pop();
         }
       }
 
