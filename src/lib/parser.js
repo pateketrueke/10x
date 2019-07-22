@@ -1,3 +1,7 @@
+import {
+  TIME_UNITS,
+} from './convert';
+
 const OP_TYPES = {
   '=': 'equal',
   '+': 'plus',
@@ -20,6 +24,7 @@ export const isFmt = x => /^[_*~]$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|of|a[ts]|in)$/i.test(x);
 export const isChar = x => /^[a-zA-Z]+$/.test(x);
+export const isTime = x => TIME_UNITS.includes(x);
 
 export const getOp = x => OP_TYPES[x];
 

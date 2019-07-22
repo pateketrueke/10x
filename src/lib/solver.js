@@ -1,7 +1,7 @@
 import Convert from 'convert-units';
 
 import {
-  isExpr,
+  isOp, isTime, isExpr,
 } from './parser';
 
 export function toNumber(token) {
@@ -160,6 +160,7 @@ export function calculateFromTokens(expr) {
 
 export function reduceFromAST(tokens, convert, expressions = {}) {
   let isDate;
+  let lastUnit;
 
   return tokens.reduce((prev, cur, i) => {
     if (cur[0] === 'def') {
@@ -180,27 +181,33 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       cur = calculateFromTokens(reduceFromAST(cur, convert, expressions));
     }
 
+    // convert into Date values
     if (cur[2] === 'datetime') {
       isDate = true;
       cur[1] = fromValue(cur);
+    } else {
+      // flag the expression for dates
+      if (isTime(cur[2])) isDate = true;
+
+      if (cur[0] === 'number') {
+        // convert time-expressions into seconds
+        if (isDate) {
+          cur[1] = convert(toNumber(cur), cur[2], 's');
+          cur[2] = 's';
+        }
+
+        // convert between units
+        if (lastUnit && cur[2] && lastUnit !== cur[2]) {
+          cur[1] = convert(toNumber(cur), cur[2], lastUnit);
+          cur.pop();
+        }
+
+        // save current unit
+        if (cur[2]) lastUnit = cur[2];
+      }
     }
 
-    // const left = tokens[i - 1];
-    // const right = tokens[i + 1];
-    //
-    // if (left && right) {
-    //   // convert between units
-    //   if (left[0] === 'number' || right[0] === 'number') {
-    //     if (left[2] !== right[2]) {
-    //       left[1] = toNumber(left);
-    //       right[1] = convert(toNumber(right), right[2], left[2]);
-    //       right.pop();
-    //     }
-    //   }
-    // }
-
     prev.push(cur);
-
     return prev;
   }, []);
 }

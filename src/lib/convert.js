@@ -4,6 +4,7 @@ import currencySymbols from 'currency-symbol.js';
 const convert = new Convert();
 const groups = convert.measures();
 
+export const TIME_UNITS = convert.list('time').map(x => x.abbr).sort();
 export const CURRENCY_SYMBOLS = currencySymbols.settings.symbols;
 export const DEFAULT_MAPPINGS = {};
 
