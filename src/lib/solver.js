@@ -162,6 +162,45 @@ export function calculateFromTokens(expr) {
   return expr[0];
 }
 
+export function reduceFromTokens(tree, values) {
+  return tree.map(item => {
+    if (Array.isArray(item[0])) {
+      return reduceFromTokens(item, values);
+    }
+
+    if (values[item[1]]) {
+      return values[item[1]];
+    }
+
+    return item;
+  });
+}
+
+export function reduceFromArgs(keys, values) {
+  let offset = 0;
+
+  const locals = [];
+
+  // break values into single arguments
+  for (let i = 0; i < values.length; i += 1) {
+    const stack = locals[offset] || (locals[offset] = []);
+    const cur = values[i];
+
+    stack.push(cur);
+
+    if (cur[0] === 'expr' && cur[1] === ',') {
+      stack.pop();
+      offset++;
+    }
+  }
+
+  // compute a map from given units and values
+  return keys.reduce((prev, cur, i) => {
+    prev[cur[1]] = locals[i];
+    return prev;
+  }, {});
+}
+
 export function reduceFromAST(tokens, convert, expressions = {}) {
   let isDate;
   let lastUnit;
@@ -174,9 +213,15 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
 
     // handle call expressions
     if (cur[0] === 'call') {
-      const body = cur[2] || tokens[i + 1];
+      const call = expressions[cur[1]];
+      const args = cur[2] || tokens[i + 1];
 
-      console.log('CALL', cur[1], body);
+      // compute valid sub-expressions from arguments
+      const locals = reduceFromArgs(call[0].filter(x => x[0] === 'unit'), args[0]);
+
+      // replace all given units within the AST
+      cur = reduceFromTokens(call.slice(2), locals);
+      cur = calculateFromTokens(reduceFromAST(cur, convert, expressions));
     }
 
     // handle unit expressions
