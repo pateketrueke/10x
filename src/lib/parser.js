@@ -17,7 +17,7 @@ const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
 export const isOp = (a, b = '') => /^[-+=*/;_]$/.test(a) && !b.includes(a);
-export const isSep = (a, b = '') => a === '(' || a === ')' || a === ' ' || b.includes(a);
+export const isSep = (a, b = '') => `${b}(;, )`.includes(a);
 
 export const isInt = x => /^\d+$/.test(x);
 export const isFmt = x => /^[_*~]$/.test(x);
@@ -65,7 +65,6 @@ export function toNumber(value) {
 }
 
 export function parseBuffer(text, units) {
-  let mayNumber = false;
   let inHeading = false;
   let inFormat = false;
   let oldChar = '';
@@ -101,69 +100,24 @@ export function parseBuffer(text, units) {
       }
     }
 
-    // otherwise, we just add anything to the current buffer line
+    // FIXME: refactor tokenize for:
+    // - keep non-unit words and keywords join
+
     if (
       inFormat || inHeading || typeof last === 'undefined'
 
-      // add consecutive format-chars
-      || (isFmt(last) && isFmt(cur) && last === cur)
+      // keep words together
+      || (isNum(last) && isNum(cur))
+      || (isChar(last) && isChar(cur))
 
-      // add from other units
-      || (hasNum(line) && isChar(cur))
-      || (isInt(line) && cur === '/' && isInt(next))
-      || (isChar(last) && cur === '-' && isChar(next))
-      || (hasNum(oldChar) && last === '/' && isChar(next))
-      || (cur === '/' && isChar(next) && hasNum(last) && !isNum(line))
-
-      // add possible numbers
-      || (hasNum(last) && cur === ':')
-      || (hasNum(cur) && last === '/' && !isSep(oldChar))
-      || (hasNum(oldChar) && last === ' ' && isChar(cur))
-      || (hasNum(last) && (cur === '%' || cur === ' ') && isChar(next))
-
-      // underscores as unit/number separators
-      || (isChar(last) && cur === '_' && hasNum(next)) || (last === '_' && hasNum(cur))
-      || (hasNum(last) && cur === '_' && hasNum(next)) || (isChar(last) && cur === '_' && isChar(next))
+      // handle numbers, including negatives between ops
+      || (last === '-' && isNum(cur) && !isNum(oldChar))
+      || (isNum(last) && cur === '.') || (last === '.' && isNum(cur))
     ) {
-      // break on unknown units, or expressions
-      if (!inHeading && last !== ' ' && !isChar(cur) && line.includes(' ')) {
-        const [pre, word] = line.split(' ');
-        const key = word + cur;
-
-        // make sure we're ignoring unknown units
-        if (isExpr(key) || !hasKeyword(key, units)) {
-          prev[offset] = pre.split('');
-          prev[++offset] = key.split('');
-
-          return prev;
-        }
-      }
-
       buffer.push(cur);
-    } else if (
-      // skip separators
-      isSep(cur, '/') || isSep(last, '*/') || line.charAt() === ','
-
-      // skip after words
-      || (isOp(last) && isChar(cur))
-      || (isChar(cur) && last === '=')
-      || (isChar(line) && cur === ',')
-
-      // skip possible numbers
-      || (hasNum(last) && isOp(cur) && cur !== '/')
-      || (hasNum(last) && cur === '/' && !hasNum(next))
-      || (hasNum(last) && cur === ',' && !hasNum(next))
-      || (isOp(last, '-') && hasNum(cur) && !mayNumber)
-      || (!hasNum(last) && isOp(cur) && oldChar !== cur)
-      || (hasNum(oldChar) && last === '-' && hasNum(cur))
-    ) {
-      prev[++offset] = [cur];
     } else {
-      buffer.push(cur);
+      prev[++offset] = [cur];
     }
-
-    // flag possible negative numbers
-    mayNumber = last === '-' && hasNum(cur);
 
     // enable headings, skip everything
     if (cur === '#' && i === 0) inHeading = true;
