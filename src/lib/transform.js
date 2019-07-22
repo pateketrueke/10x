@@ -181,8 +181,8 @@ export default function transform(text, units) {
       || (hasNum(prevToken) && (cur === '=' || cur === ';'))
 
       // handle operators between expressions
-      || (hasKeyword(cur, units) && isOp(prevToken))
       || (hasNum(prevToken) && isOp(cur) && isSep(nextToken))
+      || (hasKeyword(cur, units) && (isOp(prevToken) || isExpr(prevToken)))
 
       // handle operators between dates
       || (hasDays(prevToken) && hasDays(nextToken) && isOp(cur))
