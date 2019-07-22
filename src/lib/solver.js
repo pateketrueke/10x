@@ -162,48 +162,44 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
   let isDate;
 
   return tokens.reduce((prev, cur, i) => {
-    const left = tokens[i - 1];
-    const right = tokens[i + 1];
-
-    if (cur && Array.isArray(cur[0])) {
-      prev.push(calculateFromTokens(reduceFromAST(cur, convert, expressions)));
-    } else {
-      if (cur[0] === 'def') {
-        expressions[cur[1]] = cur[2];
-        return prev;
-      }
-
-      if (cur[0] === 'unit' && expressions[cur[1]]) {
-        cur = expressions[cur[1]].slice(1, expressions[cur[1]].length - 1);
-        cur = reduceFromAST(cur, convert, expressions);
-        cur = cur.length < 2 ? cur[0] : cur;
-      }
-
-      if (cur[0] === 'number' && expressions[cur[2]]) {
-        const val = parseInt(cur[1]);
-
-        cur = expressions[cur[2]].slice(1, expressions[cur[2]].length - 1);
-        cur = [['number', val], ['expr', '*', 'mul']].concat(reduceFromAST(cur, convert, expressions));
-      }
-
-      if (cur[2] === 'datetime') {
-        isDate = true;
-        cur[1] = fromValue(cur);
-      }
-
-      // if (left && right) {
-      //   // convert between units
-      //   if (left[0] === 'number' || right[0] === 'number') {
-      //     if (left[2] !== right[2]) {
-      //       left[1] = toNumber(left);
-      //       right[1] = convert(toNumber(right), right[2], left[2]);
-      //       right.pop();
-      //     }
-      //   }
-      // }
-
-      prev.push(cur);
+    if (cur[0] === 'def') {
+      expressions[cur[1]] = cur[2];
+      return prev;
     }
+
+    // handle unit expressions
+    if (cur[0] === 'unit' && expressions[cur[1]]) {
+      cur = expressions[cur[1]].slice(1, expressions[cur[1]].length - 1);
+    } else if (cur[0] === 'number' && expressions[cur[2]]) {
+      cur = [['number', parseInt(cur[1])], ['expr', '*', 'mul']]
+        .concat(expressions[cur[2]].slice(1, expressions[cur[2]].length - 1));
+    }
+
+    // handle resolution by recursion
+    if (Array.isArray(cur[0])) {
+      cur = calculateFromTokens(reduceFromAST(cur, convert, expressions));
+    }
+
+    if (cur[2] === 'datetime') {
+      isDate = true;
+      cur[1] = fromValue(cur);
+    }
+
+    // const left = tokens[i - 1];
+    // const right = tokens[i + 1];
+    //
+    // if (left && right) {
+    //   // convert between units
+    //   if (left[0] === 'number' || right[0] === 'number') {
+    //     if (left[2] !== right[2]) {
+    //       left[1] = toNumber(left);
+    //       right[1] = convert(toNumber(right), right[2], left[2]);
+    //       right.pop();
+    //     }
+    //   }
+    // }
+
+    prev.push(cur);
 
     return prev;
   }, []);
