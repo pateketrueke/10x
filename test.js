@@ -18,24 +18,7 @@ const convert = (num, base, target) => {
 const tokens = transform(argv.join(' '), units);
 const normalized = [];
 
-// OK, now we have tokens, and they're transformed into a validated sequence
-// next, is transform that into a tree... and finally, resolve everything inside
-// the thin is... how the AST should be parsed for, how defs/calls are handled by?
-
-// each time a unit is reached, we lookup for its value, if exists,
-// evaluate that chunk; otherwise probably the value is missing, and a simple conversion would work
-
-// maths are simple to solve as previously we did... but now, we need to understand function-calls and such,
-// so, the solver must care about that? I don't think so... it should care only of solved values, a reducer may?
-
-// yeah, the reduces would take those chunks and replace them in place, at the end we just need a new tree without fns/calls
-console.log('--- tree ---');
-console.log(require('util').inspect(tokens.tree, { colors: true, depth: 5 }));
-
-console.log('--- tokens ---');
-console.log(require('util').inspect(tokens.input, { colors: true, depth: 5 }));
-console.log(require('util').inspect(tokens.output, { colors: true, depth: 5 }));
-
+// FIXME: move these to a better module...
 let lastOp = ['plus', '+'];
 let offset = 0;
 
@@ -63,8 +46,19 @@ for (let i = 0; i < chunks.length; i += 1) {
   }
 }
 
-console.log('--- chunks ---');
-console.log(require('util').inspect(chunks, { colors: true, depth: 5 }));
+try {
+  console.log('--- results ---');
+  console.log(require('util').inspect(normalized.map(x => calculateFromTokens(x)), { colors: true, depth: 5 }));
+} catch (e) {
+  console.log(e.stack);
 
-console.log('--- results ---');
-console.log(require('util').inspect(normalized.map(x => calculateFromTokens(x)), { colors: true, depth: 5 }));
+  console.log('--- chunks ---');
+  console.log(require('util').inspect(chunks, { colors: true, depth: 5 }));
+
+  console.log('--- tree ---');
+  console.log(require('util').inspect(tokens.tree, { colors: true, depth: 5 }));
+
+  console.log('--- tokens ---');
+  console.log(require('util').inspect(tokens.input, { colors: true, depth: 5 }));
+  console.log(require('util').inspect(tokens.output, { colors: true, depth: 5 }));
+}
