@@ -183,7 +183,7 @@ export function buildTree(tokens) {
     if (t[0] === 'text') continue;
 
     // fix nested-nodes
-    if (t[0] === 'def') {
+    if ((t[0] === 'def' || t[0] === 'call') && t[2]) {
       t[2] = buildTree(t[2]);
     }
 
