@@ -87,9 +87,15 @@ export function parseBuffer(text, units) {
     if (cur === '(') open++;
     if (cur === ')') open--;
 
+    let k = i;
+    let nextToken = '';
+
+    // retrieve next non white-space token
+    do { nextToken = chars[k++]; } while (nextToken === ' ');
+
     // normalize well-known dates
     if (hasMonths(line)) {
-      if (cur === ',' || (cur === ' ' && hasNum(next)) || hasNum(cur)) {
+      if (cur === ',' || (cur === ' ' && isNum(nextToken)) || hasNum(cur)) {
         buffer.push(cur);
         return prev;
       }
@@ -107,12 +113,14 @@ export function parseBuffer(text, units) {
       inFormat || inHeading || typeof last === 'undefined'
 
       // keep words together
-      || (isNum(last) && isNum(cur))
-      || (isChar(last) && isChar(cur))
+      || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))
+      || (isChar(oldChar) && cur === ' ' && isChar(nextToken)) || (last === ' ' && isChar(cur))
+
+      // handle fractions
+      || (isNum(last) && cur === '/' && isNum(next)) || (isNum(oldChar) && last === '/' && isNum(cur))
 
       // handle numbers, including negatives between ops
-      || (last === '-' && isNum(cur) && !isNum(oldChar))
-      || (isNum(last) && cur === '.') || (last === '.' && isNum(cur))
+      || (isNum(last) && cur === '.') || (last === '-' && isNum(cur) && !isNum(oldChar)) || (last === '.' && isNum(cur) && hasNum(oldChar))
     ) {
       buffer.push(cur);
     } else {
