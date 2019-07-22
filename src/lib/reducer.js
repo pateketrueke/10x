@@ -108,33 +108,36 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       const left = tokens[i - 1] || [];
       const right = tokens[i + 1] || [];
 
-      // flag the expression for dates
-      if (isTime(cur[2])) isDate = true;
-
       // handle converting between expressions
       if (cur[0] === 'expr' && isExpr(cur[1])) {
-        const fixedUnit = right[0] === 'unit' ? right[1] : right[2];
+        const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
 
-        left[1] = convert(toNumber(left), left[2], fixedUnit);
-        left[2] = fixedUnit;
-        tokens.splice(i, 2);
+        if (fixedUnit && fixedUnit !== 'datetime' && left[2] !== 'datetime') {
+          left[1] = left[2] ? convert(toNumber(left[1]), left[2], fixedUnit) : left[1];
+          left[2] = fixedUnit;
+          tokens.splice(i, 2);
+        }
       }
 
       if (cur[0] === 'number') {
         // convert time-expressions into seconds
         if (isDate && isTime(cur[2])) {
-          cur[1] = convert(toNumber(cur), cur[2], 's');
+          cur[1] = convert(toNumber(cur[1]), cur[2], 's');
           cur[2] = 's';
         }
 
         // convert between units
         if (lastUnit && cur[2] && lastUnit !== cur[2]) {
-          cur[1] = convert(toNumber(cur), cur[2], lastUnit);
+          cur[1] = convert(toNumber(cur[1]), cur[2], lastUnit);
+          cur[2] = lastUnit;
         }
 
         // save initial unit
         if (cur[2] && !lastUnit) lastUnit = cur[2];
       }
+
+      // flag the expression for dates
+      if (isTime(cur[2])) isDate = true;
     }
 
     prev.push(cur);

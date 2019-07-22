@@ -50,18 +50,18 @@ export const hasDatetime = x => {
   return x && (RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x));
 };
 
-export function toNumber(token) {
-  if (token[2] === 'fraction') {
-    const [a, b] = token[1].split('/');
+export function toNumber(value) {
+  if (typeof value === 'string') {
+    if (value.includes('/')) {
+      const [a, b] = value.split('/');
 
-    return a / b;
+      return a / b;
+    }
+
+    return parseFloat(value.replace(/[^a-z\s\d.-]/ig, ''));
   }
 
-  if (typeof token[1] === 'string') {
-    return parseFloat(token[1].replace(/[^a-z\s\d.-]/ig, ''));
-  }
-
-  return token[1];
+  return value;
 }
 
 export function parseBuffer(text, units) {
@@ -146,7 +146,6 @@ export function parseBuffer(text, units) {
 
       // skip after words
       || (isOp(last) && isChar(cur))
-      || (isChar(last) && isAny(cur))
       || (isChar(cur) && last === '=')
       || (isChar(line) && cur === ',')
 
