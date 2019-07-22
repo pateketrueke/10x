@@ -21,6 +21,7 @@ export const isSep = (a, b = '') => a === '(' || a === ')' || a === ' ' || b.inc
 
 export const isInt = x => /^\d+$/.test(x);
 export const isFmt = x => /^[_*~]$/.test(x);
+export const isAny = x => /\W/.test(x) && !isOp(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|of|a[ts]|in)$/i.test(x);
 export const isChar = x => /^[a-zA-Z]+/.test(x);
@@ -141,6 +142,7 @@ export function parseBuffer(text, units) {
 
       // skip after words
       || (isOp(last) && isChar(cur))
+      || (isChar(last) && isAny(cur))
       || (isChar(cur) && last === '=')
       || (isChar(line) && cur === ',')
 

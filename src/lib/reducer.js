@@ -118,6 +118,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
         // convert between units
         if (lastUnit && cur[2] && lastUnit !== cur[2]) {
           cur[1] = convert(toNumber(cur), cur[2], lastUnit);
+          cur[2] = lastUnit;
         }
 
         // save initial unit
