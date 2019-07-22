@@ -32,6 +32,10 @@ const normalized = [];
 console.log('--- tree ---');
 console.log(require('util').inspect(tokens.tree, { colors: true, depth: 5 }));
 
+console.log('--- tokens ---');
+console.log(require('util').inspect(tokens.input, { colors: true, depth: 5 }));
+console.log(require('util').inspect(tokens.output, { colors: true, depth: 5 }));
+
 let lastOp = ['plus', '+'];
 let offset = 0;
 

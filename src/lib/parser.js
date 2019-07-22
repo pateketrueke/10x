@@ -121,7 +121,7 @@ export function parseBuffer(text, units) {
       || (hasNum(last) && cur === '_' && hasNum(next)) || (isChar(last) && cur === '_' && isChar(next))
     ) {
       // break on unknown units, or expressions
-      if (last !== ' ' && !isChar(cur) && line.includes(' ')) {
+      if (!inHeading && last !== ' ' && !isChar(cur) && line.includes(' ')) {
         const [pre, word] = line.split(' ');
         const key = word + cur;
 
