@@ -191,7 +191,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
 
       if (cur[0] === 'number') {
         // convert time-expressions into seconds
-        if (isDate) {
+        if (isDate && isTime(cur[1])) {
           cur[1] = convert(toNumber(cur), cur[2], 's');
           cur[2] = 's';
         }
