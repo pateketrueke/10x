@@ -11,7 +11,11 @@ export function toNumber(token) {
     return a / b;
   }
 
-  return parseFloat(token[1].replace(/[^a-z\s\d.-]/ig, ''));
+  if (typeof token[1] === 'string') {
+    return parseFloat(token[1].replace(/[^a-z\s\d.-]/ig, ''));
+  }
+
+  return token[1];
 }
 
 export function fromValue(token) {
@@ -171,10 +175,8 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
 
       if (cur[0] === 'unit' && expressions[cur[1]]) {
         cur = expressions[cur[1]].slice(1, expressions[cur[1]].length - 1);
+        cur = reduceFromAST(cur, convert, expressions);
         cur = cur.length < 2 ? cur[0] : cur;
-
-        prev.push(cur);
-        return prev;
       }
 
       if (cur[2] === 'datetime') {
@@ -182,16 +184,16 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
         cur[1] = fromValue(cur);
       }
 
-      if (left && right) {
-        // convert between units
-        if (left[0] === 'number' || right[0] === 'number') {
-          if (left[2] !== right[2]) {
-            left[1] = toNumber(left);
-            right[1] = convert(toNumber(right), right[2], left[2]);
-            right.pop();
-          }
-        }
-      }
+      // if (left && right) {
+      //   // convert between units
+      //   if (left[0] === 'number' || right[0] === 'number') {
+      //     if (left[2] !== right[2]) {
+      //       left[1] = toNumber(left);
+      //       right[1] = convert(toNumber(right), right[2], left[2]);
+      //       right.pop();
+      //     }
+      //   }
+      // }
 
       prev.push(cur);
     }

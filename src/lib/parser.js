@@ -177,33 +177,9 @@ export function buildTree(tokens) {
     // skip text-nodes
     if (t[0] === 'text') continue;
 
-    // group functions and calls
-    if (fn) {
-      fn[2].push(t);
-
-      if (t[0] === 'open') depth++;
-      if (t[0] === 'close') depth--;
-
-      // handle definitions (end)
-      if (t[0] === 'expr' && t[1] === ';') {
-        if (depth !== 0) break;
-
-        // build sub-tree and merge
-        fn[2] = buildTree(fn[2]);
-        root.push(fn);
-        calls.pop();
-      }
-
-      continue;
-    }
-
-    // handle definitions (begin)
+    // fix nested-nodes
     if (t[0] === 'def') {
-      const leaf = [t[0], t[1], []];
-
-      leaf._offset = i;
-      calls.push(leaf);
-      continue;
+      t[2] = buildTree(t[2]);
     }
 
     // handle nesting

@@ -38,6 +38,7 @@ const tokens = transform(argv.join(' '), units);
 // so, the solver must care about that? I don't think so... it should care only of solved values, a reducer may?
 
 // yeah, the reduces would take those chunks and replace them in place, at the end we just need a new tree without fns/calls
+console.log('--- tree ---');
 console.log(require('util').inspect(tokens.tree, { colors: true, depth: 5 }));
 
 let lastOp = ['plus', '+'];
@@ -53,5 +54,8 @@ const chunks = reduceFromAST(tokens.tree, convert).reduce((prev, cur) => {
   return prev;
 }, []);
 
+console.log('--- chunks ---');
 console.log(require('util').inspect(chunks, { colors: true, depth: 5 }));
+
+console.log('--- results ---');
 console.log(require('util').inspect(calculateFromTokens(chunks), { colors: true, depth: 5 }));
