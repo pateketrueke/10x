@@ -108,18 +108,22 @@ export function parseBuffer(text, units) {
 
     // FIXME: refactor tokenize for:
     // - keep non-unit words and keywords join
+    // - keep numbers and well-known units together
 
     if (
       inFormat || inHeading || typeof last === 'undefined'
 
-      // keep words together
+      // keep words and numbers together
+      || (last === ' ' && cur == ' ')
+      || (last === ' ' && isChar(nextToken))
       || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))
+      || (isNum(last) && isChar(cur)) || (isChar(last) && isNum(cur))
       || (isChar(oldChar) && cur === ' ' && isChar(nextToken)) || (last === ' ' && isChar(cur))
 
       // handle fractions
       || (isNum(last) && cur === '/' && isNum(next)) || (isNum(oldChar) && last === '/' && isNum(cur))
 
-      // handle numbers, including negatives between ops
+      // handle numbers, including negatives between ops; notice all N-N are splitted
       || (isNum(last) && cur === '.') || (last === '-' && isNum(cur) && !isNum(oldChar)) || (last === '.' && isNum(cur) && hasNum(oldChar))
     ) {
       buffer.push(cur);
