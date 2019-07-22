@@ -125,8 +125,8 @@ export function operateExpression(ops, expr) {
     if (cur && ops.indexOf(cur[1]) > -1) {
       let result;
 
-      if (prev[0] === 'number' && next[0] === 'number') {
-        result = evaluateExpression(cur[1], prev[1], next[1]);
+      if (prev[0] === 'number' || next[0] === 'number') {
+        result = evaluateExpression(cur[1], toNumber(prev), toNumber(next));
       }
 
       if (!isNaN(result)) {
@@ -154,34 +154,48 @@ export function calculateFromTokens(expr) {
   return expr[0];
 }
 
-export function reduceFromAST(tokens, convert) {
+export function reduceFromAST(tokens, convert, expressions = {}) {
   let isDate;
 
-  for (let i = 0, c = tokens.length; i < c; i += 1) {
-    const cur = tokens[i];
-    const prev = tokens[i - 1];
-    const next = tokens[i + 1];
+  return tokens.reduce((prev, cur, i) => {
+    const left = tokens[i - 1];
+    const right = tokens[i + 1];
 
     if (cur && Array.isArray(cur[0])) {
-      tokens[i] = calculateFromTokens(reduceFromAST(cur, convert));
+      prev.push(calculateFromTokens(reduceFromAST(cur, convert, expressions)));
     } else {
-      if (prev && next) {
-        if (cur[2] === 'datetime') {
-          isDate = true;
-          cur[1] = fromValue(cur);
-        }
+      if (cur[0] === 'def') {
+        expressions[cur[1]] = cur[2];
+        return prev;
+      }
 
+      if (cur[0] === 'unit' && expressions[cur[1]]) {
+        cur = expressions[cur[1]].slice(1, expressions[cur[1]].length - 1);
+        cur = cur.length < 2 ? cur[0] : cur;
+
+        prev.push(cur);
+        return prev;
+      }
+
+      if (cur[2] === 'datetime') {
+        isDate = true;
+        cur[1] = fromValue(cur);
+      }
+
+      if (left && right) {
         // convert between units
-        if (prev[2] !== next[2]) {
-          prev[1] = toNumber(prev);
-          next[1] = convert(toNumber(next), next[2], prev[2]);
-          next.pop();
+        if (left[0] === 'number' || right[0] === 'number') {
+          if (left[2] !== right[2]) {
+            left[1] = toNumber(left);
+            right[1] = convert(toNumber(right), right[2], left[2]);
+            right.pop();
+          }
         }
       }
 
-      tokens[i] = cur;
+      prev.push(cur);
     }
-  }
 
-  return tokens;
+    return prev;
+  }, []);
 }

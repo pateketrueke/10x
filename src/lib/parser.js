@@ -227,8 +227,8 @@ export function buildTree(tokens) {
   }
 
   // handle exceptions
-  if (depth || (stack.length && ops)) {
-    depth = depth || stack[0]._offset;
+  if (depth || calls.length || (stack.length && ops)) {
+    depth = depth || (calls[0] || stack[0])._offset;
 
     const err = new Error(`Missing terminator for \`${
       tokens.slice(0, Math.max(1, depth - 1)).map(x => x[1]).join(' ')

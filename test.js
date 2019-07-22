@@ -53,5 +53,5 @@ const chunks = reduceFromAST(tokens.tree, convert).reduce((prev, cur) => {
   return prev;
 }, []);
 
-// console.log(require('util').inspect(chunks, { colors: true, depth: 5 }));
+console.log(require('util').inspect(chunks, { colors: true, depth: 5 }));
 console.log(require('util').inspect(calculateFromTokens(chunks), { colors: true, depth: 5 }));
