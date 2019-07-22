@@ -137,7 +137,7 @@ export function calculateFromTokens(expr) {
   expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in'], expr);
 
   // ensure we're returning a valid number back!
-  if (typeof expr[0][1] !== 'undefined') {
+  if (expr[0][0] === 'number' && typeof expr[0][1] !== 'undefined') {
     expr[0][1] = toNumber(expr[0][1]);
   }
 

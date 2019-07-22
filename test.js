@@ -16,14 +16,24 @@ const convert = (num, base, target) => {
 };
 
 const tokens = transform(argv.join(' '), units);
+
 const normalized = [];
+const expressions = {};
+
+if (require('fs').existsSync('shared.json')) {
+  Object.assign(expressions, JSON.parse(require('fs').readFileSync('shared.json')));
+  Object.assign(units, Object.keys(expressions).reduce((prev, cur) => {
+    prev[cur] = cur;
+    return prev;
+  }, {}));
+}
 
 // FIXME: move these to a better module...
 let lastOp = ['plus', '+'];
 let offset = 0;
 
 // operate all possible expressions...
-const chunks = reduceFromAST(tokens.tree, convert).reduce((prev, cur) => {
+const chunks = reduceFromAST(tokens.tree, convert, expressions).reduce((prev, cur) => {
   const lastValue = prev[prev.length - 1] || [];
 
   if (lastValue[0] === 'number' && cur[0] === 'number') prev.push(lastOp, cur);
@@ -32,6 +42,8 @@ const chunks = reduceFromAST(tokens.tree, convert).reduce((prev, cur) => {
   if (isOp(cur[1], '/*')) lastOp = cur;
   return prev;
 }, []);
+
+require('fs').writeFileSync('shared.json', JSON.stringify(expressions));
 
 // join chunks into final expressions
 for (let i = 0; i < chunks.length; i += 1) {
