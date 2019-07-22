@@ -80,8 +80,8 @@ export function calculateFromDate(op, left, right) {
 export function evaluateExpression(op, left, right) {
   if (op === '+') return left + right;
   if (op === '-') return left - right;
-  if (op === '*') return left * right;
-  if (op === '/') return left / right;
+  if (op === '*' || op === 'in') return left * right;
+  if (op === '/' || op === 'of') return left / right;
 }
 
 export function operateExpression(ops, expr) {

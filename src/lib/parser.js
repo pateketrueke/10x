@@ -194,7 +194,7 @@ export function buildTree(tokens) {
     const t = tokens[i];
 
     // skip text-nodes
-    if (t[0] === 'text') continue;
+    if (!['unit', 'expr', 'number'].includes(t[0])) continue;
 
     // fix nested-nodes
     if ((t[0] === 'def' || t[0] === 'call') && t[2]) {
