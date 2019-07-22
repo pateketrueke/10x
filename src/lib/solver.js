@@ -1,7 +1,7 @@
 import Convert from 'convert-units';
 
 import {
-  isOp, isTime, isExpr,
+  isOp, isTime, isExpr, hasMonths,
 } from './parser';
 
 export function toNumber(token) {
@@ -130,7 +130,11 @@ export function operateExpression(ops, expr) {
       let result;
 
       if (prev[0] === 'number' || next[0] === 'number') {
-        result = evaluateExpression(cur[1], toNumber(prev), toNumber(next));
+        if (prev[1] instanceof Date) {
+          result = calculateFromDate(cur[1], prev[1], next[1]);
+        } else {
+          result = evaluateExpression(cur[1], toNumber(prev), toNumber(next));
+        }
       }
 
       if (!isNaN(result)) {
@@ -191,7 +195,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
 
       if (cur[0] === 'number') {
         // convert time-expressions into seconds
-        if (isDate && isTime(cur[1])) {
+        if (isDate && isTime(cur[2])) {
           cur[1] = convert(toNumber(cur), cur[2], 's');
           cur[2] = 's';
         }
@@ -202,8 +206,8 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
           cur[2] = lastUnit;
         }
 
-        // save current unit
-        if (cur[2]) lastUnit = cur[2];
+        // save initial unit
+        if (cur[2] && !lastUnit) lastUnit = cur[2];
       }
     }
 

@@ -172,7 +172,8 @@ export default function transform(text, units) {
     }
 
     if (
-      isSep(cur) || hasNum(cur) || prevToken === 'call'
+      // handle most operators and well-known keywords
+      isSep(cur) || hasNum(cur) || hasDays(cur) || prevToken === 'call'
 
       // handle units before operators
       || (isChar(cur) && isOp(nextToken))
