@@ -58,4 +58,6 @@ console.log('--- chunks ---');
 console.log(require('util').inspect(chunks, { colors: true, depth: 5 }));
 
 console.log('--- results ---');
-console.log(require('util').inspect(calculateFromTokens(chunks), { colors: true, depth: 5 }));
+chunks.forEach(chunk => {
+  console.log(require('util').inspect(calculateFromTokens(reduceFromAST(chunk, convert)), { colors: true, depth: 5 }));
+});

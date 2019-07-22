@@ -179,6 +179,13 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
         cur = cur.length < 2 ? cur[0] : cur;
       }
 
+      if (cur[0] === 'number' && expressions[cur[2]]) {
+        const val = parseInt(cur[1]);
+
+        cur = expressions[cur[2]].slice(1, expressions[cur[2]].length - 1);
+        cur = [['number', val], ['expr', '*', 'mul']].concat(reduceFromAST(cur, convert, expressions));
+      }
+
       if (cur[2] === 'datetime') {
         isDate = true;
         cur[1] = fromValue(cur);
