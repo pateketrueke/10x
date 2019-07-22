@@ -26,6 +26,7 @@ const convert = (num, base, target) => {
 };
 
 const tokens = transform(argv.join(' '), units);
+const normalized = [];
 
 // OK, now we have tokens, and they're transformed into a validated sequence
 // next, is transform that into a tree... and finally, resolve everything inside
@@ -42,6 +43,7 @@ console.log('--- tree ---');
 console.log(require('util').inspect(tokens.tree, { colors: true, depth: 5 }));
 
 let lastOp = ['plus', '+'];
+let offset = 0;
 
 // operate all possible expressions...
 const chunks = reduceFromAST(tokens.tree, convert).reduce((prev, cur) => {
@@ -54,8 +56,21 @@ const chunks = reduceFromAST(tokens.tree, convert).reduce((prev, cur) => {
   return prev;
 }, []);
 
+// join chunks into final expressions
+for (let i = 0; i < chunks.length; i += 1) {
+  const cur = chunks[i];
+
+  normalized[offset] = normalized[offset] || [];
+  normalized[offset].push(cur);
+
+  if (cur[0] === 'expr' && (cur[1] === '=' || cur[1] === ';')) {
+    normalized[offset].pop();
+    offset += 1;
+  }
+}
+
 console.log('--- chunks ---');
 console.log(require('util').inspect(chunks, { colors: true, depth: 5 }));
 
 console.log('--- results ---');
-console.log(require('util').inspect(calculateFromTokens(chunks), { colors: true, depth: 5 }));
+console.log(require('util').inspect(normalized.map(x => calculateFromTokens(x)), { colors: true, depth: 5 }));

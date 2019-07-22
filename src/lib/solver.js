@@ -172,7 +172,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
     if (cur[0] === 'unit' && expressions[cur[1]]) {
       cur = expressions[cur[1]].slice(1, expressions[cur[1]].length - 1);
     } else if (cur[0] === 'number' && expressions[cur[2]]) {
-      cur = [['number', parseInt(cur[1])], ['expr', '*', 'mul']]
+      cur = [['number', parseInt(cur[1]), expressions[cur[2]][1][2]], ['expr', '*', 'mul']]
         .concat(expressions[cur[2]].slice(1, expressions[cur[2]].length - 1));
     }
 
@@ -199,7 +199,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
         // convert between units
         if (lastUnit && cur[2] && lastUnit !== cur[2]) {
           cur[1] = convert(toNumber(cur), cur[2], lastUnit);
-          cur.pop();
+          cur[2] = lastUnit;
         }
 
         // save current unit
