@@ -111,8 +111,8 @@ export function parseBuffer(text, units) {
       || (cur === '/' && isChar(next) && hasNum(last) && !isNum(line))
 
       // add possible numbers
-      || (hasNum(cur) && last === '/')
       || (hasNum(last) && cur === ':')
+      || (hasNum(cur) && last === '/' && !isSep(oldChar))
       || (hasNum(oldChar) && last === ' ' && isChar(cur))
       || (hasNum(last) && (cur === '%' || cur === ' ') && isChar(next))
 

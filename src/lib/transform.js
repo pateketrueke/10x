@@ -99,6 +99,7 @@ function fromSymbols(text, units, expression) {
 
 export default function transform(text, units) {
   const all = parseBuffer(text, units);
+
   const stack = [];
   const calls = {};
 

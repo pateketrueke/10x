@@ -1,5 +1,5 @@
+import { isTime, toNumber, hasMonths } from './parser';
 import { calculateFromTokens } from './solver';
-import { isTime, toNumber } from './parser';
 
 export function reduceFromValue(token) {
   let text = token[1];
