@@ -33,6 +33,10 @@ export const hasNum = x => /\d/.test(x);
 export const hasDays = x => RE_DAYS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
 
+export const hasPercent = x => {
+  return typeof x === 'string' && x.charAt(x.length - 1) === '%';
+};
+
 export const hasKeyword = (x, units) => {
   if (!x) return false;
 
@@ -105,8 +109,8 @@ export function parseBuffer(text, units) {
       || (isFmt(last) && isFmt(cur) && last === cur)
 
       // add from other units
-      || (isInt(line) && cur === '/')
       || (hasNum(line) && isChar(cur))
+      || (isInt(line) && cur === '/' && isInt(next))
       || (isChar(last) && cur === '-' && isChar(next))
       || (hasNum(oldChar) && last === '/' && isChar(next))
       || (cur === '/' && isChar(next) && hasNum(last) && !isNum(line))
@@ -196,7 +200,7 @@ export function buildTree(tokens) {
     const t = tokens[i];
 
     // skip text-nodes
-    if (!['unit', 'expr', 'number'].includes(t[0])) continue;
+    if (!['def', 'call', 'unit', 'expr', 'open', 'close', 'number'].includes(t[0])) continue;
 
     // fix nested-nodes
     if ((t[0] === 'def' || t[0] === 'call') && t[2]) {

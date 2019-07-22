@@ -46,17 +46,22 @@ for (let i = 0; i < chunks.length; i += 1) {
   }
 }
 
+let _e;
+
 try {
   console.log('--- results ---');
   console.log(require('util').inspect(normalized.map(x => calculateFromTokens(x)), { colors: true, depth: 5 }));
 } catch (e) {
   console.log(e.stack);
+  _e = e;
+}
+
+if (_e || process.argv.includes('--debug')) {
+  console.log('--- tree ---');
+  console.log(require('util').inspect(tokens.tree, { colors: true, depth: 5 }));
 
   console.log('--- chunks ---');
   console.log(require('util').inspect(chunks, { colors: true, depth: 5 }));
-
-  console.log('--- tree ---');
-  console.log(require('util').inspect(tokens.tree, { colors: true, depth: 5 }));
 
   console.log('--- tokens ---');
   console.log(require('util').inspect(tokens.input, { colors: true, depth: 5 }));

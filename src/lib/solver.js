@@ -1,7 +1,7 @@
 import Convert from 'convert-units';
 
 import {
-  isOp, isTime, isExpr, hasMonths, toNumber,
+  isOp, isTime, isExpr, hasMonths, hasPercent, toNumber,
 } from './parser';
 
 export function calculateFromDate(op, left, right) {
@@ -78,9 +78,6 @@ export function calculateFromDate(op, left, right) {
 }
 
 export function evaluateExpression(op, left, right) {
-  // handle percentages
-  if (isExpr(op)) return left / right * 100;
-
   // handle basic arithmetic
   if (op === '+') return left + right;
   if (op === '-') return left - right;
@@ -101,18 +98,16 @@ export function operateExpression(ops, expr) {
         if (prev[1] instanceof Date) {
           result = calculateFromDate(cur[1], prev[1], next[1]);
         } else {
-          result = evaluateExpression(cur[1], toNumber(prev), toNumber(next));
-
-          // assume all expressions are from percentages,
-          // further convertion is handled on reduceFromAST()
-          if (isExpr(cur[1])) prev[2] = '%';
+          if (!hasPercent(next[1])) {
+            result = evaluateExpression(cur[1], toNumber(prev), toNumber(next));
+          } else {
+            result = parseFloat(prev[1]) + (prev[1] * (parseFloat(next[1]) / 100));
+          }
         }
       }
 
-      if (!isNaN(result)) {
-        const unit = expr.find(x => x[0] === 'unit');
-
-        expr.splice(i - 1, 3, ['number', result, unit ? unit[1] : prev[2]]);
+      if (typeof result !== 'undefined') {
+        expr.splice(i - 1, 3, ['number', result, prev[2]]);
 
         // if tokens are left...
         if (expr.length >= 3) {
@@ -127,7 +122,7 @@ export function operateExpression(ops, expr) {
   return expr;
 }
 
-export function calculateFromTokens(expr) {
+export function calculateFromTokens(expr, convert) {
   expr = operateExpression(['*', '/'], expr);
   expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in'], expr);
 

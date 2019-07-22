@@ -1,4 +1,4 @@
-import { isTime, toNumber, hasMonths } from './parser';
+import { isTime, isExpr, toNumber, hasMonths } from './parser';
 import { calculateFromTokens } from './solver';
 
 export function reduceFromValue(token) {
@@ -105,8 +105,18 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       isDate = true;
       cur[1] = reduceFromValue(cur);
     } else {
+      const left = tokens[i - 1] || [];
+      const right = tokens[i + 1] || [];
+
       // flag the expression for dates
       if (isTime(cur[2])) isDate = true;
+
+      // handle converting between expressions
+      if (cur[0] === 'expr' && isExpr(cur[1]) && left[2] !== right[2]) {
+        left[1] = convert(toNumber(left), left[2], right[2]);
+        left[2] = right[2];
+        tokens.splice(i, 2);
+      }
 
       if (cur[0] === 'number') {
         // convert time-expressions into seconds
@@ -118,7 +128,6 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
         // convert between units
         if (lastUnit && cur[2] && lastUnit !== cur[2]) {
           cur[1] = convert(toNumber(cur), cur[2], lastUnit);
-          cur[2] = lastUnit;
         }
 
         // save initial unit
