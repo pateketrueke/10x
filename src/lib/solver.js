@@ -78,10 +78,22 @@ export function calculateFromDate(op, left, right) {
 }
 
 export function evaluateExpression(op, left, right) {
+  // handle percentages
+  if (isExpr(op)) {
+    const base = left / right * 100;
+
+    if (op === 'at' || op === 'as') {
+      return right / 100 * base;
+    }
+
+    return base;
+  }
+
+  // handle basic arithmetic
   if (op === '+') return left + right;
   if (op === '-') return left - right;
-  if (op === '*' || op === 'in') return left * right;
-  if (op === '/' || op === 'of') return left / right;
+  if (op === '*') return left * right;
+  if (op === '/') return left / right;
 }
 
 export function operateExpression(ops, expr) {
@@ -98,6 +110,10 @@ export function operateExpression(ops, expr) {
           result = calculateFromDate(cur[1], prev[1], next[1]);
         } else {
           result = evaluateExpression(cur[1], toNumber(prev), toNumber(next));
+
+          // FIXME: convert here?
+          if (cur[1] === 'in' || cur[1] === 'of') prev[2] = '%';
+          if (cur[1] === 'at' || cur[1] === 'as') prev[2] = next[2];
         }
       }
 
