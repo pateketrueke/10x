@@ -1,18 +1,8 @@
 import transform from './src/lib/transform';
-
-import {
-  isOp,
-} from './src/lib/parser';
-
-import {
-  reduceFromAST,
-  calculateFromTokens,
-} from './src/lib/solver';
-
-import {
-  convertFrom,
-  DEFAULT_MAPPINGS,
-} from './src/lib/convert';
+import { isOp } from './src/lib/parser';
+import { reduceFromAST } from './src/lib/reducer';
+import { calculateFromTokens } from './src/lib/solver';
+import { convertFrom, DEFAULT_MAPPINGS } from './src/lib/convert';
 
 const argv = process.argv.slice(Math.max(2, process.argv.indexOf('--') + 1));
 

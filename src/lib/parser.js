@@ -45,6 +45,20 @@ export const hasDatetime = x => {
   return x && (RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x));
 };
 
+export function toNumber(token) {
+  if (token[2] === 'fraction') {
+    const [a, b] = token[1].split('/');
+
+    return a / b;
+  }
+
+  if (typeof token[1] === 'string') {
+    return parseFloat(token[1].replace(/[^a-z\s\d.-]/ig, ''));
+  }
+
+  return token[1];
+}
+
 export function parseBuffer(text, units) {
   let mayNumber = false;
   let inHeading = false;
