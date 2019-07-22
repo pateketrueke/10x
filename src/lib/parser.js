@@ -23,7 +23,7 @@ export const isInt = x => /^\d+$/.test(x);
 export const isFmt = x => /^[_*~]$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|of|a[ts]|in)$/i.test(x);
-export const isChar = x => /^[a-zA-Z]+$/.test(x);
+export const isChar = x => /^[a-zA-Z]+/.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
 
 export const getOp = x => OP_TYPES[x];
@@ -128,7 +128,7 @@ export function parseBuffer(text, units) {
       // skip after words
       || (isOp(last) && isChar(cur))
       || (isChar(cur) && last === '=')
-      || (isChar(last) && cur === ',')
+      || (isChar(line) && cur === ',')
 
       // skip possible numbers
       || (hasNum(last) && isOp(cur) && cur !== '/')

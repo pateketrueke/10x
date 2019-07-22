@@ -172,6 +172,13 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       return prev;
     }
 
+    // handle call expressions
+    if (cur[0] === 'call') {
+      const body = cur[2] || tokens[i + 1];
+
+      console.log('CALL', cur[1], body);
+    }
+
     // handle unit expressions
     if (cur[0] === 'unit' && expressions[cur[1]]) {
       cur = expressions[cur[1]].slice(1, expressions[cur[1]].length - 1);

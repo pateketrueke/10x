@@ -43,19 +43,14 @@ function fromMarkdown(text) {
 }
 
 function fromSymbols(text, units, expression) {
+  // try most char-expressions as valid units...
+  if (expression && isChar(text)) {
+    return ['unit', text];
+  }
+
   // handle white-space
   if (text === ' ') {
     return ['text', ' '];
-  }
-
-  if (expression) {
-    if (units[text]) {
-      return ['unit', text];
-    }
-
-    if (text === ',') {
-      return ['expr', text, 'and'];
-    }
   }
 
   // handle expressions
@@ -123,7 +118,7 @@ export default function transform(text, units) {
 
     // handle expression blocks
     if (inExpr) {
-      const token = fromSymbols(cur, units, true);
+      const token = fromSymbols(cur, units, !inCall);
 
       // handle nested calls
       if (token[0] === 'unit' && nextToken === '(') {
