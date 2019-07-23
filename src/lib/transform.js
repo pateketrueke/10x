@@ -1,6 +1,6 @@
 import {
   isOp, isSep, isNum, hasNum, isChar, isExpr, hasKeyword, hasDatetime, hasDays,
-  getOp, parseBuffer, buildTree,
+  getOp, parseBuffer, joinTokens, buildTree,
 } from './parser';
 
 function fromMarkdown(text) {
@@ -98,7 +98,7 @@ function fromSymbols(text, units, expression) {
 }
 
 export default function transform(text, units) {
-  const all = parseBuffer(text, units);
+  const all = joinTokens(parseBuffer(text), units);
 
   const stack = [];
   const calls = {};
@@ -203,7 +203,7 @@ export default function transform(text, units) {
       prev.push(fromMarkdown(cur));
     }
 
-    if (!isSep(cur)) prevToken = cur;
+    if (!isSep(cur, ' ')) prevToken = cur;
     return prev;
   }, []);
 

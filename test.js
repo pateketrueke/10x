@@ -28,49 +28,50 @@ if (require('fs').existsSync('shared.json')) {
   }, {}));
 }
 
-// FIXME: move these to a better module...
-let lastOp = ['plus', '+'];
-let offset = 0;
-
-// operate all possible expressions...
-const chunks = reduceFromAST(tokens.tree, convert, expressions).reduce((prev, cur) => {
-  const lastValue = prev[prev.length - 1] || [];
-
-  if (lastValue[0] === 'number' && cur[0] === 'number') prev.push(lastOp, cur);
-  else prev.push(cur);
-
-  if (isOp(cur[1], '/*')) lastOp = cur;
-  return prev;
-}, []);
-
-require('fs').writeFileSync('shared.json', JSON.stringify(expressions));
-
-// join chunks into final expressions
-for (let i = 0; i < chunks.length; i += 1) {
-  const cur = chunks[i];
-
-  normalized[offset] = normalized[offset] || [];
-  normalized[offset].push(cur);
-
-  if (cur[0] === 'expr' && (cur[1] === '=' || cur[1] === ';')) {
-    normalized[offset].pop();
-    offset += 1;
-  }
-}
-
+let chunks;
 let info = {};
 let _e;
 
 try {
+  // FIXME: move these to a better module...
+  let lastOp = ['plus', '+'];
+  let offset = 0;
+
+  // operate all possible expressions...
+  chunks = reduceFromAST(tokens.tree, convert, expressions).reduce((prev, cur) => {
+    const lastValue = prev[prev.length - 1] || [];
+
+    if (lastValue[0] === 'number' && cur[0] === 'number') prev.push(lastOp, cur);
+    else prev.push(cur);
+
+    if (isOp(cur[1], '/*')) lastOp = cur;
+    return prev;
+  }, []);
+
+  require('fs').writeFileSync('shared.json', JSON.stringify(expressions));
+
+  // join chunks into final expressions
+  for (let i = 0; i < chunks.length; i += 1) {
+    const cur = chunks[i];
+
+    normalized[offset] = normalized[offset] || [];
+    normalized[offset].push(cur);
+
+    if (cur[0] === 'expr' && (cur[1] === '=' || cur[1] === ';')) {
+      normalized[offset].pop();
+      offset += 1;
+    }
+  }
+
   info.results = normalized.map(x => calculateFromTokens(x));
 } catch (e) {
-  console.log(e.stack);
+  process.stderr.write(e.stack);
   _e = e;
-}
+} finally {
+  if (_e || process.argv.includes('--debug')) {
+    info.chunks = chunks;
+    Object.assign(info, tokens);
+  }
 
-if (_e || process.argv.includes('--debug')) {
-  info.chunks = chunks;
-  Object.assign(info, tokens);
+  process.stdout.write(JSON.stringify(info));
 }
-
-process.stdout.write(JSON.stringify(info));

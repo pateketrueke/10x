@@ -16,12 +16,13 @@ const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
-export const isOp = (a, b = '') => /^[-+=*/;_]$/.test(a) && !b.includes(a);
-export const isSep = (a, b = '') => `${b}(;, )`.includes(a);
+export const isOp = (a, b = '') => /^[-+=*/;_]$/.test(a) || b.includes(a);
+export const isSep = (a, b = '') => `${b}(;,)`.includes(a);
 
 export const isInt = x => /^\d+$/.test(x);
 export const isFmt = x => /^[_*~]$/.test(x);
 export const isAny = x => /\W/.test(x) && !isOp(x);
+export const isNth = x => /^(?:th|[rn]d)y?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|of|a[ts]|in)$/i.test(x);
 export const isChar = x => /^[a-zA-Z]+/.test(x);
@@ -64,7 +65,34 @@ export function toNumber(value) {
   return value;
 }
 
-export function parseBuffer(text, units) {
+export function joinTokens(data, units) {
+  const buffer = [];
+
+  let offset = 0;
+  let stack = [];
+
+  for (let i = 0; i < data.length; i += 1) {
+    stack = buffer[offset] || (buffer[offset] = []);
+
+    const cur = data[i];
+    const next = data[i + 1];
+
+    // handle unit expressions
+    if (hasNum(stack[0]) && cur === ' ' && hasKeyword(next, units)) {
+      buffer[offset++] = [stack[0] + cur + next];
+      data.splice(i - 1, 1);
+      stack.pop();
+      continue;
+    }
+
+    if (isOp(cur, ' ') || isOp(next) || hasNum(next)) offset++;
+    stack.push(cur);
+  }
+
+  return buffer.map(x => x.join(''));
+}
+
+export function parseBuffer(text) {
   let inHeading = false;
   let inFormat = false;
   let oldChar = '';
@@ -87,15 +115,9 @@ export function parseBuffer(text, units) {
     if (cur === '(') open++;
     if (cur === ')') open--;
 
-    let k = i;
-    let nextToken = '';
-
-    // retrieve next non white-space token
-    do { nextToken = chars[k++]; } while (nextToken === ' ');
-
     // normalize well-known dates
     if (hasMonths(line)) {
-      if (cur === ',' || (cur === ' ' && isNum(nextToken)) || hasNum(cur)) {
+      if (cur === ',' || (cur === ' ' && isNum(next)) || hasNum(cur)) {
         buffer.push(cur);
         return prev;
       }
@@ -113,12 +135,14 @@ export function parseBuffer(text, units) {
     if (
       inFormat || inHeading || typeof last === 'undefined'
 
+      // keep white-space
+      || ((last === ' ' && cur === ' '))
+      || (isChar(last) && isAny(cur) && !isSep(cur, ' '))
+      || ((isNum(cur) || isChar(cur)) && !(isOp(last, ' ') || isSep(last)))
+
       // keep words and numbers together
-      || (last === ' ' && cur == ' ')
-      || (last === ' ' && isChar(nextToken))
       || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))
       || (isNum(last) && isChar(cur)) || (isChar(last) && isNum(cur))
-      || (isChar(oldChar) && cur === ' ' && isChar(nextToken)) || (last === ' ' && isChar(cur))
 
       // handle fractions
       || (isNum(last) && cur === '/' && isNum(next)) || (isNum(oldChar) && last === '/' && isNum(cur))
@@ -164,7 +188,7 @@ export function buildTree(tokens) {
     const fn = calls[calls.length - 1];
     const t = tokens[i];
 
-    // skip text-nodes
+    // skip non math-tokens
     if (!['def', 'call', 'unit', 'expr', 'open', 'close', 'number'].includes(t[0])) continue;
 
     // fix nested-nodes
