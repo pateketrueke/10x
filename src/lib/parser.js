@@ -93,22 +93,20 @@ export function joinTokens(data, units) {
     }
 
     // concatenate until we reach units
-    if (isChar(stack[0]) && !(hasNum(next) || isOp(next))) {
-      if (isChar(cur) || cur === ' ') {
-        stack.push(cur);
-        continue;
-      }
-    }
+    const old = stack[stack.length - 1];
 
-    // split from well-known ops
-    if (stack[0] === ' ' || isOp(cur) || isSep(cur) || isOp(next) || hasNum(next) || isSep(next)) {
-      if (!buffer[offset].length) offset--;
-      buffer[++offset] = [cur];
-      offset++;
+    if (
+      (isSep(cur, ' ') || isChar(cur))
+      && (isChar(old) || old === ' ')
+    ) {
+      stack.push(cur);
       continue;
     }
 
-    stack.push(cur);
+    // otherwise, just continue splitting...
+    if (!buffer[offset].length) offset--;
+    buffer[++offset] = [cur];
+    offset++;
   }
 
   return buffer.map(x => x.join(''));
@@ -138,7 +136,7 @@ export function parseBuffer(text) {
     if (cur === ')') open--;
 
     // normalize well-known dates
-    if (hasMonths(line)) {
+    if (hasMonths(line) && (cur === ',' || cur === ' ')) {
       if (cur === ',' || (cur === ' ' && isNum(next)) || hasNum(cur)) {
         buffer.push(cur);
         return prev;
