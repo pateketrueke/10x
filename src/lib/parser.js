@@ -117,8 +117,11 @@ export function joinTokens(data, units) {
       || (isChar(oldChar) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
       || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
     ) {
-      stack.push(cur);
-      continue;
+      // make sure we're not adding units...
+      if (!hasKeyword(cur, units)) {
+        stack.push(cur);
+        continue;
+      }
     }
 
     // handle fractions
