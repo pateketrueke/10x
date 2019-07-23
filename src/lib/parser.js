@@ -27,6 +27,7 @@ export const isNth = x => /^(?:th|[rn]d)y?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|of|a[ts]|in)$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
+export const isJoin = x => '_,.'.includes(x);
 
 export const getOp = x => OP_TYPES[x];
 
@@ -162,10 +163,6 @@ export function parseBuffer(text) {
       }
     }
 
-    // FIXME: refactor tokenize for:
-    // - keep non-unit words and keywords join
-    // - keep numbers and well-known units together
-
     if (
       inFormat || inHeading || typeof last === 'undefined'
 
@@ -178,8 +175,8 @@ export function parseBuffer(text) {
       || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))
       || (isNum(last) && isChar(cur)) || (isChar(last) && isNum(cur))
 
-      // keep commas between numbers
-      || (last == ',' && isNum(cur)) || (isNum(last) && cur == ',' && isNum(next))
+      // keep some separators between numbers
+      || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
 
       // handle fractions
       || (isNum(last) && cur === '/' && isNum(next)) || (isNum(oldChar) && last === '/' && isNum(cur))
