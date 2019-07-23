@@ -98,7 +98,7 @@ function fromSymbols(text, units, expression) {
 }
 
 export default function transform(text, units) {
-  const all = joinTokens(parseBuffer(text), units);
+  const input = joinTokens(parseBuffer(text), units);
 
   const stack = [];
   const calls = {};
@@ -109,12 +109,12 @@ export default function transform(text, units) {
   let prevToken;
   let nextToken;
 
-  const body = all.reduce((prev, cur, i) => {
+  const body = input.reduce((prev, cur, i) => {
     let inExpr = stack[stack.length - 1];
     let key = i;
 
     do {
-      nextToken = all[++key];
+      nextToken = input[++key];
     } while (nextToken && nextToken.charAt() === ' ');
 
     // handle expression blocks
@@ -162,7 +162,7 @@ export default function transform(text, units) {
     }
 
     // skip number inside parens/brackets (however sorrounding chars are highlighted)
-    if (all[i - 1] === '(' && nextToken === ')') {
+    if (input[i - 1] === '(' && nextToken === ')') {
       prev.push(fromMarkdown(cur));
       return prev;
     }
@@ -208,8 +208,8 @@ export default function transform(text, units) {
   }, []);
 
   return {
+    input,
     tree: buildTree(body),
-    input: all,
-    output: body,
+    output: body.filter(x => x[0] !== 'text'),
   };
 }

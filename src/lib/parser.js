@@ -17,7 +17,7 @@ const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
 export const isOp = (a, b = '') => `${b}-+=*/;_`.includes(a);
-export const isSep = (a, b = '') => `${b}(;,)`.includes(a);
+export const isSep = (a, b = '') => `${b}(|:;,)`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
 export const isInt = x => /^\d+$/.test(x);
@@ -102,20 +102,24 @@ export function joinTokens(data, units) {
       continue;
     }
 
+    let key = i;
+    let nextToken;
+
+    const line = stack.join('');
+
+    do { nextToken = data[++key]; } while (nextToken === ' ')
+
     // concatenate until we reach units
     if (
-      (!isOp(next, '()')
+      (!isOp(nextToken, '()')
         && (isChar(cur) || cur === ' ')
         && !(isSep(stack[0]) || isOp(stack[0])))
 
       || (isChar(oldChar) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
       || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
     ) {
-      // ensure we skip white-space
-      if (stack[0] !== ' ' || (next === ' ' || cur === ' ' || !next)) {
-        stack.push(cur);
-        continue;
-      }
+      stack.push(cur);
+      continue;
     }
 
     // otherwise, just continue splitting...
@@ -223,7 +227,7 @@ export function buildTree(tokens) {
     const t = tokens[i];
 
     // skip non math-tokens
-    if (!['def', 'call', 'unit', 'expr', 'open', 'close', 'number'].includes(t[0])) continue;
+    if (['heading', 'italic', 'bold', 'code', 'text'].includes(t[0])) continue;
 
     // fix nested-nodes
     if ((t[0] === 'def' || t[0] === 'call') && t[2]) {
