@@ -101,7 +101,7 @@ export function operateExpression(ops, expr) {
           if (hasPercent(next[1])) {
             result = parseFloat(prev[1]) + (prev[1] * (parseFloat(next[1]) / 100));
           } else {
-            result = evaluateExpression(cur[1], toNumber(prev[1]), toNumber(next[1]));
+            result = evaluateExpression(cur[1], parseFloat(toNumber(prev[1])), parseFloat(toNumber(next[1])));
           }
 
           // remove units as result from fractions
@@ -135,11 +135,6 @@ export function operateExpression(ops, expr) {
 export function calculateFromTokens(expr) {
   expr = operateExpression(['*', '/'], expr);
   expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in'], expr);
-
-  // ensure we're returning a valid number back!
-  if (expr[0][0] === 'number' && typeof expr[0][1] !== 'undefined') {
-    expr[0][1] = toNumber(expr[0][1]);
-  }
 
   return expr[0];
 }

@@ -99,9 +99,7 @@ function fromSymbols(text, units, expression) {
 
 export default function transform(text, units) {
   const input = joinTokens(parseBuffer(text), units);
-
   const stack = [];
-  const calls = {};
 
   let inCall = false;
   let prevToken;
@@ -120,19 +118,15 @@ export default function transform(text, units) {
       const token = fromSymbols(cur, units, !inCall);
 
       // handle nested calls
-      if (token[0] === 'unit' && nextToken === '(') {
-        token[0] = 'call';
-      }
+      if (token[0] === 'unit' && nextToken === '(') token[0] = 'def';
 
       // skip text-nodes
-      if (token[0] !== 'text') {
-        inExpr[2].push(token);
-      }
+      if (token[0] !== 'text') inExpr[2].push(token);
 
       // ensure we close and continue eating...
       if (cur === ';' || (inCall && cur === ')')) {
         prev.push(inExpr);
-        prevToken = !inCall ? 'def' : 'call';
+        prevToken = 'def';
         inCall = false;
         inExpr = null;
         stack.pop();
@@ -142,16 +136,10 @@ export default function transform(text, units) {
     }
 
     if (isChar(cur) && (nextToken === '=' || nextToken === '(')) {
-      const type = !units[cur] ? 'def' : 'call';
-
-      if (type === 'call' && nextToken === '=') {
-        throw new Error(`Unit '${cur}' already defined`);
-      }
-
       inCall = nextToken === '(' && units[cur];
-      stack.push([type, cur, []]);
-      calls[cur] = [];
+      stack.push(['def', cur, []]);
 
+      // don't override builtins!
       if (!units[cur]) {
         units[cur] = cur;
       }
@@ -167,7 +155,7 @@ export default function transform(text, units) {
 
     if (
       // handle most operators and well-known keywords
-      isSep(cur) || hasNum(cur) || hasDays(cur) || prevToken === 'call'
+      isSep(cur) || hasNum(cur) || hasDays(cur) || prevToken === 'def'
 
       // handle units before operators
       || (isChar(cur) && isOp(nextToken))

@@ -72,13 +72,16 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
   let lastUnit;
 
   return tokens.reduce((prev, cur, i) => {
-    if (cur[0] === 'def') {
+    const leaf = (cur[2] && cur[2][2]) || [];
+
+    // handle var/call definitions
+    if (cur[0] === 'def' && leaf[0] === 'expr' && leaf[1] === '=') {
       expressions[cur[1]] = cur[2];
       return prev;
     }
 
     // handle call expressions
-    if (cur[0] === 'call') {
+    if (cur[0] === 'def') {
       const call = expressions[cur[1]];
       const args = cur[2] || tokens[i + 1];
 

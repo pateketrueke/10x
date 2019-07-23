@@ -60,7 +60,7 @@ export function toNumber(value) {
       return a / b;
     }
 
-    return parseFloat(value.replace(/[^a-z\s\d.-]/ig, ''));
+    return value.replace(/[^a-z\s\d.-]/ig, '');
   }
 
   return value;
@@ -227,9 +227,7 @@ export function buildTree(tokens) {
     if (['heading', 'italic', 'bold', 'code', 'text'].includes(t[0])) continue;
 
     // fix nested-nodes
-    if ((t[0] === 'def' || t[0] === 'call') && t[2]) {
-      t[2] = buildTree(t[2]);
-    }
+    if (t[0] === 'def' && t[2]) t[2] = buildTree(t[2]);
 
     // handle nesting
     if (t[0] === 'open' || t[0] === 'close') {

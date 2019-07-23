@@ -15,8 +15,6 @@ const convert = (num, base, target) => {
   return convertFrom(num, base, target);
 };
 
-const tokens = transform(argv.join(' '), units);
-
 const normalized = [];
 const expressions = {};
 
@@ -27,6 +25,8 @@ if (require('fs').existsSync('shared.json')) {
     return prev;
   }, {}));
 }
+
+const tokens = transform(argv.join(' '), units);
 
 let chunks;
 let info = {};
@@ -48,7 +48,7 @@ try {
     return prev;
   }, []);
 
-  require('fs').writeFileSync('shared.json', JSON.stringify(expressions));
+  require('fs').writeFileSync('shared.json', JSON.stringify(expressions, null, 2));
 
   // join chunks into final expressions
   for (let i = 0; i < chunks.length; i += 1) {
