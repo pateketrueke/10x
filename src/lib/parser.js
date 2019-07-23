@@ -178,6 +178,9 @@ export function parseBuffer(text) {
       || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))
       || (isNum(last) && isChar(cur)) || (isChar(last) && isNum(cur))
 
+      // keep commas between numbers
+      || (last == ',' && isNum(cur)) || (isNum(last) && cur == ',' && isNum(next))
+
       // handle fractions
       || (isNum(last) && cur === '/' && isNum(next)) || (isNum(oldChar) && last === '/' && isNum(cur))
 
