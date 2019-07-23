@@ -93,7 +93,7 @@ export function joinTokens(data, units) {
     }
 
     // concatenate until we reach units
-    if (isChar(stack[0]) && !hasNum(next)) {
+    if (isChar(stack[0]) && !(hasNum(next) || isOp(next))) {
       if (isChar(cur) || cur === ' ') {
         stack.push(cur);
         continue;
@@ -101,7 +101,7 @@ export function joinTokens(data, units) {
     }
 
     // split from well-known ops
-    if (hasNum(next) || isOp(next) || isSep(next)) {
+    if (stack[0] === ' ' || isOp(cur) || isSep(cur) || isOp(next) || hasNum(next) || isSep(next)) {
       if (!buffer[offset].length) offset--;
       buffer[++offset] = [cur];
       offset++;
