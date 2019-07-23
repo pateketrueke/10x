@@ -107,16 +107,25 @@ export function joinTokens(data, units) {
 
     do { nextToken = data[++key]; } while (nextToken === ' ');
 
-    // concatenate until we reach units
+    // concatenate until we reach ops/units
     if (
       (!isOp(nextToken, '()')
         && (isChar(cur) || cur === ' ')
         && !(isSep(stack[0]) || isOp(stack[0])))
 
+      // handle other ops between words...
       || (isChar(oldChar) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
       || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
     ) {
       stack.push(cur);
+      continue;
+    }
+
+    // handle fractions
+    if (isInt(oldChar) && cur === '/' && isInt(next)) {
+      buffer.splice(i - 1, 2, [oldChar + cur + next]);
+      data.splice(i, 1);
+      stack.pop();
       continue;
     }
 
@@ -179,9 +188,6 @@ export function parseBuffer(text) {
 
       // keep some separators between numbers
       || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
-
-      // handle fractions
-      || (isNum(last) && cur === '/' && isNum(next)) || (isNum(oldChar) && last === '/' && isNum(cur))
 
       // handle numbers, including negatives between ops; notice all N-N are splitted
       || (isNum(last) && cur === '.') || (last === '-' && isNum(cur) && !isNum(oldChar)) || (last === '.' && isNum(cur) && hasNum(oldChar))
