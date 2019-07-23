@@ -139,13 +139,16 @@ export default function transform(text, units) {
       return prev;
     }
 
+    // open var/call expressions
     if (isChar(cur) && (nextToken === '=' || nextToken === '(')) {
-      stack.push(['def', cur, []]);
+      const key = cur.trim();
+
       inCall = nextToken === '(';
+      stack.push(['def', key, []]);
 
       // don't override builtins!
-      if (!units[cur]) {
-        units[cur] = cur;
+      if (!units[key]) {
+        units[key] = key;
       }
 
       return prev;
