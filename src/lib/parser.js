@@ -77,7 +77,7 @@ export function joinTokens(data, units) {
     const cur = data[i];
     const next = data[i + 1];
 
-    // handle unit expressions
+    // handle unit expressions, with numbers
     if (hasNum(stack[0]) && cur === ' ' && hasKeyword(next, units)) {
       buffer[offset++] = [stack[0] + cur + next];
       data.splice(i - 1, 1);
@@ -85,7 +85,29 @@ export function joinTokens(data, units) {
       continue;
     }
 
-    if (isOp(cur, ' ') || isOp(next) || hasNum(next)) offset++;
+    // split on date formats
+    if (hasMonths(stack[0])) {
+      buffer[++offset] = [cur];
+      offset++;
+      continue;
+    }
+
+    // concatenate until we reach units
+    if (isChar(stack[0]) && !hasNum(next)) {
+      if (isChar(cur) || cur === ' ') {
+        stack.push(cur);
+        continue;
+      }
+    }
+
+    // split from well-known ops
+    if (hasNum(next) || isOp(next) || isSep(next)) {
+      if (!buffer[offset].length) offset--;
+      buffer[++offset] = [cur];
+      offset++;
+      continue;
+    }
+
     stack.push(cur);
   }
 
