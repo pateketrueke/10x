@@ -115,7 +115,7 @@ export default function transform(text, units) {
 
     // handle expression blocks
     if (inExpr) {
-      const token = fromSymbols(cur, units, !inCall);
+      const token = fromSymbols(cur, units, true);
 
       // handle nested calls
       if (token[0] === 'unit' && nextToken === '(') token[0] = 'def';
@@ -125,19 +125,23 @@ export default function transform(text, units) {
 
       // ensure we close and continue eating...
       if (cur === ';' || (inCall && cur === ')')) {
-        prev.push(inExpr);
         prevToken = 'def';
         inCall = false;
-        inExpr = null;
-        stack.pop();
+
+        // close var-expressions
+        if (nextToken !== '=') {
+          prev.push(inExpr);
+          inExpr = false;
+          stack.pop();
+        }
       }
 
       return prev;
     }
 
     if (isChar(cur) && (nextToken === '=' || nextToken === '(')) {
-      inCall = nextToken === '(' && units[cur];
       stack.push(['def', cur, []]);
+      inCall = nextToken === '(';
 
       // don't override builtins!
       if (!units[cur]) {

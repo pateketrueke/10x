@@ -72,18 +72,19 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
   let lastUnit;
 
   return tokens.reduce((prev, cur, i) => {
-    const leaf = (cur[2] && cur[2][2]) || [];
-
     // handle var/call definitions
-    if (cur[0] === 'def' && leaf[0] === 'expr' && leaf[1] === '=') {
-      expressions[cur[1]] = cur[2];
-      return prev;
-    }
+    if (cur[0] === 'def' && cur[2]) {
+      const isDef = (cur[2][0][0] === 'expr' && cur[2][0][1] === '=')
+        || (cur[2][1] && cur[2][1][0] === 'expr' && cur[2][1][1] === '=');
 
-    // handle call expressions
-    if (cur[0] === 'def') {
-      const call = expressions[cur[1]];
+      // define var/call
+      if (isDef) {
+        expressions[cur[1]] = cur[2];
+        return prev;
+      }
+
       const args = cur[2] || tokens[i + 1];
+      const call = expressions[cur[1]];
 
       // compute valid sub-expressions from arguments
       const locals = reduceFromArgs(call[0].filter(x => x[0] === 'unit'), args[0]);
