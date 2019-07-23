@@ -1,4 +1,7 @@
-import { isTime, isExpr, toNumber, hasMonths } from './parser';
+import {
+  isTime, isExpr, toNumber, hasMonths,
+} from './parser';
+
 import { calculateFromTokens } from './solver';
 
 export function reduceFromValue(token) {
@@ -90,9 +93,16 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
     // handle unit expressions
     if (cur[0] === 'unit' && expressions[cur[1]]) {
       cur = expressions[cur[1]].slice(1, expressions[cur[1]].length - 1);
-    } else if (cur[0] === 'number' && expressions[cur[2]]) {
-      cur = [['number', parseInt(cur[1]), expressions[cur[2]][1][2]], ['expr', '*', 'mul']]
-        .concat(expressions[cur[2]].slice(1, expressions[cur[2]].length - 1));
+    }
+
+    // handle N-unit expressions
+    if (cur[0] === 'number' && expressions[cur[2]]) {
+      const old = expressions[cur[2]];
+      const val = parseFloat(cur[1]);
+      const next = old.slice(1, old.length - 1);
+
+      // we return a new expressions from 3x to [3, *, x]
+      cur = [['number', val, old[1][2]], ['expr', '*', 'mul']].concat(next);
     }
 
     // handle resolution by recursion

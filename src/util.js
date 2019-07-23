@@ -17,7 +17,7 @@ const OP_TYPES = {
 
 // assign currency-codes as mappings
 Object.keys(currencySymbols.settings.symbols)
-  .map(k => {
+  .forEach(k => {
     DEFAULT_MAPPINGS[k] = k;
   });
 
@@ -563,7 +563,7 @@ export function operateExpression(ops, expr) {
                   result = evaluateExpression(cur[1], prev[1], result);
                 }
               }
-            }/* else if (KNOWN_UNITS.includes(prev[2]) && KNOWN_UNITS.includes(next[2])) {
+            } /* else if (KNOWN_UNITS.includes(prev[2]) && KNOWN_UNITS.includes(next[2])) {
               // handle relationships n:m, otherwise just operate
               // FIXME: conversions are not going wel....
               if (RE_EXPRS.test(cur[1])) {
@@ -580,7 +580,7 @@ export function operateExpression(ops, expr) {
                 prev[1] = prev[1] + evaluateExpression(cur[1], prev[1], base);
                 prev[2] = '';
               }
-            }*/
+            } */
           } else if (TIME_UNITS.includes(prev[2])) {
             result = calculateFromDate(cur[1], next[1], new Convert(prev[1]).from(prev[2]).to('s'));
           } else if (!prev[2] && next[1] instanceof Date) {

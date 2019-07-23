@@ -1,7 +1,7 @@
 import Convert from 'convert-units';
 
 import {
-  isOp, isTime, isExpr, hasMonths, hasPercent, toNumber,
+  isExpr, hasPercent, toNumber,
 } from './parser';
 
 export function calculateFromDate(op, left, right) {

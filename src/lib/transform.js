@@ -104,8 +104,6 @@ export default function transform(text, units) {
   const calls = {};
 
   let inCall = false;
-  let inExpr = null;
-
   let prevToken;
   let nextToken;
 

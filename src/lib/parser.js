@@ -105,9 +105,7 @@ export function joinTokens(data, units) {
     let key = i;
     let nextToken;
 
-    const line = stack.join('');
-
-    do { nextToken = data[++key]; } while (nextToken === ' ')
+    do { nextToken = data[++key]; } while (nextToken === ' ');
 
     // concatenate until we reach units
     if (
@@ -223,7 +221,6 @@ export function buildTree(tokens) {
   const calls = [];
 
   for (let i = 0; i < tokens.length; i += 1) {
-    const fn = calls[calls.length - 1];
     const t = tokens[i];
 
     // skip non math-tokens

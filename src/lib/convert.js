@@ -10,7 +10,7 @@ export const DEFAULT_MAPPINGS = {};
 
 // assign currency-codes as mappings
 Object.keys(CURRENCY_SYMBOLS)
-  .map(k => {
+  .forEach(k => {
     DEFAULT_MAPPINGS[k] = k;
   });
 
