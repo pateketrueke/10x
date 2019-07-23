@@ -16,8 +16,9 @@ const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
-export const isOp = (a, b = '') => /^[-+=*/;_]$/.test(a) || b.includes(a);
+export const isOp = (a, b = '') => `${b}-+=*/;_`.includes(a);
 export const isSep = (a, b = '') => `${b}(;,)`.includes(a);
+export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
 export const isInt = x => /^\d+$/.test(x);
 export const isFmt = x => /^[_*~]$/.test(x);
@@ -25,7 +26,6 @@ export const isAny = x => /\W/.test(x) && !isOp(x);
 export const isNth = x => /^(?:th|[rn]d)y?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|of|a[ts]|in)$/i.test(x);
-export const isChar = x => /^[a-zA-Z]+/.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
 
 export const getOp = x => OP_TYPES[x];
@@ -92,13 +92,13 @@ export function joinTokens(data, units) {
       continue;
     }
 
-    // concatenate until we reach units
     const old = stack[stack.length - 1];
 
+    // concatenate until we reach units
     if (
-      (isSep(cur, ' ') || isChar(cur))
-      && (isChar(old) || old === ' ')
-    ) {
+      !isOp(next, '()') && (
+      (isChar(cur) || cur === ' ')
+    )) {
       stack.push(cur);
       continue;
     }
