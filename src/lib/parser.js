@@ -69,17 +69,26 @@ export function joinTokens(data, units) {
   const buffer = [];
 
   let offset = 0;
-  let stack = [];
 
   for (let i = 0; i < data.length; i += 1) {
-    stack = buffer[offset] || (buffer[offset] = []);
-
     const cur = data[i];
     const next = data[i + 1];
 
+    // accumulated tokens from current line
+    const stack = buffer[offset] || (buffer[offset] = []);
+
+    // last added token on the stack
+    const oldChar = stack[stack.length - 1]
+      || (buffer.length > 1 && buffer[offset - 1][0]);
+
     // handle unit expressions, with numbers
-    if (hasNum(stack[0]) && cur === ' ' && hasKeyword(next, units)) {
-      buffer[offset++] = [stack[0] + cur + next];
+    if (hasNum(oldChar) && cur === ' ' && hasKeyword(next, units)) {
+      if (stack.length) {
+        buffer[offset++] = [oldChar + cur + next];
+      } else {
+        buffer.splice(offset - 1, 2, [oldChar + cur + next]);
+      }
+
       data.splice(i - 1, 1);
       stack.pop();
       continue;
@@ -92,18 +101,20 @@ export function joinTokens(data, units) {
       continue;
     }
 
-    const old = stack[stack.length - 1];
-
     // concatenate until we reach units
     if (
       (!isOp(next, '()')
         && (isChar(cur) || cur === ' ')
         && !(isSep(stack[0]) || isOp(stack[0])))
-      || (isChar(old) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
+
+      || (isChar(oldChar) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
       || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
     ) {
-      stack.push(cur);
-      continue;
+      // ensure we skip white-space
+      if (stack[0] !== ' ' || (next === ' ' || cur === ' ' || !next)) {
+        stack.push(cur);
+        continue;
+      }
     }
 
     // otherwise, just continue splitting...
