@@ -96,9 +96,12 @@ export function joinTokens(data, units) {
 
     // concatenate until we reach units
     if (
-      !isOp(next, '()') && (
-      (isChar(cur) || cur === ' ')
-    )) {
+      (!isOp(next, '()')
+        && (isChar(cur) || cur === ' ')
+        && !(isSep(stack[0]) || isOp(stack[0])))
+      || (isChar(old) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
+      || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
+    ) {
       stack.push(cur);
       continue;
     }
