@@ -223,7 +223,12 @@ export function parseBuffer(text) {
       // handle numbers, including negatives between ops; notice all N-N are splitted
       || (isNum(last) && cur === '.') || (last === '-' && isNum(cur) && !isNum(oldChar)) || (last === '.' && isNum(cur) && hasNum(oldChar))
     ) {
-      buffer.push(cur);
+      // make sure we're skipping from words
+      if (last && isChar(last) && isSep(cur, '.')) {
+        prev[++offset] = [cur];
+      } else {
+        buffer.push(cur);
+      }
     } else {
       prev[++offset] = [cur];
     }
