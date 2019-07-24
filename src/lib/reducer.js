@@ -87,6 +87,11 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       const args = cur[2] || tokens[i + 1];
       const call = expressions[cur[1]];
 
+      // skip undefined calls
+      if (!call) {
+        return prev;
+      }
+
       // compute valid sub-expressions from arguments
       const locals = reduceFromArgs(call[0].filter(x => x[0] === 'unit'), args[0]);
 
@@ -155,7 +160,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       }
 
       // save last used operator
-      if (cur === '+' || cur === '-') lastOp = cur;
+      if (cur[1] === '+' || cur[1] === '-') lastOp = cur;
 
       // flag the expression for dates
       if (isTime(cur[2])) isDate = true;

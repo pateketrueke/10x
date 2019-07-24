@@ -18,7 +18,7 @@ const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
 export const isOp = (a, b = '') => `${b}-+=*/;_`.includes(a);
 export const isSep = (a, b = '') => `${b}(|:;,)`.includes(a);
-export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
+export const isChar = (a, b = '') => /^[a-zA-Z]+\S*$/.test(a) || b.includes(a);
 
 export const isInt = x => /^\d+$/.test(x);
 export const isFmt = x => /^[_*~]$/.test(x);
