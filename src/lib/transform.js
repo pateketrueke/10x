@@ -186,8 +186,13 @@ export default function transform(text, units) {
       // handle expressions between keywords
       || (isExpr(cur) && (hasKeyword(nextToken, units) || hasNum(nextToken) || hasNum(prevToken)))
     ) {
-      // handle headings
-      if (cur.charAt() === '#') {
+      if (
+        // handle headings
+        cur.charAt() === '#'
+
+        // handle non-op keywords
+        || (isExpr(cur) && !hasNum(prevToken))
+      ) {
         prev.push(fromMarkdown(cur));
       } else {
         prev.push(fromSymbols(cur, units));
