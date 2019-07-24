@@ -18,9 +18,9 @@ function fromMarkdown(text) {
   // handle markdown-like headings
   if (buffer.charAt() === '#') {
     const matches = buffer.match(/^(#+)(.*)$/);
-    const nth = Math.min(matches[1].length, 6);
+    const level = Math.min(matches[1].length, 6);
 
-    return ['heading', buffer, nth];
+    return ['heading', buffer, level];
   }
 
   // handle more formats: del, em, bold
@@ -97,6 +97,11 @@ function fromSymbols(text, units, expression) {
   return ['text', text];
 }
 
+export function fromToken(value, offset) {
+  value._offset = offset;
+  return value;
+}
+
 export default function transform(text, units) {
   const input = joinTokens(parseBuffer(text), units);
   const stack = [];
@@ -115,7 +120,7 @@ export default function transform(text, units) {
 
     // handle expression blocks
     if (inExpr) {
-      const token = fromSymbols(cur, units, true);
+      const token = fromToken(fromSymbols(cur, units, true), i);
 
       // handle nested calls
       if (token[0] === 'unit' && nextToken === '(') token[0] = 'def';
@@ -156,7 +161,7 @@ export default function transform(text, units) {
 
     // skip number inside parens/brackets (however sorrounding chars are highlighted)
     if (input[i - 1] === '(' && nextToken === ')') {
-      prev.push(fromMarkdown(cur));
+      prev.push(fromToken(fromMarkdown(cur), i));
       return prev;
     }
 
@@ -193,12 +198,12 @@ export default function transform(text, units) {
         // handle non-op keywords
         || (isExpr(cur) && !hasNum(prevToken))
       ) {
-        prev.push(fromMarkdown(cur));
+        prev.push(fromToken(fromMarkdown(cur), i));
       } else {
-        prev.push(fromSymbols(cur, units));
+        prev.push(fromToken(fromSymbols(cur, units), i));
       }
     } else {
-      prev.push(fromMarkdown(cur));
+      prev.push(fromToken(fromMarkdown(cur), i));
     }
 
     if (!isSep(cur, ' ')) prevToken = cur;

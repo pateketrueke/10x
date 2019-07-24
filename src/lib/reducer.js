@@ -123,8 +123,8 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       const left = tokens[i - 1] || [];
       const right = tokens[i + 1] || [];
 
-      // apply last operator between numbers
-      if (left[0] === 'number' && cur[0] === 'number') prev.push(lastOp);
+      // append last-operator between consecutive unit-expressions
+      if ((left[0] === 'number' && cur[0] === 'number') && cur._offset - left._offset === 2) prev.push(lastOp);
 
       // handle converting between expressions
       if (cur[0] === 'expr' && isExpr(cur[1])) {
@@ -154,8 +154,8 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
         if (cur[2] && !lastUnit) lastUnit = cur[2];
       }
 
-      // save last-operator for next
-      if (cur[1] === '+' || cur[1] === '-') lastOp = cur;
+      // save last used operator
+      if (cur === '+' || cur === '-') lastOp = cur;
 
       // flag the expression for dates
       if (isTime(cur[2])) isDate = true;
