@@ -113,11 +113,7 @@ export function operateExpression(ops, expr) {
       }
 
       if (typeof result !== 'undefined') {
-        const allUnits = expr
-          .filter(x => x[0] === 'number' && x[2])
-          .map(x => x[2]);
-
-        expr.splice(i - 1, 3, ['number', result, prev[2] || allUnits[0]]);
+        expr.splice(i - 1, 3, ['number', result, prev[2]]);
 
         // if tokens are left...
         if (expr.length >= 3) {
