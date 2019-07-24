@@ -70,6 +70,7 @@ export function reduceFromArgs(keys, values) {
 export function reduceFromAST(tokens, convert, expressions = {}) {
   let isDate;
   let lastUnit;
+  let lastOp = ['expr', '+', 'plus'];
 
   return tokens.reduce((prev, cur, i) => {
     // handle var/call definitions
@@ -122,6 +123,9 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       const left = tokens[i - 1] || [];
       const right = tokens[i + 1] || [];
 
+      // apply last operator between numbers
+      if (left[0] === 'number' && cur[0] === 'number') prev.push(lastOp);
+
       // handle converting between expressions
       if (cur[0] === 'expr' && isExpr(cur[1])) {
         const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
@@ -149,6 +153,9 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
         // save initial unit
         if (cur[2] && !lastUnit) lastUnit = cur[2];
       }
+
+      // save last-operator for next
+      if (cur[1] === '+' || cur[1] === '-') lastOp = cur;
 
       // flag the expression for dates
       if (isTime(cur[2])) isDate = true;
