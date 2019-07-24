@@ -118,7 +118,7 @@ export function joinTokens(data, units) {
       || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
     ) {
       // make sure we're not adding units...
-      if (!hasKeyword(cur, units)) {
+      if (!(hasKeyword(cur, units) || hasNum(oldChar))) {
         stack.push(cur);
         continue;
       }
