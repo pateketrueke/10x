@@ -66,6 +66,26 @@ export function toNumber(value) {
   return value;
 }
 
+export function toValue(value, unit) {
+  if (value instanceof Date) {
+    return value.toString().split(' ').slice(0, 5).join(' ');
+  }
+
+  if (typeof value === 'number') {
+    const sub = value.toString().match(/^.*?\.0+\d{1,3}/);
+
+    if (!sub) {
+      value = value.toFixed(2).replace(/\.0+$/, '');
+    } else value = sub[0];
+  }
+
+  if (unit) {
+    return `${value} ${unit}`;
+  }
+
+  return value;
+}
+
 export function joinTokens(data, units) {
   const buffer = [];
 

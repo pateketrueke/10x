@@ -3,7 +3,7 @@ import {
   getOp, parseBuffer, joinTokens, buildTree,
 } from './parser';
 
-function fromMarkdown(text) {
+export function fromMarkdown(text) {
   // escape for HTML
   const buffer = text
     .replace(/&/g, '&amp;')
@@ -42,7 +42,7 @@ function fromMarkdown(text) {
   return ['text', buffer];
 }
 
-function fromSymbols(text, units, expression) {
+export function fromSymbols(text, units, expression) {
   // try most char-expressions as valid units...
   if (expression && isChar(text)) {
     return ['unit', text];
