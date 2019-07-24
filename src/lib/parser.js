@@ -177,6 +177,34 @@ export function parseBuffer(text) {
       }
     }
 
+    // enable backticks
+    if (cur === '`') {
+      inFormat = !inFormat;
+
+      if (inFormat) {
+        prev[++offset] = [cur];
+      } else {
+        buffer.push(cur);
+        offset++;
+      }
+
+      return prev;
+    }
+
+    // enable headings, skip everything
+    if (cur === '#' && i === 0) inHeading = true;
+
+    // allow skip from open/close formatting chars
+    if (isFmt(cur) && last === cur) {
+      inFormat = !inFormat;
+
+      // stop concatenation!
+      if (!inFormat) {
+        buffer.push(cur);
+        return prev;
+      }
+    }
+
     if (
       inFormat || inHeading || typeof last === 'undefined'
 
@@ -198,20 +226,6 @@ export function parseBuffer(text) {
       buffer.push(cur);
     } else {
       prev[++offset] = [cur];
-    }
-
-    // enable headings, skip everything
-    if (cur === '#' && i === 0) inHeading = true;
-
-    // handle backticks for inline-code
-    if (cur === '`') inFormat = !inFormat;
-
-    // allow skip from open/close chars
-    if (last === cur && isFmt(cur)) {
-      inFormat = !inFormat;
-      oldChar = '';
-    } else if (last !== ' ') {
-      oldChar = last;
     }
 
     return prev;

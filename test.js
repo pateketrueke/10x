@@ -33,18 +33,19 @@ let info = {};
 let _e;
 
 try {
-  // FIXME: move these to a better module...
-  let lastOp = ['plus', '+'];
+  // FIXME: move these to a better module... also, `1 1 => 1 + 2` transform could occur
+  // during resolve... or tree, transform, whatever... not here!
+
   let offset = 0;
 
-  // operate all possible expressions...
+  // split over single values...
   chunks = reduceFromAST(tokens.tree, convert, expressions).reduce((prev, cur) => {
     const lastValue = prev[prev.length - 1] || [];
 
-    if (lastValue[0] === 'number' && cur[0] === 'number') prev.push(lastOp, cur);
-    else prev.push(cur);
+    if (lastValue[0] === 'number' && cur[0] === 'number') {
+      prev.push(['expr', ';', 'k'], cur);
+    } else prev.push(cur);
 
-    if (isOp(cur[1], '/*')) lastOp = cur;
     return prev;
   }, []);
 
