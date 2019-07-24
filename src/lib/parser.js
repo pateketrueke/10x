@@ -227,6 +227,9 @@ export function parseBuffer(text) {
     if (
       inFormat || inHeading || typeof last === 'undefined'
 
+      // percentages
+      || (hasNum(last) && cur === '%')
+
       // keep white-space
       || ((last === ' ' && cur === ' '))
       || (isChar(last) && isAny(cur) && !isSep(cur, ' '))
