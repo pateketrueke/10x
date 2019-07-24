@@ -25,7 +25,7 @@ export const isFmt = x => /^[_*~]$/.test(x);
 export const isAny = x => /\W/.test(x) && !isOp(x);
 export const isNth = x => /^(?:th|[rn]d)y?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
-export const isExpr = x => /^(?:from|of|a[ts]|in)$/i.test(x);
+export const isExpr = x => /^(?:from|for|of|a[ts]|in)$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
 export const isJoin = x => '_,.'.includes(x);
 
@@ -117,8 +117,8 @@ export function joinTokens(data, units) {
       || (isChar(oldChar) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
       || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
     ) {
-      // make sure we're not adding units...
-      if (!(hasKeyword(cur, units) || hasNum(oldChar))) {
+      // make sure we're not adding units... or keywords
+      if (!(hasKeyword(cur, units) || hasNum(oldChar) || isExpr(cur))) {
         stack.push(cur);
         continue;
       }

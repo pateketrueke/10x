@@ -79,10 +79,10 @@ export function calculateFromDate(op, left, right) {
 
 export function evaluateExpression(op, left, right) {
   // handle basic arithmetic
+  if (op === '*' || op === 'for') return left * right;
+  if (op === '/' || isExpr(op)) return left / right;
   if (op === '+') return left + right;
   if (op === '-') return left - right;
-  if (op === '*') return left * right;
-  if (op === '/') return left / right;
 }
 
 export function operateExpression(ops, expr) {
@@ -129,7 +129,7 @@ export function operateExpression(ops, expr) {
 }
 
 export function calculateFromTokens(expr) {
-  expr = operateExpression(['*', '/'], expr);
+  expr = operateExpression(['for', '*', '/'], expr);
   expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in'], expr);
 
   return expr[0];
