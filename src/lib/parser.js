@@ -144,7 +144,6 @@ export function joinTokens(data, units) {
 export function parseBuffer(text) {
   let inHeading = false;
   let inFormat = false;
-  let oldChar = '';
   let offset = 0;
   let open = 0;
 
@@ -221,10 +220,10 @@ export function parseBuffer(text) {
       || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
 
       // handle numbers, including negatives between ops; notice all N-N are splitted
-      || (isNum(last) && cur === '.') || (last === '-' && isNum(cur) && !isNum(oldChar)) || (last === '.' && isNum(cur) && hasNum(oldChar))
+      || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
     ) {
       // make sure we're skipping from words
-      if (last && isChar(last) && isSep(cur, '.')) {
+      if (last && isChar(last) && isSep(cur, '.') && !isNum(next)) {
         prev[++offset] = [cur];
       } else {
         buffer.push(cur);
