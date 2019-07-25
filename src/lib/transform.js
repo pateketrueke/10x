@@ -23,12 +23,17 @@ export function fromMarkdown(text) {
     return ['code', buffer];
   }
 
-  // handle markdown-like headings
+  // handle headings
   if (buffer.charAt() === '#') {
     const matches = buffer.match(/^(#+)(.*)$/);
     const level = Math.min(matches[1].length, 6);
 
     return ['heading', buffer, level];
+  }
+
+  // handle blockquotes
+  if (buffer.charAt() === '>') {
+    return ['blockquote', buffer];
   }
 
   // handle more formats: del, em, bold

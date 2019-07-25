@@ -167,8 +167,8 @@ export function joinTokens(data, units) {
 }
 
 export function parseBuffer(text) {
-  let inHeading = false;
   let inFormat = false;
+  let inBlock = false;
   let offset = 0;
   let open = 0;
 
@@ -215,8 +215,8 @@ export function parseBuffer(text) {
       return prev;
     }
 
-    // enable headings, skip everything
-    if (cur === '#' && i === 0) inHeading = true;
+    // enable headings/blockquotes, skip everything
+    if ('#>'.includes(cur) && i === 0) inBlock = true;
 
     // allow skip from open/close formatting chars
     if (isFmt(cur) && last === cur) {
@@ -230,7 +230,7 @@ export function parseBuffer(text) {
     }
 
     if (
-      inFormat || inHeading || typeof last === 'undefined'
+      inFormat || inBlock || typeof last === 'undefined'
 
       // percentages
       || (hasNum(last) && cur === '%')
@@ -279,7 +279,7 @@ export function buildTree(tokens) {
     const t = tokens[i];
 
     // skip non math-tokens
-    if (['heading', 'italic', 'bold', 'code', 'text'].includes(t[0])) continue;
+    if (['blockquote', 'heading', 'italic', 'bold', 'code', 'text'].includes(t[0])) continue;
 
     // fix nested-nodes
     if (t[0] === 'def' && t[2]) t[2] = buildTree(t[2]);
