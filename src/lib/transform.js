@@ -176,8 +176,11 @@ export default function transform(text, units) {
     }
 
     if (
-      // handle most operators and well-known keywords
-      isSep(cur) || hasNum(cur) || hasDays(cur)
+      // handle most operators
+      isSep(cur) || hasNum(cur)
+
+      // allow keywords after some dates
+      || hasDays(cur) || (hasDays(prevToken) && isExpr(cur))
 
       // operators, followed by numbers or separators
       || (isOp(cur) && (hasNum(nextToken) || isSep(nextToken)))
