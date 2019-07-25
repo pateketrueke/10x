@@ -111,7 +111,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       const val = parseFloat(cur[1]);
       const next = old.slice(1, old.length - 1);
 
-      // we return a new expressions from 3x to [3, *, x]
+      // we return a new expression from 3x to [3, *, x]
       cur = [['number', val, old[1][2]], ['expr', '*', 'mul']].concat(next);
     }
 

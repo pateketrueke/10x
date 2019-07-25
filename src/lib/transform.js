@@ -165,7 +165,7 @@ export default function transform(text, units) {
 
     if (
       // handle most operators and well-known keywords
-      isSep(cur) || hasNum(cur) || hasDays(cur) || prevToken === 'def'
+      isSep(cur) || hasNum(cur) || hasDays(cur)
 
       // handle units before operators
       || (isChar(cur) && isOp(nextToken))
