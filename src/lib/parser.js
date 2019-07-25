@@ -90,6 +90,7 @@ export function joinTokens(data, units) {
   const buffer = [];
 
   let offset = 0;
+  let hasUnit = false;
 
   for (let i = 0; i < data.length; i += 1) {
     const cur = data[i];
@@ -103,17 +104,21 @@ export function joinTokens(data, units) {
       || (buffer.length > 1 && buffer[offset - 1][0]);
 
     // handle unit expressions, with numbers
-    if (hasNum(oldChar) && cur === ' ' && hasKeyword(next, units)) {
+    if (cur === ' ' && !hasUnit && hasNum(oldChar) && hasKeyword(next, units)) {
       if (stack.length) {
         buffer[offset++] = [oldChar + cur + next];
       } else {
         buffer.splice(offset - 1, 2, [oldChar + cur + next]);
       }
 
+      hasUnit = true;
       data.splice(i - 1, 1);
       stack.pop();
       continue;
     }
+
+    // reset flag to continue
+    hasUnit = false;
 
     // split on date formats
     if (hasMonths(stack[0])) {
