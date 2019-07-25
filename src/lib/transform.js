@@ -3,6 +3,14 @@ import {
   getOp, parseBuffer, joinTokens, buildTree,
 } from './parser';
 
+export function toToken(offset, fromCallback, arg1, arg2, arg3) {
+  const value = fromCallback(arg1, arg2, arg3);
+
+  value._offset = offset;
+
+  return value;
+}
+
 export function fromMarkdown(text) {
   // escape for HTML
   const buffer = text
@@ -97,11 +105,6 @@ export function fromSymbols(text, units, expression) {
   return ['text', text];
 }
 
-export function fromToken(value, offset) {
-  value._offset = offset;
-  return value;
-}
-
 export default function transform(text, units) {
   const input = joinTokens(parseBuffer(text), units);
   const stack = [];
@@ -120,7 +123,7 @@ export default function transform(text, units) {
 
     // handle expression blocks
     if (inExpr) {
-      const token = fromToken(fromSymbols(cur, units, true), i);
+      const token = toToken(i, fromSymbols, cur, units, true);
 
       // handle nested calls
       if (token[0] === 'unit' && nextToken === '(') token[0] = 'def';
@@ -159,7 +162,7 @@ export default function transform(text, units) {
 
     // skip number inside parens/brackets (however sorrounding chars are highlighted)
     if (input[i - 1] === '(' && nextToken === ')') {
-      prev.push(fromToken(fromMarkdown(cur), i));
+      prev.push(toToken(i, fromMarkdown, cur));
       return prev;
     }
 
@@ -167,41 +170,26 @@ export default function transform(text, units) {
       // handle most operators and well-known keywords
       isSep(cur) || hasNum(cur) || hasDays(cur)
 
-      // handle units before operators
-      || (isChar(cur) && isOp(nextToken))
+      // operators, followed by numbers or separators
+      || (isOp(cur) && (hasNum(nextToken) || isSep(nextToken)))
 
-      // handle units after expressions
-      || (hasNum(prevToken) && hasKeyword(nextToken, units))
+      // numbers, if they have preceding operators or separators
+      || ((isOp(prevToken) || isSep(prevToken)) && hasNum(cur))
 
-      // handle equal symbols and ;-terminators
-      || (hasNum(prevToken) && (cur === '=' || cur === ';'))
+      // numbers sorrounding numbers
+      || (hasNum(cur) && (hasNum(nextToken) || hasNum(prevToken)))
 
-      // handle operators between expressions
-      || (hasNum(prevToken) && isOp(cur) && isSep(nextToken))
-      || (hasKeyword(cur, units) && (isOp(prevToken) || isExpr(prevToken)))
+      // handle expressions after numbers
+      || (isExpr(cur) && hasKeyword(nextToken, units))
+      || (hasKeyword(cur, units) && (isExpr(prevToken) || isOp(prevToken)))
+      || (hasNum(prevToken) && (isExpr(cur) || isOp(cur)) && hasKeyword(nextToken, units))
 
-      // handle operators between dates
-      || (hasDays(prevToken) && hasDays(nextToken) && isOp(cur))
-
-      // handle operators between numbers
-      || ((hasKeyword(prevToken, units) || hasNum(prevToken)) && hasNum(nextToken))
-
-      // handle expressions between keywords
-      || (isExpr(cur) && (hasKeyword(nextToken, units) || hasNum(nextToken) || hasNum(prevToken)))
+      // handle operators between separators
+      || ((prevToken === ')' || hasNum(prevToken)) && isOp(cur) && (nextToken === '(' || hasNum(nextToken)))
     ) {
-      if (
-        // handle headings
-        cur.charAt() === '#'
-
-        // handle non-op keywords
-        || (isExpr(cur) && !hasNum(prevToken))
-      ) {
-        prev.push(fromToken(fromMarkdown(cur), i));
-      } else {
-        prev.push(fromToken(fromSymbols(cur, units), i));
-      }
+      prev.push(toToken(i, fromSymbols, cur, units));
     } else {
-      prev.push(fromToken(fromMarkdown(cur), i));
+      prev.push(toToken(i, fromMarkdown, cur));
     }
 
     if (!isSep(cur, ' ')) prevToken = cur;

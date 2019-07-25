@@ -65,7 +65,9 @@ try {
     // make sure we split from all remaining separators
     if (cur[0] === 'expr' && isSep(cur[1])) {
       normalized[offset].pop();
-      offset += 1;
+
+      // ensure we keep no empty chunks
+      if (normalized[offset].length) offset += 1;
     }
   }
 

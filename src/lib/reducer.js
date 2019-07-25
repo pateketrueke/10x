@@ -128,6 +128,17 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       const left = tokens[i - 1] || [];
       const right = tokens[i + 1] || [];
 
+      // apply given unit on further operations
+      if (left[0] === 'expr' && cur[0] === 'unit' && (left[1] === 'as' || left[1] === 'in')) {
+        for (let x = i + 1; x < tokens.length; x += 1) {
+          if (tokens[x][0] === 'number' && !tokens[x][2]) {
+            tokens[x][2] = cur[1];
+            prev.pop();
+            return prev;
+          }
+        }
+      }
+
       // append last-operator between consecutive unit-expressions
       if (left[0] === 'number' && cur[0] === 'number') {
         // distance between tokens should be short!
