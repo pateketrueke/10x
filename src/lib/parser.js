@@ -103,15 +103,21 @@ export function joinTokens(data, units) {
     const oldChar = stack[stack.length - 1]
       || (buffer.length > 1 && buffer[offset - 1][0]);
 
-    // handle unit expressions, with numbers
-    if (cur === ' ' && !hasUnit && hasNum(oldChar) && !hasNum(next) && hasKeyword(next, units)) {
+    if (
+      // handle unit expressions, with numbers
+      (cur === ' ' && !hasUnit && hasNum(oldChar) && !hasNum(next) && hasKeyword(next, units))
+
+      // handle and validate hours
+      || (hasNum(oldChar) && cur === ' ' && RE_HOURS.test(oldChar + cur + next))
+      || (cur === ':' && isInt(oldChar) && isInt(next))
+    ) {
       if (stack.length) {
         buffer[offset++] = [oldChar + cur + next];
       } else {
         buffer.splice(offset - 1, 2, [oldChar + cur + next]);
       }
 
-      hasUnit = true;
+      hasUnit = !hasNum(next);
       data.splice(i - 1, 1);
       stack.pop();
       continue;

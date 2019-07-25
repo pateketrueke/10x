@@ -115,6 +115,7 @@ export default function transform(text, units) {
   const stack = [];
 
   let inCall = false;
+
   let prevToken;
   let nextToken;
 

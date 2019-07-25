@@ -8,6 +8,11 @@ import { reduceFromAST } from './src/lib/reducer';
 import { calculateFromTokens } from './src/lib/solver';
 import { convertFrom, DEFAULT_MAPPINGS } from './src/lib/convert';
 
+// FIXME: nice to have on CLI only...
+global.console.log = (...args) => {
+  process.stderr.write(require('util').inspect(args, { colors: true, depth: 10 }) + '\n');
+};
+
 const argv = process.argv.slice(Math.max(2, process.argv.indexOf('--') + 1));
 
 const units = {
