@@ -1,5 +1,5 @@
 import {
-  isTime, isExpr, toNumber, hasMonths,
+  isSep, isTime, isExpr, toNumber, hasMonths,
 } from './parser';
 
 import { calculateFromTokens } from './solver';
@@ -142,13 +142,13 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       // append last-operator between consecutive unit-expressions
       if (left[0] === 'number' && cur[0] === 'number') {
         // distance between tokens should be short!
-        if (cur._offset - left._offset <= 2) {
+        if ((cur._offset || 1) - (left._offset || 0) <= 2) {
           prev.push(lastOp);
         }
       }
 
       // handle converting between expressions
-      if (cur[0] === 'expr' && isExpr(cur[1])) {
+      if (cur[0] === 'expr' && left[0] === 'number' && isExpr(cur[1])) {
         const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
 
         if (fixedUnit && fixedUnit !== 'datetime' && left[2] && left[2] !== 'datetime') {

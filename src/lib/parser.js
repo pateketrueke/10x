@@ -104,7 +104,7 @@ export function joinTokens(data, units) {
       || (buffer.length > 1 && buffer[offset - 1][0]);
 
     // handle unit expressions, with numbers
-    if (cur === ' ' && !hasUnit && hasNum(oldChar) && hasKeyword(next, units)) {
+    if (cur === ' ' && !hasUnit && hasNum(oldChar) && !hasNum(next) && hasKeyword(next, units)) {
       if (stack.length) {
         buffer[offset++] = [oldChar + cur + next];
       } else {
@@ -143,7 +143,7 @@ export function joinTokens(data, units) {
       || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
     ) {
       // make sure we're not adding units... or keywords
-      if (!(hasKeyword(cur, units) || hasNum(oldChar) || isExpr(cur))) {
+      if (cur !== ' ' && !(hasNum(oldChar) || isExpr(cur) || hasKeyword(cur, units))) {
         stack.push(cur);
         continue;
       }
@@ -309,7 +309,7 @@ export function buildTree(tokens) {
     depth = depth || (calls[0] || stack[0])._offset;
 
     const err = new Error(`Missing terminator for \`${
-      tokens.slice(0, Math.max(1, depth - 1)).map(x => x[1]).join(' ')
+      tokens.slice(0, Math.max(1, depth - 1)).map(x => x[1]).join('')
     }\``);
 
     err.offset = depth;

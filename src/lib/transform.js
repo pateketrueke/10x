@@ -147,6 +147,9 @@ export default function transform(text, units) {
       return prev;
     }
 
+    // skip separators after numbers, preceding keywords
+    if (hasNum(prevToken) && ':,'.includes(cur) && nextToken && isExpr(nextToken)) return prev;
+
     // open var/call expressions
     if (isChar(cur) && (nextToken === '=' || nextToken === '(')) {
       inCall = nextToken === '(';
@@ -179,10 +182,11 @@ export default function transform(text, units) {
       // numbers sorrounding numbers
       || (hasNum(cur) && (hasNum(nextToken) || hasNum(prevToken)))
 
-      // handle expressions after numbers
+      // handle expressions between numbers/units
       || (isExpr(cur) && hasKeyword(nextToken, units))
-      || (hasKeyword(cur, units) && (isExpr(prevToken) || isOp(prevToken)))
-      || (hasNum(prevToken) && (isExpr(cur) || isOp(cur)) && hasKeyword(nextToken, units))
+      || (hasNum(prevToken) && isOp(cur) && hasKeyword(nextToken, units))
+      || (isOp(cur) && hasKeyword(prevToken, units) && hasKeyword(nextToken, units))
+      || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
 
       // handle operators between separators
       || ((prevToken === ')' || hasNum(prevToken)) && isOp(cur) && (nextToken === '(' || hasNum(nextToken)))
