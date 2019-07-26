@@ -90,6 +90,7 @@ export function joinTokens(data, units, types) {
   const buffer = [];
 
   let offset = 0;
+  let hasDate = false;
   let hasUnit = false;
 
   for (let i = 0; i < data.length; i += 1) {
@@ -123,15 +124,25 @@ export function joinTokens(data, units, types) {
       continue;
     }
 
-    // reset flag to continue
-    hasUnit = !!types[cur];
-
-    // split on date formats
-    if (hasMonths(stack[0])) {
-      buffer[++offset] = [cur];
-      offset++;
+    // keep basic month-format together
+    if (hasMonths(oldChar) && cur === ' ' && isInt(next)) {
+      stack[stack.length - 1] += cur + (next || '');
+      data.splice(i, 1);
+      hasDate = true;
       continue;
     }
+
+    // keep previous month-format plus year
+    if (hasDate && oldChar === ',' && cur === ' ' && isInt(next)) {
+      buffer.splice(offset - 2, 2, [buffer[offset - 2] + oldChar + cur + next]);
+      data.splice(i, 1);
+      hasDate = false;
+      continue;
+    }
+
+    // reset flags to continue
+    hasDate = hasDate && !isInt(cur);
+    hasUnit = !!types[cur];
 
     let key = i;
     let nextToken;
@@ -210,19 +221,6 @@ export function parseBuffer(text, fixeds) {
 
     if (cur === '(') open++;
     if (cur === ')') open--;
-
-    // normalize well-known dates
-    if (hasMonths(line) && (cur === ',' || cur === ' ')) {
-      if (cur === ',' || (cur === ' ' && isNum(next)) || hasNum(cur)) {
-        buffer.push(cur);
-        continue;
-      }
-
-      if (!hasNum(cur)) {
-        tokens[++offset] = [cur];
-        continue;
-      }
-    }
 
     // enable backticks
     if (cur === '`') {
