@@ -1,6 +1,6 @@
 import {
   isOp, isSep, isNum, hasNum, isChar, isExpr, hasKeyword, hasDatetime, hasDays,
-  getOp, parseBuffer, joinTokens, buildTree,
+  getOp, buildTree,
 } from './parser';
 
 export function toToken(offset, fromCallback, arg1, arg2, arg3) {
@@ -110,8 +110,7 @@ export function fromSymbols(text, units, expression) {
   return ['text', text];
 }
 
-export default function transform(text, units) {
-  const input = joinTokens(parseBuffer(text), units);
+export default function transform(input, units) {
   const stack = [];
 
   let inCall = false;

@@ -179,16 +179,19 @@ export function parseBuffer(text) {
   let open = 0;
 
   const chars = text.replace(/\s/g, ' ').split('');
-  const tokens = chars.reduce((prev, cur, i) => {
-    const buffer = prev[offset] || (prev[offset] = []);
+  const tokens = [];
+
+  for (let i = 0; i < chars.length; i += 1) {
+    const buffer = tokens[offset] || (tokens[offset] = []);
     const last = buffer[buffer.length - 1];
     const line = buffer.join('');
     const next = chars[i + 1];
+    const cur = chars[i];
 
     // skip closing chars if they're not well paired
     if (!open && cur === ')') {
       buffer.push(cur);
-      return prev;
+      continue;
     }
 
     if (cur === '(') open++;
@@ -198,12 +201,12 @@ export function parseBuffer(text) {
     if (hasMonths(line) && (cur === ',' || cur === ' ')) {
       if (cur === ',' || (cur === ' ' && isNum(next)) || hasNum(cur)) {
         buffer.push(cur);
-        return prev;
+        continue;
       }
 
       if (!hasNum(cur)) {
-        prev[++offset] = [cur];
-        return prev;
+        tokens[++offset] = [cur];
+        continue;
       }
     }
 
@@ -212,13 +215,13 @@ export function parseBuffer(text) {
       inFormat = !inFormat;
 
       if (inFormat) {
-        prev[++offset] = [cur];
+        tokens[++offset] = [cur];
       } else {
         buffer.push(cur);
         offset++;
       }
 
-      return prev;
+      continue;
     }
 
     // enable headings/blockquotes, skip everything
@@ -231,7 +234,7 @@ export function parseBuffer(text) {
       // stop concatenation!
       if (!inFormat) {
         buffer.push(cur);
-        return prev;
+        continue;
       }
     }
 
@@ -258,16 +261,14 @@ export function parseBuffer(text) {
     ) {
       // make sure we're skipping from words
       if (last && isChar(last) && isSep(cur, '.') && !isNum(next)) {
-        prev[++offset] = [cur];
+        tokens[++offset] = [cur];
       } else {
         buffer.push(cur);
       }
     } else {
-      prev[++offset] = [cur];
+      tokens[++offset] = [cur];
     }
-
-    return prev;
-  }, []);
+  }
 
   return tokens.map(l => l.join(''));
 }
