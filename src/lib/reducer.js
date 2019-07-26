@@ -12,6 +12,9 @@ export function reduceFromValue(token) {
     text += token[2] ? ` ${token[2]}` : '';
   }
 
+  // handle ISO strings
+  if (text.length > 20) return new Date(text);
+
   const now = new Date();
   const year = now.getFullYear();
   const today = now.toString().split(' ').slice(0, 4).join(' ');

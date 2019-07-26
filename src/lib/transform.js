@@ -110,7 +110,7 @@ export function fromSymbols(text, units, expression) {
   return ['text', text];
 }
 
-export default function transform(input, units) {
+export default function transform(input, units, types) {
   const stack = [];
 
   let inCall = false;
@@ -119,6 +119,12 @@ export default function transform(input, units) {
   let nextToken;
 
   const body = input.reduce((prev, cur, i) => {
+    // resolve from given types
+    if (types[cur]) {
+      prev.push(toToken(i, () => ['number', cur, types[cur]]));
+      return prev;
+    }
+
     let inExpr = stack[stack.length - 1];
     let key = i;
 

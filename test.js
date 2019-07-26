@@ -2,11 +2,12 @@ import transform from './src/lib/transform';
 
 import {
   isOp, isSep, toNumber, toValue,
+  parseBuffer, joinTokens,
 } from './src/lib/parser';
 
 import { reduceFromAST } from './src/lib/reducer';
 import { calculateFromTokens } from './src/lib/solver';
-import { convertFrom, DEFAULT_MAPPINGS } from './src/lib/convert';
+import { unitFrom, convertFrom, DEFAULT_TYPES, DEFAULT_MAPPINGS } from './src/lib/convert';
 
 // FIXME: nice to have on CLI only...
 global.console.log = (...args) => {
@@ -19,10 +20,16 @@ const units = {
   ...DEFAULT_MAPPINGS,
 };
 
+const types = [
+  ...DEFAULT_TYPES,
+];
+
 // try built-ins first
 const convert = (num, base, target) => {
   return convertFrom(num, base, target);
 };
+
+const extract = unitFrom(types);
 
 const normalized = [];
 const expressions = {};
@@ -35,7 +42,9 @@ if (require('fs').existsSync('shared.json')) {
   }, {}));
 }
 
-const tokens = transform(argv.join(' '), units);
+const out = parseBuffer(argv.join(' '), extract);
+const all = joinTokens(out.tokens, units, out.types);
+const tokens = transform(all, units, out.types);
 
 let chunks;
 let info = {};

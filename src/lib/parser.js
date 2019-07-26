@@ -86,7 +86,7 @@ export function toValue(value, unit) {
   return value;
 }
 
-export function joinTokens(data, units) {
+export function joinTokens(data, units, types) {
   const buffer = [];
 
   let offset = 0;
@@ -124,7 +124,7 @@ export function joinTokens(data, units) {
     }
 
     // reset flag to continue
-    hasUnit = false;
+    hasUnit = !!types[cur];
 
     // split on date formats
     if (hasMonths(stack[0])) {
@@ -172,7 +172,7 @@ export function joinTokens(data, units) {
   return buffer.map(x => x.join(''));
 }
 
-export function parseBuffer(text) {
+export function parseBuffer(text, fixeds) {
   let inFormat = false;
   let inBlock = false;
   let offset = 0;
@@ -180,9 +180,23 @@ export function parseBuffer(text) {
 
   const chars = text.replace(/\s/g, ' ').split('');
   const tokens = [];
+  const types = {};
 
   for (let i = 0; i < chars.length; i += 1) {
     const buffer = tokens[offset] || (tokens[offset] = []);
+
+    // FIXME: (cleanup) consume fixed-length units first... also consider not only seps, maybe anything?
+    const fixedUnit = (!chars[i - 1] || isAny(chars[i - 1])) && fixeds(chars.slice(i));
+    const fixedLength = fixedUnit && fixedUnit[0].length;
+
+    if (fixedUnit && (!chars[i + fixedLength] || isAny(chars[i + fixedLength]))) {
+      if (buffer.length) offset++;
+      tokens[offset] = [fixedUnit[0]];
+      types[fixedUnit[0]] = fixedUnit[1];
+      chars.splice(i + 1, fixedLength - 1);
+      continue;
+    }
+
     const last = buffer[buffer.length - 1];
     const line = buffer.join('');
     const next = chars[i + 1];
@@ -270,7 +284,10 @@ export function parseBuffer(text) {
     }
   }
 
-  return tokens.map(l => l.join(''));
+  return {
+    tokens: tokens.map(l => l.join('')),
+    types,
+  };
 }
 
 export function buildTree(tokens) {
