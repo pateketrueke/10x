@@ -187,13 +187,13 @@ export function parseBuffer(text, fixeds) {
 
     // FIXME: (cleanup) consume fixed-length units first... also consider not only seps, maybe anything?
     const fixedUnit = (!chars[i - 1] || isAny(chars[i - 1])) && fixeds(chars.slice(i));
-    const fixedLength = fixedUnit && fixedUnit[0].length;
+    const [fixedValue, fixedType] = fixedUnit || [];
 
-    if (fixedUnit && (!chars[i + fixedLength] || isAny(chars[i + fixedLength]))) {
+    if (fixedType && (!chars[i + fixedValue.length] || isAny(chars[i + fixedValue.length]))) {
       if (buffer.length) offset++;
-      tokens[offset] = [fixedUnit[0]];
-      types[fixedUnit[0]] = fixedUnit[1];
-      chars.splice(i + 1, fixedLength - 1);
+      tokens[offset] = [fixedValue];
+      types[fixedValue] = fixedType;
+      chars.splice(i + 1, fixedValue.length - 1);
       continue;
     }
 

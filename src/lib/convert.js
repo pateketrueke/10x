@@ -55,17 +55,12 @@ export function unitFrom(types) {
     let found = [];
 
     for (let j = 0; j < tokens.length; j += 1) {
-      for (let i = 0; i < tokens[j][0].length; i += 1) {
-        if (!tokens[j][0][i](v[i])) {
-          found = [];
-          break;
-        }
+      const result = tokens[j][0].every((f, i) => f(v[i]));
 
+      if (result) {
         found = [j, tokens[j][0].length];
         break;
       }
-
-      if (found) break;
     }
 
     return found;
