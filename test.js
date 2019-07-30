@@ -108,8 +108,8 @@ try {
   _e = e;
 } finally {
   if (_e || process.argv.includes('--debug')) {
-    info.chunks = chunks;
-    Object.assign(info, tokens);
+    info.tokens = all;
+    info.parsed = tokens.tree;
   }
 
   process.stdout.write(JSON.stringify(info));

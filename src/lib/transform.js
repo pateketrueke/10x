@@ -216,7 +216,6 @@ export default function transform(input, units, types) {
   }, []);
 
   return {
-    input,
     tree: buildTree(body),
     output: body.filter(x => x[0] !== 'text'),
   };
