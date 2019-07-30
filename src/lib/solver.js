@@ -1,7 +1,7 @@
 import Convert from 'convert-units';
 
 import {
-  isExpr, hasPercent, toNumber,
+  isInt, isExpr, hasPercent, toNumber,
 } from './parser';
 
 export function calculateFromDate(op, left, right) {
@@ -70,8 +70,10 @@ export function calculateFromDate(op, left, right) {
       }
     }
   } else {
+    if ((op === 'of' || op === 'from') && isInt(right)) left.setFullYear(right);
+    if (op === 'as' && isInt(right)) left.setDate(right);
     if (op === '-') left.setSeconds(left.getSeconds() - right);
-    if (op === '+' || isExpr(op)) left.setSeconds(left.getSeconds() + right);
+    if (op === '+') left.setSeconds(left.getSeconds() + right);
   }
 
   return left;
