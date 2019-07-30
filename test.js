@@ -7,7 +7,11 @@ import {
 
 import { reduceFromAST } from './src/lib/reducer';
 import { calculateFromTokens } from './src/lib/solver';
-import { unitFrom, convertFrom, DEFAULT_TYPES, DEFAULT_MAPPINGS } from './src/lib/convert';
+
+import {
+  unitFrom, convertFrom,
+  DEFAULT_TYPES, DEFAULT_MAPPINGS,
+} from './src/lib/convert';
 
 // FIXME: nice to have on CLI only...
 global.console.log = (...args) => {

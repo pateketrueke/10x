@@ -4,6 +4,21 @@ import {
   isInt, isExpr, hasPercent, toNumber,
 } from './parser';
 
+export function calculateFromMS(diff) {
+  const hourTime = 1000 * 60;
+  const seconds = Math.floor(diff / 1000 % 60);
+  const minutes = Math.floor(diff / hourTime % 60);
+  const hours = Math.floor(diff / (hourTime * 60) % 24);
+  const days = Math.floor(diff / (hourTime * 60 * 24) % 365);
+
+  return [
+    days ? `${days}d` : '',
+    hours ? `${hours}h` : '',
+    minutes ? `${minutes}m` : '',
+    seconds ? `${seconds}s` : '',
+  ].filter(Boolean).join(' ');
+}
+
 export function calculateFromDate(op, left, right) {
   if (!(left instanceof Date)) {
     const now = new Date();
@@ -38,23 +53,18 @@ export function calculateFromDate(op, left, right) {
     const newSeconds = right.getSeconds();
 
     if (op !== 'at' && isExpr(op)) {
-      if (oldYear !== newYear) left.setYear(newYear);
+      if (oldYear !== newYear) left.setFullYear(newYear);
       if (oldMonth !== newMonth) left.setMonth(newMonth);
     }
 
     if (op === '-') {
-      if (oldYear !== newYear) left.setYear(oldYear - newYear);
-      if (oldMonth !== newMonth) left.setMonth(oldMonth - newMonth);
-      if (oldDate !== newDate) left.setDate(oldDate - newDate);
-      if (oldHours !== newHours) left.setHours(oldHours - newHours);
-      if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes - newMinutes);
-      if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds - newSeconds);
+      return Math.abs(right.getTime() - left.getTime());
     }
 
     if (op === '+' || op === 'at') {
       let isToday = true;
 
-      if (oldYear !== newYear) isToday = !left.setYear(oldYear + newYear);
+      if (oldYear !== newYear) isToday = !left.setFullYear(oldYear + newYear);
       if (oldMonth !== newMonth) isToday = !left.setMonth(oldMonth + newMonth);
       if (oldDate !== newDate) isToday = !left.setDate(oldDate + newDate);
 
@@ -99,6 +109,13 @@ export function operateExpression(ops, expr) {
       if (prev[0] === 'number' || next[0] === 'number') {
         if (prev[1] instanceof Date) {
           result = calculateFromDate(cur[1], prev[1], next[1]);
+
+          // adjust time-differences in days
+          if (typeof result === 'number') {
+            result = calculateFromMS(result);
+            prev.pop();
+            next.pop();
+          }
         } else {
           if ((cur[1] === 'in' || cur[1] === 'as') && next[0] === 'unit') {
             // carry units
