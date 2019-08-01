@@ -1,6 +1,6 @@
 import {
   isOp, isSep, isNum, hasNum, isChar, isExpr, hasKeyword, hasDatetime, hasDays,
-  getOp, buildTree,
+  getOp, buildTree, cleanTree,
 } from './parser';
 
 export function toToken(offset, fromCallback, arg1, arg2, arg3) {
@@ -139,8 +139,8 @@ export default function transform(input, units, types) {
       // handle nested calls
       if (token[0] === 'unit' && nextToken === '(') token[0] = 'def';
 
-      // skip text-nodes
-      if (token[0] !== 'text') inExpr[2].push(token);
+      // append all nodes
+      inExpr[2].push(token);
 
       // ensure we close and continue eating...
       if (cur === ';' || (inCall && cur === ')')) {
@@ -216,7 +216,7 @@ export default function transform(input, units, types) {
   }, []);
 
   return {
-    tree: buildTree(body),
-    output: body.filter(x => x[0] !== 'text'),
+    ast: body,
+    tree: cleanTree(buildTree(body)),
   };
 }

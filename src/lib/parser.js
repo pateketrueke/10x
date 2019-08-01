@@ -2,6 +2,8 @@ import {
   TIME_UNITS,
 } from './convert';
 
+const TAG_TYPES = ['blockquote', 'heading', 'italic', 'bold', 'code', 'text'];
+
 const OP_TYPES = {
   '=': 'equal',
   '+': 'plus',
@@ -34,6 +36,7 @@ export const getOp = x => OP_TYPES[x];
 export const hasNum = x => /\d/.test(x);
 export const hasDays = x => RE_DAYS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
+export const hasTagName = x => TAG_TYPES.includes(x);
 
 export const hasPercent = x => {
   return typeof x === 'string' && x.charAt(x.length - 1) === '%';
@@ -300,11 +303,10 @@ export function buildTree(tokens) {
   for (let i = 0; i < tokens.length; i += 1) {
     const t = tokens[i];
 
-    // skip non math-tokens
-    if (['blockquote', 'heading', 'italic', 'bold', 'code', 'text'].includes(t[0])) continue;
-
     // fix nested-nodes
-    if (t[0] === 'def' && t[2]) t[2] = buildTree(t[2]);
+    if (t[0] === 'def' && t[2]) {
+      t[2] = buildTree(t[2]);
+    }
 
     // handle nesting
     if (t[0] === 'open' || t[0] === 'close') {
@@ -340,4 +342,18 @@ export function buildTree(tokens) {
   }
 
   return tree;
+}
+
+export function cleanTree(ast) {
+  return ast.reduce((prev, cur) => {
+    // skip non math-tokens
+    if (hasTagName(cur[0])) return prev;
+
+    // clean arguments/body from definitions...
+    if (cur[0] === 'def' && Array.isArray(cur[2])) prev.push([cur[0], cur[1], cleanTree(cur[2])]);
+    else if (Array.isArray(cur[0])) prev.push(cleanTree(cur));
+    else prev.push(cur);
+
+    return prev;
+  }, []);
 }

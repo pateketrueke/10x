@@ -109,7 +109,8 @@ try {
 } finally {
   if (_e || process.argv.includes('--debug')) {
     info.tokens = all;
-    info.parsed = tokens.tree;
+    info.input = tokens.ast;
+    info.tree = tokens.tree;
   }
 
   process.stdout.write(JSON.stringify(info));

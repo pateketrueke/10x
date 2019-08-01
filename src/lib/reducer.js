@@ -1,5 +1,5 @@
 import {
-  isSep, isTime, isExpr, toNumber, hasMonths,
+  isSep, isTime, isExpr, toNumber, hasMonths, hasTagName,
 } from './parser';
 
 import { calculateFromTokens } from './solver';
