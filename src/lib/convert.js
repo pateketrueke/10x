@@ -6,6 +6,9 @@ const groups = convert.measures();
 
 export const TIME_UNITS = convert.list('time').map(x => x.abbr).sort();
 export const CURRENCY_SYMBOLS = currencySymbols.settings.symbols;
+
+export const DEFAULT_EXPRESSIONS = {};
+
 export const DEFAULT_MAPPINGS = {};
 
 // fixed-length types
