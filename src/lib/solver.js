@@ -134,6 +134,11 @@ export function operateExpression(ops, expr) {
       }
 
       if (typeof result !== 'undefined') {
+        // append percentage symbol if needed, e.g. N from M, N in M
+        if (isExpr(cur[1]) && typeof result === 'number') {
+          result = `${result}%`;
+        }
+
         expr.splice(i - 1, 3, ['number', result, prev[2] || next[2]]);
 
         // if tokens are left...
