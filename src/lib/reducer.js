@@ -115,7 +115,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       const next = old.slice(1, old.length - 1);
 
       // we return a new expression from 3x to [3, *, x]
-      cur = [['number', val, old[1][2]], ['expr', '*', 'mul']].concat(next);
+      cur = [['number', val], ['expr', '*', 'mul']].concat(next);
     }
 
     // handle resolution by recursion
