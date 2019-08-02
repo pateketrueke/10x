@@ -154,15 +154,13 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       if (cur[0] === 'expr' && left[0] === 'number' && isExpr(cur[1])) {
         const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
 
-        if (fixedUnit) {
-          if (fixedUnit !== 'datetime' && left[2] && left[2] !== 'datetime') {
-            left[1] = convert(parseFloat(toNumber(left[1])), left[2], fixedUnit);
-            left[2] = fixedUnit;
-            tokens.splice(i, 2);
-          } else if (isTime(left[2])) {
-            left[1] = convert(parseFloat(toNumber(left[1])), left[2], 's');
-            left.pop();
-          }
+        if (fixedUnit && fixedUnit !== 'datetime' && left[2] && left[2] !== 'datetime') {
+          left[1] = convert(parseFloat(toNumber(left[1])), left[2], fixedUnit);
+          left[2] = fixedUnit;
+          tokens.splice(i, 2);
+        } else if (isTime(left[2])) {
+          left[1] = convert(parseFloat(toNumber(left[1])), left[2], 's');
+          left[2] = 's';
         }
       }
 

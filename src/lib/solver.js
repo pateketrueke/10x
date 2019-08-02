@@ -1,5 +1,5 @@
 import {
-  isInt, isExpr, hasPercent, toNumber,
+  isInt, isTime, isExpr, hasPercent, toNumber,
 } from './parser';
 
 export function calculateFromMS(diff) {
@@ -25,6 +25,7 @@ export function calculateFromDate(op, left, right) {
 
     // add given seconds
     if (op === 'from') return calculateFromDate('+', right, left);
+    if (op === 'as') return calculateFromDate('+', parseFloat(right), left);
 
     // otherwise, just take the year
     if (typeof left === 'number') left = new Date(`${nowMonth} ${nowDate}, ${left} 00:00`);
@@ -100,7 +101,11 @@ export function operateExpression(ops, expr) {
       let result;
 
       if (prev[0] === 'number' || next[0] === 'number') {
-        if (prev[1] instanceof Date || next[1] instanceof Date) {
+        if (
+          prev[1] instanceof Date
+          || next[1] instanceof Date
+          || (prev[2] === 's' && isExpr(cur[1]) && isInt(next[1]))
+        ) {
           result = calculateFromDate(cur[1], prev[1], next[1]);
 
           // adjust time-differences in days
