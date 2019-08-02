@@ -137,7 +137,8 @@ export function joinTokens(data, units, types) {
 
     // keep previous month-format plus year
     if (hasDate && oldChar === ',' && cur === ' ' && isInt(next)) {
-      buffer.splice(offset - 2, 2, [buffer[offset - 2] + oldChar + cur + next]);
+      buffer.splice(offset - 2, 1, [buffer[offset - 2] + oldChar + cur + next]);
+      buffer[--offset] = [];
       data.splice(i, 1);
       hasDate = false;
       continue;
