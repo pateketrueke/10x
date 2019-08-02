@@ -7,7 +7,7 @@ import { terser } from 'rollup-plugin-terser';
 
 const production = !process.env.ROLLUP_WATCH;
 
-function makeEntry(input, output) {
+function makeEntry(input, output, liveReload) {
   return {
     input,
     output,
@@ -21,7 +21,7 @@ function makeEntry(input, output) {
       }),
       resolve({ browser: true }),
       commonjs(),
-      !production && livereload('public'),
+      liveReload && livereload('public'),
       production && terser()
     ],
     watch: {
@@ -31,5 +31,5 @@ function makeEntry(input, output) {
 }
 
 export default [
-  makeEntry('src/lib/index.js', { format: 'cjs', file: 'dist/soulvelte.js' }),
+  makeEntry('src/lib/index.js', { format: 'cjs', file: 'dist/soulvelte.js' }, false),
 ];
