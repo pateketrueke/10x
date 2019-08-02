@@ -185,7 +185,7 @@ export default function transform(input, units, types) {
       isSep(cur) || hasNum(cur)
 
       // allow keywords after some dates
-      || hasDays(cur) || (hasDays(prevToken) && isExpr(cur))
+      || hasDays(cur) || (hasNum(prevToken) && isExpr(cur))
       || (hasDatetime(prevToken) && isExpr(cur) && isNum(nextToken))
 
       // operators, followed by numbers or separators

@@ -1,5 +1,3 @@
-import Convert from 'convert-units';
-
 import {
   isInt, isExpr, hasPercent, toNumber,
 } from './parser';
@@ -25,13 +23,8 @@ export function calculateFromDate(op, left, right) {
     const nowMonth = now.toString().split(' ')[1];
     const nowDate = now.getDate();
 
-    // convert from given units
-    if (Array.isArray(left)) {
-      const secs = new Convert(left[1]).from(left[2]).to('s');
-
-      left = new Date();
-      left.setSeconds(secs);
-    }
+    // add given seconds
+    if (op === 'from') return calculateFromDate('+', right, left);
 
     // otherwise, just take the year
     if (typeof left === 'number') left = new Date(`${nowMonth} ${nowDate}, ${left} 00:00`);
@@ -107,7 +100,7 @@ export function operateExpression(ops, expr) {
       let result;
 
       if (prev[0] === 'number' || next[0] === 'number') {
-        if (prev[1] instanceof Date) {
+        if (prev[1] instanceof Date || next[1] instanceof Date) {
           result = calculateFromDate(cur[1], prev[1], next[1]);
 
           // adjust time-differences in days

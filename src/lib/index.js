@@ -97,7 +97,10 @@ export default class Soulvelte {
         };
       });
     } catch (e) {
-      info.error = e;
+      info.error = {
+        message: e.message,
+        stack: e.stack,
+      };
     } finally {
       info.tokens = all;
       info.input = tokens.ast;
