@@ -82,6 +82,27 @@ export function toValue(value, unit) {
     } else value = sub[0];
   }
 
+  // simplify decimals
+  if (value.includes('.')) {
+    const [base, decimals] = value.replace('%', '').split('.');
+    const isPercentage = value.charAt(value.length - 1) === '%';
+    const input = decimals.split('');
+    const out = [];
+
+    for (let i = 0; i < input.length; i += 1) {
+      const old = out[out.length - 1];
+
+      if (old > 0) {
+        if (input[i] > 0) out.push(input[i]);
+        break;
+      }
+
+      out.push(input[i]);
+    }
+
+    value = `${base}.${out.join('')}${isPercentage ? '%' : ''}`;
+  }
+
   if (unit) {
     return `${value} ${unit}`;
   }

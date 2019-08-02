@@ -134,12 +134,14 @@ export function operateExpression(ops, expr) {
       }
 
       if (typeof result !== 'undefined') {
+        const fixedUnit = prev[2] || next[2];
+
         // append percentage symbol if needed, e.g. N from M, N in M
-        if (isExpr(cur[1]) && typeof result === 'number') {
+        if (!fixedUnit && isExpr(cur[1]) && typeof result === 'number') {
           result = `${result}%`;
         }
 
-        expr.splice(i - 1, 3, ['number', result, prev[2] || next[2]]);
+        expr.splice(i - 1, 3, ['number', result, fixedUnit]);
 
         // if tokens are left...
         if (expr.length >= 3) {
