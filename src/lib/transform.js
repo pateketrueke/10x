@@ -217,6 +217,6 @@ export default function transform(input, units, types) {
 
   return {
     ast: body,
-    tree: cleanTree(buildTree(body)),
+    tree: buildTree(body),
   };
 }

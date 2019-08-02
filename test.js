@@ -2,7 +2,7 @@ import transform from './src/lib/transform';
 
 import {
   isOp, isSep, toNumber, toValue,
-  parseBuffer, joinTokens,
+  parseBuffer, joinTokens, cleanTree,
 } from './src/lib/parser';
 
 import { reduceFromAST } from './src/lib/reducer';
@@ -49,6 +49,7 @@ if (require('fs').existsSync('shared.json')) {
 const out = parseBuffer(argv.join(' '), extract);
 const all = joinTokens(out.tokens, units, out.types);
 const tokens = transform(all, units, out.types);
+const fixedTree = cleanTree(tokens.tree);
 
 let chunks;
 let info = {};
@@ -61,7 +62,7 @@ try {
   let offset = 0;
 
   // split over single values...
-  chunks = reduceFromAST(tokens.tree, convert, expressions).reduce((prev, cur) => {
+  chunks = reduceFromAST(fixedTree, convert, expressions).reduce((prev, cur) => {
     const lastValue = prev[prev.length - 1] || [];
 
     if (lastValue[0] === 'number' && cur[0] === 'number') {
@@ -110,7 +111,7 @@ try {
   if (_e || process.argv.includes('--debug')) {
     info.tokens = all;
     info.input = tokens.ast;
-    info.tree = tokens.tree;
+    info.tree = fixedTree;
   }
 
   process.stdout.write(JSON.stringify(info));
