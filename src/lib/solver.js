@@ -1,5 +1,5 @@
 import {
-  isInt, isTime, isExpr, hasPercent, toNumber,
+  isInt, isTime, isExpr, hasPercent, toNumber, toFraction,
 } from './parser';
 
 export function calculateFromMS(diff) {
@@ -25,7 +25,7 @@ export function calculateFromDate(op, left, right) {
 
     // add given seconds
     if (op === 'from') return calculateFromDate('+', right, left);
-    if (op === 'as') return calculateFromDate('+', parseFloat(right), left);
+    if (['as', 'in', 'to'].includes(op)) return calculateFromDate('+', parseFloat(right), left);
 
     // otherwise, just take the year
     if (typeof left === 'number') left = new Date(`${nowMonth} ${nowDate}, ${left} 00:00`);
@@ -75,7 +75,7 @@ export function calculateFromDate(op, left, right) {
     }
   } else {
     if ((op === 'of' || op === 'from') && isInt(right)) left.setFullYear(right);
-    if (op === 'as' && isInt(right)) left.setDate(right);
+    if (['as', 'in', 'to'].includes(op) && isInt(right)) left.setDate(right);
     if (op === '-') left.setSeconds(left.getSeconds() - right);
     if (op === '+') left.setSeconds(left.getSeconds() + right);
   }
@@ -85,8 +85,8 @@ export function calculateFromDate(op, left, right) {
 
 export function evaluateExpression(op, left, right) {
   // handle basic arithmetic
-  if (op === '*' || op === 'for') return left * right;
-  if (op === '/' || isExpr(op)) return left / right;
+  if (op === '*') return left * right;
+  if (op === '/') return left / right;
   if (op === '+') return left + right;
   if (op === '-') return left - right;
 }
@@ -115,18 +115,31 @@ export function operateExpression(ops, expr) {
             next.pop();
           }
         } else {
-          if ((cur[1] === 'in' || cur[1] === 'as') && next[0] === 'unit') {
+          if (['as', 'in', 'to'].includes(cur[1]) && next[0] === 'unit') {
             // carry units
-            result = prev[1];
+            result = toNumber(prev[1]);
             prev[2] = prev[2] || next[1];
+          } else if (isExpr(cur[1])) {
+            if (!(prev[2] && next[2])) {
+              result = `${prev[1] / parseFloat(next[1]) * 100}%`;
+            } else {
+              result = toNumber(prev[1]);
+            }
           } else if (hasPercent(next[1])) {
             result = parseFloat(prev[1]) + (parseFloat(prev[1]) * (parseFloat(next[1]) / 100));
           } else {
             result = evaluateExpression(cur[1], parseFloat(toNumber(prev[1])), parseFloat(toNumber(next[1])));
           }
 
-          // remove units as result from fractions
-          if (prev[2] === 'fraction') {
+          // escape unit-fractions for later
+          if (next[0] === 'unit' && next[2] === 'fr') {
+            result = toFraction(result);
+            prev[2] = `fr-${prev[2]}`;
+            next.pop();
+          }
+
+          // fixed-unit as result from fractions
+          if (prev[2] === 'x-fraction') {
             prev.pop();
             next.pop();
           }
@@ -158,7 +171,7 @@ export function operateExpression(ops, expr) {
 
 export function calculateFromTokens(expr) {
   expr = operateExpression(['for', '*', '/'], expr);
-  expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in'], expr);
+  expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in', 'to'], expr);
 
   return expr[0];
 }

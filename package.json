@@ -1,5 +1,5 @@
 {
-  "name": "soulvelte",
+  "name": "solvente",
   "version": "0.0.0",
   "bin": {
     "calc": "cli"

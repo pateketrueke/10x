@@ -27,7 +27,7 @@ export const isFmt = x => /^[_*~]$/.test(x);
 export const isAny = x => /\W/.test(x) && !isOp(x);
 export const isNth = x => /^(?:th|[rn]d)y?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
-export const isExpr = x => /^(?:from|for|of|a[ts]|in)$/i.test(x);
+export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
 export const isJoin = x => '_,.'.includes(x);
 
@@ -37,6 +37,10 @@ export const hasNum = x => /\d/.test(x);
 export const hasDays = x => RE_DAYS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
 export const hasTagName = x => TAG_TYPES.includes(x);
+
+export const highestCommonFactor = (a, b) => {
+  return b !== 0 ? highestCommonFactor(b, a % b) : a;
+};
 
 export const hasPercent = x => {
   return typeof x === 'string' && x.charAt(x.length - 1) === '%';
@@ -55,21 +59,42 @@ export const hasDatetime = x => {
   return x && (RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x));
 };
 
+export function toFraction(number) {
+  const decimals = number.toString().match(/\.0+\d/);
+  const length = Math.max(decimals ? decimals[0].length : 3, 3);
+
+  // adjust correction from zero-left padded decimals
+  const div = parseInt(`1${Array.from({ length }).join('0')}`);
+  const base = Math.floor(parseFloat(number) * div) / div;
+
+  const [left, right] = base.toString().split('.');
+
+  let numerator = left + right;
+  let denominator = Math.pow(10, right.length);
+
+  const factor = highestCommonFactor(numerator, denominator);
+
+  denominator /= factor;
+  numerator /= factor;
+
+  return `${numerator}/${denominator}`;
+}
+
 export function toNumber(value) {
   if (typeof value === 'string') {
     if (value.includes('/')) {
-      const [a, b] = value.split('/');
+      const [a, b] = value.split(/[\s/]/);
 
       return a / b;
     }
 
-    return value.replace(/[^a-z\s\d.-]/ig, '');
+    return value.replace(/[^%a-z\s\d.-]/ig, '');
   }
 
   return value;
 }
 
-export function toValue(value, unit) {
+export function toValue(value) {
   if (value instanceof Date) {
     return value.toString().split(' ').slice(0, 5).join(' ');
   }
@@ -101,10 +126,6 @@ export function toValue(value, unit) {
     }
 
     value = `${base}.${out.join('')}${isPercentage ? '%' : ''}`;
-  }
-
-  if (unit) {
-    return `${value} ${unit}`;
   }
 
   return value;

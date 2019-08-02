@@ -1,8 +1,8 @@
 import transform from './transform';
 
 import {
-  isOp, isSep, toNumber, toValue,
   parseBuffer, joinTokens, cleanTree,
+  isOp, isSep, toFraction, toNumber, toValue,
 } from './parser';
 
 import { reduceFromAST } from './reducer';
@@ -13,7 +13,7 @@ import {
   DEFAULT_TYPES, DEFAULT_MAPPINGS, DEFAULT_EXPRESSIONS,
 } from './convert';
 
-export default class Soulvelte {
+export default class Solvente {
   constructor(opts) {
     this.expressions = {
       ...DEFAULT_EXPRESSIONS,
@@ -45,6 +45,7 @@ export default class Soulvelte {
     const out = parseBuffer(sample, unitFrom(this.types));
     const all = joinTokens(out.tokens, this.units, out.types);
     const tokens = transform(all, this.units, out.types);
+    const fixedAST = tokens.ast.map(x => x.slice());
     const fixedTree = cleanTree(tokens.tree);
     const normalized = [];
 
@@ -86,14 +87,27 @@ export default class Soulvelte {
         let value = calculateFromTokens(x);
 
         if (value[0] === 'number') {
-          value = toNumber(value);
+          value[1] = toNumber(value[1]);
+        }
+
+        let fixedValue = toValue(value[1]);
+        let fixedUnit = value[2];
+
+        // adjust unit-fractions
+        if (fixedUnit && fixedUnit.indexOf('fr-') === 0) {
+          fixedValue = toFraction(fixedValue);
+          fixedUnit = fixedUnit.split('fr-')[1];
+        }
+
+        // FIXME: plural/singular?
+        if (fixedUnit) {
+          fixedValue += ` ${fixedUnit}`;
         }
 
         return {
-          fmt: toValue(value[1], value[2]),
           val: value[1],
           type: value[0],
-          unit: value[2],
+          format: fixedValue,
         };
       });
     } catch (e) {
@@ -103,7 +117,7 @@ export default class Soulvelte {
       };
     } finally {
       info.tokens = all;
-      info.input = tokens.ast;
+      info.input = fixedAST;
       info.tree = fixedTree;
     }
 

@@ -83,7 +83,7 @@ export function fromSymbols(text, units, expression) {
 
   // handle fraction numbers
   if (/^\d+\/\d+$/.test(text)) {
-    return ['number', text, 'fraction'];
+    return ['number', text, 'x-fraction'];
   }
 
   // handle all datetimes

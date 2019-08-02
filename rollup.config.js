@@ -31,5 +31,5 @@ function makeEntry(input, output, liveReload) {
 }
 
 export default [
-  makeEntry('src/lib/index.js', { format: 'cjs', file: 'dist/soulvelte.js' }, false),
+  makeEntry('src/lib/index.js', { format: 'cjs', file: 'dist/solvente.js' }, false),
 ];

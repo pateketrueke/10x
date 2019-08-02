@@ -9,7 +9,13 @@ export const CURRENCY_SYMBOLS = currencySymbols.settings.symbols;
 
 export const DEFAULT_EXPRESSIONS = {};
 
-export const DEFAULT_MAPPINGS = {};
+// fraction handling is built-in
+export const DEFAULT_MAPPINGS = {
+  fr: 'fr',
+  frac: 'fr',
+  fraction: 'fr',
+  fractions: 'fr',
+};
 
 // fixed-length types
 export const DEFAULT_TYPES = [
@@ -38,7 +44,6 @@ groups.forEach(group => {
     }
   });
 });
-
 
 export function convertFrom(num, base, target) {
   if (CURRENCY_SYMBOLS[base] || CURRENCY_SYMBOLS[target]) {

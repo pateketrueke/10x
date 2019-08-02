@@ -132,7 +132,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       const right = tokens[i + 1] || [];
 
       // apply given unit on further operations
-      if (left[0] === 'expr' && cur[0] === 'unit' && (left[1] === 'as' || left[1] === 'in')) {
+      if (left[0] === 'expr' && cur[0] === 'unit' && ['as', 'in', 'to'].includes(left[1])) {
         for (let x = i + 1; x < tokens.length; x += 1) {
           if (tokens[x][0] === 'number' && !tokens[x][2]) {
             tokens[x][2] = cur[1];
@@ -154,10 +154,9 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       if (cur[0] === 'expr' && left[0] === 'number' && isExpr(cur[1])) {
         const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
 
-        if (fixedUnit && fixedUnit !== 'datetime' && left[2] && left[2] !== 'datetime') {
+        if (fixedUnit && !['datetime', 'fr'].includes(fixedUnit) && left[2] && left[2] !== 'datetime') {
           left[1] = convert(parseFloat(toNumber(left[1])), left[2], fixedUnit);
           left[2] = fixedUnit;
-          tokens.splice(i, 2);
         } else if (isTime(left[2])) {
           left[1] = convert(parseFloat(toNumber(left[1])), left[2], 's');
           left[2] = 's';

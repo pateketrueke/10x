@@ -2,7 +2,7 @@ global.console.log = (...args) => {
   process.stderr.write(require('util').inspect(args, { colors: true, depth: 10 }) + '\n');
 };
 
-const Soulvelte = require('./dist/soulvelte.js');
+const Solvente = require('./dist/solvente.js');
 
 const sharedFileOffset = process.argv.slice(2).indexOf('--shared');
 const sharedFilePath = sharedFileOffset >= 0 && process.argv.slice(2)[sharedFileOffset + 1];
@@ -15,7 +15,7 @@ if (sharedFile && require('fs').existsSync(sharedFile)) {
 
 const argv = process.argv.slice(Math.max(2, process.argv.indexOf('--') + 1));
 
-const calc = new Soulvelte({
+const calc = new Solvente({
   expressions: sharedExpressions,
 });
 
