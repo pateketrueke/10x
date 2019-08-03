@@ -13,9 +13,10 @@
     "dev:test": "npm run test -- -w",
     "mocha": "_mocha --exit --recursive -bR spec",
     "test": "npm run test:unit --",
-    "test:ci": "npm run coverage && npm run report --",
+    "test:ci": "npm run coverage && npm run report -- -r lcov",
     "test:unit": "npm run mocha -- -r esm 'tests/*.test.js'",
     "test:coverage": "npm run coverage -- npm run test:unit && npm run report --",
+    "codecov": "codecov --file=coverage/lcov.info -e TRAVIS_NODE_VERSION",
     "coverage": "nyc -x '**/tests/**' -x '**/*.test.js' --",
     "report": "nyc report"
   },
