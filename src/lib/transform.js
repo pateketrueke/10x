@@ -127,7 +127,6 @@ export default function transform(input, units, types) {
 
       // handle nested calls
       if (token[0] === 'unit' && nextToken === '(') token[0] = 'def';
-      // if (token[0] === 'unit' && !units[token[1]]) units[token[1]] = token[1];
 
       // append all nodes
       inExpr[2].push(token);

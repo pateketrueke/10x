@@ -199,22 +199,19 @@ export function joinTokens(data, units, types) {
 
     do { nextToken = data[++key]; } while (nextToken === ' ');
 
-    // concatenate until we reach ops/units
     if (
-      (!isOp(nextToken, '()')
+      isAny(cur)
+
+      // concatenate until we reach ops/units
+      || (!isOp(nextToken, '()')
         && (isChar(cur) || cur === ' ')
         && !(isSep(stack[0]) || isOp(stack[0])))
 
       // handle other ops between words...
-      || isAny(cur)
-      // || (isOp(cur) && !isChar(next))
-      // || (isChar(oldChar) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
       || (next === '-' && isChar(cur) && !isOp(oldChar))
       || (cur === '-' && isChar(next) && !isOp(oldChar))
     ) {
       // make sure we're not adding units... or keywords
-      // if (!(isOp(cur) || isSep(cur, ' ') || isExpr(cur) || hasKeyword(cur, units))) {
-      // }
       if (cur !== ' ' && !(isExpr(next) || hasKeyword(next, units))) {
         stack.push(cur);
         continue;
@@ -308,9 +305,6 @@ export function parseBuffer(text, fixeds) {
     if (
       inFormat || inBlock || typeof last === 'undefined'
 
-      // percentages
-      // || (hasNum(last) && cur === '%')
-
       // non-keywords
       || (last === '-' && isNum(cur))
       || (last !== ' ' && isAny(cur))
@@ -319,10 +313,6 @@ export function parseBuffer(text, fixeds) {
       || (last === ',' && isNum(cur) && !open)
       || (isChar(last) && (isAny(cur) || cur === ':'))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
-
-      // // // keep words and numbers together
-      // || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))
-      // || (isNum(last) && isChar(cur)) || (isChar(last) && isNum(cur))
 
       // keep some separators between numbers
       || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
@@ -334,12 +324,6 @@ export function parseBuffer(text, fixeds) {
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
     ) {
       buffer.push(cur);
-      // make sure we're skipping from words
-      // if (last && isChar(last) && isSep(cur, '.') && !isNum(next)) {
-      //   tokens[++offset] = [cur];
-      // } else {
-      //   buffer.push(cur);
-      // }
     } else {
       tokens[++offset] = [cur];
     }
