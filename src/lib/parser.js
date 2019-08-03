@@ -137,6 +137,7 @@ export function joinTokens(data, units, types) {
   const buffer = [];
 
   let offset = 0;
+  let depth = 0;
   let hasDate = false;
   let hasUnit = false;
 
@@ -211,9 +212,6 @@ export function joinTokens(data, units, types) {
       || (next === '-' && isChar(cur) && !isOp(oldChar))
       || (cur === '-' && isChar(next) && !isOp(oldChar))
     ) {
-      // stack.push(cur);
-    // console.log({cur,k:hasKeyword(cur,units)});
-      // continue;
       // make sure we're not adding units... or keywords
       // if (!(isOp(cur) || isSep(cur, ' ') || isExpr(cur) || hasKeyword(cur, units))) {
       // }
@@ -316,8 +314,10 @@ export function parseBuffer(text, fixeds) {
       // non-keywords
       || (last === '-' && isNum(cur))
       || (last !== ' ' && isAny(cur))
+      || (isMoney(last) && hasNum(cur))
+      || (last === ',' && isNum(cur) && !open)
       || (isChar(last) && (isAny(cur) || cur === ':'))
-      // || (isMoney(last) && hasNum(cur))
+      || (hasNum(last) && cur === ',' && isNum(next) && !open)
 
       // // // keep words and numbers together
       // || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))

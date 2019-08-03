@@ -7,7 +7,7 @@ const values = ({ tokens, results }) => {
   return results.map(x => x.format);
 };
 
-describe.only('DSL', () => {
+describe('DSL', () => {
   describe('Basic operations', () => {
     it('should handle common errors', () => {
        expect(calc('1ml - 1cm').error.message).to.eql('Cannot convert incompatible measures of volume and length');

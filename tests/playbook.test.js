@@ -22,7 +22,7 @@ const cases = [
   ['Some values are already units, like 1cm - 35mm.', ['-2.5 cm']],
 ];
 
-describe.only('Playbook', () => {
+describe('Playbook', () => {
   const c = new Solvente();
 
   cases.forEach(test => {
