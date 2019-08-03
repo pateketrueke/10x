@@ -110,7 +110,6 @@ export function toValue(value) {
   // simplify decimals
   if (value.includes('.')) {
     const [base, decimals] = value.replace('%', '').split('.');
-    const isPercentage = value.charAt(value.length - 1) === '%';
     const input = decimals.split('');
     const out = [];
 
@@ -125,7 +124,7 @@ export function toValue(value) {
       out.push(input[i]);
     }
 
-    value = `${base}.${out.join('')}${isPercentage ? '%' : ''}`;
+    value = `${base}.${out.join('')}${hasPercent(value) ? '%' : ''}`;
   }
 
   return value;
@@ -242,7 +241,7 @@ export function parseBuffer(text, fixeds) {
   for (let i = 0; i < chars.length; i += 1) {
     const buffer = tokens[offset] || (tokens[offset] = []);
 
-    // FIXME: (cleanup) consume fixed-length units first... also consider not only seps, maybe anything?
+    // consume fixed-length units first...
     const fixedUnit = (!chars[i - 1] || isAny(chars[i - 1])) && fixeds(chars.slice(i));
     const [fixedValue, fixedType] = fixedUnit || [];
 
