@@ -49,6 +49,8 @@ export const hasPercent = x => {
 };
 
 export const hasKeyword = (x, units) => {
+  if (!x) return false;
+
   const key = x.replace(/^[^a-zA-Z]*/g, '');
   const test = key && (units[key] || units[key.toLowerCase()]);
 
