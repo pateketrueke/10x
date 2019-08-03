@@ -314,7 +314,9 @@ export function parseBuffer(text, fixeds) {
       // || (hasNum(last) && cur === '%')
 
       // non-keywords
-      || (isAny(cur) && last !== ' ')
+      || (last === '-' && isNum(cur))
+      || (last !== ' ' && isAny(cur))
+      || (isChar(last) && (isAny(cur) || cur === ':'))
       // || (isMoney(last) && hasNum(cur))
 
       // // // keep words and numbers together
@@ -329,7 +331,6 @@ export function parseBuffer(text, fixeds) {
 
       // keep chars and numbers together
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
-      // || (last === '-' && isNum(cur)) || (cur === '-' && isNum(next))
     ) {
       buffer.push(cur);
       // make sure we're skipping from words
