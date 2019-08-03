@@ -314,6 +314,7 @@ export function parseBuffer(text, fixeds) {
       // non-keywords
       || (last === '-' && isNum(cur))
       || (last !== ' ' && isAny(cur))
+      || (hasNum(last) && cur === '%')
       || (isMoney(last) && hasNum(cur))
       || (last === ',' && isNum(cur) && !open)
       || (isChar(last) && (isAny(cur) || cur === ':'))
@@ -326,8 +327,8 @@ export function parseBuffer(text, fixeds) {
       // keep some separators between numbers
       || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
 
-      // // // handle numbers, including negatives between ops; notice all N-N are splitted
-      // || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
+      // handle numbers, including negatives between ops; notice all N-N are splitted
+      || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
 
       // keep chars and numbers together
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
