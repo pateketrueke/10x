@@ -81,10 +81,12 @@ export function calculateFromDate(op, left, right) {
 
 export function evaluateExpression(op, left, right) {
   // handle basic arithmetic
-  if (op === '*') return left * right;
-  if (op === '/') return left / right;
-  if (op === '+') return left + right;
-  if (op === '-') return left - right;
+  switch (op) {
+    case '*': return left * right;
+    case '/': return left / right;
+    case '+': return left + right;
+    default: return left - right;
+  }
 }
 
 export function operateExpression(ops, expr) {
@@ -96,49 +98,47 @@ export function operateExpression(ops, expr) {
     if (cur && ops.indexOf(cur[1]) > -1) {
       let result;
 
-      if (prev[0] === 'number' || next[0] === 'number') {
-        if (
-          prev[1] instanceof Date
-          || next[1] instanceof Date
-          || (prev[2] === 's' && isExpr(cur[1]) && isInt(next[1]))
-        ) {
-          result = calculateFromDate(cur[1], prev[1], next[1]);
+      if (
+        prev[1] instanceof Date
+        || next[1] instanceof Date
+        || (prev[2] === 's' && isExpr(cur[1]) && isInt(next[1]))
+      ) {
+        result = calculateFromDate(cur[1], prev[1], next[1]);
 
-          // adjust time-differences in days
-          if (typeof result === 'number') {
-            result = calculateFromMS(result);
-            prev.pop();
-            next.pop();
-          }
-        } else {
-          if (['as', 'in', 'to'].includes(cur[1]) && next[0] === 'unit') {
-            // carry units
-            result = toNumber(prev[1]);
-            prev[2] = prev[2] || next[1];
-          } else if (isExpr(cur[1])) {
-            if (!(prev[2] && next[2])) {
-              result = `${prev[1] / parseFloat(next[1]) * 100}%`;
-            } else {
-              result = toNumber(prev[1]);
-            }
-          } else if (hasPercent(next[1])) {
-            result = parseFloat(prev[1]) + (parseFloat(prev[1]) * (parseFloat(next[1]) / 100));
+        // adjust time-differences in days
+        if (typeof result === 'number') {
+          result = calculateFromMS(result);
+          prev.pop();
+          next.pop();
+        }
+      } else {
+        if (['as', 'in', 'to'].includes(cur[1]) && next[0] === 'unit') {
+          // carry units
+          result = toNumber(prev[1]);
+          prev[2] = prev[2] || next[1];
+        } else if (isExpr(cur[1])) {
+          if (!(prev[2] && next[2])) {
+            result = `${prev[1] / parseFloat(next[1]) * 100}%`;
           } else {
-            result = evaluateExpression(cur[1], parseFloat(toNumber(prev[1])), parseFloat(toNumber(next[1])));
+            result = toNumber(prev[1]);
           }
+        } else if (hasPercent(next[1])) {
+          result = parseFloat(prev[1]) + (parseFloat(prev[1]) * (parseFloat(next[1]) / 100));
+        } else {
+          result = evaluateExpression(cur[1], parseFloat(toNumber(prev[1])), parseFloat(toNumber(next[1])));
+        }
 
-          // escape unit-fractions for later
-          if (next[0] === 'unit' && (next[2] === 'fr' || next[1] === 'fr')) {
-            prev[2] = `fr-${prev[2].indexOf('fr') === 0 ? 'fr' : prev[2]}`;
-            result = toFraction(result);
-            next.pop();
-          }
+        // escape unit-fractions for later
+        if (next[0] === 'unit' && (next[2] === 'fr' || next[1] === 'fr')) {
+          prev[2] = `fr-${prev[2].indexOf('fr') === 0 ? 'fr' : prev[2]}`;
+          result = toFraction(result);
+          next.pop();
+        }
 
-          // fixed-unit as result from fractions
-          if (prev[2] === 'x-fraction') {
-            prev.pop();
-            next.pop();
-          }
+        // fixed-unit as result from fractions
+        if (prev[2] === 'x-fraction') {
+          prev.pop();
+          next.pop();
         }
       }
 
