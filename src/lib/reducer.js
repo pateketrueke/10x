@@ -7,9 +7,10 @@ import { calculateFromTokens } from './solver';
 export function reduceFromValue(token) {
   let text = token[1];
 
-  if (typeof text === 'number') {
-    text = text.toString().split(/(?=\d{2})/).join(':');
-    text += token[2] ? ` ${token[2]}` : '';
+  // adjust hours given as numbers
+  if (!text.includes(':') && /[ap]m$/.test(text)) {
+    text = text.split(/(?=\d{2})/).join(':');
+    text = text.replace(/(\d)(\w)/, '$1 $2');
   }
 
   // handle ISO strings
@@ -32,9 +33,8 @@ export function reduceFromValue(token) {
   if (text.toLowerCase() === 'yesterday') return (now.setDate(now.getDate() - 1), now);
   if (text.toLowerCase() === 'tomorrow') return (now.setDate(now.getDate() + 1), now);
   if (text.toLowerCase() === 'today') return new Date(`${today} 00:00:00`);
-  if (text.toLowerCase() === 'now') return now;
 
-  return text;
+  return now;
 }
 
 export function reduceFromTokens(tree, values) {

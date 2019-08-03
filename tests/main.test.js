@@ -86,6 +86,16 @@ describe('DSL', () => {
       expect(values(calc('Jun 10th'))).to.eql(['Sun Jun 10 2012 00:00:00']);
     });
 
+    it('should handle well-known dates', () => {
+      expect(values(calc('900am'))).to.eql(['Fri Mar 02 2012 09:00:00']);
+      expect(values(calc('900 am'))).to.eql(['Fri Mar 02 2012 09:00:00']);
+      expect(values(calc('9:00 am'))).to.eql(['Fri Mar 02 2012 09:00:00']);
+      expect(values(calc('now'))).to.eql(['Fri Mar 02 2012 11:38:49']);
+      expect(values(calc('today'))).to.eql(['Fri Mar 02 2012 00:00:00']);
+      expect(values(calc('tomorrow'))).to.eql(['Sat Mar 03 2012 11:38:49']);
+      expect(values(calc('yesterday'))).to.eql(['Thu Mar 01 2012 11:38:49']);
+    });
+
     it('should allow ISO dates', () => {
       expect(values(calc('1987-06-10T06:00:00.000Z'))).to.eql(['Wed Jun 10 1987 06:00:00']);
     });

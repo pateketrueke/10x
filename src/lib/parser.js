@@ -15,7 +15,7 @@ const OP_TYPES = {
 };
 
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
-const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)$/i;
+const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
 export const isIn = (x, a, b) => x >= a && x <= b;
@@ -153,6 +153,7 @@ export function joinTokens(data, units, types) {
 
       // handle and validate hours
       || (hasNum(oldChar) && cur === ' ' && RE_HOURS.test(oldChar + cur + next))
+      || (isInt(oldChar) && cur === ' ' && ['am', 'pm'].includes(next))
       || (cur === ':' && isIn(oldChar, 0, 24) && isIn(next, 0, 60))
     ) {
       if (stack.length) {
