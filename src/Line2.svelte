@@ -341,8 +341,12 @@
         if (RE_EMOJI.test(markup.substr(offset - 2, 2))) {
           push();
           setTimeout(() => {
-            refresh();
             saveCursor();
+            refresh();
+
+            // normalize offset in case of exceeding boundaries
+            if (offset - 1 === markup.length) offset--;
+
             pull();
             sel();
           });
