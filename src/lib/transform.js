@@ -1,5 +1,5 @@
 import {
-  isOp, isSep, isNum, hasNum, isChar, isExpr, hasKeyword, hasDatetime, hasDays,
+  isOp, isInt, isSep, isNum, hasNum, isChar, isExpr, hasKeyword, hasDatetime, hasMonths, hasDays,
   getOp, buildTree, cleanTree,
 } from './parser';
 
@@ -77,7 +77,7 @@ export function fromSymbols(text, units, expression) {
   }
 
   // handle separators
-  if (isSep(text)) {
+  if (text === '(' || text === ')') {
     return [text === '(' ? 'open' : 'close', text];
   }
 
@@ -185,6 +185,7 @@ export default function transform(input, units, types) {
       isSep(cur) || hasNum(cur)
 
       // allow keywords after some dates
+      || (isExpr(prevToken) && hasMonths(cur))
       || hasDays(cur) || (hasNum(prevToken) && isExpr(cur))
       || (hasDatetime(prevToken) && isExpr(cur) && isNum(nextToken))
 

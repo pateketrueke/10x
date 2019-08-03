@@ -51,27 +51,23 @@ export function calculateFromDate(op, left, right) {
       if (oldMonth !== newMonth) left.setMonth(newMonth);
     }
 
+    if (op === 'at') {
+      if (oldHours !== newHours) left.setHours(newHours);
+      if (oldMinutes !== newMinutes) left.setMinutes(newMinutes);
+      if (oldSeconds !== newSeconds) left.setSeconds(newSeconds);
+    }
+
     if (op === '-') {
       return Math.abs(right.getTime() - left.getTime());
     }
 
-    if (op === '+' || op === 'at') {
-      let isToday = true;
-
-      if (oldYear !== newYear) isToday = !left.setFullYear(oldYear + newYear);
-      if (oldMonth !== newMonth) isToday = !left.setMonth(oldMonth + newMonth);
-      if (oldDate !== newDate) isToday = !left.setDate(oldDate + newDate);
-
-      // operate only when both dates are not from same day!
-      if (!isToday) {
-        if (oldHours !== newHours) left.setHours(oldHours + newHours);
-        if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes + newMinutes);
-        if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds + newSeconds);
-      } else {
-        if (oldHours !== newHours) left.setHours(newHours);
-        if (oldMinutes !== newMinutes) left.setMinutes(newMinutes);
-        if (oldSeconds !== newSeconds) left.setSeconds(newSeconds);
-      }
+    if (op === '+') {
+      if (oldYear !== newYear) left.setFullYear(oldYear + newYear);
+      if (oldMonth !== newMonth) left.setMonth(oldMonth + newMonth);
+      if (oldDate !== newDate) left.setDate(oldDate + newDate);
+      if (oldHours !== newHours) left.setHours(oldHours + newHours);
+      if (oldMinutes !== newMinutes) left.setMinutes(oldMinutes + newMinutes);
+      if (oldSeconds !== newSeconds) left.setSeconds(oldSeconds + newSeconds);
     }
   } else {
     if ((op === 'of' || op === 'from') && isInt(right)) left.setFullYear(right);

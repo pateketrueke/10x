@@ -18,6 +18,7 @@ const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
+export const isIn = (x, a, b) => x >= a && x <= b;
 export const isOp = (a, b = '') => `${b}-+=*/;_`.includes(a);
 export const isSep = (a, b = '') => `${b}(|:;,)`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+\S*$/.test(a) || b.includes(a);
@@ -154,7 +155,7 @@ export function joinTokens(data, units, types) {
 
       // handle and validate hours
       || (hasNum(oldChar) && cur === ' ' && RE_HOURS.test(oldChar + cur + next))
-      || (cur === ':' && isInt(oldChar) && isInt(next))
+      || (cur === ':' && isIn(oldChar, 0, 24) && isIn(next, 0, 60))
     ) {
       if (stack.length) {
         buffer[offset++] = [oldChar + cur + next];
