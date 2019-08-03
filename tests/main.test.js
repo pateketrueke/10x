@@ -4,7 +4,7 @@ import Solvente from '../src/lib';
 const calc = (expr, opts) => new Solvente(opts).resolve(expr);
 const values = ({ results }) => results.map(x => x.format);
 
-describe.only('DSL', () => {
+describe('DSL', () => {
   describe('Basic operations', () => {
     it('should handle common errors', () => {
        expect(calc('1ml - 1cm').error.message).to.eql('Cannot convert incompatible measures of volume and length');
@@ -13,6 +13,7 @@ describe.only('DSL', () => {
     it('should handle most basic units', () => {
       expect(values(calc('1cm'))).to.eql(['1 cm']);
     });
+
     it('should handle most basic operators', () => {
       expect(values(calc('1+2, 3-4, 5/6, 7*8'))).to.eql(['3', '-1', '0.83', '56']);
     });
@@ -24,6 +25,19 @@ describe.only('DSL', () => {
     it('should apply well-known inflections', () => {
       expect(values(calc('2 weeks as day'))).to.eql(['14 days']);
       expect(values(calc('1d'))).to.eql(['1 day']);
+    });
+
+    it('should skip bad sequences from input', () => {
+      expect(values(calc('1 ) 2'))).to.eql(['1', '2']);
+    });
+
+    it('should handle nested sub-expressions', () => {
+      expect(values(calc('1 + ( 2 + ( 3 - 4 ) - 2 )'))).to.eql(['0']);
+    });
+
+    it('should validate nested sub-expressions', () => {
+      expect(() => calc('1+(2+(3-4)-2')).to.throw(/Missing terminator for `1\+\(`/);
+      expect(() => calc('1 + ( 2 + ( 3 - 4 ) - 2')).to.throw(/Missing terminator for `1 \+ \(`/);
     });
 
     it('should handle separated sub-expressions', () => {
@@ -65,12 +79,21 @@ describe.only('DSL', () => {
       expect(values(calc('2x', { expressions: { x: [['expr', '=', 'equal'], ['number', 1.5], ['expr', ';', 'k']] } }))).to.eql(['3']);
     });
 
+    it('should handle number suffixes', () => {
+      expect(values(calc('Jun 3rd'))).to.eql(['Sun Jun 03 2012 00:00:00']);
+      expect(values(calc('Jun 20ty'))).to.eql(['Wed Jun 20 2012 00:00:00']);
+      expect(values(calc('Jun 4th'))).to.eql(['Mon Jun 04 2012 00:00:00']);
+      expect(values(calc('Jun 10th'))).to.eql(['Sun Jun 10 2012 00:00:00']);
+    });
+
     it('should allow ISO dates', () => {
       expect(values(calc('1987-06-10T06:00:00.000Z'))).to.eql(['Wed Jun 10 1987 06:00:00']);
     });
   });
 
-  describe('Tokenization', () => {
-    it('...');
+  describe('Formatting', () => {
+    it('should handle code-blocks', () => {
+      expect(calc('foo `bar baz` buzz').input[2][0]).to.eql('code');
+    });
   });
 });

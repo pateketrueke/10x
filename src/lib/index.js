@@ -95,8 +95,15 @@ export default class Solvente {
       info.results = normalized.map(x => {
         const value = calculateFromTokens(x);
 
-        if (value[0] === 'number' && value[2] !== 'datetime') {
-          value[1] = parseFloat(toNumber(value[1]));
+        value[1] = toNumber(value[1]);
+
+        if (
+          value[2]
+          && value[0] === 'number'
+          && !(isInt(value[1]) || value[1] instanceof Date)
+        ) {
+          // remove trailing words from units
+          value[1] = value[1].replace(/[\sa-z]+$/ig, '');
         }
 
         let fixedValue = toValue(value[1]);

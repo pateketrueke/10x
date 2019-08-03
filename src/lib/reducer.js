@@ -20,7 +20,15 @@ export function reduceFromValue(token) {
   const today = now.toString().split(' ').slice(0, 4).join(' ');
 
   if (text.includes(':')) return new Date(`${today} ${text}`);
-  if (hasMonths(text)) return new Date(`${!text.includes(',') ? `${text}, ${year}` : text} 00:00:00`);
+
+  if (hasMonths(text)) {
+    // remove number suffixes
+    text = text.replace(/(\d+)[\sa-z]+$/, '$1');
+    text = !text.includes(',') ? `${text}, ${year}` : text;
+
+    return new Date(`${text} 00:00:00`);
+  }
+
   if (text.toLowerCase() === 'yesterday') return (now.setDate(now.getDate() - 1), now);
   if (text.toLowerCase() === 'tomorrow') return (now.setDate(now.getDate() + 1), now);
   if (text.toLowerCase() === 'today') return new Date(`${today} 00:00:00`);

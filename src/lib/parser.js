@@ -24,9 +24,9 @@ export const isSep = (a, b = '') => `${b}(|:;,)`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+\S*$/.test(a) || b.includes(a);
 
 export const isFmt = x => /^[_*~]$/.test(x);
-export const isNth = x => /^(?:th|[rn]d)y?$/.test(x);
-export const isInt = x => /^-?(?!0)\d+(\.\d+)?$/.test(x);
+export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
 export const isAny = x => /^[^\s\w\d_*~$€£¢%()|:;_,.+=*/-]$/.test(x);
+export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
@@ -48,8 +48,6 @@ export const hasPercent = x => {
 };
 
 export const hasKeyword = (x, units) => {
-  if (!x) return false;
-
   const key = x.replace(/^[^a-zA-Z]*/g, '');
   const test = key && (units[key] || units[key.toLowerCase()]);
 
@@ -170,7 +168,7 @@ export function joinTokens(data, units, types) {
     }
 
     // keep basic month-format together
-    if (hasMonths(oldChar) && cur === ' ' && isInt(next)) {
+    if (hasMonths(oldChar) && cur === ' ' && (isInt(next) || isNth(next))) {
       stack[stack.length - 1] += cur + (next || '');
       data.splice(i, 1);
       hasDate = true;
@@ -247,7 +245,6 @@ export function parseBuffer(text, fixeds) {
     const [fixedValue, fixedType] = fixedUnit || [];
 
     if (fixedType && (!chars[i + fixedValue.length] || isAny(chars[i + fixedValue.length]))) {
-      if (buffer.length) offset++;
       tokens[offset] = [fixedValue];
       types[fixedValue] = fixedType;
       chars.splice(i + 1, fixedValue.length - 1);
@@ -359,22 +356,22 @@ export function buildTree(tokens) {
         stack.push(root);
         root = leaf;
         ops = false;
-      } else if (t[0] === 'close') {
+      } else {
         root = stack.pop();
         ops = false;
       }
-    } else if (root) {
+    } else {
       if (isOp(t[1])) ops = true;
       root.push(t);
-    } else break;
+    }
   }
 
   // handle exceptions
-  if (depth || calls.length || (stack.length && ops)) {
+  if (depth || calls.length || stack.length) {
     depth = depth || (calls[0] || stack[0])._offset;
 
     const err = new Error(`Missing terminator for \`${
-      tokens.slice(0, Math.max(1, depth - 1)).map(x => x[1]).join('')
+      tokens.slice(0, Math.max(2, depth + 1)).map(x => x[1]).join('')
     }\``);
 
     err.offset = depth;
