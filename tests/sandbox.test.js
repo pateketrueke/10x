@@ -1,5 +1,6 @@
-import Solvente from '../src/lib';
+import tk from 'timekeeper';
 import { deepEqual } from 'assert';
+import Solvente from '../src/lib';
 
 const cases = [
   ['2 cm / 35mm', ['0.57 cm']],
@@ -30,21 +31,24 @@ const cases = [
   ['2+3 as cm', ['5 cm']],
   ['2+3, as cm', ['5 cm']],
   ['12 from 1987', ['0.6%']],
-  ['Jun 10 - Apr 15 2019', ['56d']],
+  ['Jun 10 - Apr 15 2019', ['310d']],
   ['1987-06-10T06:00:00.000Z', ['Wed Jun 10 1987 00:00:00']],
-  !process.env.CI ? ['-1 week as 1990', ['Thu Jul 26 1990 00:00:00']] : null,
-  !process.env.CI ? ['Jun 10 at 6:00 pm', ['Mon Jun 10 2019 18:00:00']] : null,
-  !process.env.CI ? ['1 month from today', ['Sun Sep 01 2019 10:30:00']] : null,
-  !process.env.CI ? ['3:35 am + 9 hours 20 minutes', ['Fri Aug 02 2019 12:55:00']] : null,
-  ['now as 10 of Jun from 1987', ['Wed Jun 10 1987 ' + new Date().toString().split(' ')[4]]],
+  ['-1 week as 1990', ['Fri Feb 23 1990 00:00:00']],
+  ['Jun 10 at 6:00 pm', ['Sun Jun 10 2012 18:00:00']],
+  ['1 month from today', ['Sun Apr 01 2012 10:30:00']],
+  ['3:35 am + 9 hours 20 minutes', ['Fri Mar 02 2012 12:55:00']],
+  ['now as 10 of Jun from 1987', ['Wed Jun 10 1987 05:38:49']],
   ['Jun 10, 1987 - 1 week', ['Wed Jun 03 1987 00:00:00']],
   ['Jun 10 of 1987', ['Wed Jun 10 1987 00:00:00']],
   ['Jun 10 1987', ['Wed Jun 10 1987 00:00:00']],
-  ['Jun 10', [`Mon Jun 10 ${new Date().getFullYear()} 00:00:00`]],
-  ['Jun 1', [`Sat Jun 01 ${new Date().getFullYear()} 00:00:00`]],
+  ['Jun 10', [`Sun Jun 10 2012 00:00:00`]],
+  ['Jun 1', [`Fri Jun 01 2012 00:00:00`]],
 ];
 
 const calc = new Solvente();
+const time = new Date(1330688329321);
+
+tk.freeze(time);
 
 describe('Sandbox', () => {
   cases.forEach(test => {
