@@ -12,7 +12,7 @@
     "start:dev": "sirv public --single --dev",
     "dev:test": "npm run test -- -w",
     "mocha": "_mocha --exit --recursive -bR spec",
-    "test": "npm run test:unit --",
+    "test": "TZ=UTC npm run test:unit --",
     "test:ci": "npm run test:coverage -- -r lcov",
     "test:unit": "npm run mocha -- -r esm 'tests/*.test.js'",
     "test:coverage": "npm run coverage -- npm run test:unit && npm run report --",
