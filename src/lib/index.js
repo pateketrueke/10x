@@ -17,18 +17,22 @@ export default class Solvente {
   constructor(opts = {}) {
     this.expressions = {
       ...DEFAULT_EXPRESSIONS,
+      ...(opts.expressions || {}),
     };
 
     this.inflections = {
       ...DEFAULT_INFLECTIONS,
+      ...(opts.inflections || {}),
     };
 
     this.units = {
       ...DEFAULT_MAPPINGS,
+      ...(opts.units || {}),
     };
 
     this.types = [
       ...DEFAULT_TYPES,
+      ...(opts.types || []),
     ];
 
     // try built-ins first
@@ -36,10 +40,9 @@ export default class Solvente {
       return convertFrom(num, base, target);
     };
 
-    // extend with custom expressions
+    // extend units from custom expressions
     if (typeof opts.expressions === 'object') {
       Object.keys(opts.expressions).forEach(key => {
-        this.expressions[key] = opts.expressions[key];
         this.units[key] = key;
       });
     }
