@@ -1,17 +1,19 @@
 <script context="module">
   import EmojiPicker from './pick/Emoji.svelte';
   import DebugInfo from './Debug.svelte';
+  import Solvente from './lib';
+
+  import { isOp, hasTagName } from './lib/parser';
 
   import {
-    basicFormat,
     getCursor,
     setCursor,
-    toValue,
     getClipbordText,
     getSelectionStart,
     removeSelectedText,
-    calculateFromTokens,
   } from './util';
+
+  const calc = new Solvente();
 
   const MODES = {
     ':': {
@@ -31,16 +33,10 @@
 
   const dispatch = createEventDispatcher();
 
+  let info = calc.resolve(markup);
   let node;
   let input;
   let overlay;
-
-  let info = {
-    input: [],
-    output: '',
-    tokens: [],
-    results: [],
-  };
 
   let sources = [];
   let selected = 0;
@@ -77,57 +73,28 @@
     }
   }
 
-  // evaluate aftermath
-  function maths() {
-    info.errored = undefined;
-    info.tokens = all(x => [x.dataset.op, x.textContent, x.dataset.unit || undefined]);
-
-    try {
-      input.classList.remove('errored');
-      input.removeAttribute('title');
-
-      info = {
-        ...info,
-        ...calculateFromTokens(info.tokens),
-      };
-    } catch (e) {
-      // always debug on console
-      if (debug) console.log(e);
-
-      info.errored = {
-        offset: e.offset,
-        message: e.message,
-      };
-
-      const ops = all();
-
-      if (e.offset > 0 && ops[e.offset]) {
-        ops[e.offset].classList.add('errored');
-        ops[e.offset].setAttribute('title', e.message);
-      } else {
-        input.classList.add('errored');
-        input.setAttribute('title', e.message);
-      }
-    }
-  }
-
   // we take the markup and inject HTML from it
   function render() {
-    let suffix = '';
-
     // FIXME: instead of this, try render using vDOM?
-    try {
-      info = basicFormat(markup);
-    } catch (e) {
-      info = basicFormat(markup.substr(0, e.offset));
-      suffix = `<span style="background-color:red;color:white">${
-        markup.substr(e.offset).replace(/\s/g, String.fromCharCode(160))
-      }</span>`;
-    }
+    const html = info.input.reduce((prev, cur) => {
+      if (cur[0] === 'text') {
+        prev.push(`<var>${cur[1].replace(/\s/g, String.fromCharCode(160))}</var>`);
+      } else if (cur[0] === 'expr') {
+        if (isOp(cur[1])) prev.push(`<var data-op="${cur[2]}">${cur[1]}</var>`);
+        else prev.push(`<var data-op="expr">${cur[1]}</var>`);
+      } else if (cur[0] === 'open' || cur[0] === 'close') {
+        prev.push(`<var data-op="${cur[0]}">${cur[1]}</var>`);
+      } else if (cur[0] === 'number') {
+        prev.push(`<var data-op="number">${cur[1]}</var>`);
+      } else if (hasTagName(cur[0])) {
+        if (cur[0] === 'heading') prev.push(`<h${cur[2]}>${cur[1]}</h${cur[2]}>`);
+        else prev.push(`<${cur[0]}>${cur[1]}</${cur[0]}>`);
+      }
 
-    input.innerHTML = `${info.output} `;
+      return prev;
+    }, []).join('');
 
-    maths();
+    input.innerHTML = `${html} `;
   }
 
   // apply changes to current markup
@@ -318,7 +285,7 @@
       if (e.metaKey && e.keyCode === 90) revert(e);
       if (e.metaKey && e.keyCode === 88) {
         setTimeout(() => {
-          maths(push());
+          push();
           sync({ selectedText });
         }, 10);
       }
@@ -459,34 +426,17 @@
   function select(e) {
     clearTimeout(select.t);
 
-    const [type, nth] = e.detail;
+    const { offset } = e.detail;
 
     if (node) node.classList.remove('highlighted');
 
     // patch parsed input as regular nodes, or text nodes...
-    if (type === 'input') {
-      const sub = input.childNodes[nth];
+    const sub = input.childNodes[offset];
 
-      // highlight regular nodes
-      if (sub && sub.nodeType === 1) {
-        node = sub;
-      }
-
-      // patch current DOM to highlight text nodes
-      if (sub && sub.nodeType === 3) {
-        const target = document.createElement('var');
-
-        target.textContent = sub.textContent;
-
-        sub.parentNode.insertBefore(target, sub);
-        sub.parentNode.removeChild(sub);
-
-        node = target;
-      }
+    // highlight regular nodes
+    if (sub && sub.nodeType === 1) {
+      node = sub;
     }
-
-    // otherwise, we highlight all well-known nodes
-    if (type === 'tokens') node = all()[nth];
 
     if (node) {
       node.classList.add('highlighted');
@@ -547,8 +497,8 @@
     />
     {#if info.results}
       <div class="results">
-        {#each info.results as [type, value, unit]}
-          <var data-result={type}>{toValue(value, unit)}</var>
+        {#each info.results as { type, format }}
+          <var data-result={type}>{format}</var>
         {/each}
       </div>
     {/if}

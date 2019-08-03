@@ -32,4 +32,5 @@ function makeEntry(input, output, liveReload) {
 
 export default [
   makeEntry('src/lib/index.js', { format: 'cjs', file: 'dist/solvente.js' }, false),
+  makeEntry('src/main.js', { format: 'iife', file: 'public/bundle.js', name: 'Solvente' }, !production),
 ];

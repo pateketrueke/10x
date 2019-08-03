@@ -10,7 +10,7 @@
     2TB + 25GB = [2.025TB]
     3GB / 1MB = [3,000]
     2 + 1 inch + 1cm = [3.394 inches]
-    $15,000 MXN / 14 days of **work** 😅😇👋🏿👨‍👨‍👧‍👧
+    $15,000 MXN / 14 days of **work**  😅😇👋🏿👨‍👨‍👧‍👧
     10 inches in cm
     450 km in miles
     160 pounds as kg

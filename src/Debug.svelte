@@ -10,7 +10,7 @@
   const dispatch = createEventDispatcher();
 
   function focus(offset) {
-    dispatch('focus', offset);
+    dispatch('focus', { offset });
   }
 
   function set(e) {
@@ -86,9 +86,10 @@
   {#if mode === 'input' && input.length}
     <p>
       {#each input as chunk, i}
-        <small on:click={() => focus(['input', i])}>
-          {chunk === ' ' ? String.fromCharCode(160) : chunk}
-          {#if chunk !== ' ' && chunk.length > 5}<span>{chunk.length}</span>{/if}
+        <small on:click={() => focus(i)}>
+          <em>{chunk[0]}</em>
+          <var>{chunk[1]}</var>
+          {#if chunk[2]}<span>{chunk[2]}</span>{/if}
         </small>
       {/each}
     </p>
@@ -96,10 +97,9 @@
   {#if mode === 'tokens' && tokens.length}
     <p>
       {#each tokens as chunk, i}
-        <small on:click={() => focus(['tokens', i])}>
-          <em>{chunk[0]}</em>
-          <var>{chunk[1]}</var>
-          {#if chunk[2]}<span>{chunk[2]}</span>{/if}
+        <small on:click={() => focus(i)}>
+          {chunk === ' ' ? String.fromCharCode(160) : chunk}
+          {#if chunk !== ' ' && chunk.length > 5}<span>{chunk.length}</span>{/if}
         </small>
       {/each}
     </p>
