@@ -11,7 +11,6 @@ const OP_TYPES = {
   '/': 'div',
   '*': 'mul',
   ',': 'or',
-  ';': 'k',
 };
 
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
