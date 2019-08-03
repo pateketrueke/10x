@@ -88,14 +88,15 @@ export default class Solvente {
 
           // ensure we keep no empty chunks
           if (normalized[offset].length) offset += 1;
+          else normalized.length = offset;
         }
       }
 
       info.results = normalized.map(x => {
-        let value = calculateFromTokens(x);
+        const value = calculateFromTokens(x);
 
-        if (value[0] === 'number') {
-          value[1] = toNumber(value[1]);
+        if (value[0] === 'number' && value[2] !== 'datetime') {
+          value[1] = parseFloat(toNumber(value[1]));
         }
 
         let fixedValue = toValue(value[1]);
