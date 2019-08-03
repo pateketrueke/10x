@@ -98,6 +98,10 @@ export function toNumber(value) {
 }
 
 export function toValue(value) {
+  if (typeof value === 'undefined') {
+    return null;
+  }
+
   if (value instanceof Date) {
     return value.toString().split(' ').slice(0, 5).join(' ');
   }
