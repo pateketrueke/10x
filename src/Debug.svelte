@@ -98,7 +98,7 @@
     <p>
       {#each tokens as chunk, i}
         <small on:click={() => focus(i)}>
-          {chunk === ' ' ? String.fromCharCode(160) : chunk}
+          {chunk.replace(/\s/g, String.fromCharCode(160))}
           {#if chunk !== ' ' && chunk.length > 5}<span>{chunk.length}</span>{/if}
         </small>
       {/each}

@@ -75,6 +75,8 @@
 
   // we take the markup and inject HTML from it
   function render() {
+    info = calc.resolve(markup);
+
     // FIXME: instead of this, try render using vDOM?
     const html = info.input.reduce((prev, cur) => {
       if (cur[0] === 'text') {
@@ -218,7 +220,7 @@
 
     if (e.keyCode === 8) {
       removeSelectedText();
-      input.style.whiteSpace = 'normal';
+      input.style.whiteSpace = 'nowrap';
     }
   }
 
