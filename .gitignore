@@ -1,6 +1,8 @@
 *.todo
 .DS_Store
 dist
+coverage
+.nyc_output
 node_modules
 public/bundle.*
 expressions.json
