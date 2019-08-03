@@ -14,7 +14,7 @@ import {
 } from './convert';
 
 export default class Solvente {
-  constructor(opts) {
+  constructor(opts = {}) {
     this.expressions = {
       ...DEFAULT_EXPRESSIONS,
     };
@@ -108,7 +108,7 @@ export default class Solvente {
           fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
 
-        if (fixedUnit) {
+        if (fixedUnit && !(fixedUnit === 'datetime' || value[1] instanceof Date)) {
           // apply well-known inflections
           if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
             const [one, many] = this.inflections[fixedUnit];
