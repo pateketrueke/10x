@@ -10,13 +10,17 @@ import { calculateFromTokens } from './solver';
 
 import {
   unitFrom, convertFrom,
-  DEFAULT_TYPES, DEFAULT_MAPPINGS, DEFAULT_EXPRESSIONS,
+  DEFAULT_TYPES, DEFAULT_MAPPINGS, DEFAULT_EXPRESSIONS, DEFAULT_INFLECTIONS,
 } from './convert';
 
 export default class Solvente {
   constructor(opts) {
     this.expressions = {
       ...DEFAULT_EXPRESSIONS,
+    };
+
+    this.inflections = {
+      ...DEFAULT_INFLECTIONS,
     };
 
     this.units = {
@@ -99,8 +103,16 @@ export default class Solvente {
           fixedUnit = fixedUnit.split('fr-')[1];
         }
 
-        // FIXME: plural/singular?
         if (fixedUnit) {
+          // apply well-known inflections
+          if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
+            const [one, many] = this.inflections[fixedUnit];
+            const base = parseFloat(fixedValue);
+
+            if (base === 1.0 && one) fixedUnit = one;
+            if (base !== 1.0 && many) fixedUnit = many;
+          }
+
           fixedValue += ` ${fixedUnit}`;
         }
 

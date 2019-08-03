@@ -9,6 +9,8 @@ export const CURRENCY_SYMBOLS = currencySymbols.settings.symbols;
 
 export const DEFAULT_EXPRESSIONS = {};
 
+export const DEFAULT_INFLECTIONS = {};
+
 // fraction handling is built-in
 export const DEFAULT_MAPPINGS = {
   fr: 'fr',
@@ -41,6 +43,7 @@ groups.forEach(group => {
     if (!plural.includes(' ') && singular !== plural) {
       DEFAULT_MAPPINGS[plural.toLowerCase()] = abbr;
       DEFAULT_MAPPINGS[singular.toLowerCase()] = abbr;
+      DEFAULT_INFLECTIONS[abbr] = [singular.toLowerCase(), plural.toLowerCase()];
     }
   });
 });
