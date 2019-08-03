@@ -2,7 +2,7 @@ import transform from './transform';
 
 import {
   parseBuffer, joinTokens, cleanTree,
-  isOp, isSep, toFraction, toNumber, toValue,
+  isOp, isInt, isSep, toFraction, toNumber, toValue,
 } from './parser';
 
 import { reduceFromAST } from './reducer';
@@ -101,6 +101,11 @@ export default class Solvente {
         if (fixedUnit && fixedUnit.indexOf('fr-') === 0) {
           fixedValue = toFraction(fixedValue);
           fixedUnit = fixedUnit.split('fr-')[1];
+        }
+
+        // add thousand separators
+        if (isInt(fixedValue)) {
+          fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
 
         if (fixedUnit) {

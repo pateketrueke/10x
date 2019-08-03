@@ -22,8 +22,8 @@ export const isOp = (a, b = '') => `${b}-+=*/;_`.includes(a);
 export const isSep = (a, b = '') => `${b}(|:;,)`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+\S*$/.test(a) || b.includes(a);
 
-export const isInt = x => /^-?\d+$/.test(x);
 export const isFmt = x => /^[_*~]$/.test(x);
+export const isInt = x => /^-?(?!0)\d+/.test(x);
 export const isAny = x => /\W/.test(x) && !isOp(x);
 export const isNth = x => /^(?:th|[rn]d)y?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
