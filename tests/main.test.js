@@ -22,12 +22,25 @@ const cases = [
   ['Some values are already units, like 1cm - 35mm.', ['-2.5 cm']],
 ];
 
-const calc = new Solvente();
-
 describe('DSL', () => {
   cases.forEach(test => {
     it(test[0], () => {
-      deepEqual(calc.resolve(test[0]).results.map(x => x.format), test[1]);
+      deepEqual(new Solvente().resolve(test[0]).results.map(x => x.format), test[1]);
     });
   });
 });
+
+// const calc = expr => new Solvente().resolve(expr);
+// const values = ({ results }) => results.map(x => x.format);
+
+// describe('DSL', () => {
+//   describe('Basic operations', () => {
+//     it('handle most basic operators', () => {
+//       deepEqual(values(calc('1+2, 3-4, 5/6, 7*8')), ['3', '-1', '0.83', '56']);
+//     });
+//   });
+
+//   describe('Tokenization', () => {
+//     it('...');
+//   });
+// });
