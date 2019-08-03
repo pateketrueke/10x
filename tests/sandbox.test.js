@@ -31,6 +31,7 @@ const cases = [
   ['2+3, as cm', ['5 cm']],
   ['12 from 1987', ['0.6%']],
   ['Jun 10 - Apr 15 2019', ['56d']],
+  ['1987-06-10T06:00:00.000Z', ['Wed Jun 10 1987 00:00:00']],
   !process.env.CI ? ['-1 week as 1990', ['Thu Jul 26 1990 00:00:00']] : null,
   !process.env.CI ? ['Jun 10 at 6:00 pm', ['Mon Jun 10 2019 18:00:00']] : null,
   !process.env.CI ? ['1 month from today', ['Sun Sep 01 2019 10:30:00']] : null,
