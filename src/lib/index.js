@@ -109,7 +109,7 @@ export default class Solvente {
           fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
 
-        if (fixedUnit && !(fixedUnit === 'datetime' || value[1] instanceof Date)) {
+        if (fixedUnit && !(['datetime', 'x-fraction'].includes(fixedUnit) || value[1] instanceof Date)) {
           // apply well-known inflections
           if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
             const [one, many] = this.inflections[fixedUnit];
@@ -119,7 +119,9 @@ export default class Solvente {
             if (base !== 1.0 && many) fixedUnit = many;
           }
 
-          fixedValue += ` ${fixedUnit}`;
+          if (fixedUnit !== 'fr') {
+            fixedValue += ` ${fixedUnit}`;
+          }
         }
 
         return {

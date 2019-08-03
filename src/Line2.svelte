@@ -87,7 +87,13 @@
       } else if (cur[0] === 'open' || cur[0] === 'close') {
         prev.push(`<var data-op="${cur[0]}">${cur[1]}</var>`);
       } else if (cur[0] === 'number') {
-        prev.push(`<var data-op="number">${cur[1]}</var>`);
+        if (cur[1].includes('/')) {
+          const [a, b, c] = cur[1].split(/[\s/]/);
+
+          prev.push(`<var data-op="number"><sup>${a}</sup><span>/</span><sub>${b}</sub>${c ? ` ${c}` : ''}</var>`);
+        } else {
+          prev.push(`<var data-op="number">${cur[1]}</var>`);
+        }
       } else if (cur[0] === 'unit') {
         prev.push(`<var data-op="unit">${cur[1]}</var>`);
       } else if (hasTagName(cur[0])) {
