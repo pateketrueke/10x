@@ -457,6 +457,7 @@
 <style>
   .input {
     word-break: break-word;
+    white-space: nowrap;
     left: 0;
     top: 0;
     z-index: 1;
