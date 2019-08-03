@@ -303,7 +303,7 @@ export function parseBuffer(text, fixeds) {
       || (hasNum(last) && cur === '%')
 
       // non-keywords
-      || (isAny(cur))
+      || (isAny(cur) && last !== ' ')
 
       // keep words and numbers together
       || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))
