@@ -21,6 +21,7 @@
     "report": "nyc report"
   },
   "devDependencies": {
+    "chai": "^4.2.0",
     "codecov": "^3.5.0",
     "convert-units": "^2.3.4",
     "currency-symbol.js": "^1.0.0",

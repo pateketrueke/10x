@@ -128,9 +128,9 @@ export function operateExpression(ops, expr) {
           }
 
           // escape unit-fractions for later
-          if (next[0] === 'unit' && next[2] === 'fr') {
+          if (next[0] === 'unit' && (next[2] === 'fr' || next[1] === 'fr')) {
+            prev[2] = `fr-${prev[2].indexOf('fr') === 0 ? 'fr' : prev[2]}`;
             result = toFraction(result);
-            prev[2] = `fr-${prev[2]}`;
             next.pop();
           }
 
