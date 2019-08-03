@@ -88,6 +88,8 @@
         prev.push(`<var data-op="${cur[0]}">${cur[1]}</var>`);
       } else if (cur[0] === 'number') {
         prev.push(`<var data-op="number">${cur[1]}</var>`);
+      } else if (cur[0] === 'unit') {
+        prev.push(`<var data-op="unit">${cur[1]}</var>`);
       } else if (hasTagName(cur[0])) {
         if (cur[0] === 'heading') prev.push(`<h${cur[2]}>${cur[1]}</h${cur[2]}>`);
         else prev.push(`<${cur[0]}>${cur[1]}</${cur[0]}>`);
@@ -191,6 +193,11 @@
         setCursor(input, newOffset);
       }
     }
+  }
+
+  // ensure we sync from browser-input
+  function refresh() {
+    markup = input.textContent.replace(/\s$/, '');
   }
 
   // extract source from current contenteditable
@@ -319,11 +326,8 @@
         if (e.key !== 'Dead') {
           setTimeout(() => {
             saveCursor();
-
-            // retrive buffer con rendered content
-            markup = input.textContent;
+            refresh();
             isDead = false;
-
             pull();
           });
         }
@@ -337,9 +341,7 @@
         if (RE_EMOJI.test(markup.substr(offset - 2, 2))) {
           push();
           setTimeout(() => {
-            // remove last white-space to preserve length
-            markup = input.textContent.substr(0, input.textContent.length - 1);
-
+            refresh();
             saveCursor();
             pull();
             sel();
