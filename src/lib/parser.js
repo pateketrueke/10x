@@ -1,5 +1,5 @@
 import {
-  TIME_UNITS,
+  TIME_UNITS, CURRENCY_MAPPINGS,
 } from './convert';
 
 const TAG_TYPES = ['blockquote', 'heading', 'em', 'b', 'code', 'text'];
@@ -30,6 +30,7 @@ export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
+export const isMoney = x => CURRENCY_MAPPINGS[x];
 export const isJoin = x => '_,.'.includes(x);
 
 export const getOp = x => OP_TYPES[x];
@@ -302,6 +303,7 @@ export function parseBuffer(text, fixeds) {
 
       // non-keywords
       || (isAny(cur) && last !== ' ')
+      || (isMoney(last) && hasNum(cur))
 
       // keep words and numbers together
       || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))

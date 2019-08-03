@@ -5,10 +5,15 @@ const convert = new Convert();
 const groups = convert.measures();
 
 export const TIME_UNITS = convert.list('time').map(x => x.abbr).sort();
+
 export const CURRENCY_SYMBOLS = currencySymbols.settings.symbols;
+export const CURRENCY_MAPPINGS = {};
+
+Object.keys(CURRENCY_SYMBOLS).forEach(key => {
+  CURRENCY_MAPPINGS[CURRENCY_SYMBOLS[key]] = key;
+});
 
 export const DEFAULT_EXPRESSIONS = {};
-
 export const DEFAULT_INFLECTIONS = {};
 
 // fraction handling is built-in
