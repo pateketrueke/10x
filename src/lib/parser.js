@@ -13,6 +13,7 @@ const OP_TYPES = {
   ',': 'or',
 };
 
+const RE_NUM = /^-?\.?\d|^.?\w+\s*\d/;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
@@ -34,7 +35,7 @@ export const isJoin = x => '_,.'.includes(x);
 
 export const getOp = x => OP_TYPES[x];
 
-export const hasNum = x => /\d/.test(x);
+export const hasNum = x => RE_NUM.test(x);
 export const hasDays = x => RE_DAYS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
 export const hasTagName = x => TAG_TYPES.includes(x);
@@ -259,40 +260,42 @@ export function parseBuffer(text, fixeds) {
     const next = chars[i + 1];
     const cur = chars[i];
 
-    // skip closing chars if they're not well paired
-    if (!open && cur === ')') {
-      buffer.push(cur);
-      continue;
-    }
-
-    if (cur === '(') open++;
-    if (cur === ')') open--;
-
-    // enable backticks
-    if (cur === '`') {
-      inFormat = !inFormat;
-
-      if (inFormat) {
-        tokens[++offset] = [cur];
-      } else {
-        buffer.push(cur);
-        offset++;
-      }
-
-      continue;
-    }
-
-    // enable headings/blockquotes, skip everything
-    if ('#>'.includes(cur) && i === 0) inBlock = true;
-
-    // allow skip from open/close formatting chars
-    if (isFmt(cur) && last === cur) {
-      inFormat = !inFormat;
-
-      // stop concatenation!
-      if (!inFormat) {
+    if (!inBlock) {
+      // skip closing chars if they're not well paired
+      if (!open && cur === ')') {
         buffer.push(cur);
         continue;
+      }
+
+      if (cur === '(') open++;
+      if (cur === ')') open--;
+
+      // enable backticks
+      if (cur === '`') {
+        inFormat = !inFormat;
+
+        if (inFormat) {
+          tokens[++offset] = [cur];
+        } else {
+          buffer.push(cur);
+          offset++;
+        }
+
+        continue;
+      }
+
+      // enable headings/blockquotes, skip everything
+      if ('#>'.includes(cur) && i === 0) inBlock = true;
+
+      // allow skip from open/close formatting chars
+      if (isFmt(cur) && last === cur) {
+        inFormat = !inFormat;
+
+        // stop concatenation!
+        if (!inFormat) {
+          buffer.push(cur);
+          continue;
+        }
       }
     }
 

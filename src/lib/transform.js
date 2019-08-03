@@ -12,47 +12,41 @@ export function toToken(offset, fromCallback, arg1, arg2, arg3) {
 }
 
 export function fromMarkdown(text) {
-  // escape for HTML
-  const buffer = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
   // handle code blocks
-  if (buffer.charAt() === '`' && buffer.charAt(buffer.length - 1) === '`') {
-    return ['code', buffer];
+  if (text.charAt() === '`' && text.charAt(text.length - 1) === '`') {
+    return ['code', text];
   }
 
   // handle headings
-  if (buffer.charAt() === '#') {
-    const matches = buffer.match(/^(#+)(.*)$/);
+  if (text.charAt() === '#') {
+    const matches = text.match(/^(#+)(.*)$/);
     const level = Math.min(matches[1].length, 6);
 
-    return ['heading', buffer, level];
+    return ['heading', text, level];
   }
 
   // handle blockquotes
-  if (buffer.charAt() === '>') {
-    return ['blockquote', buffer];
+  if (text.charAt() === '>') {
+    return ['blockquote', text];
   }
 
   // handle more formats: del, em, bold
-  const begin = buffer.substr(0, 2);
-  const end = buffer.substr(buffer.length - 2, 2);
+  const begin = text.substr(0, 2);
+  const end = text.substr(text.length - 2, 2);
 
   if (begin === '~~' && end === '~~') {
-    return ['del', buffer];
+    return ['del', text];
   }
 
   if (begin === '__' && end === '__') {
-    return ['em', buffer];
+    return ['em', text];
   }
 
   if (begin === '**' && end === '**') {
-    return ['b', buffer];
+    return ['b', text];
   }
 
-  return ['text', buffer];
+  return ['text', text];
 }
 
 export function fromSymbols(text, units, expression) {
@@ -82,7 +76,7 @@ export function fromSymbols(text, units, expression) {
   }
 
   // handle fraction numbers
-  if (/^\d+\/\d+$/.test(text)) {
+  if (text.includes('/')) {
     return ['number', text, 'x-fraction'];
   }
 
@@ -102,12 +96,7 @@ export function fromSymbols(text, units, expression) {
     return ['unit', text].concat(fixedUnit !== text ? fixedUnit : []);
   }
 
-  // all numbers
-  if (isNum(text)) {
-    return ['number', text];
-  }
-
-  return ['text', text];
+  return ['number', text];
 }
 
 export default function transform(input, units, types) {
@@ -182,30 +171,17 @@ export default function transform(input, units, types) {
 
     if (
       // handle most operators
-      isSep(cur) || hasNum(cur)
+      isSep(cur) || hasNum(cur) || isOp(cur)
 
       // allow keywords after some dates
       || (isExpr(prevToken) && hasMonths(cur))
       || hasDays(cur) || (hasNum(prevToken) && isExpr(cur))
       || (hasDatetime(prevToken) && isExpr(cur) && isNum(nextToken))
 
-      // operators, followed by numbers or separators
-      || (isOp(cur) && (hasNum(nextToken) || isSep(nextToken)))
-
-      // numbers, if they have preceding operators or separators
-      || ((isOp(prevToken) || isSep(prevToken)) && hasNum(cur))
-
-      // numbers sorrounding numbers
-      || (hasNum(cur) && (hasNum(nextToken) || hasNum(prevToken)))
-
       // handle expressions between numbers/units
       || (isExpr(cur) && hasKeyword(nextToken, units))
-      || (hasNum(prevToken) && isOp(cur) && hasKeyword(nextToken, units))
-      || (isOp(cur) && hasKeyword(prevToken, units) && hasKeyword(nextToken, units))
+      || ((isOp(prevToken) || isSep(prevToken)) && hasNum(cur))
       || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
-
-      // handle operators between separators
-      || ((prevToken === ')' || hasNum(prevToken)) && isOp(cur) && (nextToken === '(' || hasNum(nextToken)))
     ) {
       prev.push(toToken(i, fromSymbols, cur, units));
     } else {

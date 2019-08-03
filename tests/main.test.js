@@ -107,8 +107,12 @@ describe('DSL', () => {
   });
 
   describe('Formatting', () => {
-    it('should handle code-blocks', () => {
+    it('should handle markdown-like formatting', () => {
       expect(calc('foo `bar baz` buzz').input[2][0]).to.eql('code');
+      expect(calc('foo ~~bar baz~~ buzz').input[2][0]).to.eql('del');
+      expect(calc('foo __bar baz__ buzz').input[2][0]).to.eql('em');
+      expect(calc('foo **bar baz** buzz').input[2][0]).to.eql('b');
+      expect(calc('> ~~foo~~ `bar` __baz__ **buzz**').input[0][0]).to.eql('blockquote');
     });
   });
 });
