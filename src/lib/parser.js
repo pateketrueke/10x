@@ -32,7 +32,7 @@ export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
 export const isMoney = x => CURRENCY_MAPPINGS[x];
-export const isJoin = x => '_,.'.includes(x);
+export const isJoin = x => '_.'.includes(x);
 
 export const getOp = x => OP_TYPES[x];
 
@@ -206,9 +206,16 @@ export function joinTokens(data, units, types) {
 
       // handle other ops between words...
       || isAny(cur)
+      // || (isChar(oldChar) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
+      // || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
     ) {
-      stack.push(cur);
-      continue;
+      // stack.push(cur);
+      // continue;
+      // make sure we're not adding units... or keywords
+      if (cur !== ' ' && !(isExpr(cur) || hasKeyword(cur, units))) {
+        stack.push(cur);
+        continue;
+      }
     }
 
     // handle fractions
@@ -298,11 +305,34 @@ export function parseBuffer(text, fixeds) {
     if (
       inFormat || inBlock || typeof last === 'undefined'
 
+      // percentages
+      // || (hasNum(last) && cur === '%')
+
+      // non-keywords
+      || (isAny(cur) && last !== ' ')
+      // || (isMoney(last) && hasNum(cur))
+
+      // // // keep words and numbers together
+      // || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))
+      // || (isNum(last) && isChar(cur)) || (isChar(last) && isNum(cur))
+
+      // keep some separators between numbers
+      || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
+
+      // // // handle numbers, including negatives between ops; notice all N-N are splitted
+      // || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
+
       // keep chars and numbers together
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
       // || (last === '-' && isNum(cur)) || (cur === '-' && isNum(next))
     ) {
       buffer.push(cur);
+      // make sure we're skipping from words
+      // if (last && isChar(last) && isSep(cur, '.') && !isNum(next)) {
+      //   tokens[++offset] = [cur];
+      // } else {
+      //   buffer.push(cur);
+      // }
     } else {
       tokens[++offset] = [cur];
     }

@@ -2,9 +2,12 @@ import { expect } from 'chai';
 import Solvente from '../src/lib';
 
 const calc = (expr, opts) => new Solvente(opts).resolve(expr);
-const values = ({ results }) => results.map(x => x.format);
+const values = ({ tokens, results }) => {
+  // console.log(tokens);
+  return results.map(x => x.format);
+};
 
-describe('DSL', () => {
+describe.only('DSL', () => {
   describe('Basic operations', () => {
     it('should handle common errors', () => {
        expect(calc('1ml - 1cm').error.message).to.eql('Cannot convert incompatible measures of volume and length');
@@ -71,7 +74,7 @@ describe('DSL', () => {
       expect(values(calc('1123foo', { types: [['0000foo', 'cm']] }))).to.eql(['1,123 cm']);
     });
 
-    it.only('should handle local functions', () => {
+    it('should handle local functions', () => {
       expect(values(calc("f(x',y)=x'*y;f(2, 3)"))).to.eql(['6']);
       expect(values(calc("f(x',y)=(x'*y);f(2, 3)"))).to.eql(['6']);
       expect(values(calc("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)"))).to.eql(['-4']);
