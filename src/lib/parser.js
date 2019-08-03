@@ -22,7 +22,7 @@ const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 export const isIn = (x, a, b) => x >= a && x <= b;
 export const isOp = (a, b = '') => `${b}-+=*/;_`.includes(a);
 export const isSep = (a, b = '') => `${b}(|:;,)`.includes(a);
-export const isChar = (a, b = '') => /^[a-zA-Z]+\S*$/.test(a) || b.includes(a);
+export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
 export const isFmt = x => /^[_*~]$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
@@ -206,13 +206,18 @@ export function joinTokens(data, units, types) {
 
       // handle other ops between words...
       || isAny(cur)
+      // || (isOp(cur) && !isChar(next))
       // || (isChar(oldChar) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
-      // || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
+      || (next === '-' && isChar(cur) && !isOp(oldChar))
+      || (cur === '-' && isChar(next) && !isOp(oldChar))
     ) {
       // stack.push(cur);
+    // console.log({cur,k:hasKeyword(cur,units)});
       // continue;
       // make sure we're not adding units... or keywords
-      if (cur !== ' ' && !(isExpr(cur) || hasKeyword(cur, units))) {
+      // if (!(isOp(cur) || isSep(cur, ' ') || isExpr(cur) || hasKeyword(cur, units))) {
+      // }
+      if (cur !== ' ' && !(isExpr(next) || hasKeyword(next, units))) {
         stack.push(cur);
         continue;
       }
