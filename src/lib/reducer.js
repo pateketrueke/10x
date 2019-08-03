@@ -46,7 +46,10 @@ export function reduceFromTokens(tree, values) {
 
     // one matches, replace!
     if (values[item[1]]) {
-      return values[item[1]];
+      let retval = values[item[1]];
+
+      while (retval.length === 1) retval = retval[0];
+      return retval;
     }
 
     return item;
@@ -57,6 +60,9 @@ export function reduceFromArgs(keys, values) {
   let offset = 0;
 
   const locals = [];
+
+  // flatten all single-nodes
+  while (values.length === 1) values = values[0];
 
   // break values into single arguments
   for (let i = 0; i < values.length; i += 1) {
@@ -85,9 +91,10 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
 
   return tokens.reduce((prev, cur, i) => {
     // handle var/call definitions
-    if (cur[0] === 'def' && cur[2]) {
-      const isDef = (cur[2][0][0] === 'expr' && cur[2][0][1] === '=')
-        || (cur[2][1] && cur[2][1][0] === 'expr' && cur[2][1][1] === '=');
+    if (cur[0] === 'def') {
+      const isDef = cur[2]
+        && ((cur[2][0][0] === 'expr' && cur[2][0][1] === '=')
+        || (cur[2][1] && cur[2][1][0] === 'expr' && cur[2][1][1] === '='));
 
       // define var/call
       if (isDef) {
@@ -95,8 +102,8 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
         return prev;
       }
 
-      const args = cur[2] || tokens[i + 1];
       const call = expressions[cur[1]];
+      const args = cur[2] || tokens[i + 1];
 
       // skip undefined calls
       if (!call) {
@@ -104,7 +111,7 @@ export function reduceFromAST(tokens, convert, expressions = {}) {
       }
 
       // compute valid sub-expressions from arguments
-      const locals = reduceFromArgs(call[0].filter(x => x[0] === 'unit'), args[0]);
+      const locals = reduceFromArgs(call[0].filter(x => x[0] === 'unit'), args);
 
       // replace all given units within the AST
       cur = reduceFromTokens(call.slice(2), locals);

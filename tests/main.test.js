@@ -71,9 +71,10 @@ describe('DSL', () => {
       expect(values(calc('1123foo', { types: [['0000foo', 'cm']] }))).to.eql(['1,123 cm']);
     });
 
-    it('should handle local functions', () => {
+    it.only('should handle local functions', () => {
       expect(values(calc("f(x',y)=x'*y;f(2, 3)"))).to.eql(['6']);
       expect(values(calc("f(x',y)=(x'*y);f(2, 3)"))).to.eql(['6']);
+      expect(values(calc("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)"))).to.eql(['-4']);
     });
 
     it('should handle local expressions', () => {

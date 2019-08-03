@@ -11,6 +11,7 @@ const OP_TYPES = {
   '/': 'div',
   '*': 'mul',
   ',': 'or',
+  ';': 'k',
 };
 
 const RE_NUM = /^-?\.?\d|^.?\w+\s*\d/;
@@ -204,14 +205,10 @@ export function joinTokens(data, units, types) {
         && !(isSep(stack[0]) || isOp(stack[0])))
 
       // handle other ops between words...
-      || (isChar(oldChar) && (isSep(cur, ' ') || (next === ',' || next === ' ')))
-      || ((next === '-' && isChar(cur) && isChar(stack[0])) || (cur === '-' && isChar(next)))
+      || isAny(cur)
     ) {
-      // make sure we're not adding units... or keywords
-      if (cur !== ' ' && !(hasNum(oldChar) || isExpr(cur) || hasKeyword(cur, units))) {
-        stack.push(cur);
-        continue;
-      }
+      stack.push(cur);
+      continue;
     }
 
     // handle fractions
@@ -256,7 +253,6 @@ export function parseBuffer(text, fixeds) {
     }
 
     const last = buffer[buffer.length - 1];
-    const line = buffer.join('');
     const next = chars[i + 1];
     const cur = chars[i];
 
@@ -302,29 +298,11 @@ export function parseBuffer(text, fixeds) {
     if (
       inFormat || inBlock || typeof last === 'undefined'
 
-      // percentages
-      || (hasNum(last) && cur === '%')
-
-      // non-keywords
-      || (isAny(cur) && last !== ' ')
-      || (isMoney(last) && hasNum(cur))
-
-      // keep words and numbers together
-      || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))
-      || (isNum(last) && isChar(cur)) || (isChar(last) && isNum(cur))
-
-      // keep some separators between numbers
-      || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
-
-      // handle numbers, including negatives between ops; notice all N-N are splitted
-      || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
+      // keep chars and numbers together
+      || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
+      // || (last === '-' && isNum(cur)) || (cur === '-' && isNum(next))
     ) {
-      // make sure we're skipping from words
-      if (last && isChar(last) && isSep(cur, '.') && !isNum(next)) {
-        tokens[++offset] = [cur];
-      } else {
-        buffer.push(cur);
-      }
+      buffer.push(cur);
     } else {
       tokens[++offset] = [cur];
     }
