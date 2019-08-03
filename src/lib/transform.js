@@ -41,15 +41,15 @@ export function fromMarkdown(text) {
   const end = buffer.substr(buffer.length - 2, 2);
 
   if (begin === '~~' && end === '~~') {
-    return ['deleted', buffer];
+    return ['del', buffer];
   }
 
   if (begin === '__' && end === '__') {
-    return ['italic', buffer];
+    return ['em', buffer];
   }
 
   if (begin === '**' && end === '**') {
-    return ['bold', buffer];
+    return ['b', buffer];
   }
 
   return ['text', buffer];

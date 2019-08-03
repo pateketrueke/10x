@@ -2,7 +2,7 @@ import {
   TIME_UNITS,
 } from './convert';
 
-const TAG_TYPES = ['blockquote', 'heading', 'italic', 'bold', 'code', 'text'];
+const TAG_TYPES = ['blockquote', 'heading', 'em', 'b', 'code', 'text'];
 
 const OP_TYPES = {
   '=': 'equal',
@@ -25,8 +25,8 @@ export const isChar = (a, b = '') => /^[a-zA-Z]+\S*$/.test(a) || b.includes(a);
 
 export const isFmt = x => /^[_*~]$/.test(x);
 export const isInt = x => /^-?(?!0)\d+/.test(x);
-export const isAny = x => /\W/.test(x) && !isOp(x);
 export const isNth = x => /^(?:th|[rn]d)y?$/.test(x);
+export const isAny = x => /^[^\s\w\d_*~$€£¢%()|:;_,.+=*/-]$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
@@ -302,10 +302,8 @@ export function parseBuffer(text, fixeds) {
       // percentages
       || (hasNum(last) && cur === '%')
 
-      // keep white-space
-      || ((last === ' ' && cur === ' '))
-      || (isChar(last) && isAny(cur) && !isSep(cur, ' '))
-      || ((isNum(cur) || isChar(cur)) && !(isOp(last, ' ') || isSep(last)))
+      // non-keywords
+      || (isAny(cur))
 
       // keep words and numbers together
       || (isNum(last) && isNum(cur)) || (isChar(last) && isChar(cur))

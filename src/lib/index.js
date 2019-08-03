@@ -49,6 +49,7 @@ export default class Solvente {
     const out = parseBuffer(sample, unitFrom(this.types));
     const all = joinTokens(out.tokens, this.units, out.types);
     const tokens = transform(all, this.units, out.types);
+
     const fixedAST = tokens.ast.map(x => x.slice());
     const fixedTree = cleanTree(tokens.tree);
     const normalized = [];
