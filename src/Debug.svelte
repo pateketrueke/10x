@@ -9,8 +9,8 @@
 
   const dispatch = createEventDispatcher();
 
-  function focus(type, offset) {
-    dispatch('focus', { type, offset });
+  function focus(type, position) {
+    dispatch('focus', { type, position });
   }
 
   function set(e) {

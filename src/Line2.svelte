@@ -75,6 +75,8 @@
 
   // FIXME: instead of this, try render using vDOM?
   function renderItem(token) {
+    const pos = token._offset >= 0 ? ` data-pos="${token._offset}"` : '';
+
     if (token[0] === 'text') {
       return `<var>${sp(token[1])}</var>`;
     }
@@ -89,23 +91,21 @@
     }
 
     if (token[0] === 'number') {
-      const pos = token._offset  || 0;
-
       if (token[1].includes('/')) {
         const [a, b, c] = token[1].split(/[\s/]/);
 
-        return `<var data-op="number" data-pos="${pos}"><sup>${a}</sup><span>/</span><sub>${b}</sub>${c ? ` ${c}` : ''}</var>`;
+        return `<var data-op="number"${pos}><sup>${a}</sup><span>/</span><sub>${b}</sub>${c ? ` ${c}` : ''}</var>`;
       } else {
-        return `<var data-op="number" data-pos="${pos}">${token[1]}</var>`;
+        return `<var data-op="number"${pos}>${token[1]}</var>`;
       }
     }
 
     if (token[0] === 'unit') {
-      return `<var data-op="unit">${token[1]}</var>`;
+      return `<var data-op="unit"${pos}>${token[1]}</var>`;
     }
 
     if (hasTagName(token[0])) {
-      if (token[0] === 'heading') return `<h${token[2]}>${token[1]}</h${token[2]}>`;
+      if (token[0] === 'heading') return `<h${token[2]}${pos}>${token[1]}</h${token[2]}>`;
       else return `<${token[0]}>${token[1]}</${token[0]}>`;
     }
 
@@ -130,6 +130,7 @@
   function render() {
     if (markup !== oldMarkup) {
       oldMarkup = markup;
+
       info = calc.resolve(markup);
       input.innerHTML = `${info.tokens.map(renderItem).join('')} `;
     }
@@ -344,18 +345,27 @@
         if (!window.getSelection().isCollapsed) return;
 
         // adjust numeric values with SHIFT+UP/DOWN
-        if (e.keyCode === 38 || e.keyCode === 40 && node.dataset.op === 'number') {
+        if (
+          (e.keyCode === 38 || e.keyCode === 40)
+          && node.dataset.op === 'number'
+          && node.dataset.pos >= 0
+        ) {
           e.preventDefault();
 
           const pos = parseInt(node.dataset.pos, 10);
-          const char = info.input[pos];
+          const num = info.input[pos].replace(/\D+$/, '');
 
           const left = info.input.slice(0, pos);
           const right = info.input.slice(pos + 1);
 
-          // FIXME: this is fine for numbers, what about fractions, units or dates?
-          const value = parseFloat(toNumber(char));
-          const nextValue = value + (e.keyCode === 38 ? 1 : -1);
+          const matches = node.textContent.match(/\D+$/);
+          const value = parseFloat(toNumber(num));
+
+          let nextValue = value + (e.keyCode === 38 ? 1 : -1);
+
+          if (matches) {
+            nextValue += matches[0];
+          }
 
           markup = left.concat(nextValue).concat(right).join('');
           render();
@@ -494,7 +504,7 @@
   function select(e) {
     clearTimeout(select.t);
 
-    const { type, offset } = e.detail;
+    const { type, position } = e.detail;
 
     if (node) node.classList.remove('highlighted');
 
@@ -503,7 +513,7 @@
       ? input.querySelectorAll('[data-op]')
       : input.childNodes;
 
-    const sub = nodes[offset];
+    const sub = nodes[position];
 
     // highlight regular nodes
     if (sub && sub.nodeType === 1) {

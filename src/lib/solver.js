@@ -2,6 +2,10 @@ import {
   isInt, isTime, isExpr, hasPercent, toNumber, toFraction,
 } from './parser';
 
+import {
+  toToken,
+} from './transform';
+
 export function calculateFromMS(diff) {
   const hourTime = 1000 * 60;
   const seconds = Math.floor(diff / 1000 % 60);
@@ -142,9 +146,7 @@ export function operateExpression(ops, expr) {
         }
       }
 
-      const fixedUnit = prev[2] || next[2];
-
-      expr.splice(i - 1, 3, ['number', result, fixedUnit]);
+      expr.splice(i - 1, 3, ['number', result, prev[2] || next[2]]);
 
       // if tokens are left...
       if (expr.length >= 3) {
