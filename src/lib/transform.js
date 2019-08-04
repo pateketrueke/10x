@@ -99,7 +99,7 @@ export function fromSymbols(text, units, expression) {
   return ['number', text];
 }
 
-export default function transform(input, units, types) {
+export function transform(input, units, types) {
   const stack = [];
 
   let inCall = false;
@@ -194,8 +194,19 @@ export default function transform(input, units, types) {
     return prev;
   }, []);
 
+  // handle errors during tree-building
+  let fixedTree;
+  let _e;
+
+  try {
+    fixedTree = buildTree(body)
+  } catch (e) {
+    _e = e;
+  }
+
   return {
     ast: body,
-    tree: buildTree(body),
+    tree: fixedTree,
+    error: _e || undefined,
   };
 }

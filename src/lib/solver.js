@@ -142,17 +142,13 @@ export function operateExpression(ops, expr) {
         }
       }
 
-      if (typeof result !== 'undefined') {
-        const fixedUnit = prev[2] || next[2];
+      const fixedUnit = prev[2] || next[2];
 
-        expr.splice(i - 1, 3, ['number', result, fixedUnit]);
+      expr.splice(i - 1, 3, ['number', result, fixedUnit]);
 
-        // if tokens are left...
-        if (expr.length >= 3) {
-          return operateExpression(ops, expr);
-        }
-      } else {
-        throw new Error(`Invalid expression: ${prev[1]} ${cur[1]} ${next[1]}`);
+      // if tokens are left...
+      if (expr.length >= 3) {
+        return operateExpression(ops, expr);
       }
     }
   }

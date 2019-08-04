@@ -36,8 +36,8 @@ describe('DSL', () => {
     });
 
     it('should validate nested sub-expressions', () => {
-      expect(() => calc('1+(2+(3-4)-2')).to.throw(/Missing terminator for `1\+\(`/);
-      expect(() => calc('1 + ( 2 + ( 3 - 4 ) - 2')).to.throw(/Missing terminator for `1 \+ \(`/);
+      expect(calc('1+(2+(3-4)-2').error.message).to.match(/Missing terminator for `1\+\(`/);
+      expect(calc('1 + ( 2 + ( 3 - 4 ) - 2').error.message).to.match(/Missing terminator for `1 \+ \(`/);
     });
 
     it('should handle separated sub-expressions', () => {

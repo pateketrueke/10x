@@ -1,4 +1,6 @@
-import transform from './transform';
+import {
+  transform,
+} from './transform';
 
 import {
   parseBuffer, joinTokens, cleanTree,
@@ -49,20 +51,34 @@ export default class Solvente {
   }
 
   resolve(sample) {
+    let info = {
+      tokens: [],
+      input: [],
+      tree: [],
+    };
+
     const out = parseBuffer(sample, unitFrom(this.types));
     const all = joinTokens(out.tokens, this.units, out.types);
-    const tokens = transform(all, this.units, out.types);
 
-    const fixedAST = tokens.ast.map(x => x.slice());
-    const fixedTree = cleanTree(tokens.tree);
-    const normalized = [];
-
-    let chunks;
-    let info = {};
-    let _e;
+    info.tokens = all;
 
     try {
+      const tokens = transform(all, this.units, out.types);
+      const fixedAST = tokens.ast.map(x => x.slice());
+
+      info.error = tokens.error;
+      info.input = fixedAST;
+
+      // rethrow tree-building errors
+      if (tokens.error) throw tokens.error;
+
+      const fixedTree = cleanTree(tokens.tree);
+      const normalized = [];
+
       let offset = 0;
+      let chunks;
+
+      info.tree = fixedTree;
 
       // split over single values...
       chunks = reduceFromAST(fixedTree, this.convert, this.expressions).reduce((prev, cur) => {
@@ -146,10 +162,6 @@ export default class Solvente {
         message: e.message,
         stack: e.stack,
       };
-    } finally {
-      info.tokens = all;
-      info.input = fixedAST;
-      info.tree = fixedTree;
     }
 
     return info;
