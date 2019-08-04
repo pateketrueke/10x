@@ -47,6 +47,10 @@
   let enabled = false;
   let usingMode = null;
 
+  function sp(text) {
+    return text.replace(/\s/g, String.fromCharCode(160));
+  }
+
   function all(cb) {
     const nodes = [].slice.call(input.children).filter(x => 'op' in x.dataset);
 
@@ -80,7 +84,7 @@
     // FIXME: instead of this, try render using vDOM?
     const html = info.input.reduce((prev, cur) => {
       if (cur[0] === 'text') {
-        prev.push(`<var>${cur[1].replace(/\s/g, String.fromCharCode(160))}</var>`);
+        prev.push(`<var>${sp(cur[1])}</var>`);
       } else if (cur[0] === 'expr') {
         if (isOp(cur[1])) prev.push(`<var data-op="${cur[2]}">${cur[1]}</var>`);
         else prev.push(`<var data-op="expr">${cur[1]}</var>`);
@@ -99,6 +103,16 @@
       } else if (hasTagName(cur[0])) {
         if (cur[0] === 'heading') prev.push(`<h${cur[2]}>${cur[1]}</h${cur[2]}>`);
         else prev.push(`<${cur[0]}>${cur[1]}</${cur[0]}>`);
+      } else if (cur[0] === 'def') {
+        const args = cur[2].map(x => {
+          if (Array.isArray(x[0])) {
+            return `(${x.map(y => sp(y[1])).join('')})`;
+          }
+
+          return sp(x[1]);
+        }).join('');
+
+        prev.push(`<var data-op="def">${cur[1]}${args}</var>`);
       }
 
       return prev;
