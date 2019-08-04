@@ -3,7 +3,9 @@
   import DebugInfo from './Debug.svelte';
   import Solvente from './lib';
 
-  import { isOp, hasTagName } from './lib/parser';
+  import {
+   isOp, toNumber, hasTagName,
+ } from './lib/parser';
 
   import {
     getCursor,
@@ -44,6 +46,8 @@
   let revision = -1;
   let offset = -1;
   let search = '';
+
+  let oldMarkup;
   let enabled = false;
   let usingMode = null;
 
@@ -85,12 +89,14 @@
     }
 
     if (token[0] === 'number') {
+      const pos = token._offset  || 0;
+
       if (token[1].includes('/')) {
         const [a, b, c] = token[1].split(/[\s/]/);
 
-        return `<var data-op="number"><sup>${a}</sup><span>/</span><sub>${b}</sub>${c ? ` ${c}` : ''}</var>`;
+        return `<var data-op="number" data-pos="${pos}"><sup>${a}</sup><span>/</span><sub>${b}</sub>${c ? ` ${c}` : ''}</var>`;
       } else {
-        return `<var data-op="number">${token[1]}</var>`;
+        return `<var data-op="number" data-pos="${pos}">${token[1]}</var>`;
       }
     }
 
@@ -122,8 +128,11 @@
 
   // we take the markup and inject HTML from it
   function render() {
-    info = calc.resolve(markup);
-    input.innerHTML = `${info.tokens.map(renderItem).join('')} `;
+    if (markup !== oldMarkup) {
+      oldMarkup = markup;
+      info = calc.resolve(markup);
+      input.innerHTML = `${info.tokens.map(renderItem).join('')} `;
+    }
   }
 
   // apply changes to current markup
@@ -333,6 +342,32 @@
       ) {
         // keep selection as normal
         if (!window.getSelection().isCollapsed) return;
+
+        // adjust numeric values with SHIFT+UP/DOWN
+        if (e.keyCode === 38 || e.keyCode === 40) {
+          if (node.dataset.op === 'number') {
+            e.preventDefault();
+
+            const pos = parseInt(node.dataset.pos, 10);
+            const char = info.input[pos];
+
+            const left = info.input.slice(0, pos);
+            const right = info.input.slice(pos + 1);
+
+            // FIXME: this is fine for numbers, what about fractions, units or dates?
+            const value = parseFloat(toNumber(char));
+            const nextValue = value + (e.keyCode === 38 ? 1 : -1);
+
+            markup = left.concat(nextValue).concat(right).join('');
+            render();
+
+            // ensure cursor is set to the current token
+            offset = left.join('').length;
+            setCursor(input, offset);
+            sel();
+            return;
+          }
+        }
 
         // we can't save immediately or the cursor will reset!
         setTimeout(() => {
