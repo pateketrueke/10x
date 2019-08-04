@@ -205,6 +205,9 @@ export function transform(input, units, types) {
     return prev;
   }, []);
 
+  // append remaining tokens from calls
+  if (inCall && stack.length) body.push(stack[0]);
+
   // handle errors during tree-building
   let fixedTree;
   let _e;
