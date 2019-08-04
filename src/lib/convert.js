@@ -24,6 +24,42 @@ export const DEFAULT_MAPPINGS = {
   fractions: 'fr',
 };
 
+export const ALPHA_CHARS = {
+  Alpha: ['Α', 'α'],
+  Beta: ['Β', 'β'],
+  Gamma: ['Γ', 'γ'],
+  Delta: ['Δ', 'δ'],
+  Epsilon: ['Ε', 'ε'],
+  Zeta: ['Ζ', 'ζ'],
+  Eta: ['Η', 'η'],
+  Theta: ['Θ', 'θ'],
+  Iota: ['Ι', 'ι'],
+  Kappa: ['Κ', 'κ'],
+  Lambda: ['Λ', 'λ'],
+  Mu: ['Μ', 'μ'],
+  Nu: ['Ν', 'ν'],
+  Xi: ['Ξ', 'ξ'],
+  Omicron: ['Ο', 'ο'],
+  Pi: ['Π', 'π'],
+  Rho: ['Ρ', 'ρ'],
+  Sigma: ['Σ', 'σ'],
+  Tau: ['Τ', 'τ'],
+  Upsilon: ['Υ', 'υ'],
+  Phi: ['Φ', 'φ'],
+  Chi: ['Χ', 'χ'],
+  Psi: ['Ψ', 'ψ'],
+  Omega: ['Ω', 'ω'],
+};
+
+export const ALPHA_MAPPINGS = Object.keys(ALPHA_CHARS)
+  .reduce((prev, cur) => {
+    ALPHA_CHARS[cur].forEach(i => {
+      prev[i] = cur;
+    });
+
+    return prev;
+  }, {});
+
 // fixed-length types
 export const DEFAULT_TYPES = [
   ['0000-00-00T00:00:00.000Z', 'datetime'],

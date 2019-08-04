@@ -1,5 +1,5 @@
 import {
-  TIME_UNITS, CURRENCY_MAPPINGS,
+  TIME_UNITS, CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
 } from './convert';
 
 const TAG_TYPES = ['blockquote', 'heading', 'em', 'b', 'code', 'text'];
@@ -19,6 +19,7 @@ const RE_DATE = /^[a-z]{3}(?:\s\d{1,2})?(?:,\s(?:\d{2}|\d{4}))?$/i;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
+const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
 export const isIn = (x, a, b) => x >= a && x <= b;
 export const isOp = (a, b = '') => `${b}-+=*/;`.includes(a);
@@ -33,6 +34,7 @@ export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
 export const isMoney = x => CURRENCY_MAPPINGS[x];
+export const isAlpha = x => ALPHA_MAPPINGS[x];
 export const isJoin = x => '_.'.includes(x);
 
 export const getOp = x => OP_TYPES[x];
@@ -53,7 +55,7 @@ export const hasPercent = x => {
 export const hasKeyword = (x, units) => {
   if (!x) return false;
 
-  const key = x.replace(/^[^a-zA-Z]*/g, '');
+  const key = x.replace(RE_NO_ALPHA, '');
   const test = key && (units[key] || units[key.toLowerCase()]);
 
   return test;

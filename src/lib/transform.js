@@ -1,5 +1,5 @@
 import {
-  isOp, isInt, isSep, isNum, hasNum, isChar, isExpr, hasKeyword, hasDatetime, hasMonths, hasDays,
+  isOp, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr, hasKeyword, hasDatetime, hasMonths, hasDays,
   getOp, buildTree, cleanTree,
 } from './parser';
 
@@ -51,7 +51,7 @@ export function fromMarkdown(text) {
 
 export function fromSymbols(text, units, expression) {
   // try most char-expressions as valid units...
-  if (expression && isChar(text)) {
+  if (expression && (isChar(text) || isAlpha(text))) {
     return ['unit', text];
   }
 
@@ -156,7 +156,7 @@ export function transform(input, units, types) {
     if (hasNum(prevToken) && ':,'.includes(cur) && nextToken && isExpr(nextToken)) return prev;
 
     // open var/call expressions
-    if (isChar(cur) && (nextToken === '=' || nextToken === '(')) {
+    if ((isChar(cur) || isAlpha(cur)) && (nextToken === '=' || nextToken === '(')) {
       inCall = nextToken === '(';
       stack.push(['def', cur, []]);
 
