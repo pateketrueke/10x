@@ -174,13 +174,9 @@ export function transform(input, units, types) {
 
       // handle operators
       || (isOp(cur) && (
-        (!prevToken && (types[nextToken] || (hasNum(nextToken) && i > 0)))
-        || (cur === '=' && (!nextToken || isChar(nextToken) || hasNum(nextToken)))
-        || ((hasNum(prevToken) || hasKeyword(prevToken, units)) && nextToken === '(')
-        || (
-          (hasNum(prevToken) || hasKeyword(prevToken, units))
-          && (hasNum(nextToken) || hasKeyword(nextToken, units))
-        )
+        (!prevToken && types[nextToken])
+        || (hasNum(prevToken) && nextToken === '(')
+        || (hasNum(prevToken) && (hasNum(nextToken) || hasKeyword(nextToken, units)))
       ))
 
       // allow keywords after some dates
@@ -206,7 +202,7 @@ export function transform(input, units, types) {
   }, []);
 
   // append remaining tokens from calls
-  if (inCall && stack.length) body.push(stack[0]);
+  if (stack.length) body.push(stack[0]);
 
   // handle errors during tree-building
   let fixedTree;

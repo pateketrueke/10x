@@ -4,7 +4,7 @@
   export let debug = false;
 
   let tests = `
-    f( x ) = x * 2 ; n = 3 ; f( n )
+    f(x)=x*2;n=3;f(n)
   `.trim().split('\n').map(x => [0, x.trim()]);
 
   function toggle(text) {

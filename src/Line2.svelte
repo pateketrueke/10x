@@ -125,7 +125,7 @@
           return sp(x[1]);
         }).join('');
 
-        prev.push(`<var data-op="def"><var data-op="unit">${cur[1]}</var>${args}</var>`);
+        prev.push(`<var data-op="def">${cur[1]}${args}</var>`);
       }
 
       return prev;

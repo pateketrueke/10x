@@ -36,6 +36,7 @@ describe('DSL', () => {
     });
 
     it('should validate nested sub-expressions', () => {
+      expect(calc('f(n').error.message).to.match(/Missing terminator for `\(n`/);
       expect(calc('1+(2+(3-4)-2').error.message).to.match(/Missing terminator for `1\+\(`/);
       expect(calc('1 + ( 2 + ( 3 - 4 ) - 2').error.message).to.match(/Missing terminator for `1 \+ \(`/);
     });

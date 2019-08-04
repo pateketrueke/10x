@@ -69,11 +69,6 @@ export default class Solvente {
       info.error = tokens.error;
       info.input = fixedAST;
 
-      // fallback
-      if (!info.input.length) {
-        info.input = all.map(x => ['text', x]);
-      }
-
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
 
