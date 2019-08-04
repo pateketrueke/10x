@@ -15,6 +15,7 @@ const OP_TYPES = {
 };
 
 const RE_NUM = /^(?:-?\.?\d|[^()]?\w+\s*\d)(?![)])/;
+const RE_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const RE_DATE = /^[a-z]{3}(?:\s\d{1,2})?(?:,\s(?:\d{2}|\d{4}))?$/i;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
@@ -62,7 +63,7 @@ export const hasKeyword = (x, units) => {
 };
 
 export const hasDatetime = x => {
-  return x && (RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x));
+  return x && (RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x) || RE_ISO.test(x));
 };
 
 export function toFraction(number) {
