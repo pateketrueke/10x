@@ -69,61 +69,61 @@
     }
   }
 
+  // FIXME: instead of this, try render using vDOM?
+  function renderItem(token) {
+    if (token[0] === 'text') {
+      return `<var>${sp(token[1])}</var>`;
+    }
+
+    if (token[0] === 'expr') {
+      if (isOp(token[1])) return `<var data-op="${token[2]}">${token[1]}</var>`;
+      else return `<var data-op="expr">${token[1]}</var>`;
+    }
+
+    if (token[0] === 'open' || token[0] === 'close') {
+      return `<var data-op="${token[0]}">${token[1]}</var>`;
+    }
+
+    if (token[0] === 'number') {
+      if (token[1].includes('/')) {
+        const [a, b, c] = token[1].split(/[\s/]/);
+
+        return `<var data-op="number"><sup>${a}</sup><span>/</span><sub>${b}</sub>${c ? ` ${c}` : ''}</var>`;
+      } else {
+        return `<var data-op="number">${token[1]}</var>`;
+      }
+    }
+
+    if (token[0] === 'unit') {
+      return `<var data-op="unit">${token[1]}</var>`;
+    }
+
+    if (hasTagName(token[0])) {
+      if (token[0] === 'heading') return `<h${token[2]}>${token[1]}</h${token[2]}>`;
+      else return `<${token[0]}>${token[1]}</${token[0]}>`;
+    }
+
+    if (token[0] === 'def') {
+      const args = token[2].map(x => {
+        if (Array.isArray(x[0])) {
+          return `<var data-op="open">(</var>${x.map(renderItem).join('')}<var data-op="close">)</var>`;
+        }
+
+        if (x.length === 0) {
+          return '<var data-op="open">(</var><var data-op="close">)</var>';
+        }
+
+        return renderItem(x);
+      }).join('');
+
+      return `<var data-op="def">${token[1]}${args}</var>`;
+    }
+  }
+
   // we take the markup and inject HTML from it
   function render() {
     info = calc.resolve(markup);
-
-    // FIXME: instead of this, try render using vDOM?
-    const html = info.tokens.reduce((prev, cur) => {
-      if (cur[0] === 'text') {
-        prev.push(`<var>${sp(cur[1])}</var>`);
-      } else if (cur[0] === 'expr') {
-        if (isOp(cur[1])) prev.push(`<var data-op="${cur[2]}">${cur[1]}</var>`);
-        else prev.push(`<var data-op="expr">${cur[1]}</var>`);
-      } else if (cur[0] === 'open' || cur[0] === 'close') {
-        prev.push(`<var data-op="${cur[0]}">${cur[1]}</var>`);
-      } else if (cur[0] === 'number') {
-        if (cur[1].includes('/')) {
-          const [a, b, c] = cur[1].split(/[\s/]/);
-
-          prev.push(`<var data-op="number"><sup>${a}</sup><span>/</span><sub>${b}</sub>${c ? ` ${c}` : ''}</var>`);
-        } else {
-          prev.push(`<var data-op="number">${cur[1]}</var>`);
-        }
-      } else if (cur[0] === 'unit') {
-        prev.push(`<var data-op="unit">${cur[1]}</var>`);
-      } else if (hasTagName(cur[0])) {
-        if (cur[0] === 'heading') prev.push(`<h${cur[2]}>${cur[1]}</h${cur[2]}>`);
-        else prev.push(`<${cur[0]}>${cur[1]}</${cur[0]}>`);
-      } else if (cur[0] === 'def') {
-        const args = cur[2].map(x => {
-          if (Array.isArray(x[0])) {
-            return `<var data-op="open">(</var>${x.map(y => {
-              if (y[0] === 'number') return `<var data-op="number">${y[1]}</var>`;
-              if (y[0] === 'unit') return `<var data-op="unit">${y[1]}</var>`;
-
-              return sp(y[1]);
-            }).join('')}<var data-op="close">)</var>`;
-          }
-
-          if (x.length === 0) {
-            return '<var data-op="open">(</var><var data-op="close">)</var>';
-          }
-
-          if (x[0] === 'number') return `<var data-op="number">${x[1]}</var>`;
-          if (x[0] === 'unit') return `<var data-op="unit">${x[1]}</var>`;
-          if (isOp(x[1])) return `<var data-op="${x[2]}">${x[1]}</var>`;
-
-          return sp(x[1]);
-        }).join('');
-
-        prev.push(`<var data-op="def">${cur[1]}${args}</var>`);
-      }
-
-      return prev;
-    }, []).join('');
-
-    input.innerHTML = `${html} `;
+    input.innerHTML = `${info.tokens.map(renderItem).join('')} `;
   }
 
   // apply changes to current markup
