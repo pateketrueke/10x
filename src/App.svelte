@@ -7,6 +7,7 @@
     f(x)=x*2;n=3;f(3)
     π=3.141592654;3π
     Test: 3/2
+    This is now, or this week, who nows?
   `.trim().split('\n').map(x => [0, x.trim()]);
 
   function toggle(text) {

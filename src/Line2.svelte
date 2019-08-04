@@ -363,8 +363,37 @@
           let fixedOffset = 0;
 
           if (hasDatetime(node.textContent)) {
+            const firstWord = node.textContent.split(' ')[0];
+
             // FIXME: design how these will works...
-            nextValue = node.textContent;
+            switch (node.textContent.toLowerCase()) {
+              case 'tonight':
+              case 'today':
+              case 'now':
+                nextValue = inc > 0 ? 'tomorrow' : 'yesterday';
+                break;
+
+              case 'tomorrow':
+                nextValue = inc > 0 ? 'tomorrow' : 'today';
+                break;
+
+              case 'yesterday':
+                nextValue = inc > 0 ? 'today' : 'yesterday';
+                break;
+
+              case 'week':
+              case 'weekend':
+                nextValue = inc > 0 ? 'weekend' : 'week';
+                break;
+            }
+
+            if (nextValue) {
+              const isUpper = /^[A-Z]+$/.test(node.textContent);
+              const isTitle = /^[A-Z][a-z]+$/.test(node.textContent);
+
+              if (isUpper) nextValue = nextValue.toUpperCase();
+              if (isTitle) nextValue = nextValue[0].toUpperCase() + nextValue.substr(1).toLowerCase();
+            }
           } else if (node.textContent.includes('/')) {
             const curLine = info.input.join('').slice(0, offset).substr(left.join('').length);
             const [a, b, c] = node.textContent.split(/[\s/]/);
