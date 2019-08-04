@@ -178,7 +178,7 @@ export function joinTokens(data, units, types) {
     // keep previous month-format plus year
     if (hasDate) {
       // break on given years...
-      if (oldChar === ',' && cur === ' ' && (isInt(next) || isNth(next))) {
+      if (oldChar === ',' && cur === ' ' && isInt(next)) {
         stack.push(cur, next);
         data.splice(i, 1);
         hasDate = false;
@@ -202,7 +202,7 @@ export function joinTokens(data, units, types) {
     }
 
     // reset flags to continue
-    hasDate = hasDate && !isInt(cur);
+    hasDate = false;
     hasUnit = !!types[cur];
 
     let key = i;
