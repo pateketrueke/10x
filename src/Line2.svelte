@@ -344,29 +344,27 @@
         if (!window.getSelection().isCollapsed) return;
 
         // adjust numeric values with SHIFT+UP/DOWN
-        if (e.keyCode === 38 || e.keyCode === 40) {
-          if (node.dataset.op === 'number') {
-            e.preventDefault();
+        if (e.keyCode === 38 || e.keyCode === 40 && node.dataset.op === 'number') {
+          e.preventDefault();
 
-            const pos = parseInt(node.dataset.pos, 10);
-            const char = info.input[pos];
+          const pos = parseInt(node.dataset.pos, 10);
+          const char = info.input[pos];
 
-            const left = info.input.slice(0, pos);
-            const right = info.input.slice(pos + 1);
+          const left = info.input.slice(0, pos);
+          const right = info.input.slice(pos + 1);
 
-            // FIXME: this is fine for numbers, what about fractions, units or dates?
-            const value = parseFloat(toNumber(char));
-            const nextValue = value + (e.keyCode === 38 ? 1 : -1);
+          // FIXME: this is fine for numbers, what about fractions, units or dates?
+          const value = parseFloat(toNumber(char));
+          const nextValue = value + (e.keyCode === 38 ? 1 : -1);
 
-            markup = left.concat(nextValue).concat(right).join('');
-            render();
+          markup = left.concat(nextValue).concat(right).join('');
+          render();
 
-            // ensure cursor is set to the current token
-            offset = left.join('').length;
-            setCursor(input, offset);
-            sel();
-            return;
-          }
+          // ensure cursor is set to the current token
+          offset = left.join('').length;
+          setCursor(input, offset);
+          sel();
+          return;
         }
 
         // we can't save immediately or the cursor will reset!
