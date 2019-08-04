@@ -158,6 +158,7 @@
     sel();
   }
 
+  // highlight nodes on focus/click
   function sel() {
     if (sel.t) return;
 
@@ -292,6 +293,7 @@
         else if (e.key.length === 1) search += e.key;
       }
 
+      // keep tabs as isual
       if (e.keyCode === 9) return;
 
       const selection = window.getSelection();

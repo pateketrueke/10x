@@ -45,13 +45,7 @@ export function reduceFromTokens(tree, values) {
     }
 
     // one matches, replace!
-    if (values[item[1]]) {
-      let retval = values[item[1]];
-
-      while (retval.length === 1) retval = retval[0];
-      return retval;
-    }
-
+    if (values[item[1]]) return values[item[1]];
     return item;
   });
 }

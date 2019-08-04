@@ -108,8 +108,8 @@ export function operateExpression(ops, expr) {
         // adjust time-differences in days
         if (typeof result === 'number') {
           result = calculateFromMS(result);
-          prev.pop();
-          next.pop();
+          prev[2] = undefined;
+          next[2] = undefined;
         }
       } else {
         if (['as', 'in', 'to'].includes(cur[1]) && next[0] === 'unit') {
@@ -132,13 +132,13 @@ export function operateExpression(ops, expr) {
         if (next[0] === 'unit' && (next[2] === 'fr' || next[1] === 'fr')) {
           prev[2] = `fr-${prev[2].indexOf('fr') === 0 ? 'fr' : prev[2]}`;
           result = toFraction(result);
-          next.pop();
+          next[2] = undefined;
         }
 
         // fixed-unit as result from fractions
         if (prev[2] === 'x-fraction') {
-          prev.pop();
-          next.pop();
+          prev[2] = undefined;
+          next[2] = undefined;
         }
       }
 
