@@ -20,6 +20,8 @@ const cases = [
   ["Numbers along with units are evaluated: 1c', -0.2a' or 2-b'.", ['2.04', '-0.24', '-1.4']],
   ['# Units', []],
   ['Some values are already units, like 1cm - 35mm.', ['-2.5 cm']],
+  ["Numbers are not tokenized if they're alone within parenthesis, e.g. (123)", []],
+  ['Numbers can alse be expressed as fractions, e.g. 1/2 or 0.00032 as fr.', ['0.5', '1/5000']],
 ];
 
 describe('Playbook', () => {
@@ -29,13 +31,9 @@ describe('Playbook', () => {
     it(test[0], () => {
       const x = c.resolve(test[0]);
 
-      try {
-        deepEqual(x.results.map(x => x.format), test[1]);
-      } catch (e) {
-        console.log(x.tokens);
-        console.log(x.input);
-        throw e;
-      }
+      if (x.error) throw x.error;
+
+      deepEqual(x.results.map(x => x.format), test[1]);
     });
   });
 });

@@ -14,19 +14,19 @@ const OP_TYPES = {
   ';': 'k',
 };
 
-const RE_NUM = /^-?\.?\d|^.?\w+\s*\d/;
+const RE_NUM = /^-?\.?\d|^[^()]?\w+\s*\d/;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
 export const isIn = (x, a, b) => x >= a && x <= b;
-export const isOp = (a, b = '') => `${b}-+=*/;_`.includes(a);
+export const isOp = (a, b = '') => `${b}-+=*/;`.includes(a);
 export const isSep = (a, b = '') => `${b}(|:;,)`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
 export const isFmt = x => /^[_*~]$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
-export const isAny = x => /^[^\s\w\d_*~$€£¢%()|:;_,.+=*/-]$/.test(x);
+export const isAny = (x, a = '') => /^[^\s\w\d_*~$€£¢%()|:;_,.+=*/-]$/.test(x) || a.includes(x);
 export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
@@ -222,9 +222,14 @@ export function joinTokens(data, units, types) {
       }
     }
 
-    // handle fractions
-    if (isInt(oldChar) && cur === '/' && isInt(next)) {
-      buffer.splice(i - 1, 2, [oldChar + cur + next]);
+    if (
+      // handle fractions,
+      (isInt(oldChar) && cur === '/' && isInt(next))
+
+      // skip numbers within parenthesis
+      || (oldChar === '(' && hasNum(cur) && next === ')')
+    ) {
+      buffer.splice(i - (cur === '/' ? 1 : 2), 2, [oldChar + cur + next]);
       data.splice(i, 1);
       stack.pop();
       continue;
@@ -314,8 +319,8 @@ export function parseBuffer(text, fixeds) {
       || (last !== ' ' && isAny(cur))
       || (hasNum(last) && cur === '%')
       || (isMoney(last) && hasNum(cur))
+      || (isChar(last) && isAny(cur, ':'))
       || (last === ',' && isNum(cur) && !open)
-      || (isChar(last) && (isAny(cur) || cur === ':'))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
 
       // keep some separators between numbers
@@ -377,8 +382,8 @@ export function buildTree(tokens) {
   }
 
   // handle exceptions
-  if (depth || calls.length || stack.length) {
-    depth = depth || (calls[0] || stack[0])._offset;
+  if (calls.length || stack.length) {
+    depth = (calls[0] || stack[0])._offset;
 
     const err = new Error(`Missing terminator for \`${
       tokens.slice(0, Math.max(2, depth + 1)).map(x => x[1]).join('')

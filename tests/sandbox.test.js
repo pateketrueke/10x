@@ -25,8 +25,6 @@ const cases = [
   ['2 cm in 3 in', ['0.79 in']],
   ['10 inches in cm', ['25.4 cm']],
   ['450 km in miles', ['279.62 mi']],
-  ['in cm 2+3', ['5 cm']],
-  ['in cm, 2+3', ['5 cm']],
   ['3 days in 4 years', ['0.0082 year']],
   ['2+3 as cm', ['5 cm']],
   ['2+3, as cm', ['5 cm']],
@@ -53,7 +51,11 @@ tk.freeze(time);
 describe('Sandbox', () => {
   cases.forEach(test => {
     if (test) it(test[0], () => {
-      deepEqual(calc.resolve(test[0]).results.map(x => x.format), test[1]);
+      const x = calc.resolve(test[0]);
+
+      if (x.error) throw x.error;
+
+      deepEqual(x.results.map(x => x.format), test[1]);
     });
   });
 });

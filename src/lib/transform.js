@@ -103,6 +103,7 @@ export default function transform(input, units, types) {
   const stack = [];
 
   let inCall = false;
+  let inMaths = false;
 
   let prevToken;
   let nextToken;
@@ -113,6 +114,9 @@ export default function transform(input, units, types) {
       prev.push(toToken(i, () => ['number', cur, types[cur]]));
       return prev;
     }
+
+    // flag possible expressions
+    if (hasNum(cur)) inMaths = true;
 
     let inExpr = stack[stack.length - 1];
     let key = i;
@@ -135,6 +139,7 @@ export default function transform(input, units, types) {
       if (cur === ';' || (inCall && cur === ')')) {
         prevToken = 'def';
         inCall = false;
+        inMaths = false;
 
         // close var-expressions
         if (nextToken !== '=') {
@@ -179,9 +184,13 @@ export default function transform(input, units, types) {
       || (hasDatetime(prevToken) && isExpr(cur) && isNum(nextToken))
 
       // handle expressions between numbers/units
-      || (isExpr(cur) && hasKeyword(nextToken, units))
       || ((isOp(prevToken) || isSep(prevToken)) && hasNum(cur))
-      || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
+
+      // handle units/expressions after maths, never before
+      || (inMaths && (
+        (isExpr(cur) && hasKeyword(nextToken, units))
+        || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
+       ))
     ) {
       prev.push(toToken(i, fromSymbols, cur, units));
     } else {
