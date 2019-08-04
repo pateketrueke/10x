@@ -30,6 +30,15 @@ export function reduceFromValue(token) {
     return new Date(`${text} 00:00:00`);
   }
 
+  // adjust weekdays
+  if (['week', 'weekend'].includes(text.toLowerCase())) {
+    const diffDay = text.toLowerCase() === 'weekend' ? 6 : 1;
+
+    now.setDate(now.getDate() + (diffDay + 7 - now.getDay()) % 7);
+
+    return now;
+  }
+
   if (text.toLowerCase() === 'yesterday') return (now.setDate(now.getDate() - 1), now);
   if (text.toLowerCase() === 'tomorrow') return (now.setDate(now.getDate() + 1), now);
   if (text.toLowerCase() === 'today') return new Date(`${today} 00:00:00`);
