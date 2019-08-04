@@ -169,8 +169,19 @@ export function transform(input, units, types) {
     }
 
     if (
-      // handle most operators
-      isSep(cur) || hasNum(cur) || isOp(cur)
+      // handle most values
+      isSep(cur) || hasNum(cur)
+
+      // handle operators
+      || (isOp(cur) && (
+        (!prevToken && (types[nextToken] || (hasNum(nextToken) && i > 0)))
+        || (cur === '=' && (!nextToken || isChar(nextToken) || hasNum(nextToken)))
+        || ((hasNum(prevToken) || hasKeyword(prevToken, units)) && nextToken === '(')
+        || (
+          (hasNum(prevToken) || hasKeyword(prevToken, units))
+          && (hasNum(nextToken) || hasKeyword(nextToken, units))
+        )
+      ))
 
       // allow keywords after some dates
       || (isExpr(prevToken) && hasMonths(cur))
@@ -178,7 +189,7 @@ export function transform(input, units, types) {
       || hasDays(cur) || hasMonths(cur) || (hasNum(prevToken) && isExpr(cur))
 
       // handle expressions between numbers/units
-      || ((isOp(prevToken) || isSep(prevToken)) && hasNum(cur))
+      || (isOp(prevToken) && hasNum(cur))
 
       // handle units/expressions after maths, never before
       || (inMaths && (

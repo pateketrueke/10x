@@ -14,7 +14,7 @@ const OP_TYPES = {
   ';': 'k',
 };
 
-const RE_NUM = /^-?\.?\d|^[^()]?\w+\s*\d/;
+const RE_NUM = /^(?:-?\.?\d|[^()]?\w+\s*\d)(?![)])/;
 const RE_DATE = /^[a-z]{3}(?:\s\d{1,2})?(?:,\s(?:\d{2}|\d{4}))?$/i;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
