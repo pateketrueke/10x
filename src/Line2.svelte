@@ -4,7 +4,7 @@
   import Solvente from './lib';
 
   import {
-   isOp, toNumber, hasTagName,
+   isOp, toNumber, hasDatetime, hasTagName,
  } from './lib/parser';
 
   import {
@@ -346,32 +346,55 @@
 
         // adjust numeric values with SHIFT+UP/DOWN
         if (
-          (e.keyCode === 38 || e.keyCode === 40)
-          && node.dataset.op === 'number'
+          node
           && node.dataset.pos >= 0
+          && node.dataset.op === 'number'
+          && (e.keyCode === 38 || e.keyCode === 40)
         ) {
           e.preventDefault();
 
+          const inc = e.keyCode === 38 ? 1 : -1;
           const pos = parseInt(node.dataset.pos, 10);
-          const num = info.input[pos].replace(/\D+$/, '');
 
           const left = info.input.slice(0, pos);
           const right = info.input.slice(pos + 1);
 
-          const matches = node.textContent.match(/\D+$/);
-          const value = parseFloat(toNumber(num));
+          let nextValue = 0;
+          let fixedOffset = 0;
 
-          let nextValue = value + (e.keyCode === 38 ? 1 : -1);
+          if (hasDatetime(node.textContent)) {
+            // FIXME: design how these will works...
+            nextValue = node.textContent;
+          } else if (node.textContent.includes('/')) {
+            const curLine = info.input.join('').slice(0, offset).substr(left.join('').length);
+            const [a, b, c] = node.textContent.split(/[\s/]/);
 
-          if (matches) {
-            nextValue += matches[0];
+            if (curLine.includes('/')) {
+              nextValue = `${a}/${parseInt(b, 10) + inc}`;
+              fixedOffset += a.length + 1;
+            } else {
+              nextValue = `${parseInt(a, 10) + inc}/${b}`;
+            }
+
+            if (c) {
+              nextValue += c;
+            }
+          } else {
+            const matches = node.textContent.match(/\D+$/);
+            const value = parseFloat(toNumber(info.input[pos].replace(/\D+$/, '')));
+
+            nextValue = value + inc;
+
+            if (matches) {
+              nextValue += matches[0];
+            }
           }
 
           markup = left.concat(nextValue).concat(right).join('');
           render();
 
           // ensure cursor is set to the current token
-          offset = left.join('').length;
+          offset = left.join('').length + fixedOffset;
           setCursor(input, offset);
           sel();
           return;
