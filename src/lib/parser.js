@@ -143,6 +143,8 @@ export function joinTokens(data, units, types) {
 
   let offset = 0;
   let depth = 0;
+
+  let inCall = false;
   let hasDate = false;
   let hasUnit = false;
 
@@ -235,7 +237,7 @@ export function joinTokens(data, units, types) {
       (isInt(oldChar) && cur === '/' && isInt(next))
 
       // skip numbers within parenthesis
-      || (oldChar === '(' && hasNum(cur) && next === ')')
+      || (!inCall && (oldChar === '(' && hasNum(cur) && next === ')'))
 
       // keep hour/seconds format together
       || (oldChar && oldChar.includes(':') && cur === ':' && hasNum(next))
@@ -245,6 +247,10 @@ export function joinTokens(data, units, types) {
       stack.pop();
       continue;
     }
+
+    // flag possible def/call expressions
+    if (isChar(cur) && nextToken === '(') inCall = true;
+    if (cur === ';' || cur === ')') inCall = false;
 
     // otherwise, just continue splitting...
     if (!buffer[offset].length) offset--;
