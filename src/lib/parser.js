@@ -269,13 +269,20 @@ export function parseBuffer(text, fixeds) {
     const buffer = tokens[offset] || (tokens[offset] = []);
 
     // consume fixed-length units first...
-    const fixedUnit = (!chars[i - 1] || isAny(chars[i - 1])) && fixeds(chars.slice(i));
+    const fixedUnit = fixeds(chars.slice(i));
     const [fixedValue, fixedType] = fixedUnit || [];
 
-    if (fixedType && !chars[i + fixedValue.length]) {
-      tokens[offset] = [fixedValue];
+    if (fixedType) {
+      if (i > 0) {
+        tokens[offset] = [chars[i - 1]];
+        tokens[++offset] = [fixedValue];
+      } else {
+        tokens[offset] = [fixedValue];
+      }
+
+      offset++;
       types[fixedValue] = fixedType;
-      chars.splice(i + 1, fixedValue.length - 1);
+      chars.splice(i, fixedValue.length - 1);
       continue;
     }
 
