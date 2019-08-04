@@ -5,6 +5,7 @@
 
   let tests = `
     f(x)=x*2;n=3;f(3)
+    π=3.141592654;3π
   `.trim().split('\n').map(x => [0, x.trim()]);
 
   function toggle(text) {
