@@ -19,16 +19,16 @@ export function calculateFromMS(diff) {
 
 export function calculateFromDate(op, left, right) {
   if (!(left instanceof Date)) {
-    const now = new Date();
-    const nowMonth = now.toString().split(' ')[1];
-    const nowDate = now.getDate();
-
     // add given seconds
     if (op === 'from') return calculateFromDate('+', right, left);
     if (['as', 'in', 'to'].includes(op)) return calculateFromDate('+', parseFloat(right), left);
 
+    const now = new Date();
+    const nowMonth = now.toString().split(' ')[1];
+    const nowDate = now.getDate();
+
     // otherwise, just take the year
-    if (typeof left === 'number') left = new Date(`${nowMonth} ${nowDate}, ${left} 00:00`);
+    left = new Date(`${nowMonth} ${nowDate}, ${left} 00:00`);
   }
 
   const oldYear = left.getFullYear();
@@ -144,11 +144,6 @@ export function operateExpression(ops, expr) {
 
       if (typeof result !== 'undefined') {
         const fixedUnit = prev[2] || next[2];
-
-        // append percentage symbol if needed, e.g. N from M, N in M
-        if (!fixedUnit && isExpr(cur[1]) && typeof result === 'number') {
-          result = `${result}%`;
-        }
 
         expr.splice(i - 1, 3, ['number', result, fixedUnit]);
 

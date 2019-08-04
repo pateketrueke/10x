@@ -168,12 +168,6 @@ export default function transform(input, units, types) {
       return prev;
     }
 
-    // skip number inside parens/brackets (however sorrounding chars are highlighted)
-    if (input[i - 1] === '(' && nextToken === ')') {
-      prev.push(toToken(i, fromMarkdown, cur));
-      return prev;
-    }
-
     if (
       // handle most operators
       isSep(cur) || hasNum(cur) || isOp(cur)
@@ -188,8 +182,7 @@ export default function transform(input, units, types) {
 
       // handle units/expressions after maths, never before
       || (inMaths && (
-        (isExpr(cur) && hasKeyword(nextToken, units))
-        || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
+        isExpr(cur) || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
        ))
     ) {
       prev.push(toToken(i, fromSymbols, cur, units));

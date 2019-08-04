@@ -2,10 +2,7 @@ import { expect } from 'chai';
 import Solvente from '../src/lib';
 
 const calc = (expr, opts) => new Solvente(opts).resolve(expr);
-const values = ({ tokens, results }) => {
-  // console.log(tokens);
-  return results.map(x => x.format);
-};
+const values = ({ results }) => results.map(x => x.format);
 
 describe('DSL', () => {
   describe('Basic operations', () => {
@@ -60,6 +57,8 @@ describe('DSL', () => {
       expect(values(calc('0.5 as frac'))).to.eql(['1/2']);
       expect(values(calc('0.5 as fraction'))).to.eql(['1/2']);
       expect(values(calc('0.5 as fractions'))).to.eql(['1/2']);
+      expect(values(calc('3 from 10 as fr'))).to.eql(['30/1']);
+      expect(values(calc('3 inches - 2 cm as fr'))).to.eql(['221/100 in']);
     });
 
     it('should handle converting from units', () => {

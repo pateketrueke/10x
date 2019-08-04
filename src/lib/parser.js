@@ -72,6 +72,10 @@ export function toFraction(number) {
 
   const [left, right] = base.toString().split('.');
 
+  if (!right) {
+    return `${left}/1`;
+  }
+
   let numerator = left + right;
   let denominator = Math.pow(10, right.length);
 
@@ -98,10 +102,6 @@ export function toNumber(value) {
 }
 
 export function toValue(value) {
-  if (typeof value === 'undefined') {
-    return null;
-  }
-
   if (value instanceof Date) {
     return value.toString().split(' ').slice(0, 5).join(' ');
   }
@@ -165,12 +165,7 @@ export function joinTokens(data, units, types) {
       || (isInt(oldChar) && cur === ' ' && ['am', 'pm'].includes(next))
       || (cur === ':' && isIn(oldChar, 0, 24) && isIn(next, 0, 60))
     ) {
-      if (stack.length) {
-        buffer[offset++] = [oldChar + cur + next];
-      } else {
-        buffer.splice(offset - 1, 2, [oldChar + cur + next]);
-      }
-
+      buffer.splice(offset - 1, 2, [oldChar + cur + next]);
       hasUnit = !hasNum(next);
       data.splice(i - 1, 1);
       stack.pop();
@@ -179,7 +174,7 @@ export function joinTokens(data, units, types) {
 
     // keep basic month-format together
     if (hasMonths(oldChar) && cur === ' ' && (isInt(next) || isNth(next))) {
-      stack[stack.length - 1] += cur + (next || '');
+      stack[stack.length - 1] += cur + next;
       data.splice(i, 1);
       hasDate = true;
       continue;
@@ -228,8 +223,11 @@ export function joinTokens(data, units, types) {
 
       // skip numbers within parenthesis
       || (oldChar === '(' && hasNum(cur) && next === ')')
+
+      // keep hour/seconds format together
+      || (oldChar && oldChar.includes(':') && cur === ':' && hasNum(next))
     ) {
-      buffer.splice(i - (cur === '/' ? 1 : 2), 2, [oldChar + cur + next]);
+      buffer.splice(offset - 1, 2, [oldChar + cur + next]);
       data.splice(i, 1);
       stack.pop();
       continue;
@@ -261,7 +259,7 @@ export function parseBuffer(text, fixeds) {
     const fixedUnit = (!chars[i - 1] || isAny(chars[i - 1])) && fixeds(chars.slice(i));
     const [fixedValue, fixedType] = fixedUnit || [];
 
-    if (fixedType && (!chars[i + fixedValue.length] || isAny(chars[i + fixedValue.length]))) {
+    if (fixedType && !chars[i + fixedValue.length]) {
       tokens[offset] = [fixedValue];
       types[fixedValue] = fixedType;
       chars.splice(i + 1, fixedValue.length - 1);
