@@ -106,13 +106,26 @@
       } else if (cur[0] === 'def') {
         const args = cur[2].map(x => {
           if (Array.isArray(x[0])) {
-            return `(${x.map(y => sp(y[1])).join('')})`;
+            return `<var data-op="open">(</var>${x.map(y => {
+              if (y[0] === 'number') return `<var data-op="number">${y[1]}</var>`;
+              if (y[0] === 'unit') return `<var data-op="unit">${y[1]}</var>`;
+
+              return sp(y[1]);
+            }).join('')}<var data-op="close">)</var>`;
           }
+
+          if (x.length === 0) {
+            return '<var data-op="open">(</var><var data-op="close">)</var>';
+          }
+
+          if (x[0] === 'number') return `<var data-op="number">${x[1]}</var>`;
+          if (x[0] === 'unit') return `<var data-op="unit">${x[1]}</var>`;
+          if (isOp(x[1])) return `<var data-op="${x[2]}">${x[1]}</var>`;
 
           return sp(x[1]);
         }).join('');
 
-        prev.push(`<var data-op="def">${cur[1]}${args}</var>`);
+        prev.push(`<var data-op="def"><var data-op="unit">${cur[1]}</var>${args}</var>`);
       }
 
       return prev;

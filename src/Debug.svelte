@@ -89,7 +89,7 @@
         <small on:click={() => focus(i)}>
           <em>{chunk[0]}</em>
           <var>{chunk[1]}</var>
-          {#if chunk[2]}<span>{chunk[2]}</span>{/if}
+          {#if chunk[2]}<span>{Array.isArray(chunk[2]) ? '...' : chunk[2]}</span>{/if}
         </small>
       {/each}
     </p>
