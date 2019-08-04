@@ -60,14 +60,14 @@ export default class Solvente {
     const out = parseBuffer(sample, unitFrom(this.types));
     const all = joinTokens(out.tokens, this.units, out.types);
 
-    info.tokens = all;
+    info.input = all;
 
     try {
       const tokens = transform(all, this.units, out.types);
       const fixedAST = tokens.ast.map(x => x.slice());
 
       info.error = tokens.error;
-      info.input = fixedAST;
+      info.tokens = fixedAST;
 
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
