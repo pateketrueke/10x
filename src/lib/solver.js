@@ -9,12 +9,12 @@ export function calculateFromMS(diff) {
   const hours = Math.floor(diff / (hourTime * 60) % 24);
   const days = Math.floor(diff / (hourTime * 60 * 24) % 365);
 
-  return [
-    days ? `${days}d` : '',
-    hours ? `${hours}h` : '',
-    minutes ? `${minutes}m` : '',
-    seconds ? `${seconds}s` : '',
-  ].filter(Boolean).join(' ');
+  return []
+    .concat(days ? `${days}d` : [])
+    .concat(hours ? `${hours}h` : [])
+    .concat(minutes ? `${minutes}m` : [])
+    .concat(seconds ? `${seconds}s` : [])
+    .join(' ');
 }
 
 export function calculateFromDate(op, left, right) {

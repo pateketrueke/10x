@@ -42,6 +42,7 @@ const cases = [
   ['Jun 10 1987', ['Wed Jun 10 1987 00:00:00']],
   ['Jun 10', [`Sun Jun 10 2012 00:00:00`]],
   ['Jun 1', [`Fri Jun 01 2012 00:00:00`]],
+  ['Apr 20 as Jun 10, 1987', ['Sat Jun 20 1987 00:00:00']],
 ];
 
 const calc = new Solvente();

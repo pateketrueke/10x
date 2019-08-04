@@ -184,6 +184,7 @@ export function joinTokens(data, units, types) {
     if (hasDate && oldChar === ',' && cur === ' ' && isInt(next)) {
       buffer.splice(offset - 2, 1, [buffer[offset - 2] + oldChar + cur + next]);
       buffer[--offset] = [];
+      buffer.length = offset;
       data.splice(i, 1);
       hasDate = false;
       continue;
