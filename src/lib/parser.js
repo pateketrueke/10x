@@ -15,6 +15,7 @@ const OP_TYPES = {
 };
 
 const RE_NUM = /^-?\.?\d|^[^()]?\w+\s*\d/;
+const RE_DATE = /^[a-z]{3}(?:\s\d{1,2})?(?:,\s(?:\d{2}|\d{4}))?$/i;
 const RE_DAYS = /^(?:now|today|tonight|tomorrow|yesterday|weekend)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)/i;
@@ -172,21 +173,29 @@ export function joinTokens(data, units, types) {
       continue;
     }
 
-    // keep basic month-format together
-    if (hasMonths(oldChar) && cur === ' ' && (isInt(next) || isNth(next))) {
-      stack[stack.length - 1] += cur + next;
-      data.splice(i, 1);
-      hasDate = true;
-      continue;
-    }
-
     // keep previous month-format plus year
-    if (hasDate && oldChar === ',' && cur === ' ' && isInt(next)) {
-      buffer.splice(offset - 2, 1, [buffer[offset - 2] + oldChar + cur + next]);
-      buffer[--offset] = [];
-      buffer.length = offset;
-      data.splice(i, 1);
-      hasDate = false;
+    if (hasDate) {
+      // break on given years...
+      if (oldChar === ',' && cur === ' ' && (isInt(next) || isNth(next))) {
+        stack.push(cur, next);
+        data.splice(i, 1);
+        hasDate = false;
+        continue;
+      }
+
+      // break on any word...
+      if (isChar(cur) || isOp(cur) || isAny(cur)) {
+        buffer[++offset] = [stack[stack.length - 1]];
+        buffer[++offset] = [cur];
+        stack.pop();
+        hasDate = false;
+      }
+
+      // keep eating tokens...
+      if (cur === ' ' || cur === ',' || (isInt(cur) || isNth(cur))) {
+        stack.push(cur);
+      }
+
       continue;
     }
 
@@ -198,6 +207,9 @@ export function joinTokens(data, units, types) {
     let nextToken;
 
     do { nextToken = data[++key]; } while (nextToken === ' ');
+
+    // flag well-known date formats
+    if (hasMonths(cur)) hasDate = true;
 
     if (
       isAny(cur)

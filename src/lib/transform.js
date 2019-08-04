@@ -174,8 +174,8 @@ export default function transform(input, units, types) {
 
       // allow keywords after some dates
       || (isExpr(prevToken) && hasMonths(cur))
-      || hasDays(cur) || (hasNum(prevToken) && isExpr(cur))
       || (hasDatetime(prevToken) && isExpr(cur) && isNum(nextToken))
+      || hasDays(cur) || hasMonths(cur) || (hasNum(prevToken) && isExpr(cur))
 
       // handle expressions between numbers/units
       || ((isOp(prevToken) || isSep(prevToken)) && hasNum(cur))
