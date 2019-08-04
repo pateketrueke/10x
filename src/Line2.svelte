@@ -51,14 +51,6 @@
     return text.replace(/\s/g, String.fromCharCode(160));
   }
 
-  function all(cb) {
-    const nodes = [].slice.call(input.children).filter(x => 'op' in x.dataset);
-
-    if (typeof cb === 'function') return nodes.map(cb);
-
-    return nodes;
-  }
-
   function push() {
     // clean but keep at least one entry!
     if (revision !== -1) {
@@ -82,7 +74,7 @@
     info = calc.resolve(markup);
 
     // FIXME: instead of this, try render using vDOM?
-    const html = info.input.reduce((prev, cur) => {
+    const html = info.tokens.reduce((prev, cur) => {
       if (cur[0] === 'text') {
         prev.push(`<var>${sp(cur[1])}</var>`);
       } else if (cur[0] === 'expr') {
@@ -467,12 +459,16 @@
   function select(e) {
     clearTimeout(select.t);
 
-    const { offset } = e.detail;
+    const { type, offset } = e.detail;
 
     if (node) node.classList.remove('highlighted');
 
-    // patch parsed input as regular nodes, or text nodes...
-    const sub = input.childNodes[offset];
+    // bonus: highlighting defs
+    const nodes = type === 'input'
+      ? input.querySelectorAll('[data-op]')
+      : input.childNodes;
+
+    const sub = nodes[offset];
 
     // highlight regular nodes
     if (sub && sub.nodeType === 1) {
