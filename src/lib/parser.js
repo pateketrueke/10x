@@ -27,7 +27,7 @@ export const isOp = (a, b = '') => `${b}-+=*/;`.includes(a);
 export const isSep = (a, b = '') => `${b}(|:;,)`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
-export const isFmt = x => /^[`[/\]_*~]+$/.test(x);
+export const isFmt = x => /^[`[\]_*~]$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
 export const isAny = (x, a = '') => /^[^\s\w\d_*~$€£¢%()|:;_,.+=*/-]$/.test(x) || a.includes(x);
 export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x);
@@ -150,7 +150,9 @@ export function joinTokens(data, units, types) {
   let offset = 0;
   let depth = 0;
 
+  let inFmt = false;
   let inCall = false;
+
   let hasDate = false;
   let hasUnit = false;
 
@@ -166,8 +168,9 @@ export function joinTokens(data, units, types) {
       || (buffer.length > 1 && buffer[offset - 1][0]);
 
     // keep formatting blocks together
-    if (isFmt(cur) && oldChar.indexOf(cur) === 0) {
+    if (inFmt && oldChar.indexOf(cur) === 0) {
       buffer[offset - 1].push(cur);
+      inFmt = false;
       continue;
     }
 
@@ -221,6 +224,14 @@ export function joinTokens(data, units, types) {
     let nextToken;
 
     do { nextToken = data[++key]; } while (nextToken === ' ');
+
+    // keep formatting block together, ** symbols required twice!
+    if (isFmt(cur) && (cur.length === 2 || cur !== '*')) {
+      inFmt = !inFmt;
+    } else if (inFmt) {
+      buffer[offset - 1].push(cur);
+      continue;
+    }
 
     // glue ISO-dates together
     if (
@@ -294,7 +305,6 @@ export function joinTokens(data, units, types) {
 }
 
 export function parseBuffer(text, fixeds) {
-  let inFormat = false;
   let inBlock = false;
   let offset = 0;
   let open = 0;
@@ -327,14 +337,6 @@ export function parseBuffer(text, fixeds) {
     const last = buffer[buffer.length - 1];
     const next = chars[i + 1];
     const cur = chars[i];
-
-    // toggle formatting blocks
-    if (isFmt(cur) && last !== cur) {
-      inFormat = !inFormat;
-    } else if (inFormat) {
-      buffer.push(cur);
-      continue;
-    }
 
     if (!inBlock) {
       // skip closing chars if they're not well paired
