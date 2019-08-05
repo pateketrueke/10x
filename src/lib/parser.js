@@ -233,6 +233,9 @@ export function joinTokens(data, units, types) {
       // handle fractions,
       (isInt(oldChar) && cur === '/' && isInt(next))
 
+      // keep [ ] checkboxes together
+      || (oldChar === '[' && ' x'.includes(cur) && next === ']')
+
       // skip numbers within parenthesis
       || (!inCall && (oldChar === '(' && hasNum(cur) && next === ')'))
 
