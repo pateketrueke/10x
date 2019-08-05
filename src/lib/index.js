@@ -119,7 +119,7 @@ export default class Solvente {
           && !(isInt(value[1]) || value[1] instanceof Date)
         ) {
           // remove trailing words from units
-          value[1] = value[1].replace(/[\sa-z]+$/ig, '');
+          value[1] = value[1].replace(/[\sa-z/-]+$/ig, '');
         }
 
         let fixedValue = toValue(value[1]);

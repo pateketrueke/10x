@@ -230,6 +230,30 @@ export function joinTokens(data, units, types) {
     if (hasMonths(cur)) hasDate = true;
 
     if (
+      // handle fractions,
+      (isInt(oldChar) && cur === '/' && isInt(next))
+
+      // skip numbers within parenthesis
+      || (!inCall && (oldChar === '(' && hasNum(cur) && next === ')'))
+
+      // keep hour/seconds format together
+      || (oldChar && oldChar.includes(':') && cur === ':' && hasNum(next))
+
+      // keep mixed units together, e.g. ft-us
+      || (
+        hasNum(oldChar)
+        && hasKeyword(oldChar, units)
+        && '/-'.includes(cur) && isChar(next)
+        && hasKeyword(oldChar + cur + next, units)
+      )
+    ) {
+      buffer.splice(offset - 1, 2, [oldChar + cur + next]);
+      data.splice(i, 1);
+      stack.pop();
+      continue;
+    }
+
+    if (
       isAny(cur)
 
       // concatenate until we reach ops/units
@@ -246,22 +270,6 @@ export function joinTokens(data, units, types) {
         stack.push(cur);
         continue;
       }
-    }
-
-    if (
-      // handle fractions,
-      (isInt(oldChar) && cur === '/' && isInt(next))
-
-      // skip numbers within parenthesis
-      || (!inCall && (oldChar === '(' && hasNum(cur) && next === ')'))
-
-      // keep hour/seconds format together
-      || (oldChar && oldChar.includes(':') && cur === ':' && hasNum(next))
-    ) {
-      buffer.splice(offset - 1, 2, [oldChar + cur + next]);
-      data.splice(i, 1);
-      stack.pop();
-      continue;
     }
 
     // flag possible def/call expressions
