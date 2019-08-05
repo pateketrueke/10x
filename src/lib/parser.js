@@ -241,8 +241,7 @@ export function joinTokens(data, units, types) {
 
       // keep mixed units together, e.g. ft-us
       || (
-        hasNum(oldChar)
-        && hasKeyword(oldChar, units)
+        hasKeyword(oldChar, units)
         && '/-'.includes(cur) && isChar(next)
         && hasKeyword(oldChar + cur + next, units)
       ) || (isInt(oldChar) && cur === ' ' && hasKeyword(next, units))

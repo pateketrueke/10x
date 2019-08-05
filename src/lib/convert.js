@@ -103,10 +103,10 @@ export function possibilitiesFrom(num, unit) {
     return index;
   }
 
-  if (DEFAULT_MAPPINGS[unit]) {
-    const opts = convert.from(DEFAULT_MAPPINGS[unit]).possibilities();
+  const test = DEFAULT_MAPPINGS[unit] || DEFAULT_MAPPINGS[unit.toLowerCase()];
 
-    // FIXME: keep short/longs words?
+  if (test) {
+    const opts = convert.from(test).possibilities();
 
     return opts;
   }

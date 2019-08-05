@@ -76,7 +76,7 @@ export function fromSymbols(text, units, expression, previousToken) {
   }
 
   // handle fraction numbers
-  if (text.includes('/')) {
+  if (isNum(text) && text.includes('/')) {
     return ['number', text, 'x-fraction'];
   }
 
