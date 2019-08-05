@@ -3,8 +3,8 @@ import {
   getOp, buildTree, cleanTree,
 } from './parser';
 
-export function toToken(offset, fromCallback, arg1, arg2, arg3) {
-  const value = fromCallback(arg1, arg2, arg3);
+export function toToken(offset, fromCallback, arg1, arg2, arg3, arg4) {
+  const value = fromCallback(arg1, arg2, arg3, arg4);
 
   value._offset = offset;
 
@@ -49,19 +49,19 @@ export function fromMarkdown(text) {
   return ['text', text];
 }
 
-export function fromSymbols(text, units, expression) {
-  // try most char-expressions as valid units...
-  if (expression && (isChar(text) || isAlpha(text))) {
-    return ['unit', text];
-  }
-
+export function fromSymbols(text, units, expression, previousToken) {
   // handle white-space
   if (text === ' ') {
     return ['text', ' '];
   }
 
+  // try most char-expressions as valid units...
+  if (expression && (isChar(text) || isAlpha(text))) {
+    return ['unit', text];
+  }
+
   // handle expressions
-  if (isExpr(text)) {
+  if (isExpr(text) && !isExpr(previousToken)) {
     return ['expr', text];
   }
 
@@ -191,7 +191,7 @@ export function transform(input, units, types) {
         isExpr(cur) || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
        ))
     ) {
-      prev.push(toToken(i, fromSymbols, cur, units));
+      prev.push(toToken(i, fromSymbols, cur, units, null, prevToken));
     } else {
       prev.push(toToken(i, fromMarkdown, cur));
     }
