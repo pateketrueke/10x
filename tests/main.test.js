@@ -131,6 +131,12 @@ describe('DSL', () => {
       expect(calc('foo _bar baz_ buzz').tokens[2][1]).to.eql('_bar baz_');
     });
 
+    it('should handle heading tags', () => {
+      expect(calc('## ~~foo~~ `bar` __baz__ **buzz**').tokens[0][0]).to.eql('heading');
+      expect(calc('## ~~foo~~ `bar` __baz__ **buzz**').tokens[0][2]).to.eql(2);
+      expect(calc('## ~~foo~~ `bar` __baz__ **buzz**').tokens[0][1]).to.eql('## ~~foo~~ `bar` __baz__ **buzz**');
+    });
+
     it('should handle blockquote tags', () => {
       expect(calc('> ~~foo~~ `bar` __baz__ **buzz**').tokens[0][0]).to.eql('blockquote');
       expect(calc('> ~~foo~~ `bar` __baz__ **buzz**').tokens[0][1]).to.eql('> ~~foo~~ `bar` __baz__ **buzz**');
