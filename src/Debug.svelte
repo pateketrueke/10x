@@ -67,6 +67,9 @@
   p small:hover {
     background-color: rgba(0, 0, 0, .05);
   }
+  p small span {
+    margin-left: 2px;
+  }
   label {
     color: gray;
     cursor: pointer;

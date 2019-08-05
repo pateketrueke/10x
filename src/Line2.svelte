@@ -55,8 +55,35 @@
   let enabled = false;
   let usingMode = null;
 
-  function sp(text) {
+  function E(text) {
+    text = text.replace(/&/g, '&amp;');
+    text = text.replace(/>/g, '&gt;');
+    text = text.replace(/</g, '&lt;');
+
+    return text;
+  }
+
+  function sp(text, pre = '', suff = '') {
+    text = text.substr(pre.length, text.length - (suff.length + pre.length));
+    text = `${pre ? `<span>${pre === '>' ? '&gt;' : pre}</span>` : ''}${E(text)}${suff ? `<span>${suff}</span>` : ''}`;
+
     return text.replace(/\s/g, String.fromCharCode(160));
+  }
+
+  function mkd(text) {
+    // FIXME: adjust parser to... _ok_ __this__ *ok* **oks**
+    text = text.replace(/\*\*([^<>]+?)\*\*/g, '<span>**</span><b>$1</b><span>**</span>');
+    text = text.replace(/__([^<>]+?)__/g, '<span>__</span><b>$1</b><span>__</span>');
+    text = text.replace(/\*([^<>]+?)\*/g, '<span>*</span><em>$1</em><span>*</span>');
+    text = text.replace(/_([^<>]+?)_/g, '<span>_</span><em>$1</em><span>_</span>');
+    text = text.replace(/~([^<>]+?)~/g, '<span>~</span><del>$1</del><span>~</span>');
+
+    // FIXME: how to?
+    text = text.replace(/\[([x\s])\]/g, (_, x) => {
+      return `<var data-op="checkbox"><span>[</span>${x}<input tabindex="-1" type="checkbox"${x === 'x' ? ' checked' : ''}/><span>]</span></var>`;
+    });
+
+    return text;
   }
 
   function push() {
@@ -82,7 +109,7 @@
     const pos = token._offset >= 0 ? ` data-pos="${token._offset}"` : '';
 
     if (token[0] === 'text') {
-      return `<var>${sp(token[1])}</var>`;
+      return `<var>${mkd(sp(token[1]))}</var>`;
     }
 
     if (token[0] === 'expr') {
@@ -109,8 +136,13 @@
     }
 
     if (hasTagName(token[0])) {
-      if (token[0] === 'heading') return `<h${token[2]}${pos}>${sp(token[1])}</h${token[2]}>`;
-      else return `<${token[0]}>${sp(token[1])}</${token[0]}>`;
+      // if (token[0] === 'p') return `<p>${sp(token[1], '__', '__')}</p>`;
+      // if (token[0] === 'em') return `<em>${sp(token[1], '__', '__')}</em>`;
+      // if (token[0] === 'b') return `<b>${sp(token[1], '**', '**')}</b>`;
+      // if (token[0] === 'del') return `<del>${sp(token[1], '~~', '~~')}</del>`;
+      // if (token[0] === 'code') return `<code>${sp(token[1], '`', '`')}</code>`;
+      if (token[0] === 'heading') return `<h${token[2]}>${sp(token[1], token[1].substr(0, token[2]))}</h${token[2]}>`;
+      if (token[0] === 'blockquote') return `<blockquote>${mkd(sp(token[1], '>'))}</blockquote>`;
     }
 
     if (token[0] === 'def') {
@@ -269,7 +301,6 @@
 
     if (e.keyCode === 8) {
       removeSelectedText();
-      input.style.whiteSpace = 'nowrap';
     }
   }
 
@@ -353,8 +384,8 @@
         // adjust numeric values with SHIFT+UP/DOWN
         if (
           e.shiftKey
+          && node && node.dataset.pos >= 0
           && (e.keyCode === 38 || e.keyCode === 40)
-          && node && node.dataset.pos >= 0 && ['unit', 'number'].includes(node.dataset.op)
         ) {
           e.preventDefault();
 
@@ -519,10 +550,6 @@
 
       if (e.keyCode === 8) {
         if (usingMode && MODES[markup.charAt(offset - 1)]) usingMode = null;
-
-        // make white-space visible during this
-        input.style.whiteSpace = 'pre-line';
-
         mutate('', -1);
         sel();
       }
@@ -601,11 +628,7 @@
 
 <style>
   .input {
-    word-break: break-word;
-    white-space: nowrap;
-    left: 0;
-    top: 0;
-    z-index: 1;
+    word-break: break-all;
     cursor: text;
     outline: none;
     min-width: 5px;

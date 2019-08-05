@@ -1,5 +1,7 @@
 body { font-family: Montserrat; }
 
+.editor { line-height: 1.5; }
+.editor:hover { background-color: #FFFFEF; }
 .editor.errored::before, .editor .errored::before { width: 100%; height: 1px; content: ' '; bottom: 0; left: 0; position: absolute; border-bottom: 1px dashed red; }
 .editor.errored, .editor .errored { position: relative; }
 .editor h1, .editor h2, .editor h3, .editor h4, .editor h5, .editor h6 { margin: 0; }
@@ -12,10 +14,17 @@ body { font-family: Montserrat; }
 .editor { color: #414A52; caret-color: #898E8A; overflow: hidden; }
 .editor var { font-style: normal; }
 .editor * span, .editor [data-op=open], .editor [data-op=close] { color: #D4D8D5; font-weight: normal; }
+.editor blockquote { padding: 0; margin: 0 0 0 1em; color: #898E8A; }
+.editor blockquote > span:first-child::after { color: #D4D8D5; position: absolute; content: '“'; font-size: 2em; left: -2px; top: -5px; }
+.editor [data-op=checkbox] { color: transparent; position: relative; display: inline-block; width: 27px; }
+.editor [data-op=checkbox] * { position: absolute; }
+.editor [data-op=checkbox] span:first-child { left: 0; }
+.editor [data-op=checkbox] span:last-child { right: 0; }
+.editor [data-op=checkbox] input { left: 5px; top: 1px; }
 .editor [data-op=number] { color: #3B89C6; }
 .editor [data-op=unit] { border-bottom: 1px dashed #D4D8D5; }
 .editor [data-op=equal], .editor [data-op=plus], .editor [data-op=min] { color: #D776C7; }
-.editor [data-op=div], .editor [data-op=mul], .editor [data-op=number] span { position: relative; color: transparent; display: inline-block; width: .5em; }
+.editor [data-op=div], .editor [data-op=mul], .editor [data-op=number] span, .editor blockquote > span:first-child { position: relative; color: transparent; display: inline-block; width: .5em; }
 .editor [data-op=div]::after, .editor [data-op=mul]::after { caret-color: #898E8A; color: #D776C7; position: absolute; left: -2px; bottom: 0; }
 .editor [data-op=number] span::after { content: '⁄'; color: #3B89C6; position: absolute; left: 3px; }
 .editor [data-op=mul], .editor [data-op=div] { width: .3em;  }
