@@ -30,21 +30,15 @@ export function fromMarkdown(text) {
     return ['blockquote', text];
   }
 
-  // handle more formats: del, em, bold
+  // handle more formats...
   const begin = text.substr(0, 2);
   const end = text.substr(text.length - 2, 2);
 
-  if (begin === '~~' && end === '~~') {
-    return ['del', text];
-  }
+  // bold words are made by double marks, sadly *this won't* work!
+  if (begin === '**' && end === '**' || begin === '__' && end === '__') return ['b', text];
 
-  if (begin === '__' && end === '__') {
-    return ['em', text];
-  }
-
-  if (begin === '**' && end === '**') {
-    return ['b', text];
-  }
+  if (begin[0] === '~' && end[1] === '~') return ['del', text];
+  if (begin[0] === '_' && end[1] === '_') return ['em', text];
 
   return ['text', text];
 }
