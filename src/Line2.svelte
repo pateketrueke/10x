@@ -162,6 +162,8 @@
     if (enabled) {
       enabled = false;
     }
+
+    sel();
   }
 
   function enable() {
@@ -352,7 +354,7 @@
         if (
           e.shiftKey
           && (e.keyCode === 38 || e.keyCode === 40)
-          && node && node.dataset.pos >= 0 && node.dataset.op === 'number'
+          && node && node.dataset.pos >= 0 && ['unit', 'number'].includes(node.dataset.op)
         ) {
           e.preventDefault();
 
@@ -417,9 +419,9 @@
             }
 
             fixedOffset += fixedLength + (isDash ? 1 : 0);
-          } else if (!dateType && values[i].trim()) {
+          } else if (values[i].trim() && dateType !== 'ISO') {
             const unit = values[i].toLowerCase();
-            const list = possibilitiesFrom(unit);
+            const list = possibilitiesFrom(hasNum(tmp), unit);
             const index = Math.min(Math.max(0, list.indexOf(unit) + inc), list.length - 1);
 
             // try to keep same casing...
