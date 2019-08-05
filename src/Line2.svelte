@@ -4,7 +4,7 @@
   import Solvente from './lib';
 
   import {
-   isOp, toNumber, hasDatetime, hasTagName,
+   isOp, isInt, isChar, toNumber, hasDatetime, hasTagName,
  } from './lib/parser';
 
   import {
@@ -353,73 +353,61 @@
         ) {
           e.preventDefault();
 
+          let fixedOffset = 0;
+
+          const tmp = node.textContent;
           const inc = e.keyCode === 38 ? 1 : -1;
           const pos = parseInt(node.dataset.pos, 10);
 
           const left = info.input.slice(0, pos);
           const right = info.input.slice(pos + 1);
+          const values = tmp.match(/-?\d+|[a-z]+|\s|\D/gi);
 
-          let nextValue = 0;
-          let fixedOffset = 0;
+          // retrieve relative position
+          const cursor = info.input
+            .join('').slice(0, offset)
+            .substr(left.join('').length)
+            .length;
 
-          if (hasDatetime(node.textContent)) {
-            const firstWord = node.textContent.split(' ')[0];
+          // flag well-known dates
+          const isDate = hasDatetime(tmp);
 
-            // FIXME: design how these will works...
-            switch (node.textContent.toLowerCase()) {
-              case 'tonight':
-              case 'today':
-              case 'now':
-                nextValue = inc > 0 ? 'tomorrow' : 'yesterday';
+          for (let i = 0, cur = 0; i < values.length; i += 1) {
+            if (cursor >= cur && cursor <= (cur + values[i].length)) {
+              if (isInt(values[i]) || values[i].charAt() === '0') {
+                const width = values[i].length;
+
+                values[i] = parseInt(values[i], 10) + inc;
+
+                if (isDate) {
+                  let max = 2;
+                  let min = 1;
+
+                  // some constraints from ISO-dates
+                  if (i === 2) max = 12;
+                  if (i === 4) max = 31;
+                  if (i === 6) max = 23;
+                  if (i === 8 || i === 10) max = 59;
+                  if (i === 12) max = 999;
+                  if (width === 3) min = 0;
+                  if (width === 4) max = 9999;
+
+                  values[i] = Math.max(min, Math.min(max, values[i]));
+                  values[i] = `000${values[i]}`.substr(-width);
+                }
+
+                fixedOffset += cur;
                 break;
-
-              case 'tomorrow':
-                nextValue = inc > 0 ? 'tomorrow' : 'today';
-                break;
-
-              case 'yesterday':
-                nextValue = inc > 0 ? 'today' : 'yesterday';
-                break;
-
-              case 'week':
-              case 'weekend':
-                nextValue = inc > 0 ? 'weekend' : 'week';
-                break;
+              } else if (values[i].length > 1) {
+                // FIXME: just use lists and offsets...
+                console.log('CHAR', cur, values[i], cursor);
+              }
             }
 
-            if (nextValue) {
-              const isUpper = /^[A-Z]+$/.test(node.textContent);
-              const isTitle = /^[A-Z][a-z]+$/.test(node.textContent);
-
-              if (isUpper) nextValue = nextValue.toUpperCase();
-              if (isTitle) nextValue = nextValue[0].toUpperCase() + nextValue.substr(1).toLowerCase();
-            }
-          } else if (node.textContent.includes('/')) {
-            const curLine = info.input.join('').slice(0, offset).substr(left.join('').length);
-            const [a, b, c] = node.textContent.split(/[\s/]/);
-
-            if (curLine.includes('/')) {
-              nextValue = `${a}/${parseInt(b, 10) + inc}`;
-              fixedOffset += a.length + 1;
-            } else {
-              nextValue = `${parseInt(a, 10) + inc}/${b}`;
-            }
-
-            if (c) {
-              nextValue += c;
-            }
-          } else {
-            const matches = node.textContent.match(/\D+$/);
-            const value = parseFloat(toNumber(info.input[pos].replace(/\D+$/, '')));
-
-            nextValue = value + inc;
-
-            if (matches) {
-              nextValue += matches[0];
-            }
+            cur += values[i].length;
           }
 
-          markup = left.concat(nextValue).concat(right).join('');
+          markup = left.concat(values.join('')).concat(right).join('');
           render();
 
           // ensure cursor is set to the current token
