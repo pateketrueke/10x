@@ -95,8 +95,8 @@ groups.forEach(group => {
   });
 });
 
-export function possibilitiesFrom(unit) {
-  const index = INC_DEC.find(x => x.includes(unit));
+export function possibilitiesFrom(num, unit) {
+  const index = !num && INC_DEC.find(x => x.includes(unit));
 
   if (index) {
     return index;
