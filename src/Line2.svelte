@@ -4,7 +4,7 @@
   import Solvente from './lib';
 
   import {
-   isOp, isInt, isChar, toNumber, hasDatetime, hasTagName,
+   isOp, hasNum, hasTagName, hasDatetime,
  } from './lib/parser';
 
   import {
@@ -346,10 +346,9 @@
 
         // adjust numeric values with SHIFT+UP/DOWN
         if (
-          node
-          && node.dataset.pos >= 0
-          && node.dataset.op === 'number'
+          e.shiftKey
           && (e.keyCode === 38 || e.keyCode === 40)
+          && node && node.dataset.pos >= 0 && node.dataset.op === 'number'
         ) {
           e.preventDefault();
 
@@ -369,34 +368,41 @@
             .substr(left.join('').length)
             .length;
 
-          // flag well-known dates
-          const isDate = hasDatetime(tmp);
+          // flag possible date-time
+          const dateType = hasDatetime(tmp);
 
           for (let i = 0, cur = 0; i < values.length; i += 1) {
             if (cursor >= cur && cursor <= (cur + values[i].length)) {
-              if (isInt(values[i]) || values[i].charAt() === '0') {
-                const width = values[i].length;
+              if (hasNum(values[i])) {
+                const isDash = dateType === 'ISO' && values[i].charAt() === '-';
+                const width = values[i].length - (isDash ? 1 : 0);
 
+                values[i] = isDash ? values[i].substr(1) : values[i];
                 values[i] = parseInt(values[i], 10) + inc;
 
-                if (isDate) {
-                  let max = 2;
-                  let min = 1;
+                if (dateType === 'ISO') {
+                  let max = 59;
+                  let min = 0;
 
                   // some constraints from ISO-dates
-                  if (i === 2) max = 12;
-                  if (i === 4) max = 31;
-                  if (i === 6) max = 23;
-                  if (i === 8 || i === 10) max = 59;
-                  if (i === 12) max = 999;
-                  if (width === 3) min = 0;
+                  if (width === 2 && !(i === 6 || i === 8)) {
+                    if (i === 1) { min = 1; max = 12; }
+                    if (i === 2) { min = 1; max = 31; }
+                    if (i === 4) max = 23;
+                  }
+
+                  if (i === 10) max = 999;
                   if (width === 4) max = 9999;
 
                   values[i] = Math.max(min, Math.min(max, values[i]));
                   values[i] = `000${values[i]}`.substr(-width);
                 }
 
-                fixedOffset += cur;
+                if (isDash) {
+                  values[i] = `-${values[i]}`;
+                }
+
+                fixedOffset += cur + (isDash ? 1 : 0);
                 break;
               } else if (values[i].length > 1) {
                 // FIXME: just use lists and offsets...
