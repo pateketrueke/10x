@@ -4,28 +4,28 @@
   export let debug = false;
 
   let tests = `
-    1 as mm
-    1 as mm2
-    1 as mcg
-    1 as mm3
-    1 as mm3/s
-    1 as C
-    1 as ns
-    1 as Hz
-    1 as m/s
-    1 as s/m
-    1 as Pa
-    1 as b
-    1 as lx
-    1 as ppm
-    1 as V
-    1 as A
-    1 as W
-    1 as VA
-    1 as VAR
-    1 as Wh
-    1 as VARh
-    1 as deg
+    mm
+    mm2
+    mcg
+    mm3
+    mm3/s
+    C
+    ns
+    Hz
+    m/s
+    s/m
+    Pa
+    b
+    lx
+    ppm
+    V
+    A
+    W
+    VA
+    VAR
+    Wh
+    VARh
+    deg
   `.trim().split('\n').map(x => [0, x.trim()]);
 
   function toggle(text) {

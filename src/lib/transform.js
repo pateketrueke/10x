@@ -170,7 +170,7 @@ export function transform(input, units, types) {
 
     if (
       // handle most values
-      isSep(cur) || hasNum(cur)
+      isSep(cur) || isNum(cur)
 
       // handle operators
       || (isOp(cur) && (
