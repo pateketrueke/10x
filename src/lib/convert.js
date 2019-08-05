@@ -66,6 +66,11 @@ export const DEFAULT_TYPES = [
   ['0000-00-00', 'datetime'],
 ];
 
+export const INC_DEC = [
+  ['yesterday', 'today', 'now', 'tonight', 'tomorrow', 'week', 'weekend'],
+  ['jan', 'feb', 'mar', 'apr', 'mar', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'],
+];
+
 // assign currency-codes as mappings
 Object.keys(CURRENCY_SYMBOLS)
   .forEach(k => {
@@ -89,6 +94,24 @@ groups.forEach(group => {
     }
   });
 });
+
+export function possibilitiesFrom(unit) {
+  const index = INC_DEC.find(x => x.includes(unit));
+
+  if (index) {
+    return index;
+  }
+
+  if (DEFAULT_MAPPINGS[unit]) {
+    const opts = convert.from(DEFAULT_MAPPINGS[unit]).possibilities();
+
+    // FIXME: keep short/longs words?
+
+    return opts;
+  }
+
+  return [unit];
+}
 
 export function convertFrom(num, base, target) {
   if (CURRENCY_SYMBOLS[base] || CURRENCY_SYMBOLS[target]) {
