@@ -62,7 +62,8 @@ export const ALPHA_MAPPINGS = Object.keys(ALPHA_CHARS)
 
 // fixed-length types
 export const DEFAULT_TYPES = [
-  ['0000-00-00T00:00:00.000Z', 'datetime'],
+  ['0000-00-00T00:00:00', 'datetime'],
+  ['0000-00-00', 'datetime'],
 ];
 
 // assign currency-codes as mappings

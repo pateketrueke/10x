@@ -15,7 +15,7 @@ const OP_TYPES = {
 };
 
 const RE_NUM = /^(?:-?\.?\d|[^()]?\w+\s*\d)(?![)])/;
-const RE_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const RE_ISO = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2})?/;
 const RE_DATE = /^[a-z]{3}(?:\s\d{1,2})?(?:,\s(?:\d{2}|\d{4}))?$/i;
 const RE_DAYS = /^(?:now|to(?:day|night|morrow)|yesterday|week(?:end)?)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
@@ -63,7 +63,10 @@ export const hasKeyword = (x, units) => {
 };
 
 export const hasDatetime = x => {
-  return x && (RE_MONTHS.test(x) || RE_DAYS.test(x) || RE_HOURS.test(x) || RE_ISO.test(x));
+  if (x && RE_ISO.test(x)) return 'ISO';
+  if (x && RE_DAYS.test(x)) return 'DAYS';
+  if (x && RE_HOURS.test(x)) return 'HOURS';
+  if (x && RE_MONTHS.test(x)) return 'MONTHS';
 };
 
 export function toFraction(number) {
@@ -212,6 +215,16 @@ export function joinTokens(data, units, types) {
     let nextToken;
 
     do { nextToken = data[++key]; } while (nextToken === ' ');
+
+    // glue ISO-dates together
+    if (
+      hasNum(cur)
+      && hasDatetime(oldChar) === 'ISO'
+      && cur.charAt() === '.' && cur.charAt(cur.length - 1) === 'Z'
+    ) {
+      buffer[offset - 1].push(cur);
+      continue;
+    }
 
     // flag well-known date formats
     if (hasMonths(cur)) hasDate = true;

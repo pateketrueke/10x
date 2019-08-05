@@ -14,7 +14,7 @@ export function reduceFromValue(token) {
   }
 
   // handle ISO strings
-  if (text.length > 20) return new Date(text);
+  if (text.length >= 10 && !text.includes(' ')) return new Date(text);
 
   const now = new Date();
   const year = now.getFullYear();

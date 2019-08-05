@@ -174,8 +174,7 @@ export function transform(input, units, types) {
 
       // handle operators
       || (isOp(cur) && (
-        (!prevToken && types[nextToken])
-        || (hasNum(prevToken) && nextToken === '(')
+        (hasNum(prevToken) && nextToken === '(')
         || (hasNum(prevToken) && (hasNum(nextToken) || hasKeyword(nextToken, units)))
       ))
 
