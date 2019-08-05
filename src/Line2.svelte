@@ -24,6 +24,12 @@
     },
   };
 
+  // FIXME: trye the same for convert-units?
+  const INC_DEC = [
+    ['yesterday', 'today', 'now', 'tonight', 'tomorrow', 'week', 'weekend'],
+    ['jan', 'feb', 'mar', 'apr', 'mar', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'],
+  ];
+
   const RE_EMOJI = /[\uD83C-\uDBFF\uDC00-\uDFFF]/;
 </script>
 
@@ -96,7 +102,7 @@
 
         return `<var data-op="number"${pos}><sup>${a}</sup><span>/</span><sub>${b}</sub>${c ? ` ${c}` : ''}</var>`;
       } else {
-        return `<var data-op="number"${pos}>${token[1]}</var>`;
+        return `<var data-op="number"${pos}>${sp(token[1])}</var>`;
       }
     }
 
@@ -398,6 +404,11 @@
                   values[i] = `000${values[i]}`.substr(-width);
                 }
 
+                if (dateType === 'MONTHS') {
+                  if (width <= 2) values[i] = Math.max(1, Math.min(31, values[i]));
+                  if (width === 4) values[i] = Math.max(0, Math.min(9999, values[i]));
+                }
+
                 if (isDash) {
                   values[i] = `-${values[i]}`;
                 }
@@ -405,8 +416,18 @@
                 fixedOffset += cur + (isDash ? 1 : 0);
                 break;
               } else if (values[i].length > 1) {
-                // FIXME: just use lists and offsets...
-                console.log('CHAR', cur, values[i], cursor);
+                const cur = values[i].toLowerCase();
+                const list = INC_DEC.find(x => x.includes(cur));
+                const index = Math.min(Math.max(0, list.indexOf(cur) + inc), list.length - 1);
+
+                // try to keep same casing...
+                if (/^[A-Z][a-z]+$/.test(values[i])) {
+                  values[i] = list[index][0].toUpperCase() + list[index].substr(1);
+                } else if (/^[A-Z]+$/.test(values[i])) {
+                  values[i] = list[index].toUpperCase();
+                } else {
+                  values[i] = list[index];
+                }
               }
             }
 
