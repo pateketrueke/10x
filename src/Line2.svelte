@@ -413,13 +413,19 @@
             cur += values[i].length;
           }
 
-          markup = left.concat(values.join('')).concat(right).join('');
-          render();
+          // ensure we don't render in vain...
+          const newMarkup = left.concat(values.join('')).concat(right).join('');
 
-          // ensure cursor is set to the current token
-          offset = left.join('').length + fixedOffset;
-          setCursor(input, offset);
-          sel();
+          if (newMarkup !== markup) {
+            markup = newMarkup;
+            push();
+            render();
+
+            // ensure cursor is set to the current token
+            offset = left.join('').length + fixedOffset;
+            setCursor(input, offset);
+            sel();
+          }
           return;
         }
 
