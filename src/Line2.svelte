@@ -109,8 +109,8 @@
     }
 
     if (hasTagName(token[0])) {
-      if (token[0] === 'heading') return `<h${token[2]}${pos}>${token[1]}</h${token[2]}>`;
-      else return `<${token[0]}>${token[1]}</${token[0]}>`;
+      if (token[0] === 'heading') return `<h${token[2]}${pos}>${sp(token[1])}</h${token[2]}>`;
+      else return `<${token[0]}>${sp(token[1])}</${token[0]}>`;
     }
 
     if (token[0] === 'def') {
@@ -521,7 +521,7 @@
         if (usingMode && MODES[markup.charAt(offset - 1)]) usingMode = null;
 
         // make white-space visible during this
-        input.style.whiteSpace = 'pre';
+        input.style.whiteSpace = 'pre-line';
 
         mutate('', -1);
         sel();
