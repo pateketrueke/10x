@@ -4,8 +4,12 @@
   import Solvente from './lib';
 
   import {
-   isOp, hasNum, hasTagName, hasDatetime,
- } from './lib/parser';
+    isOp, hasNum, hasTagName, hasDatetime,
+  } from './lib/parser';
+
+  import {
+    possibilitiesFrom,
+  } from './lib/convert';
 
   import {
     getCursor,
@@ -23,12 +27,6 @@
       pagination: 10,
     },
   };
-
-  // FIXME: trye the same for convert-units?
-  const INC_DEC = [
-    ['yesterday', 'today', 'now', 'tonight', 'tomorrow', 'week', 'weekend'],
-    ['jan', 'feb', 'mar', 'apr', 'mar', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'],
-  ];
 
   const RE_EMOJI = /[\uD83C-\uDBFF\uDC00-\uDFFF]/;
 </script>
@@ -358,7 +356,9 @@
         ) {
           e.preventDefault();
 
+          let i;
           let fixedOffset = 0;
+          let fixedLength = 0;
 
           const tmp = node.textContent;
           const inc = e.keyCode === 38 ? 1 : -1;
@@ -366,7 +366,7 @@
 
           const left = info.input.slice(0, pos);
           const right = info.input.slice(pos + 1);
-          const values = tmp.match(/-?\d+|[a-z]+|\s|\D/gi);
+          const values = tmp.match(/-?\d+|[a-z/-]+|\s|\D/gi);
 
           // retrieve relative position
           const cursor = info.input
@@ -377,61 +377,60 @@
           // flag possible date-time
           const dateType = hasDatetime(tmp);
 
-          for (let i = 0, cur = 0; i < values.length; i += 1) {
-            if (cursor >= cur && cursor <= (cur + values[i].length)) {
-              if (hasNum(values[i])) {
-                const isDash = dateType === 'ISO' && values[i].charAt() === '-';
-                const width = values[i].length - (isDash ? 1 : 0);
+          for (i = 0; i < values.length; i += 1) {
+            if (cursor - fixedLength < values[i].length) break;
+            fixedLength += values[i].length;
+          }
 
-                values[i] = isDash ? values[i].substr(1) : values[i];
-                values[i] = parseInt(values[i], 10) + inc;
+          if (hasNum(values[i])) {
+            const isDash = dateType === 'ISO' && values[i].charAt() === '-';
+            const width = values[i].length - (isDash ? 1 : 0);
 
-                if (dateType === 'ISO') {
-                  let max = 59;
-                  let min = 0;
+            values[i] = isDash ? values[i].substr(1) : values[i];
+            values[i] = parseInt(values[i], 10) + inc;
 
-                  // some constraints from ISO-dates
-                  if (width === 2 && !(i === 6 || i === 8)) {
-                    if (i === 1) { min = 1; max = 12; }
-                    if (i === 2) { min = 1; max = 31; }
-                    if (i === 4) max = 23;
-                  }
+            if (dateType === 'ISO') {
+              let max = 59;
+              let min = 0;
 
-                  if (i === 10) max = 999;
-                  if (width === 4) max = 9999;
-
-                  values[i] = Math.max(min, Math.min(max, values[i]));
-                  values[i] = `000${values[i]}`.substr(-width);
-                }
-
-                if (dateType === 'MONTHS') {
-                  if (width <= 2) values[i] = Math.max(1, Math.min(31, values[i]));
-                  if (width === 4) values[i] = Math.max(0, Math.min(9999, values[i]));
-                }
-
-                if (isDash) {
-                  values[i] = `-${values[i]}`;
-                }
-
-                fixedOffset += cur + (isDash ? 1 : 0);
-                break;
-              } else if (values[i].length > 1) {
-                const cur = values[i].toLowerCase();
-                const list = INC_DEC.find(x => x.includes(cur));
-                const index = Math.min(Math.max(0, list.indexOf(cur) + inc), list.length - 1);
-
-                // try to keep same casing...
-                if (/^[A-Z][a-z]+$/.test(values[i])) {
-                  values[i] = list[index][0].toUpperCase() + list[index].substr(1);
-                } else if (/^[A-Z]+$/.test(values[i])) {
-                  values[i] = list[index].toUpperCase();
-                } else {
-                  values[i] = list[index];
-                }
+              // some constraints from ISO-dates
+              if (width === 2 && !(i === 6 || i === 8)) {
+                if (i === 1) { min = 1; max = 12; }
+                if (i === 2) { min = 1; max = 31; }
+                if (i === 4) max = 23;
               }
+
+              if (i === 10) max = 999;
+              if (width === 4) max = 9999;
+
+              values[i] = Math.max(min, Math.min(max, values[i]));
+              values[i] = `000${values[i]}`.substr(-width);
             }
 
-            cur += values[i].length;
+            if (dateType === 'MONTHS') {
+              if (width <= 2) values[i] = Math.max(1, Math.min(31, values[i]));
+              if (width === 4) values[i] = Math.max(0, Math.min(9999, values[i]));
+            }
+
+            if (isDash) {
+              values[i] = `-${values[i]}`;
+            }
+
+            fixedOffset += fixedLength + (isDash ? 1 : 0);
+          } else if (!dateType && values[i].trim()) {
+            const unit = values[i].toLowerCase();
+            const list = possibilitiesFrom(unit);
+            const index = Math.min(Math.max(0, list.indexOf(unit) + inc), list.length - 1);
+
+            // try to keep same casing...
+            if (/^[A-Z][a-z]+$/.test(values[i])) {
+              values[i] = list[index][0].toUpperCase() + list[index].substr(1);
+            } else if (/^[A-Z]+$/.test(values[i])) {
+              values[i] = list[index].toUpperCase();
+            } else {
+              values[i] = list[index];
+            }
+            fixedOffset += fixedLength;
           }
 
           // ensure we don't render in vain...

@@ -9,7 +9,10 @@
     Test: 3/2
     2019-08-05T00:21:16.635Z
     This is now, or this week, who nows?
-    Jun 10; or Jun 10, 1987; or Jun, 1987;
+    Jun 10
+    Jun, 1987
+    Jun 10, 1987
+    10 cm
   `.trim().split('\n').map(x => [0, x.trim()]);
 
   function toggle(text) {
