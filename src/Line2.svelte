@@ -655,10 +655,15 @@
     display: flex;
     align-items: center;
   }
+  [data-result] {
+    margin-left: .5em;
+    padding-left: .5em;
+    border-left: 1px dashed silver;
+  }
 </style>
 
 <div class="wrapper">
-  <div class="editor">
+  <div class="editor" on:click={() => input.focus()}>
     <div class="input" spellcheck="false" contenteditable
       bind:this={input}
       on:blur={disable}
