@@ -29,7 +29,7 @@ export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
 export const isFmt = x => /^[`[\]_*~]$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
-export const isAny = (x, a = '') => /^[^\s\w\d_*~$€£¢%()|:;_,.+=*/-]$/.test(x) || a.includes(x);
+export const isAny = (x, a = '') => /^[^\s\w\d_*~$€£¢%()`|:;_,.+=*/-]$/.test(x) || a.includes(x);
 export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
@@ -226,7 +226,7 @@ export function joinTokens(data, units, types) {
     do { nextToken = data[++key]; } while (nextToken === ' ');
 
     // keep formatting block together, ** symbols required twice!
-    if (isFmt(cur) && (cur.length === 2 || cur !== '*')) {
+    if (isFmt(cur[0]) && (cur.length === 2 || cur !== '*')) {
       inFmt = !inFmt;
     } else if (inFmt) {
       buffer[offset - 1].push(cur);
