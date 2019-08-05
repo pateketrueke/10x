@@ -4,28 +4,7 @@
   export let debug = false;
 
   let tests = `
-    mm
-    mm2
-    mcg
-    mm3
-    mm3/s
-    C
-    ns
-    Hz
-    m/s
-    s/m
-    Pa
-    b
-    lx
-    ppm
-    V
-    A
-    W
-    VA
-    VAR
-    Wh
-    VARh
-    deg
+    Hello world!
   `.trim().split('\n').map(x => [0, x.trim()]);
 
   function toggle(text) {
@@ -70,7 +49,7 @@
             checked={on}
             tabIndex="-1"
           />
-          {#if !on}{text}{/if}
+          {#if !on}<input type="text" bind:value={text} />{/if}
         </label>
       {/if}
       {#if !debug || on}

@@ -577,7 +577,7 @@
 
     // bonus: highlighting defs
     const nodes = type === 'input'
-      ? input.querySelectorAll('[data-op]')
+      ? input.querySelectorAll('var')
       : input.childNodes;
 
     const sub = nodes[position];
