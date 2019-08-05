@@ -112,23 +112,23 @@ describe('DSL', () => {
 
   describe('Formatting', () => {
     it('should handle code tags', () => {
-      expect(calc('foo `bar baz` buzz').tokens[1][0]).to.eql('code');
-      expect(calc('foo `bar baz` buzz').tokens[1][1]).to.eql('`bar baz`');
+      expect(calc('foo `bar baz` buzz').tokens[2][0]).to.eql('code');
+      expect(calc('foo `bar baz` buzz').tokens[2][1]).to.eql('`bar baz`');
     });
 
     it('should handle del tags', () => {
-      expect(calc('foo ~bar baz~ buzz').tokens[1][0]).to.eql('del');
-      expect(calc('foo ~bar baz~ buzz').tokens[1][1]).to.eql('~bar baz~');
+      expect(calc('foo ~bar baz~ buzz').tokens[2][0]).to.eql('del');
+      expect(calc('foo ~bar baz~ buzz').tokens[2][1]).to.eql('~bar baz~');
     });
 
     it('should handle bold tags', () => {
-      expect(calc('foo **bar baz** buzz').tokens[1][0]).to.eql('b');
-      expect(calc('foo __bar baz__ buzz').tokens[1][1]).to.eql('__bar baz__');
+      expect(calc('foo **bar baz** buzz').tokens[2][0]).to.eql('b');
+      expect(calc('foo __bar baz__ buzz').tokens[2][1]).to.eql('__bar baz__');
     });
 
     it('should handle em tags', () => {
-      expect(calc('foo _bar baz_ buzz').tokens[1][0]).to.eql('em');
-      expect(calc('foo _bar baz_ buzz').tokens[1][1]).to.eql('_bar baz_');
+      expect(calc('foo _bar baz_ buzz').tokens[2][0]).to.eql('em');
+      expect(calc('foo _bar baz_ buzz').tokens[2][1]).to.eql('_bar baz_');
     });
 
     it('should handle blockquote tags', () => {

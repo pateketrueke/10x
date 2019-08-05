@@ -22,6 +22,7 @@ const cases = [
   ['Some values are already units, like 1cm - 35mm.', ['-2.5 cm']],
   ["Numbers are not tokenized if they're alone within parenthesis, e.g. (123)", []],
   ['Numbers can alse be expressed as fractions, e.g. 1/2 or 0.00032 as fr.', ['0.5', '1/5000']],
+  ['Checkboxes can be used too, e.g. [x] or [ ] would work.', []],
 ];
 
 describe('Playbook', () => {

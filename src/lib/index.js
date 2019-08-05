@@ -67,17 +67,7 @@ export default class Solvente {
       const fixedAST = tokens.ast.map(x => toToken(x._offset, () => x.slice()));
 
       info.error = tokens.error;
-
-      // finally, join text-nodes together...
-      info.tokens = fixedAST.reduce((prev, cur) => {
-        if (prev.length && prev[prev.length - 1][0] === 'text' && cur[0] === 'text') {
-          prev[prev.length - 1][1] += cur[1];
-        } else {
-          prev.push(cur);
-        }
-
-        return prev;
-      }, []);
+      info.tokens = fixedAST;
 
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
