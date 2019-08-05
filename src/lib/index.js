@@ -146,7 +146,7 @@ export default class Solvente {
             if (base !== 1.0 && many) fixedUnit = many;
           }
 
-          if (fixedUnit !== 'fr') {
+          if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
             fixedValue += ` ${fixedUnit}`;
           }
         }
