@@ -628,7 +628,7 @@
 
 <style>
   .input {
-    word-break: break-all;
+    word-break: break-word;
     cursor: text;
     outline: none;
     min-width: 5px;
