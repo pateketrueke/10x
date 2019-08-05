@@ -67,7 +67,8 @@ export const DEFAULT_TYPES = [
 ];
 
 export const INC_DEC = [
-  ['yesterday', 'today', 'now', 'tonight', 'tomorrow', 'week', 'weekend'],
+  ['week', 'weekend'],
+  ['yesterday', 'today', 'now', 'tonight', 'tomorrow'],
   ['jan', 'feb', 'mar', 'apr', 'mar', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'],
 ];
 

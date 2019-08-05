@@ -4,7 +4,7 @@
   import Solvente from './lib';
 
   import {
-    isOp, hasNum, hasTagName, hasDatetime,
+    isOp, isNum, hasTagName, hasDatetime,
   } from './lib/parser';
 
   import {
@@ -368,7 +368,7 @@
 
           const left = info.input.slice(0, pos);
           const right = info.input.slice(pos + 1);
-          const values = tmp.match(/-?\d+|[a-z/-]+|\s|\D/gi);
+          const values = tmp.match(/-?\d+|[a-z/-]+[23]?|\s|\D/gi);
 
           // retrieve relative position
           const cursor = info.input
@@ -384,7 +384,7 @@
             fixedLength += values[i].length;
           }
 
-          if (hasNum(values[i])) {
+          if (isNum(values[i])) {
             const isDash = dateType === 'ISO' && values[i].charAt() === '-';
             const width = values[i].length - (isDash ? 1 : 0);
 
@@ -421,7 +421,7 @@
             fixedOffset += fixedLength + (isDash ? 1 : 0);
           } else if (values[i].trim() && dateType !== 'ISO') {
             const unit = values[i].toLowerCase();
-            const list = possibilitiesFrom(hasNum(tmp), unit);
+            const list = possibilitiesFrom(isNum(tmp), unit);
             const index = Math.min(Math.max(0, list.indexOf(unit) + inc), list.length - 1);
 
             // try to keep same casing...

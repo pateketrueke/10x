@@ -245,7 +245,7 @@ export function joinTokens(data, units, types) {
         && hasKeyword(oldChar, units)
         && '/-'.includes(cur) && isChar(next)
         && hasKeyword(oldChar + cur + next, units)
-      )
+      ) || (isInt(oldChar) && cur === ' ' && hasKeyword(next, units))
     ) {
       buffer.splice(offset - 1, 2, [oldChar + cur + next]);
       data.splice(i, 1);
