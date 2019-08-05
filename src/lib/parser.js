@@ -27,7 +27,7 @@ export const isOp = (a, b = '') => `${b}-+=*/;`.includes(a);
 export const isSep = (a, b = '') => `${b}(|:;,)`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
-export const isFmt = x => /^[_*~]$/.test(x);
+export const isFmt = x => /^[`[/\]_*~]+$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
 export const isAny = (x, a = '') => /^[^\s\w\d_*~$€£¢%()|:;_,.+=*/-]$/.test(x) || a.includes(x);
 export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x);
@@ -164,6 +164,12 @@ export function joinTokens(data, units, types) {
     // last added token on the stack
     const oldChar = stack[stack.length - 1]
       || (buffer.length > 1 && buffer[offset - 1][0]);
+
+    // keep formatting blocks together
+    if (isFmt(cur) && oldChar.indexOf(cur) === 0) {
+      buffer[offset - 1].push(cur);
+      continue;
+    }
 
     if (
       // handle unit expressions, with numbers
@@ -322,6 +328,14 @@ export function parseBuffer(text, fixeds) {
     const next = chars[i + 1];
     const cur = chars[i];
 
+    // toggle formatting blocks
+    if (isFmt(cur) && last !== cur) {
+      inFormat = !inFormat;
+    } else if (inFormat) {
+      buffer.push(cur);
+      continue;
+    }
+
     if (!inBlock) {
       // skip closing chars if they're not well paired
       if (!open && cur === ')') {
@@ -332,39 +346,15 @@ export function parseBuffer(text, fixeds) {
       if (cur === '(') open++;
       if (cur === ')') open--;
 
-      // enable backticks
-      if (cur === '`') {
-        inFormat = !inFormat;
-
-        if (inFormat) {
-          tokens[++offset] = [cur];
-        } else {
-          buffer.push(cur);
-          offset++;
-        }
-
-        continue;
-      }
-
       // enable headings/blockquotes, skip everything
       if ('#>'.includes(cur) && i === 0) inBlock = true;
-
-      // allow skip from open/close formatting chars
-      if (isFmt(cur) && last === cur) {
-        inFormat = !inFormat;
-
-        // stop concatenation!
-        if (!inFormat) {
-          buffer.push(cur);
-          continue;
-        }
-      }
     }
 
     if (
-      inFormat || inBlock || typeof last === 'undefined'
+      inBlock || typeof last === 'undefined'
 
       // non-keywords
+      || (last === cur && isFmt(cur))
       || (last === '-' && isNum(cur))
       || (last !== ' ' && isAny(cur))
       || (hasNum(last) && cur === '%')
