@@ -368,7 +368,7 @@
 
           const left = info.input.slice(0, pos);
           const right = info.input.slice(pos + 1);
-          const values = tmp.match(/-?\d+|[a-z/-]+[23]?|\s|\D/gi);
+          const values = tmp.match(/-?\d+|[a-z][a-z/-]+[23]?|\s|\D/gi);
 
           // retrieve relative position
           const cursor = info.input
