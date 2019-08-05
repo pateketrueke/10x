@@ -97,7 +97,7 @@ groups.forEach(group => {
 });
 
 export function possibilitiesFrom(num, unit) {
-  const index = !num && INC_DEC.find(x => x.includes(unit));
+  const index = !num && INC_DEC.find(x => x.includes(unit.toLowerCase()));
 
   if (index) {
     return index;

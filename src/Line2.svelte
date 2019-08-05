@@ -420,18 +420,11 @@
 
             fixedOffset += fixedLength + (isDash ? 1 : 0);
           } else if (values[i].trim() && dateType !== 'ISO') {
-            const unit = values[i].toLowerCase();
+            const unit = values[i];
             const list = possibilitiesFrom(isNum(tmp), unit);
             const index = Math.min(Math.max(0, list.indexOf(unit) + inc), list.length - 1);
 
-            // try to keep same casing...
-            if (/^[A-Z][a-z]+$/.test(values[i])) {
-              values[i] = list[index][0].toUpperCase() + list[index].substr(1);
-            } else if (/^[A-Z]+$/.test(values[i])) {
-              values[i] = list[index].toUpperCase();
-            } else {
-              values[i] = list[index];
-            }
+            values[i] = list[index];
             fixedOffset += fixedLength;
           }
 
