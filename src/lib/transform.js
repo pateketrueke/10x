@@ -17,6 +17,11 @@ export function fromMarkdown(text) {
     return ['code', text];
   }
 
+  // handle checkboxes
+  if (text[0] === '[' && ' x'.includes(text[1]) && text[2] === ']') {
+    return ['check', text, text.includes('x')];
+  }
+
   // handle headings
   if (text.charAt() === '#') {
     const matches = text.match(/^(#+)(.*)$/);
