@@ -15,9 +15,9 @@
     Basic function-expressions are available: f(d',x)=d'*x; f(3, 5)
     > Also, previously defined functions and variables can be shared, e.g. f(2, x) / .33
     Definitions yield nothing back:
-      a' = 1.2;
-      b' = 3.4;
-      c' = a' * b' / 2;
+      a'= 1.2;
+      b'= 3.4;
+      c'= a' * b' / 2;
     Number-less units are not evaluated: c'.
     Numbers along with units are evaluated: 1c', -0.2a' or 2-b'.
     # Units

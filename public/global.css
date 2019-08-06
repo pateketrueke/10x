@@ -20,8 +20,7 @@ body { font-family: Montserrat; }
 .editor [data-op=checkbox] { position: relative; }
 .editor [data-op=checkbox] span:nth-child(2) { display: inline-block; width: 16px; text-align: center; }
 .editor [data-op=checkbox] input { position: absolute; left: 4px; top: 1px; }
-.editor [data-op=number] { color: #3B89C6; }
-.editor [data-op=unit] { border-bottom: 1px dashed #D4D8D5; }
+.editor [data-op=number], .editor [data-op=unit] { color: #3B89C6; }
 .editor [data-op=equal], .editor [data-op=plus], .editor [data-op=min] { color: #D776C7; }
 .editor [data-op=div], .editor [data-op=mul], .editor [data-op=number] span, .editor blockquote > span:first-child { position: relative; color: transparent; display: inline-block; width: .5em; }
 .editor [data-op=div]::after, .editor [data-op=mul]::after { caret-color: #898E8A; color: #D776C7; position: absolute; left: -2px; bottom: 0; }
@@ -29,6 +28,7 @@ body { font-family: Montserrat; }
 .editor [data-op=mul], .editor [data-op=div] { width: .3em;  }
 .editor [data-op=div]::after { content: '÷'; }
 .editor [data-op=mul]::after { content: '×'; }
+.editor [data-op=def] { color: #D0412D; }
 .editor sub, .editor sup { font-size: .75em; }
 .editor .selected { background-color: #FFDEFF; }
 .editor [data-op=mul].highlighted, .editor [data-op=div].highlighted { color: #F5FFA0; }
