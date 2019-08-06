@@ -109,10 +109,6 @@
   function renderItem(token) {
     const pos = token._offset >= 0 ? ` data-pos="${token._offset}"` : '';
 
-    if (token[0] === 'text') {
-      return `<var>${mkd(sp(token[1]))}</var>`;
-    }
-
     if (token[0] === 'expr') {
       if (isOp(token[1])) return `<var data-op="${token[2]}">${token[1]}</var>`;
       else return `<var data-op="expr">${token[1]}</var>`;
@@ -165,6 +161,13 @@
 
       return `<var data-op="def">${token[1]}${args}</var>`;
     }
+
+    if (token[0] === 'text') {
+      return `<var>${mkd(sp(token[1]))}</var>`;
+    }
+
+    // everything else?
+    return `<var data-op="${token[2] || token[0]}">${sp(token[1])}</var>`;
   }
 
   // we take the markup and inject HTML from it
