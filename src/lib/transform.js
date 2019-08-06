@@ -69,7 +69,14 @@ export function fromSymbols(text, units, expression, previousToken) {
   }
 
   // handle operators
-  if (text.length <= 2 && isOp(text[0], ';,') && !isInt(text[1])) {
+  if (
+    text.length <= 2
+    && (
+      (isOp(text[0], ';,') && !isInt(text[1]))
+      || text[0] === '<'
+      || text[1] === '>'
+    )
+  ) {
     return [text.length === 1 ? 'expr' : 'fx', text, getOp(text)];
   }
 
@@ -179,6 +186,7 @@ export function transform(input, units, types) {
       isSep(cur) || isNum(cur)
 
       // keep logical ops
+      || (cur === '|>' || cur === '<|')
       || (cur[0] === '"' || '=!<>'.includes(cur))
       || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]))
 

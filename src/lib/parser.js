@@ -13,6 +13,9 @@ const OP_TYPES = {
   '=~': 'like',
   '++': 'inc',
   '--': 'dec',
+  '&&': 'and',
+  '|>': 'rpipe',
+  '<|': 'lpipe',
   '<': 'lt',
   '>': 'gt',
   '=': 'equal',
@@ -33,7 +36,7 @@ const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\b/i;
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
 export const isIn = (x, a, b) => x >= a && x <= b;
-export const isOp = (a, b = '') => `${b}-+=~<!>*/`.includes(a);
+export const isOp = (a, b = '') => `${b}-+=~<!&>*/`.includes(a);
 export const isSep = (a, b = '') => `${b}|;,`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
@@ -385,6 +388,7 @@ export function parseBuffer(text, fixeds) {
       || ('!='.includes(last) && cur === '~')
       || ('+-'.includes(last) && cur === last)
       || ('!<>='.includes(last) && cur === '=')
+      || (last === '|' && cur === '>') || (last === '<' && cur === '|')
 
       // keep chars and numbers together
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))

@@ -19,8 +19,8 @@ describe('DSL', () => {
     });
 
     it('should handle some logical operators', () => {
-      expect(calc('<= >= == != !~ =~ -- ++ < > =').tokens.filter(x => x[1] !== ' ').map(x => x[2]))
-        .to.eql(['lteq', 'gteq', 'iseq', 'noteq', 'notlike', 'like', 'dec', 'inc', 'lt', 'gt', 'equal']);
+      expect(calc('<= >= == != !~ =~ -- ++ < > = && |> <|').tokens.filter(x => x[1] !== ' ').map(x => x[2]))
+        .to.eql(['lteq', 'gteq', 'iseq', 'noteq', 'notlike', 'like', 'dec', 'inc', 'lt', 'gt', 'equal', 'and', 'rpipe', 'lpipe']);
     });
 
     it('should tokenize double-quoted strings', () => {
