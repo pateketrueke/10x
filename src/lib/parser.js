@@ -5,6 +5,16 @@ import {
 const TAG_TYPES = ['blockquote', 'heading', 'check', 'em', 'b', 'code', 'text'];
 
 const OP_TYPES = {
+  '!~': 'notlike',
+  '!=': 'noteq',
+  '==': 'iseq',
+  '<=': 'lteq',
+  '>=': 'gteq',
+  '=~': 'like',
+  '++': 'inc',
+  '--': 'dec',
+  '<': 'lt',
+  '>': 'gt',
   '=': 'equal',
   '+': 'plus',
   '-': 'min',
@@ -23,13 +33,13 @@ const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\b/i;
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
 export const isIn = (x, a, b) => x >= a && x <= b;
-export const isOp = (a, b = '') => `${b}-+=*/;`.includes(a);
+export const isOp = (a, b = '') => `${b}-+=~<!>*/`.includes(a);
 export const isSep = (a, b = '') => `${b}|;,`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
-export const isFmt = x => /^[`_*~]$/.test(x);
+export const isFmt = x => /^["`_*~]$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
-export const isAny = (x, a = '') => /^[^\s\w\d_*~$€£¢%()`|:;_,.+=*/-]$/.test(x) || a.includes(x);
+export const isAny = (x, a = '') => /^[^\s\w\d_*~$€£¢%(~<!>)"`|:;_,.+=*/-]$/.test(x) || a.includes(x);
 export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
@@ -353,6 +363,7 @@ export function parseBuffer(text, fixeds) {
       inBlock || typeof last === 'undefined'
 
       // non-keywords
+      // || (isOp(cur) && isOp(last) && !hasNum(next))
       || (last === '[' && (cur === ' ' || cur === 'x'))
       || ((last === ' ' || last === 'x') && cur === ']')
       || (last === cur && isFmt(cur))
@@ -369,6 +380,11 @@ export function parseBuffer(text, fixeds) {
 
       // handle numbers, including negatives between ops; notice all N-N are splitted
       || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
+
+      // keep some logical operators together
+      || ('!='.includes(last) && cur === '~')
+      || ('+-'.includes(last) && cur === last)
+      || ('!<>='.includes(last) && cur === '=')
 
       // keep chars and numbers together
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))

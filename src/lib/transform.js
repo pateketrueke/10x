@@ -54,6 +54,10 @@ export function fromSymbols(text, units, expression, previousToken) {
     return ['text', ' '];
   }
 
+  if (text.charAt() === '"' && text.charAt(text.length - 1) === '"') {
+    return ['string', text];
+  }
+
   // try most char-expressions as valid units...
   if (expression && (isChar(text) || isAlpha(text))) {
     return ['unit', text];
@@ -65,8 +69,8 @@ export function fromSymbols(text, units, expression, previousToken) {
   }
 
   // handle operators
-  if (isOp(text) || text === ',') {
-    return ['expr', text, getOp(text)];
+  if (text.length <= 2 && isOp(text[0], ';,') && !isInt(text[1])) {
+    return [text.length === 1 ? 'expr' : 'fx', text, getOp(text)];
   }
 
   // handle separators
@@ -173,6 +177,10 @@ export function transform(input, units, types) {
     if (
       // handle most values
       isSep(cur) || isNum(cur)
+
+      // keep logical ops
+      || (cur[0] === '"' || '=!<>'.includes(cur))
+      || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]))
 
       // handle sub-calls
       || (cur === '(' && (hasNum(nextToken) || hasKeyword(nextToken, units)))

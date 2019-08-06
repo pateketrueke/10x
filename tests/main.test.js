@@ -18,6 +18,15 @@ describe('DSL', () => {
       expect(values(calc('1+2, 3-4, 5/6, 7*8'))).to.eql(['3', '-1', '0.83', '56']);
     });
 
+    it('should handle some logical operators', () => {
+      expect(calc('<= >= == != !~ =~ -- ++ < > =').tokens.filter(x => x[1] !== ' ').map(x => x[2]))
+        .to.eql(['lteq', 'gteq', 'iseq', 'noteq', 'notlike', 'like', 'dec', 'inc', 'lt', 'gt', 'equal']);
+    });
+
+    it('should tokenize double-quoted strings', () => {
+      expect(calc('Foo "bar baz" Buz').tokens[2][0]).to.eql('string');
+    });
+
     it('should skip empty sub-expressions', () => {
       expect(calc(';;;').results).to.eql([]);
     });
