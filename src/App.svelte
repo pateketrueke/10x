@@ -22,8 +22,38 @@
     idx = offset;
   }
 
-  function focus(evt) {
+  function modify(evt) {
     const { key, position } = evt.detail;
+
+    // FIXME: is eating too much... try to flag first, on second
+    // attemp then it will move... or remove previous, whatever
+    if (key === 8 && idx > 0 && position === 0) {
+      if (!input[idx - 1][2].length) {
+        input = input.filter(x => x[1] !== idx - 1)
+          .map((x, i) => [false, i, x[2]]);
+      } else if (!input[idx][2].length) {
+        input = input.filter(x => x[1] !== idx)
+          .map((x, i) => [false, i, x[2]]);
+      }
+
+      idx = Math.max(0, idx - 1);
+      pos = input[idx][2].length;
+      return;
+    }
+
+    // FIXME: cut is good... but render is wrong
+    if (key === 13) {
+      const left = input[idx][2].substr(0, pos);
+      const right = input[idx][2].substr(pos);
+
+      input.splice(idx, 1, [false, null, left], [false, null, right]);
+      input = input.map((x, i) => [false, i, x[2]]);
+
+      setTimeout(() => {
+        idx++;
+      });
+      return;
+    }
 
     if (key === 37 || key === 39) {
       pos = Math.max(0, position);
@@ -32,18 +62,22 @@
 
     if (key === 38) idx = Math.max(0, idx - 1);
     if (key === 40) idx = Math.min(input.length - 1, idx + 1);
+  }
 
+  $: if (ref) {
     if (document.activeElement) document.activeElement.blur();
 
     let node = ref.childNodes[idx];
 
-    while (node.contentEditable !== 'true') {
+    while (node && node.contentEditable !== 'true') {
       node = node.children[0];
     }
 
-    pos = Math.min(pos, node.textContent.length - 1);
-    node.focus();
-    setCursor(node, pos);
+    if (node && node.textContent) {
+      pos = Math.min(pos, node.textContent.length - 1);
+      node.focus();
+      setCursor(node, pos);
+    }
   }
 </script>
 
@@ -84,7 +118,7 @@
         {#if !on}<input type="text" bind:value={text} />{/if}
       {/if}
       {#if !debug || on}
-        <In {debug} on:move={focus} on:pick={e => select(e, idx)} bind:markup={text} />
+        <In {debug} on:move={modify} on:pick={e => select(e, idx)} bind:markup={text} />
       {/if}
     </li>
   {/each}

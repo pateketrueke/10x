@@ -81,6 +81,12 @@
     return text;
   }
 
+  function move(ok) {
+    if (move.t) return;
+    move.t = setTimeout(() => { move.t = 0; }, 100);
+    dispatch('pick', !ok ? { position: offset } : null);
+  }
+
   function push() {
     // clean but keep at least one entry!
     if (revision !== -1) {
@@ -202,16 +208,15 @@
       enabled = true;
     }
 
-    sel(true);
+    move(true);
+    sel();
   }
 
   // highlight nodes on focus/click
-  function sel(ok) {
+  function sel() {
     if (sel.t) return;
 
     setTimeout(() => {
-      dispatch('pick', !ok ? { position: offset } : null);
-
       if (node) {
         node.classList.remove('selected');
         node = null;
@@ -499,6 +504,7 @@
           if (offset > markup.length) {
             offset = Math.min(markup.length, offset);
             setCursor(input, offset);
+            move();
           }
         });
 
@@ -531,6 +537,7 @@
             // normalize offset in case of exceeding boundaries
             if (offset - 1 === markup.length) offset--;
 
+            move();
             pull();
             sel();
           });
@@ -559,6 +566,7 @@
         clearTimeout(check.t);
         check.t = setTimeout(() => {
           mutate(e.keyCode === 32 ? String.fromCharCode(160) : e.key);
+          move();
           sel();
         }, 10);
         return;
@@ -567,6 +575,7 @@
       if (e.keyCode === 8) {
         if (usingMode && MODES[markup.charAt(offset - 1)]) usingMode = null;
         mutate('', -1);
+        move();
         sel();
       }
     }
@@ -587,6 +596,7 @@
     }
 
     saveCursor();
+    move();
     sel();
   }
 
