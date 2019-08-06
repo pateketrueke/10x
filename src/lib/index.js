@@ -69,6 +69,8 @@ export default class Solvente {
       info.error = tokens.error;
       info.tokens = fixedAST;
 
+      // FIXME: make math lazy in order to manipulate AST...
+
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
 

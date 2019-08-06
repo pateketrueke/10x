@@ -154,9 +154,12 @@ export function transform(input, units, types) {
     // skip separators after numbers, preceding keywords
     if (hasNum(prevToken) && ':,'.includes(cur) && nextToken && isExpr(nextToken)) return prev;
 
-    // open var/call expressions
-    if ((isChar(cur) || isAlpha(cur)) && (nextToken === '=' || nextToken === '(')) {
-      inCall = nextToken === '(';
+    // open var/call expressions (strict-mode)
+    if (
+      (isChar(cur) || isAlpha(cur))
+      && (input[i + 1] === '=' || input[i + 1] === '(')
+    ) {
+      inCall = input[i + 1] === '(';
       stack.push(['def', cur, []]);
 
       // don't override builtins!
@@ -170,6 +173,10 @@ export function transform(input, units, types) {
     if (
       // handle most values
       isSep(cur) || isNum(cur)
+
+      // handle sub-calls
+      || (cur === '(' && (hasNum(nextToken) || hasKeyword(nextToken, units)))
+      || (cur === ')' && (isOp(nextToken) || hasNum(prevToken) || hasKeyword(prevToken, units)))
 
       // handle operators
       || (isOp(cur) && (
@@ -195,7 +202,8 @@ export function transform(input, units, types) {
       prev.push(toToken(i, fromMarkdown, cur));
     }
 
-    if (!isSep(cur, ' ')) prevToken = cur;
+    // FIXME: re-evaluate this shit...
+    if (!isSep(cur, '( )')) prevToken = cur;
     return prev;
   }, []);
 
