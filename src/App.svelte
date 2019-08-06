@@ -14,16 +14,17 @@
     input = input.map(x => [x[1] === offset ? !x[0] : x[0], x[1], x[2]]);
   }
 
-  function select(evt, offset) {
-    if (evt.detail && typeof evt.detail.position !== 'undefined') {
-      pos = Math.max(0, evt.detail.position);
+  function modify(evt, offset) {
+    if (!(evt && evt.detail) && offset >= 0) {
+      idx = offset;
+      return;
     }
 
-    idx = offset;
-  }
-
-  function modify(evt) {
     const { key, position } = evt.detail;
+
+    if (position !== 'undefined') {
+      pos = Math.max(0, pos, position);
+    }
 
     // FIXME: is eating too much... try to flag first, on second
     // attemp then it will move... or remove previous, whatever
@@ -74,9 +75,8 @@
     }
 
     if (node && node.textContent) {
-      pos = Math.min(pos, node.textContent.length - 1);
       node.focus();
-      setCursor(node, pos);
+      setCursor(node, Math.min(pos, node.textContent.length - 1));
     }
   }
 </script>
@@ -118,7 +118,7 @@
         {#if !on}<input type="text" bind:value={text} />{/if}
       {/if}
       {#if !debug || on}
-        <In {debug} on:move={modify} on:pick={e => select(e, idx)} bind:markup={text} />
+        <In {debug} on:move={e => modify(e, idx)} bind:markup={text} />
       {/if}
     </li>
   {/each}

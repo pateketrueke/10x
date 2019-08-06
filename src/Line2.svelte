@@ -84,7 +84,7 @@
   function move(ok) {
     if (move.t) return;
     move.t = setTimeout(() => { move.t = 0; }, 100);
-    dispatch('pick', !ok ? { position: offset } : null);
+    dispatch('move', !ok ? { position: offset } : null);
   }
 
   function push() {
