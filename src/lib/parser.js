@@ -35,7 +35,7 @@ const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\b/i;
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
-export const isIn = (x, a, b) => x >= a && x <= b;
+export const isFx = y => y && y.length >= 2 && isOp(y[0], ':');
 export const isOp = (a, b = '') => `${b}-+=~<!&>*/`.includes(a);
 export const isSep = (a, b = '') => `${b}|;,`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
@@ -187,15 +187,8 @@ export function joinTokens(data, units, types) {
       continue;
     }
 
-    if (
-      // handle unit expressions, with numbers
-      (cur === ' ' && !hasUnit && hasNum(oldChar) && !hasNum(next) && hasKeyword(next, units))
-
-      // handle and validate hours
-      || (hasNum(oldChar) && cur === ' ' && RE_HOURS.test(oldChar + cur + next))
-      || (isInt(oldChar) && cur === ' ' && ['am', 'pm'].includes(next))
-      || (cur === ':' && isIn(oldChar, 0, 24) && isIn(next, 0, 60))
-    ) {
+    // handle unit expressions, with numbers
+    if (cur === ' ' && !hasUnit && hasNum(oldChar) && !hasNum(next) && hasKeyword(next, units)) {
       buffer.splice(offset - 1, 2, [oldChar + cur + next]);
       hasUnit = !hasNum(next);
       data.splice(i - 1, 1);
@@ -246,13 +239,25 @@ export function joinTokens(data, units, types) {
       continue;
     }
 
-    // glue ISO-dates together
     if (
-      hasNum(cur)
-      && hasDatetime(oldChar) === 'ISO'
-      && cur.charAt() === '.' && cur.charAt(cur.length - 1) === 'Z'
+      // glue ISO-dates together
+      (hasNum(cur)
+        && hasDatetime(oldChar) === 'ISO'
+        && cur.charAt() === '.' && cur.charAt(cur.length - 1) === 'Z')
+
+      // glue hours together
+      || ((isInt(oldChar) || (hasNum(oldChar) && oldChar[oldChar.length - 1] === ':')) && cur[0] === ':' && hasNum(cur))
     ) {
       buffer[offset - 1].push(cur);
+      continue;
+    }
+
+    // keep hours-like values together
+    if (isInt(oldChar) && cur === ' ' && ['am', 'pm'].includes(next)) {
+      buffer[offset - 1].push(cur + next);
+      buffer.splice(offset, 1);
+      data.splice(i, 1);
+      stack.pop();
       continue;
     }
 
@@ -265,9 +270,6 @@ export function joinTokens(data, units, types) {
 
       // skip numbers within parenthesis
       || (!inCall && (oldChar === '(' && hasNum(cur) && next === ')'))
-
-      // keep hour/seconds format together
-      || (oldChar && oldChar.includes(':') && cur === ':' && hasNum(next))
 
       // keep mixed units together, e.g. ft-us
       || (
@@ -366,7 +368,6 @@ export function parseBuffer(text, fixeds) {
       inBlock || typeof last === 'undefined'
 
       // non-keywords
-      // || (isOp(cur) && isOp(last) && !hasNum(next))
       || (last === '[' && (cur === ' ' || cur === 'x'))
       || ((last === ' ' || last === 'x') && cur === ']')
       || (last === cur && isFmt(cur))
@@ -388,6 +389,7 @@ export function parseBuffer(text, fixeds) {
       || ('!='.includes(last) && cur === '~')
       || ('+-'.includes(last) && cur === last)
       || ('!<>='.includes(last) && cur === '=')
+      || (last === ':' && (cur === ':' || hasNum(cur) || isChar(cur)))
       || (last === '|' && cur === '>') || (last === '<' && cur === '|')
 
       // keep chars and numbers together

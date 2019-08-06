@@ -1,5 +1,5 @@
 import {
-  isOp, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr, hasKeyword, hasDatetime, hasMonths, hasDays,
+  isOp, isFx, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr, hasKeyword, hasDatetime, hasMonths, hasDays,
   getOp, buildTree, cleanTree,
 } from './parser';
 
@@ -52,6 +52,10 @@ export function fromSymbols(text, units, expression, previousToken) {
   // handle white-space
   if (text === ' ') {
     return ['text', ' '];
+  }
+
+  if (text.charAt() === ':') {
+    return ['symbol', text];
   }
 
   if (text.charAt() === '"' && text.charAt(text.length - 1) === '"') {
@@ -186,13 +190,14 @@ export function transform(input, units, types) {
       isSep(cur) || isNum(cur)
 
       // keep logical ops
+      || (cur[0] === ':')
       || (cur === '|>' || cur === '<|')
       || (cur[0] === '"' || '=!<>'.includes(cur))
       || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]))
 
-      // handle sub-calls
-      || (cur === '(' && (hasNum(nextToken) || hasKeyword(nextToken, units)))
-      || (cur === ')' && (isOp(nextToken) || hasNum(prevToken) || hasKeyword(prevToken, units)))
+      // handle sub-calls, symbols and side-effects
+      || (cur === '(' && (isFx(nextToken) || isFx(prevToken) || hasNum(nextToken) || hasKeyword(nextToken, units)))
+      || (cur === ')' && (isFx(nextToken) || isFx(prevToken) || isOp(nextToken) || hasNum(prevToken) || hasKeyword(prevToken, units)))
 
       // handle operators
       || (isOp(cur) && (
