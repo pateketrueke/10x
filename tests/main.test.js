@@ -75,6 +75,7 @@ describe('DSL', () => {
     });
 
     it('should handle local functions', () => {
+      expect(calc('undef(1,2,3)').results).to.eql([]);
       expect(values(calc("f(x',y)=x'*y;f(2, 3)"))).to.eql(['6']);
       expect(values(calc("f(x',y)=(x'*y);f(2, 3)"))).to.eql(['6']);
       expect(values(calc("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)"))).to.eql(['-4']);
