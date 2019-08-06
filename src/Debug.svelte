@@ -101,7 +101,6 @@
       {#each tokens as chunk, i}
         <small on:click={() => focus('tokens', i)}>
           <em>{chunk[0]}</em>
-          <var>{chunk[1]}</var>
           {#if chunk[2]}<span>{Array.isArray(chunk[2]) ? '...' : chunk[2]}</span>{/if}
         </small>
       {/each}
@@ -110,13 +109,13 @@
   <small>
     {#if input.length}
       <label>
-        <input checked name="mode" value="input" type="radio" on:click={set} />
+        <input checked={mode === 'input'} name="mode" value="input" type="radio" on:click={set} />
         <span>input</span>
       </label>
     {/if}
     {#if tokens.length}
       <label>
-        <input name="mode" value="tokens" type="radio" on:click={set} />
+        <input checked={mode === 'tokens'} name="mode" value="tokens" type="radio" on:click={set} />
         <span>tokens</span>
       </label>
     {/if}

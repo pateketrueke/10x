@@ -202,14 +202,16 @@
       enabled = true;
     }
 
-    sel();
+    sel(true);
   }
 
   // highlight nodes on focus/click
-  function sel() {
+  function sel(ok) {
     if (sel.t) return;
 
     setTimeout(() => {
+      dispatch('pick', !ok ? { position: offset } : null);
+
       if (node) {
         node.classList.remove('selected');
         node = null;
@@ -311,6 +313,7 @@
 
     clearTimeout(check.t);
     clearTimeout(check.t2);
+    clearTimeout(check.t3);
 
     if (e) {
       if (usingMode) {
@@ -372,6 +375,20 @@
         }, 10);
       }
 
+      // emit keys only, disable defaults
+      if (
+        !e.shiftKey
+        && [8, 13, 37, 38, 39, 40].includes(e.keyCode)
+      ) {
+        // delay event waiting for cursor update
+        check.t3 = setTimeout(() => {
+          dispatch('move', { key: e.keyCode, position: offset });
+        }, 20);
+
+        // we cancel those events anyway...
+        if (e.keyCode === 38 || e.keyCode === 40) e.preventDefault();
+      }
+
       // allow some keys for moving inside the contenteditable
       if (
         e.metaKey || e.key === 'Meta'
@@ -401,7 +418,7 @@
           const values = tmp.match(/-?\d+|[a-z][a-z/-]+[23]?|\s|\D/gi);
 
           // retrieve relative position
-          const cursor = info.input
+          const cur = info.input
             .join('').slice(0, offset)
             .substr(left.join('').length)
             .length;
@@ -410,7 +427,7 @@
           const dateType = hasDatetime(tmp);
 
           for (i = 0; i < values.length; i += 1) {
-            if (cursor - fixedLength < values[i].length) break;
+            if (cur - fixedLength < values[i].length) break;
             fixedLength += values[i].length;
           }
 
@@ -659,6 +676,7 @@
     z-index: 2;
   }
   .wrapper {
+    flex: 1 1 auto;
     position: relative;
   }
   .results {
