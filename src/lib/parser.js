@@ -2,7 +2,7 @@ import {
   TIME_UNITS, CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
 } from './convert';
 
-const TAG_TYPES = ['blockquote', 'heading', 'em', 'b', 'code', 'text'];
+const TAG_TYPES = ['blockquote', 'heading', 'check', 'em', 'b', 'code', 'text'];
 
 const OP_TYPES = {
   '=': 'equal',
@@ -250,9 +250,6 @@ export function joinTokens(data, units, types) {
       // handle fractions,
       (isInt(oldChar) && cur === '/' && isInt(next))
 
-      // keep [ ] checkboxes together
-      || (oldChar === '[' && ' x'.includes(cur) && next === ']')
-
       // skip numbers within parenthesis
       || (!inCall && (oldChar === '(' && hasNum(cur) && next === ')'))
 
@@ -356,6 +353,8 @@ export function parseBuffer(text, fixeds) {
       inBlock || typeof last === 'undefined'
 
       // non-keywords
+      || (last === '[' && (cur === ' ' || cur === 'x'))
+      || ((last === ' ' || last === 'x') && cur === ']')
       || (last === cur && isFmt(cur))
       || (last === '-' && isNum(cur))
       || (last !== ' ' && isAny(cur))

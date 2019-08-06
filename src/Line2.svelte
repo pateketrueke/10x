@@ -78,11 +78,6 @@
     text = text.replace(/_([^<>]+?)_/g, '<span>_</span><em>$1</em><span>_</span>');
     text = text.replace(/~([^<>]+?)~/g, '<span>~</span><del>$1</del><span>~</span>');
 
-    // FIXME: how to?
-    text = text.replace(/\[([x\s])\]/g, (_, x) => {
-      return `<var data-op="checkbox"><span>[</span>${x}<input tabindex="-1" type="checkbox"${x === 'x' ? ' checked' : ''}/><span>]</span></var>`;
-    });
-
     return text;
   }
 
@@ -119,6 +114,10 @@
 
     if (token[0] === 'open' || token[0] === 'close') {
       return `<var data-op="${token[0]}">${token[1]}</var>`;
+    }
+
+    if (token[0] === 'check') {
+      return `<var data-op="checkbox"><span>[</span><span>${token[2] ? 'x' : String.fromCharCode(160)}</span><input tabindex="-1" type="checkbox"${token[2] ? ' checked' : ''}${pos}/><span>]</span></var>`;
     }
 
     if (token[0] === 'number') {
@@ -559,6 +558,18 @@
   // this will cancel overlays on-click
   function cursor(e) {
     if (usingMode) usingMode = null;
+
+    // toggle inline checkboxes
+    if (e.target.tagName === 'INPUT') {
+      info.input[e.target.dataset.pos] = `[${e.target.checked ? 'x' : ' '}]`;
+      markup = info.input.join('');
+      push();
+      render();
+      setCursor(input, offset);
+      return;
+    }
+
+    saveCursor();
     sel();
   }
 
