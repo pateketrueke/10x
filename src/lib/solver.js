@@ -1,5 +1,5 @@
 import {
-  isInt, isTime, isExpr, hasPercent, toNumber, toFraction,
+  isInt, isTime, isExpr, hasPercent, toValue, toNumber, toFraction,
 } from './parser';
 
 import {
@@ -86,8 +86,8 @@ export function calculateFromDate(op, left, right) {
 // handle basic conditions
 export function evaluateComparison(op, left, right, others) {
   // parse from JSON as it's already escaped...
-  if (typeof left === 'string') left = JSON.parse(left);
-  if (typeof right === 'string') right = JSON.parse(right);
+  if (typeof left === 'string') left = toValue(left);
+  if (typeof right === 'string') right = toValue(right);
 
   switch (op) {
     case '!~': return !left.includes(right);

@@ -82,9 +82,8 @@ export function fromSymbols(text, units, expression, previousToken) {
   if (
     text.length <= 2
     && (
-      (isOp(text[0], ';,') && !isInt(text[1]))
-      || text[0] === '<'
-      || text[1] === '>'
+      (isFx(text[0]) && isFx(text[1]))
+      || (isOp(text[0], ';,') && !isInt(text[1]))
     )
   ) {
     return [text.length === 1 ? 'expr' : 'fx', text, getOp(text)];

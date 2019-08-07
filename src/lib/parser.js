@@ -35,8 +35,8 @@ const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\b/i;
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
-export const isFx = y => y && y.length >= 2 && isOp(y[0], ':');
-export const isOp = (a, b = '') => `${b}-+=~<!&>*/`.includes(a);
+export const isFx = y => y && y.length >= 2 && '-+=~:<!|&>'.includes(y[0]);
+export const isOp = (a, b = '') => `${b}-+=~<!|&>*/`.includes(a);
 export const isSep = (a, b = '') => `${b}|;,`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
@@ -135,23 +135,30 @@ export function toValue(value) {
   }
 
   // simplify decimals
-  if (typeof value === 'string' && value.includes('.')) {
-    const [base, decimals] = value.replace('%', '').split('.');
-    const input = decimals.split('');
-    const out = [];
-
-    for (let i = 0; i < input.length; i += 1) {
-      const old = out[out.length - 1];
-
-      if (old > 0) {
-        if (input[i] > 0) out.push(input[i]);
-        break;
-      }
-
-      out.push(input[i]);
+  if (typeof value === 'string') {
+    // handle JSON-values
+    if (value.charAt() === '"' && value[value.length - 1].charAt() === '"') {
+      return JSON.parse(value);
     }
 
-    value = `${base}.${out.join('')}${hasPercent(value) ? '%' : ''}`;
+    if (value.includes('.')) {
+      const [base, decimals] = value.replace('%', '').split('.');
+      const input = decimals.split('');
+      const out = [];
+
+      for (let i = 0; i < input.length; i += 1) {
+        const old = out[out.length - 1];
+
+        if (old > 0) {
+          if (input[i] > 0) out.push(input[i]);
+          break;
+        }
+
+        out.push(input[i]);
+      }
+
+      value = `${base}.${out.join('')}${hasPercent(value) ? '%' : ''}`;
+    }
   }
 
   return value;
@@ -389,6 +396,7 @@ export function parseBuffer(text, fixeds) {
       inBlock || typeof last === 'undefined'
 
       // non-keywords
+      || (last === '\\')
       || (last === '[' && (cur === ' ' || cur === 'x'))
       || ((last === ' ' || last === 'x') && cur === ']')
       || (last === cur && isFmt(cur))

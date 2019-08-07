@@ -1,5 +1,5 @@
 import {
-  isFx, isSep, isTime, isExpr, toNumber, hasMonths, hasTagName,
+  isFx, isSep, isTime, isExpr, toValue, toNumber, hasMonths, hasTagName,
 } from './parser';
 
 import {
@@ -92,8 +92,8 @@ export function reduceFromArgs(keys, values) {
 export function reduceFromEffect(value, def) {
   return (...args) => {
     // allow strings to be JSON ;-)
-    value = value[0] === 'string' ? JSON.parse(value[1]) : value[1];
-    args = args.map(x => x[0] === 'string' ? JSON.parse(x[1]) : x[1]);
+    value = value[0] === 'string' ? toValue(value[1]) : value[1];
+    args = args.map(x => x[0] === 'string' ? toValue(x[1]) : x[1]);
 
     // invoke methods from values
     if (def.substr(0, 2) === '::') {
@@ -113,7 +113,7 @@ export function reduceFromAST(tokens, convert, expressions) {
       let value = prev[prev.length - 1];
 
       // make sure we're parsing values!
-      value = value[0] === 'string' ? JSON.parse(value[1]) : value[1];
+      value = value[0] === 'string' ? toValue(value[1]) : value[1];
       value = value[cur[1].substr(1)];
 
       // recast previous token with the new value
