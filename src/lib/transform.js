@@ -239,7 +239,7 @@ export function transform(input, units, types) {
       // handle units/expressions after maths, never before
       || (inMaths && (
         isExpr(cur) || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
-        || (isChar(cur) && prevToken[0] !== '-' && (isFx(prevToken) || isFx(nextToken) || '<>'.includes(prevToken)))
+        || (isChar(cur) && prevToken[0] !== '-' && (isFx(prevToken) || isSep(nextToken) || isFx(nextToken) || '<>'.includes(prevToken)))
        ))
     ) {
       prev.push(toToken(i, fromSymbols, cur, units, null, prevToken));

@@ -421,9 +421,6 @@ export function parseBuffer(text, fixeds) {
 
       // non-keywords
       || (last === '\\')
-      || ('.|&'.includes(last) && last === cur)
-      || (last === '[' && (cur === ' ' || cur === 'x'))
-      || ((last === ' ' || last === 'x') && cur === ']')
       || (last === cur && isFmt(cur))
       || (last === '-' && isNum(cur))
       || (last !== ' ' && isAny(cur))
@@ -436,12 +433,16 @@ export function parseBuffer(text, fixeds) {
       // keep some separators between numbers
       || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
 
+      // handle checkboxes
+      || (last === '[' && next === ']') || (' x'.includes(last) && cur === ']' && chars[i - 2] === '[')
+
       // handle numbers, including negatives between ops; notice all N-N are splitted
       || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
 
       // keep some logical operators together
       || ('!='.includes(last) && cur === '~')
       || ('+-'.includes(last) && cur === last)
+      || ('.|&'.includes(last) && last === cur)
       || ('!<>='.includes(last) && cur === '=')
       || (last === ':' && (cur === ':' || hasNum(cur) || isChar(cur)))
       || ('|~'.includes(last) && cur === '>') || (last === '<' && cur === '|')
@@ -528,9 +529,13 @@ export function cleanTree(ast) {
     if (hasTagName(cur[0])) return prev;
 
     // clean arguments/body from definitions...
-    if (cur[0] === 'def' && Array.isArray(cur[2])) prev.push([cur[0], cur[1], cleanTree(cur[2])]);
-    else if (Array.isArray(cur[0])) prev.push(cleanTree(cur));
-    else prev.push(cur);
+    if ((cur[0] === 'def' || cur[0] === 'symbol') && Array.isArray(cur[2])) {
+      prev.push([cur[0], cur[1], cleanTree(cur[2])]);
+    } else if (Array.isArray(cur[0])) {
+      prev.push(cleanTree(cur));
+    } else {
+      prev.push(cur);
+    }
 
     return prev;
   }, []);
