@@ -85,7 +85,6 @@ export function calculateFromDate(op, left, right) {
 
 // handle basic conditions
 export function evaluateComparison(op, left, right, others) {
-  console.log({ op, left, right, others });
   switch (op) {
     case '==': return left === right;
     case '!=': return left !== right;

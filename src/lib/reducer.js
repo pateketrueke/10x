@@ -140,16 +140,18 @@ export function reduceFromAST(tokens, convert, expressions) {
         }
       }
 
-      try {
-        // FIXME: validate input or something?
-        const [left, right, ...others] = args.map(x => calculateFromTokens(reduceFromAST(x, convert, expressions)));
-        const result = evaluateComparison(cur[1], left[1], right[1], others.map(x => x[1]));
-
-        // also, how these values are rendered back?
-        console.log('CHECK', result);
-      } catch (e) {
-        console.log(e);
+      // skip from non-arguments
+      if (!args.length) {
+        prev.push(cur);
+        return prev;
       }
+
+      // FIXME: validate input or something?
+      const [left, right, ...others] = args.map(x => calculateFromTokens(reduceFromAST(x, convert, expressions)));
+      const result = evaluateComparison(cur[1], left[1], right[1], others.map(x => x[1]));
+
+      // also, how these values are rendered back?
+      prev.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
       return prev;
     }
 
