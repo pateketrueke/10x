@@ -98,7 +98,8 @@ export function fromSymbols(text, units, expression, previousToken) {
   if (
     text.length <= 2
     && (
-      (isFx(text[0]) && isFx(text[1]))
+      isSep(text)
+      || (isFx(text[0]) && isFx(text[1]))
       || (isOp(text[0], ';,') && !isInt(text[1]))
     )
   ) {
