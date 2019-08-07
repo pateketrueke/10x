@@ -54,6 +54,7 @@ export function fromSymbols(text, units, expression, previousToken) {
     return ['text', ' '];
   }
 
+  // handle symbol-like tokens
   if (text.charAt() === ':') {
     return ['symbol', text];
   }

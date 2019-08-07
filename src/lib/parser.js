@@ -252,8 +252,13 @@ export function joinTokens(data, units, types) {
       continue;
     }
 
-    // keep hours-like values together
-    if (isInt(oldChar) && cur === ' ' && ['am', 'pm'].includes(next)) {
+    if (
+      // keep hours-like values together
+      (isInt(oldChar) && cur === ' ' && ['am', 'pm'].includes(next))
+
+      // keep symbol-like values together
+      || (oldChar[0] === ':' && isOp(cur, ':') && (isInt(next) || isChar(next)))
+    ) {
       buffer[offset - 1].push(cur + next);
       buffer.splice(offset, 1);
       data.splice(i, 1);

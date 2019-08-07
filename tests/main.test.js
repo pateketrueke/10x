@@ -27,6 +27,11 @@ describe('DSL', () => {
       expect(calc('Foo "bar baz" Buz').tokens[2][0]).to.eql('string');
     });
 
+    it('should tokenize symbol-like values', () => {
+      expect(calc('Foo :bar ::baz-buzz Bazzinga').tokens[2][0]).to.eql('symbol');
+      expect(calc('Foo :bar ::baz-buzz Bazzinga').tokens[4][0]).to.eql('symbol');
+    });
+
     it('should skip empty sub-expressions', () => {
       expect(calc(';;;').results).to.eql([]);
     });
