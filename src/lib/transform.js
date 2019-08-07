@@ -64,6 +64,11 @@ export function fromSymbols(text, units, expression, previousToken) {
     return ['symbol', '_'];
   }
 
+  // handle range-values
+  if (text.charAt() === '.') {
+    return ['range', text];
+  }
+
   // handle symbol-like tokens
   if (text.charAt() === ':') {
     switch (text) {
@@ -208,12 +213,13 @@ export function transform(input, units, types) {
       // keep logical ops
       || (cur[0] === ':')
       || (cur === '|>' || cur === '<|')
+      || (cur[0] === '.' && cur[1] === '.')
       || (cur[0] === '"' || '=!<>'.includes(cur))
       || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]))
 
       // handle sub-calls, symbols and side-effects
       || (cur === '(' && (isFx(nextToken) || isFx(prevToken) || hasNum(nextToken) || hasKeyword(nextToken, units)))
-      || (cur === ')' && (isFx(nextToken) || isFx(prevToken) || isOp(nextToken) || isSep(nextToken) || hasNum(prevToken) || hasKeyword(prevToken, units)))
+      || (cur === ')' && (prevToken === 'def' || isFx(nextToken) || isFx(prevToken) || isOp(nextToken) || isSep(nextToken) || hasNum(prevToken) || hasKeyword(prevToken, units)))
 
       // handle operators
       || (isOp(cur) && (

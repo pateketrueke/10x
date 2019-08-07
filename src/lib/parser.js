@@ -421,8 +421,7 @@ export function parseBuffer(text, fixeds) {
 
       // non-keywords
       || (last === '\\')
-      || (last === '|' && cur === '|')
-      || (last === '&' && cur === '&')
+      || ('.|&'.includes(last) && last === cur)
       || (last === '[' && (cur === ' ' || cur === 'x'))
       || ((last === ' ' || last === 'x') && cur === ']')
       || (last === cur && isFmt(cur))
