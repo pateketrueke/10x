@@ -153,14 +153,6 @@ export function reduceFromAST(tokens, convert, expressions) {
         }
       }
 
-      // apply chaining...
-      if (op[2] === 'rpipe') {
-        console.log(  );
-      }
-
-      // case '|>': return console.log({ left, right, others });
-      // case '<|': return console.log({ left, right, others }) || Function;
-
       // skip from non-arguments
       if (!args.length) {
         prev.push(cur);
