@@ -206,8 +206,8 @@ export function transform(input, units, types) {
 
       // handle operators
       || (isOp(cur) && (
-        (hasNum(prevToken) && nextToken === '(')
-        || (hasNum(prevToken) && (hasNum(nextToken) || hasKeyword(nextToken, units)))
+        ((isFx(prevToken) || hasNum(prevToken)) && nextToken === '(')
+        || ((isFx(prevToken) || hasNum(prevToken)) && (hasNum(nextToken) || hasKeyword(nextToken, units)))
       ))
 
       // allow keywords after some dates
