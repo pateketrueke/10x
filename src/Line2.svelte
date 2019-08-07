@@ -166,6 +166,16 @@
       return `<var>${mkd(sp(token[1]))}</var>`;
     }
 
+    if (token[0] === 'symbol') {
+      switch (token[1]) {
+        // allow for some well-known constants
+        case false: return `<var data-op="symbol">:false</var>`;
+        case true: return `<var data-op="symbol">:true</var>`;
+        case null: return `<var data-op="symbol">:null</var>`;
+        default: return `<var data-op="symbol">${token[1]}</var>`;
+      }
+    }
+
     // everything else?
     return `<var data-op="${token[2] || token[0]}">${sp(token[1])}</var>`;
   }
