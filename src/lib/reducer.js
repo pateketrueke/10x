@@ -1,8 +1,10 @@
 import {
-  isSep, isTime, isExpr, toNumber, hasMonths, hasTagName,
+  isFx, isSep, isTime, isExpr, toNumber, hasMonths, hasTagName,
 } from './parser';
 
-import { calculateFromTokens } from './solver';
+import {
+  evaluateComparison, calculateFromTokens,
+} from './solver';
 
 export function reduceFromValue(token) {
   let text = token[1];
@@ -87,12 +89,70 @@ export function reduceFromArgs(keys, values) {
   }, {});
 }
 
+export function reduceFromEffect(value, def) {
+  return (...args) => {
+    // allow strings to be JSON ;-)
+    value = value[0] === 'string' ? JSON.parse(value[1]) : value[1];
+    args = args.map(x => x[0] === 'string' ? JSON.parse(x[1]) : x[1]);
+
+    // invoke methods from values
+    if (def.substr(0, 2) === '::') {
+      return value[def.substr(2)](...args);
+    }
+  };
+}
+
 export function reduceFromAST(tokens, convert, expressions) {
   let isDate;
   let lastUnit;
   let lastOp = ['expr', '+', 'plus'];
 
   return tokens.reduce((prev, cur, i) => {
+    // apply symbol-accessor op
+    if (prev[prev.length - 1] && cur[0] === 'symbol') {
+      const value = prev[prev.length - 1][1][cur[1].substr(1)];
+
+      // recast previous token with the new value
+      prev[prev.length - 1] = [typeof value, typeof value === 'string' ? `"${value}"` : value];
+      return prev;
+    }
+
+    // just return from non-values or ops
+    if (['symbol', 'string', 'object'].includes(cur[0])) {
+      prev.push(cur);
+      return prev;
+    }
+
+    // handle logical expressions
+    if (cur[0] === 'fx') {
+      const [op, ...body] = tokens.splice(i);
+      const args = [];
+
+      let buffer = [];
+      let offset = -1;
+
+      // split on consecutive values
+      for (let i = 0; i < body.length; i += 1) {
+        if (['string', 'number', 'object'].includes(body[i][0])) offset++;
+        if (offset >= 0) {
+          buffer = args[offset] || (args[offset] = []);
+          buffer.push(body[i]);
+        }
+      }
+
+      try {
+        // FIXME: validate input or something?
+        const [left, right, ...others] = args.map(x => calculateFromTokens(reduceFromAST(x, convert, expressions)));
+        const result = evaluateComparison(cur[1], left[1], right[1], others.map(x => x[1]));
+
+        // also, how these values are rendered back?
+        console.log('CHECK', result);
+      } catch (e) {
+        console.log(e);
+      }
+      return prev;
+    }
+
     // handle var/call definitions
     if (cur[0] === 'def') {
       const isDef = cur[2]
@@ -105,11 +165,24 @@ export function reduceFromAST(tokens, convert, expressions) {
         return prev;
       }
 
-      const call = expressions[cur[1]];
+      // side-effects will operate on previous values
+      const call = isFx(cur[1]) ? reduceFromEffect(prev[prev.length - 1], cur[1]) : expressions[cur[1]];
       const args = cur[2] || tokens[i + 1];
 
       // skip undefined calls
       if (!call) {
+        return prev;
+      }
+
+      // apply side-effects
+      if (typeof call === 'function') {
+        cur = call(...args.map(x => calculateFromTokens(reduceFromAST(x, convert, expressions))));
+
+        // just remove previous value from AST
+        prev.pop();
+
+        // escape strings, but keep other values as they are
+        prev.push([typeof cur, typeof cur === 'string' ? `"${cur}"` : cur]);
         return prev;
       }
 

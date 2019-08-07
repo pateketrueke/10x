@@ -83,8 +83,18 @@ export function calculateFromDate(op, left, right) {
   return left;
 }
 
+// handle basic conditions
+export function evaluateComparison(op, left, right, others) {
+  console.log({ op, left, right, others });
+  switch (op) {
+    case '==': return left === right;
+    case '!=': return left !== right;
+    default: return console.log({ op, left, right, others });
+  }
+}
+
+// handle basic arithmetic
 export function evaluateExpression(op, left, right) {
-  // handle basic arithmetic
   switch (op) {
     case '*': return left * right;
     case '/': return left / right;

@@ -172,7 +172,7 @@ export function transform(input, units, types) {
 
     // open var/call expressions (strict-mode)
     if (
-      (isChar(cur) || isAlpha(cur))
+      (isChar(cur) || isAlpha(cur) || isFx(cur))
       && (input[i + 1] === '=' || input[i + 1] === '(')
     ) {
       inCall = input[i + 1] === '(';
