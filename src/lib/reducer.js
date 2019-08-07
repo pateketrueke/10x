@@ -110,7 +110,11 @@ export function reduceFromAST(tokens, convert, expressions) {
   return tokens.reduce((prev, cur, i) => {
     // apply symbol-accessor op
     if (prev[prev.length - 1] && cur[0] === 'symbol') {
-      const value = prev[prev.length - 1][1][cur[1].substr(1)];
+      let value = prev[prev.length - 1];
+
+      // make sure we're parsing values!
+      value = value[0] === 'string' ? JSON.parse(value[1]) : value[1];
+      value = value[cur[1].substr(1)];
 
       // recast previous token with the new value
       prev[prev.length - 1] = [typeof value, typeof value === 'string' ? `"${value}"` : value];
