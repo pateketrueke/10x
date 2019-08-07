@@ -30,6 +30,11 @@ export function fromMarkdown(text) {
     return ['heading', text, level];
   }
 
+  // handle comments
+  if (text.charAt() === '/') {
+    return ['comment', text];
+  }
+
   // handle blockquotes
   if (text.charAt() === '>') {
     return ['blockquote', text];

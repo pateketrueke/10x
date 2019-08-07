@@ -2,7 +2,7 @@ import {
   TIME_UNITS, CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
 } from './convert';
 
-const TAG_TYPES = ['blockquote', 'heading', 'check', 'em', 'b', 'code', 'text'];
+const TAG_TYPES = ['blockquote', 'comment', 'heading', 'check', 'em', 'b', 'code', 'text'];
 
 const OP_TYPES = {
   '!~': 'notlike',
@@ -368,8 +368,21 @@ export function parseBuffer(text, fixeds) {
       if (cur === '(') open++;
       if (cur === ')') open--;
 
-      // enable headings/blockquotes, skip everything
-      if ('#>'.includes(cur) && i === 0) inBlock = true;
+      if (
+        // enable headings/blockquotes, skip everything
+        ('#>'.includes(cur) && i === 0)
+
+        // enable comments, skip everything
+        || (last === '/' && '/*'.includes(cur))
+      ) inBlock = true;
+    } else if (
+      // disable multiline-style comments
+      cur === '*'
+      && next === '/'
+      && buffer.join('').includes('/*')
+      && buffer.join('').indexOf('/*') <= Math.max(0, buffer.join('').indexOf('//'))
+    ) {
+      inBlock = false;
     }
 
     if (
