@@ -61,7 +61,13 @@ export function fromSymbols(text, units, expression, previousToken) {
 
   // handle symbol-like tokens
   if (text.charAt() === ':') {
-    return ['symbol', text];
+    switch (text) {
+      // allow for some well-known constants
+      case ':false': return ['symbol', false];
+      case ':true': return ['symbol', true];
+      case ':null': return ['symbol', null];
+      default: return ['symbol', text];
+    }
   }
 
   if (text.charAt() === '"' && text.charAt(text.length - 1) === '"') {

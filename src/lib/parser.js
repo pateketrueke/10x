@@ -137,7 +137,16 @@ export function toValue(value) {
   // simplify decimals
   if (typeof value === 'string') {
     // handle JSON-values
-    if (value.charAt() === '"' && value[value.length - 1].charAt() === '"') {
+    if (value.charAt() === '"' && value[value.length - 1] === '"') {
+      if (
+        (value[1] === '[' && value.charAt(value.length - 2) === ']')
+        || (value[1] === '{' && value.charAt(value.length - 2) === '}')
+      ) {
+        // this would allow to parse well-formed objects?
+        value = value.substr(1, value.length - 2);
+        value = value.replace(/\\(?!\\)/g, '');
+      }
+
       return JSON.parse(value);
     }
 

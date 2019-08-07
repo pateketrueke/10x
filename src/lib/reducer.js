@@ -137,7 +137,7 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // split on consecutive values
       for (let i = 0; i < body.length; i += 1) {
-        if (['string', 'number', 'object', 'boolean', 'undefined'].includes(body[i][0])) offset++;
+        if (['string', 'symbol', 'number', 'object', 'boolean', 'undefined'].includes(body[i][0])) offset++;
         if (offset >= 0) {
           buffer = args[offset] || (args[offset] = []);
           buffer.push(body[i]);
