@@ -118,7 +118,7 @@ export function reduceFromAST(tokens, convert, expressions) {
     }
 
     // just return from non-values or ops
-    if (['symbol', 'string', 'object'].includes(cur[0])) {
+    if (['symbol', 'string', 'object', 'boolean', 'undefined'].includes(cur[0])) {
       prev.push(cur);
       return prev;
     }
@@ -133,7 +133,7 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // split on consecutive values
       for (let i = 0; i < body.length; i += 1) {
-        if (['string', 'number', 'object'].includes(body[i][0])) offset++;
+        if (['string', 'number', 'object', 'boolean', 'undefined'].includes(body[i][0])) offset++;
         if (offset >= 0) {
           buffer = args[offset] || (args[offset] = []);
           buffer.push(body[i]);

@@ -74,16 +74,16 @@ export default class Solvente {
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
 
-      const fixedTree = cleanTree(tokens.tree);
+      // mutates on AST manipulation!!!
+      info.tree = cleanTree(tokens.tree);
+
       const normalized = [];
 
       let offset = 0;
       let chunks;
 
-      info.tree = fixedTree;
-
       // split over single values...
-      chunks = reduceFromAST(fixedTree, this.convert, this.expressions).reduce((prev, cur) => {
+      chunks = reduceFromAST(cleanTree(tokens.tree), this.convert, this.expressions).reduce((prev, cur) => {
         const lastValue = prev[prev.length - 1] || [];
 
         if (lastValue[0] === 'number' && cur[0] === 'number') {
@@ -156,7 +156,7 @@ export default class Solvente {
         return {
           val: value[1],
           type: value[0],
-          format: fixedValue,
+          format: typeof fixedValue !== 'string' ? JSON.stringify(fixedValue) : fixedValue,
         };
       });
     } catch (e) {
