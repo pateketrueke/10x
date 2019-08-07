@@ -1,5 +1,5 @@
 import {
-  isOp, isFx, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr, hasKeyword, hasDatetime, hasMonths, hasDays,
+  isOp, isFx, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr, hasKeyword, hasOwnKeyword, hasDatetime, hasMonths, hasDays,
   getOp, buildTree, cleanTree,
 } from './parser';
 
@@ -140,7 +140,7 @@ export function transform(input, units, types) {
 
   const body = input.reduce((prev, cur, i) => {
     // resolve from given types
-    if (types[cur]) {
+    if (hasOwnKeyword(types, cur)) {
       prev.push(toToken(i, () => ['number', cur, types[cur]]));
       return prev;
     }
@@ -194,7 +194,7 @@ export function transform(input, units, types) {
       stack.push(['def', cur, []]);
 
       // don't override builtins!
-      if (!units[cur]) {
+      if (!hasOwnKeyword(units, cur)) {
         units[cur] = cur;
       }
 

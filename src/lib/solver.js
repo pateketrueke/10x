@@ -101,8 +101,8 @@ export function evaluateComparison(op, left, right, others) {
     case '&&': return left && right;
 
     // FIXME: those are fine?
-    case '|>': return left.bind(null, right, ...others);
-    case '<|': return right.bind(null, left, ...others);
+    // case '|>': return left.bind(null, right, ...others);
+    // case '<|': return console.log({ left, right, others }) || Function;
 
     // FIXME: WAT?
     case '++': return left + right;

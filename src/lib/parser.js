@@ -57,6 +57,7 @@ export const hasNum = x => RE_NUM.test(x);
 export const hasDays = x => RE_DAYS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
 export const hasTagName = x => TAG_TYPES.includes(x);
+export const hasOwnKeyword = (o, k) => Object.prototype.hasOwnProperty.call(o, k) && o[k];
 
 export const highestCommonFactor = (a, b) => {
   return b !== 0 ? highestCommonFactor(b, a % b) : a;
@@ -70,7 +71,7 @@ export const hasKeyword = (x, units) => {
   if (!x) return false;
 
   const key = x.replace(RE_NO_ALPHA, '');
-  const test = key && (units[key] || units[key.toLowerCase()]);
+  const test = key && (hasOwnKeyword(units, key) || hasOwnKeyword(units, key.toLowerCase()));
 
   return test;
 };

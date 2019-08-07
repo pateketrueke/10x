@@ -1,5 +1,5 @@
 import {
-  isFx, isSep, isTime, isExpr, toValue, toNumber, hasMonths, hasTagName,
+  isFx, isSep, isTime, isExpr, toValue, toNumber, hasMonths, hasTagName, hasOwnKeyword,
 } from './parser';
 
 import {
@@ -152,7 +152,7 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // FIXME: validate input or something?
       const [left, right, ...others] = args.map(x => calculateFromTokens(reduceFromAST(x, convert, expressions)));
-      const result = evaluateComparison(cur[1], left[1], right[1], others.map(x => x[1]));
+      const result = evaluateComparison(cur[1], left[1], right ? right[1] : undefined, others.map(x => x[1]));
 
       // also, how these values are rendered back?
       prev.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
@@ -201,12 +201,12 @@ export function reduceFromAST(tokens, convert, expressions) {
     }
 
     // handle unit expressions
-    if (cur[0] === 'unit' && expressions[cur[1]]) {
+    if (cur[0] === 'unit' && hasOwnKeyword(expressions, cur[1])) {
       cur = expressions[cur[1]].slice(1, expressions[cur[1]].length - 1);
     }
 
     // handle N-unit expressions
-    if (cur[0] === 'number' && expressions[cur[2]]) {
+    if (cur[0] === 'number' && hasOwnKeyword(expressions, cur[2])) {
       const old = expressions[cur[2]];
       const val = parseFloat(cur[1]);
       const next = old.slice(1, old.length - 1);
