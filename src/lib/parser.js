@@ -462,7 +462,8 @@ export function parseBuffer(text, fixeds) {
 }
 
 export function buildTree(tokens) {
-  let ops = false;
+  let sym = false;
+
   let root = [];
   let depth = 0;
 
@@ -472,6 +473,30 @@ export function buildTree(tokens) {
 
   for (let i = 0; i < tokens.length; i += 1) {
     const t = tokens[i];
+
+    // symbol-expressions
+    if (t[0] === 'symbol') {
+      t._offset = i;
+      t[2] = [];
+      stack.push(t);
+      sym = true;
+      continue;
+    }
+
+    // eat while in symbol
+    if (sym) {
+      stack[stack.length - 1][2].push(t);
+
+      // close symbol and push leaf
+      if (t[0] === 'expr' && t[1] === ';') {
+        const cur = stack[stack.length - 1];
+
+        root.push([cur[0], cur[1], buildTree(cur[2])]);
+        stack.pop();
+        sym = false;
+      }
+      continue;
+    }
 
     // fix nested-nodes
     if (t[0] === 'def' && t[2]) {
@@ -487,13 +512,10 @@ export function buildTree(tokens) {
         root.push(leaf);
         stack.push(root);
         root = leaf;
-        ops = false;
       } else {
         root = stack.pop();
-        ops = false;
       }
     } else {
-      if (isOp(t[1])) ops = true;
       root.push(t);
     }
   }
