@@ -59,6 +59,11 @@ export function fromSymbols(text, units, expression, previousToken) {
     return ['text', ' '];
   }
 
+  // handle placeholders
+  if (text === '_') {
+    return ['symbol', '_'];
+  }
+
   // handle symbol-like tokens
   if (text.charAt() === ':') {
     switch (text) {
@@ -121,7 +126,7 @@ export function fromSymbols(text, units, expression, previousToken) {
     return ['unit', text].concat(fixedUnit !== text ? fixedUnit : []);
   }
 
-  return ['number', text];
+  return [hasNum(text) ? 'number' : 'unit', text];
 }
 
 export function transform(input, units, types) {

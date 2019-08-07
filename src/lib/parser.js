@@ -196,6 +196,17 @@ export function joinTokens(data, units, types) {
     const oldChar = stack[stack.length - 1]
       || (buffer.length > 1 && buffer[offset - 1][0]);
 
+    // handle placeholders
+    if (
+      cur === '_'
+      && (isSep(oldChar, ' ') || isOp(oldChar) || isFx(oldChar))
+      && (isSep(next, ' ') || isOp(next) || isFx(next))
+    ) {
+      stack.push(cur);
+      inFmt = false;
+      continue;
+    }
+
     // keep formatting blocks together
     if (inFmt && oldChar.indexOf(cur) === 0) {
       buffer[offset - 1].push(cur);
