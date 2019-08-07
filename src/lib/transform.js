@@ -212,6 +212,7 @@ export function transform(input, units, types) {
 
       // keep logical ops
       || (cur[0] === ':')
+      || (cur === '[]' || cur === '{}')
       || (cur === '|>' || cur === '<|')
       || (cur[0] === '.' && cur[1] === '.')
       || (cur[0] === '"' || '=!<>'.includes(cur))

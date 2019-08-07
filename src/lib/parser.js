@@ -39,12 +39,12 @@ const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}
 
 export const isFx = y => y && y.length >= 2 && '-+=~:<!|&>'.includes(y[0]);
 export const isOp = (a, b = '') => `${b}-+=~<!|&>*/`.includes(a);
-export const isSep = (a, b = '') => `${b}|;,`.includes(a);
+export const isSep = (a, b = '') => `${b}{[]}|;,`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
 export const isFmt = x => /^["`_*~]$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
-export const isAny = (x, a = '') => /^[^\s\w\d_*~$€£¢%(~<!>)"`|:;_,.+=*/-]$/.test(x) || a.includes(x);
+export const isAny = (x, a = '') => /^[^\s\w\d_*~$€£¢%({[~<!>\]})"`|:;_,.+=*/-]$/.test(x) || a.includes(x);
 export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
@@ -462,8 +462,6 @@ export function parseBuffer(text, fixeds) {
 }
 
 export function buildTree(tokens) {
-  let sym = false;
-
   let root = [];
   let depth = 0;
 
@@ -476,26 +474,14 @@ export function buildTree(tokens) {
 
     // symbol-expressions
     if (t[0] === 'symbol') {
-      t._offset = i;
-      t[2] = [];
-      stack.push(t);
-      sym = true;
-      continue;
-    }
+      const end = tokens.slice(i + 1)
+        .findIndex(x => x[0] === 'expr' && x[1] === ';');
 
-    // eat while in symbol
-    if (sym) {
-      stack[stack.length - 1][2].push(t);
-
-      // close symbol and push leaf
-      if (t[0] === 'expr' && t[1] === ';') {
-        const cur = stack[stack.length - 1];
-
-        root.push([cur[0], cur[1], buildTree(cur[2])]);
-        stack.pop();
-        sym = false;
+      if (end > i) {
+        t[2] = tokens.splice(i + 1, i + end + 1);
+        root.push(t);
+        continue;
       }
-      continue;
     }
 
     // fix nested-nodes
