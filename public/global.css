@@ -20,6 +20,7 @@ body, input { font-family: Montserrat; }
 .editor [data-op=checkbox] { position: relative; }
 .editor [data-op=checkbox] span:nth-child(2) { display: inline-block; width: 16px; text-align: center; }
 .editor [data-op=checkbox] input { position: absolute; left: 4px; top: 1px; }
+.editor [data-op=comment] { color: #D4D8D5; font-style: italic; }
 .editor [data-op=number], .editor [data-op=unit] { color: #3B89C6; }
 .editor [data-op=equal], .editor [data-op=plus], .editor [data-op=min] { color: #D776C7; }
 .editor [data-op=div], .editor [data-op=mul], .editor [data-op=number] span, .editor blockquote > span:first-child { position: relative; color: transparent; display: inline-block; width: .5em; }
