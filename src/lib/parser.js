@@ -201,9 +201,10 @@ export function joinTokens(data, units, types) {
 
     // handle placeholders
     if (
-      cur === '_'
-      && (isSep(oldChar, ' ') || isOp(oldChar) || isFx(oldChar))
-      && (isSep(next, ' ') || isOp(next) || isFx(next))
+      (cur === '_'
+        && (isSep(next, ' ') || isOp(next) || isFx(next))
+        && (isSep(oldChar, ' ') || isOp(oldChar) || isFx(oldChar))
+        ) || (data[i - 1] === '_' && (isSep(cur, ' ') || isOp(cur) || isFx(cur)))
     ) {
       stack.push(cur);
       inFmt = false;
