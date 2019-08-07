@@ -183,6 +183,7 @@ export function joinTokens(data, units, types) {
     // keep formatting blocks together
     if (inFmt && oldChar.indexOf(cur) === 0) {
       buffer[offset - 1].push(cur);
+      buffer.length = offset;
       inFmt = false;
       continue;
     }
@@ -236,6 +237,7 @@ export function joinTokens(data, units, types) {
       inFmt = !inFmt;
     } else if (inFmt) {
       buffer[offset - 1].push(cur);
+      buffer.length = offset;
       continue;
     }
 
@@ -249,6 +251,7 @@ export function joinTokens(data, units, types) {
       || ((isInt(oldChar) || (hasNum(oldChar) && oldChar[oldChar.length - 1] === ':')) && cur[0] === ':' && hasNum(cur))
     ) {
       buffer[offset - 1].push(cur);
+      buffer.length = offset;
       continue;
     }
 
