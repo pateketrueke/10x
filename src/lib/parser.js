@@ -340,7 +340,7 @@ export function joinTokens(data, units, types) {
     }
 
     // flag possible def/call expressions
-    if (isChar(cur) && nextToken === '(') inCall = true;
+    if ((isChar(cur) || isFx(cur)) && nextToken === '(') inCall = true;
     if (cur === ';' || cur === ')') inCall = false;
 
     // otherwise, just continue splitting...

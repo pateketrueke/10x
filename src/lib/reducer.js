@@ -90,10 +90,19 @@ export function reduceFromArgs(keys, values) {
 }
 
 export function reduceFromEffect(value, def) {
+  const type = value[0];
+
+  // allow strings to be JSON ;-)
+  value = value[0] === 'string' ? toValue(value[1]) : value[1];
+
   return (...args) => {
-    // allow strings to be JSON ;-)
-    value = value[0] === 'string' ? toValue(value[1]) : value[1];
-    args = args.map(x => x[0] === 'string' ? toValue(x[1]) : x[1]);
+    args = args
+      .filter(Array.isArray)
+      .map(x => x[0] === 'string' ? toValue(x[1]) : x[1]);
+
+    if (type === 'number') {
+      value = parseFloat(toNumber(value));
+    }
 
     // invoke methods from values
     if (def.substr(0, 2) === '::') {
@@ -143,6 +152,14 @@ export function reduceFromAST(tokens, convert, expressions) {
           buffer.push(body[i]);
         }
       }
+
+      // apply chaining...
+      if (op[2] === 'rpipe') {
+        console.log(  );
+      }
+
+      // case '|>': return console.log({ left, right, others });
+      // case '<|': return console.log({ left, right, others }) || Function;
 
       // skip from non-arguments
       if (!args.length) {
