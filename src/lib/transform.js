@@ -97,7 +97,7 @@ export function fromSymbols(text, units, expression, previousToken) {
       || (isOp(text[0], ';,') && !isInt(text[1]))
     )
   ) {
-    return [text.length === 1 ? 'expr' : 'fx', text, getOp(text)];
+    return [(text.length === 1 && !'<>'.includes(text)) ? 'expr' : 'fx', text, getOp(text)];
   }
 
   // handle separators
@@ -146,7 +146,7 @@ export function transform(input, units, types) {
     }
 
     // flag possible expressions
-    if (hasNum(cur)) inMaths = true;
+    if (hasNum(cur) || isFx(cur)) inMaths = true;
 
     let inExpr = stack[stack.length - 1];
     let key = i;
@@ -232,6 +232,7 @@ export function transform(input, units, types) {
       // handle units/expressions after maths, never before
       || (inMaths && (
         isExpr(cur) || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
+        || (isChar(cur) && prevToken[0] !== '-' && (isFx(prevToken) || isFx(nextToken) || '<>'.includes(prevToken)))
        ))
     ) {
       prev.push(toToken(i, fromSymbols, cur, units, null, prevToken));

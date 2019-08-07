@@ -14,6 +14,8 @@ const OP_TYPES = {
   '++': 'inc',
   '--': 'dec',
   '&&': 'and',
+  '||': 'x-or',
+  '~>': 'void',
   '|>': 'rpipe',
   '<|': 'lpipe',
   '<': 'lt',
@@ -261,7 +263,7 @@ export function joinTokens(data, units, types) {
     do { nextToken = data[++key]; } while (nextToken === ' ');
 
     // keep formatting block together, ** symbols required twice!
-    if (isFmt(cur[0]) && (cur.length === 2 || cur !== '*')) {
+    if (isFmt(cur[0]) && cur[1] !== '>' && (cur.length === 2 || cur !== '*')) {
       inFmt = !inFmt;
     } else if (inFmt) {
       buffer[offset - 1].push(cur);
@@ -418,6 +420,8 @@ export function parseBuffer(text, fixeds) {
 
       // non-keywords
       || (last === '\\')
+      || (last === '|' && cur === '|')
+      || (last === '&' && cur === '&')
       || (last === '[' && (cur === ' ' || cur === 'x'))
       || ((last === ' ' || last === 'x') && cur === ']')
       || (last === cur && isFmt(cur))
@@ -440,7 +444,7 @@ export function parseBuffer(text, fixeds) {
       || ('+-'.includes(last) && cur === last)
       || ('!<>='.includes(last) && cur === '=')
       || (last === ':' && (cur === ':' || hasNum(cur) || isChar(cur)))
-      || (last === '|' && cur === '>') || (last === '<' && cur === '|')
+      || ('|~'.includes(last) && cur === '>') || (last === '<' && cur === '|')
 
       // keep chars and numbers together
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))

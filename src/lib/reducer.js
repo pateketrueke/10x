@@ -132,7 +132,7 @@ export function reduceFromAST(tokens, convert, expressions) {
 
     // just return from non-values or ops
     if (['symbol', 'string', 'object', 'boolean', 'undefined'].includes(cur[0])) {
-      prev.push(cur);
+      prev.push(cur.slice());
       return prev;
     }
 
