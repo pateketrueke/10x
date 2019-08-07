@@ -85,10 +85,29 @@ export function calculateFromDate(op, left, right) {
 
 // handle basic conditions
 export function evaluateComparison(op, left, right, others) {
+  // parse from JSON as it's already escaped...
+  if (typeof left === 'string') left = JSON.parse(left);
+  if (typeof right === 'string') right = JSON.parse(right);
+
   switch (op) {
-    case '==': return left === right;
+    case '!~': return !left.includes(right);
+    case '=~': return left.includes(right);
     case '!=': return left !== right;
-    default: return console.log({ op, left, right, others });
+    case '==': return left === right;
+    case '<=': return left <= right;
+    case '>=': return left >= right;
+    case '<': return left < right;
+    case '>': return left > right;
+    case '&&': return left && right;
+
+    // FIXME: those are fine?
+    case '|>': return left.bind(null, right, ...others);
+    case '<|': return right.bind(null, left, ...others);
+
+    // FIXME: WAT?
+    case '++': return left + right;
+    case '--': return left.substr(right.length);
+    default: return null;
   }
 }
 
