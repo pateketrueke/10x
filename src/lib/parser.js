@@ -543,54 +543,23 @@ export function fixTree(ast) {
 
     const value = prev[prev.length - 1];
 
-    // concatenate symbol-values next units
-    // FIXME: this is alienating all tests...
-    // if (Array.isArray(cur[0])) {
-    //   const subTree = fixTree(cur);
-    //   const target = (value && value[2])
-    //     || (subTree[0][0] === 'symbol' ? {} : []);
+    // concatenate symbol-values as objects
+    if (Array.isArray(cur[0])) {
+      const subTree = fixTree(cur);
 
-    //   fixToken(target, subTree);
+      if (Array.isArray(subTree[0]) && ['symbol', 'object'].includes(subTree[0][0])) {
+        const target = (value && value[2])
+          || (subTree[0][0] === 'symbol' ? {} : []);
 
-    //   if (value && !value[2]) value[2] = target;
-    //   else prev.push(['object', target]);
-    //   return prev;
-    // }
+        fixToken(target, subTree);
 
-    // if (value && !value[2] && value[0] === 'unit') {
-    //   let obj;
-    //   let key;
-
-    //   obj = subTree.reduce((p, v) => {
-    //     if (Array.isArray(v[0])) {
-    //       v = fixTree(v[]);
-    //     }
-
-    //     console.log({ v });
-
-    //     if (v[0] === 'expr') {
-    //       return p;
-    //     }
-
-    //     if (Array.isArray(p)) {
-    //       p.push(v[1]);
-    //       return p;
-    //     }
-
-    //     if (key) {
-    //       p[key] = v[1];
-    //       key = null;
-    //     } else if (v[0] === 'symbol') {
-    //       key = v[1].substr(1);
-    //     }
-
-    //     return p;
-    //   }, subTree[0][0] === 'symbol' ? {} : []);
-
-    //   value[2] = ['object', obj];
-
-    //   return prev;
-    // }
+        if (value && !value[2]) value[2] = target;
+        else prev.push(['object', target]);
+      } else {
+        prev.push(subTree);
+      }
+      return prev;
+    }
 
     // clean arguments/body from definitions...
     if ((cur[0] === 'def' || cur[0] === 'symbol') && Array.isArray(cur[2])) {
