@@ -516,71 +516,75 @@ export function buildTree(tokens) {
 }
 
 // FIXME: cleanup...
-export function fixToken(value, ast) {
-  const arr = Array.isArray(value);
-
-  let i = 0;
-  let key;
-
-  for (; i < ast.length; i += 1) {
-    if (ast[i][0] === 'expr' && ast[i][1] === ',') continue;
-    if (arr) {
-      if (ast[i][0] === 'number') {
-        value.push(parseFloat(toNumber(ast[i][1])));
-      } else {
-        value.push(toValue(ast[i][1]));
-      }
-    } else {
-      if (!key && ast[i][0] === 'symbol') {
-        key = ast[i][1].substr(1);
-      } else if (key) {
-        if (ast[i][0] === 'number') {
-          value[key] = parseFloat(toNumber(ast[i][1]));
-        } else {
-          value[key] = toValue(ast[i][1]);
-        }
-        key = null;
-      }
+export function fixToken(ast) {
+  if (!Array.isArray(ast[0])) {
+    if (ast[0] === 'number' && ast[2] !== 'datetime') {
+      return parseFloat(toNumber(ast[1]));
     }
+
+    return toValue(ast[1]);
   }
-}
 
-export function fixTree(ast, symbol) {
-  return ast.reduce((prev, cur, i) => {
-    // skip non math-tokens
-    if (hasTagName(cur[0])) return prev;
+  const target = ast[0][0] === 'symbol' ? {} : [];
+  const array = Array.isArray(target);
 
-    // flag for symbol-like values
-    if (cur[0] === 'symbol') symbol = true;
-    if (',;]}'.includes(cur[1])) symbol = false;
+  let keyName;
 
-    // concatenate all possible values
-    if (symbol && Array.isArray(cur[0])) {
-      const value = prev[prev.length - 1];
-      const subTree = fixTree(cur, symbol);
+  return ast.reduce((prev, cur) => {
+    if (cur[0] === 'expr' && cur[1] === ',') return prev;
 
-      // keep side-effects without modification
-      if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
-        const target = (value && value[2])
-          || (subTree[0][0] === 'symbol' ? {} : []);
-
-        fixToken(target, subTree);
-        prev.push(['object', target]);
-      } else {
-        prev.push(subTree);
-      }
+    if (array) {
+      prev.push(fixToken(cur));
       return prev;
     }
 
-    // clean arguments/body from definitions...
-    if ((cur[0] === 'def' || cur[0] === 'symbol') && Array.isArray(cur[2])) {
-      prev.push([cur[0], cur[1], fixTree(cur[2])]);
-    } else if (Array.isArray(cur[0])) {
-      prev.push(fixTree(cur));
-    } else {
-      prev.push(cur);
+    if (!keyName && ['unit', 'symbol'].includes(cur[0])) keyName = cur[1];
+    else {
+      prev[keyName.substr(1)] = fixToken(cur);
+      keyName = false;
     }
 
     return prev;
-  }, []);
+  }, target);
+}
+
+export function fixTree(ast, symbol) {
+  const tokens = ast.filter(x => !hasTagName(x[0]));
+
+  let sym = false;
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const prev = tokens[i - 1];
+    const next = tokens[i + 1];
+
+    let cur = Array.isArray(tokens[i][0])
+      ? fixTree(tokens[i])
+      : tokens[i];
+
+    if (prev && prev[0] === 'symbol' && ['unit', 'symbol'].includes(cur[0])) {
+      let subTree = fixTree(next);
+
+      // keep side-effects without modification
+      if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
+        cur[2] = fixToken(subTree);
+        prev[2] = ['object', cur];
+      }
+
+      if (!prev[2]) {
+        prev[2] = prev[2] || (prev[2] = []);
+        prev[2].push(['def', cur[1], [['expr', '=', 'equal'], subTree, ['expr', ';', 'k']]]);
+      }
+
+      tokens.splice(i, 2);
+      continue;
+    }
+
+    if (cur[0] === 'def' && Array.isArray(cur[2])) {
+      cur = [cur[0], cur[1], fixTree(cur[2])];
+    }
+
+    tokens[i] = cur;
+  }
+
+  return tokens;
 }
