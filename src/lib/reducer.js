@@ -82,6 +82,8 @@ export function reduceFromArgs(keys, values) {
     }
   }
 
+  if (!keys) return locals;
+
   // compute a map from given units and values
   return keys.reduce((prev, cur, i) => {
     prev[cur[1]] = locals[i];
@@ -119,7 +121,15 @@ export function reduceFromAST(tokens, convert, expressions) {
 
     // apply symbol-accessor op
     if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
-      prev[prev.length - 1] = reduceFromEffect(value, (tokens[i + 1] || [])[1] || [], cur[1]);
+      const args = reduceFromArgs(null, reduceFromAST(tokens[i + 1] || [], convert, expressions))
+        .map(x => calculateFromTokens(x))
+        .map(x => {
+          if (x[0] === 'string') return toValue(x[1]);
+          if (x[0] === 'number') return parseFloat(toNumber(x[1]));
+          return x[1];
+        });
+
+      prev[prev.length - 1] = reduceFromEffect(value, args, cur[1]);
       return prev;
     }
 

@@ -556,7 +556,7 @@ export function fixTree(ast, symbol) {
       : tokens[i];
 
     if (prev && prev[0] === 'symbol' && ['unit', 'symbol'].includes(cur[0])) {
-      let subTree = fixTree(next);
+      let subTree = fixTree(next || cur);
 
       // keep side-effects without modification
       if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
@@ -564,12 +564,19 @@ export function fixTree(ast, symbol) {
         prev[2] = ['object', cur];
       }
 
+      // FIXME: adjust tokens... so, units can be defs, and so?
       if (!prev[2]) {
         prev[2] = prev[2] || (prev[2] = []);
-        prev[2].push(['def', cur[1], [['expr', '=', 'equal'], subTree, ['expr', ';', 'k']]]);
+
+        // transform token on :set declarations
+        if (cur[0] === 'unit' && cur[1] === ':set') {
+          prev[2].push([cur[0] === 'unit' ? 'def' : cur[0], cur[1], [['expr', '=', 'equal'], subTree, ['expr', ';', 'k']]]);
+        } else {
+          prev[2].push(cur, subTree);
+        }
       }
 
-      tokens.splice(i, 2);
+      tokens.splice(i, next ? 2 : 1);
       continue;
     }
 

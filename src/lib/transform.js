@@ -225,7 +225,7 @@ export function transform(input, units, types) {
 
       // handle sub-calls, symbols and side-effects
       || (cur === '(' && (isFx(nextToken) || isFx(prevToken) || hasNum(nextToken) || hasKeyword(nextToken, units)))
-      || (cur === ')' && (prevToken === 'def' || isFx(nextToken) || isFx(prevToken) || isOp(nextToken) || isSep(nextToken) || hasNum(prevToken) || hasKeyword(prevToken, units)))
+      || (cur === ')' && (isFx(nextToken) || isFx(prevToken) || isOp(nextToken) || isSep(nextToken) || hasNum(prevToken) || hasKeyword(prevToken, units)))
 
       // handle operators
       || (isOp(cur) && (
