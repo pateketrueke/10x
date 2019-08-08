@@ -517,13 +517,7 @@ export function buildTree(tokens) {
 
 // FIXME: cleanup...
 export function fixToken(ast) {
-  if (!Array.isArray(ast[0])) {
-    if (ast[0] === 'number' && ast[2] !== 'datetime') {
-      return parseFloat(toNumber(ast[1]));
-    }
-
-    return toValue(ast[1]);
-  }
+  if (!Array.isArray(ast[0])) return ast;
 
   const target = ast[0][0] === 'symbol' ? {} : [];
   const array = Array.isArray(target);
