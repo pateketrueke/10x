@@ -547,14 +547,15 @@ export function fixTree(ast) {
     if (Array.isArray(cur[0])) {
       const subTree = fixTree(cur);
 
-      if (Array.isArray(subTree[0]) && ['symbol', 'object'].includes(subTree[0][0])) {
+      if (
+        Array.isArray(subTree[0])
+        && (value[0] === 'unit' || ['symbol', 'object'].includes(subTree[0][0]))
+      ) {
         const target = (value && value[2])
           || (subTree[0][0] === 'symbol' ? {} : []);
 
         fixToken(target, subTree);
-
-        if (value && !value[2]) value[2] = target;
-        else prev.push(['object', target]);
+        prev.push(['object', target]);
       } else {
         prev.push(subTree);
       }
