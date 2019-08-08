@@ -515,6 +515,7 @@ export function buildTree(tokens) {
   return tree;
 }
 
+// FIXME: cleanup...
 export function fixToken(value, ast) {
   const arr = Array.isArray(value);
 
@@ -524,12 +525,20 @@ export function fixToken(value, ast) {
   for (; i < ast.length; i += 1) {
     if (ast[i][0] === 'expr' && ast[i][1] === ',') continue;
     if (arr) {
-      value.push(ast[i][1]);
+      if (ast[i][0] === 'number') {
+        value.push(parseFloat(toNumber(ast[i][1])));
+      } else {
+        value.push(toValue(ast[i][1]));
+      }
     } else {
       if (!key && ast[i][0] === 'symbol') {
         key = ast[i][1].substr(1);
       } else if (key) {
-        value[key] = ast[i][1];
+        if (ast[i][0] === 'number') {
+          value[key] = parseFloat(toNumber(ast[i][1]));
+        } else {
+          value[key] = toValue(ast[i][1]);
+        }
         key = null;
       }
     }

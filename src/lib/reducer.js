@@ -89,26 +89,24 @@ export function reduceFromArgs(keys, values) {
   }, {});
 }
 
-export function reduceFromEffect(value, def) {
-  const type = value[0];
+export function reduceFromEffect(value, args, def) {
+  // make sure we're parsing values!
+  let fixedValue = value[1];
 
-  // allow strings to be JSON ;-)
-  value = value[0] === 'string' ? toValue(value[1]) : value[1];
+  if (value[0] === 'string') fixedValue = toValue(fixedValue);
+  if (value[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
 
-  return (...args) => {
-    args = args
-      .filter(Array.isArray)
-      .map(x => x[0] === 'string' ? toValue(x[1]) : x[1]);
+  // apply side-effects
+  if (def.substr(0, 2) === '::') {
+    fixedValue = fixedValue[def.substr(2)](...args);
+  } else {
+    fixedValue = fixedValue[def.substr(1)];
+  }
 
-    if (type === 'number') {
-      value = parseFloat(toNumber(value));
-    }
+  fixedValue = typeof fixedValue === 'string' ? `"${fixedValue}"` : fixedValue;
 
-    // invoke methods from values
-    if (def.substr(0, 2) === '::') {
-      return value[def.substr(2)](...args);
-    }
-  };
+  // recast previous token with the new value
+  return [typeof fixedValue, fixedValue];
 }
 
 export function reduceFromAST(tokens, convert, expressions) {
@@ -120,13 +118,8 @@ export function reduceFromAST(tokens, convert, expressions) {
     let value = prev[prev.length - 1];
 
     // apply symbol-accessor op
-    if ((hasNum(value) || isFx(value)) && cur[0] === 'symbol') {
-      // make sure we're parsing values!
-      value = value[0] === 'string' ? toValue(value[1]) : value[1];
-      value = value[cur[1].substr(1)];
-
-      // recast previous token with the new value
-      prev[prev.length - 1] = [typeof value, typeof value === 'string' ? `"${value}"` : value];
+    if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
+      prev[prev.length - 1] = reduceFromEffect(value, (tokens[i + 1] || [])[1] || [], cur[1]);
       return prev;
     }
 
@@ -181,23 +174,11 @@ export function reduceFromAST(tokens, convert, expressions) {
       }
 
       // side-effects will operate on previous values
-      const call = isFx(cur[1]) ? reduceFromEffect(prev[prev.length - 1], cur[1]) : expressions[cur[1]];
+      const call = expressions[cur[1]];
       const args = cur[2] || tokens[i + 1];
 
       // skip undefined calls
       if (!call) {
-        return prev;
-      }
-
-      // apply side-effects
-      if (typeof call === 'function') {
-        cur = call(...args.map(x => calculateFromTokens(reduceFromAST(x, convert, expressions))));
-
-        // just remove previous value from AST
-        prev.pop();
-
-        // escape strings, but keep other values as they are
-        prev.push([typeof cur, typeof cur === 'string' ? `"${cur}"` : cur]);
         return prev;
       }
 
