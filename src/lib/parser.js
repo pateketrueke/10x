@@ -536,21 +536,21 @@ export function fixToken(value, ast) {
   }
 }
 
-export function fixTree(ast) {
-  return ast.reduce((prev, cur) => {
+export function fixTree(ast, symbol) {
+  return ast.reduce((prev, cur, i) => {
     // skip non math-tokens
     if (hasTagName(cur[0])) return prev;
 
-    const value = prev[prev.length - 1];
+    // flag for symbol-like values
+    if (cur[0] === 'symbol') symbol = true;
+    if (',;]}'.includes(cur[1])) symbol = false;
 
-    // concatenate symbol-values as objects
-    if (Array.isArray(cur[0])) {
-      const subTree = fixTree(cur);
+    // concatenate all possible values
+    if (symbol && Array.isArray(cur[0])) {
+      const value = prev[prev.length - 1];
+      const subTree = fixTree(cur, symbol);
 
-      if (
-        Array.isArray(subTree[0])
-        && (value[0] === 'unit' || ['symbol', 'object'].includes(subTree[0][0]))
-      ) {
+      if (Array.isArray(subTree[0])) {
         const target = (value && value[2])
           || (subTree[0][0] === 'symbol' ? {} : []);
 

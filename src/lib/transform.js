@@ -137,6 +137,7 @@ export function fromSymbols(text, units, expression, previousToken) {
 
 export function transform(input, units, types) {
   const stack = [];
+  const vars = {};
 
   let inCall = false;
   let inMaths = false;
@@ -160,6 +161,9 @@ export function transform(input, units, types) {
     do {
       nextToken = input[++key];
     } while (nextToken && nextToken.charAt() === ' ');
+
+    // flag local variables
+    if (isChar(cur) && '(='.includes(nextToken)) vars[cur] = 1;
 
     // handle expression blocks
     if (inExpr) {
@@ -239,9 +243,8 @@ export function transform(input, units, types) {
 
       // handle units/expressions after maths, never before
       || (inMaths && (
-        isExpr(cur) || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
-        || (isChar(cur) && prevToken[0] !== '-' && (isFx(prevToken) || isSep(nextToken) || isFx(nextToken) || '<>'.includes(prevToken)))
-       ))
+        vars[cur] || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
+      ))
     ) {
       prev.push(toToken(i, fromSymbols, cur, units, null, prevToken));
     } else {
