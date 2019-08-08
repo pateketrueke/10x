@@ -122,7 +122,7 @@ export function toNumber(value) {
       return a / b;
     }
 
-    return value.replace(/[^%a-z\s\d.-]/ig, '');
+    return value.replace(/[^%:a-z\s\d.-]/ig, '');
   }
 
   return value;
@@ -550,7 +550,8 @@ export function fixTree(ast, symbol) {
       const value = prev[prev.length - 1];
       const subTree = fixTree(cur, symbol);
 
-      if (Array.isArray(subTree[0])) {
+      // keep side-effects without modification
+      if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
         const target = (value && value[2])
           || (subTree[0][0] === 'symbol' ? {} : []);
 

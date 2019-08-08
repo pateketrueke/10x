@@ -239,7 +239,7 @@ export function transform(input, units, types) {
       || hasDays(cur) || hasMonths(cur) || (hasNum(prevToken) && isExpr(cur))
 
       // handle expressions between numbers/units
-      || (isOp(prevToken) && hasNum(cur))
+      || (isOp(prevToken) && hasNum(cur)) || (isFx(prevToken) && !hasNum(prevToken) && isChar(cur))
 
       // handle units/expressions after maths, never before
       || (inMaths && (
