@@ -1,5 +1,5 @@
 import {
-  isFx, isSep, isTime, isExpr, toValue, toNumber, hasMonths, hasTagName, hasOwnKeyword,
+  isFx, isSep, isTime, isExpr, toValue, toNumber, hasNum, hasMonths, hasTagName, hasOwnKeyword,
 } from './parser';
 
 import {
@@ -117,10 +117,10 @@ export function reduceFromAST(tokens, convert, expressions) {
   let lastOp = ['expr', '+', 'plus'];
 
   return tokens.reduce((prev, cur, i) => {
-    // apply symbol-accessor op
-    if (prev[prev.length - 1] && cur[0] === 'symbol') {
-      let value = prev[prev.length - 1];
+    let value = prev[prev.length - 1];
 
+    // apply symbol-accessor op
+    if ((hasNum(value) || isFx(value)) && cur[0] === 'symbol') {
       // make sure we're parsing values!
       value = value[0] === 'string' ? toValue(value[1]) : value[1];
       value = value[cur[1].substr(1)];

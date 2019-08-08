@@ -3,7 +3,7 @@ import {
 } from './transform';
 
 import {
-  parseBuffer, joinTokens, cleanTree,
+  parseBuffer, joinTokens, fixTree,
   isOp, isInt, isSep, toFraction, toNumber, toValue,
 } from './parser';
 
@@ -75,7 +75,7 @@ export default class Solvente {
       if (tokens.error) throw tokens.error;
 
       // mutates on AST manipulation!!!
-      info.tree = cleanTree(tokens.tree);
+      info.tree = fixTree(tokens.tree);
 
       const normalized = [];
 
@@ -83,7 +83,7 @@ export default class Solvente {
       let chunks;
 
       // split over single values...
-      chunks = reduceFromAST(cleanTree(tokens.tree), this.convert, this.expressions).reduce((prev, cur) => {
+      chunks = reduceFromAST(fixTree(tokens.tree), this.convert, this.expressions).reduce((prev, cur) => {
         const lastValue = prev[prev.length - 1] || [];
 
         if (lastValue[0] === 'number' && cur[0] === 'number') {

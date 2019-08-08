@@ -1,6 +1,6 @@
 import {
   isOp, isFx, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr, hasKeyword, hasOwnKeyword, hasDatetime, hasMonths, hasDays,
-  getOp, buildTree, cleanTree,
+  getOp, buildTree,
 } from './parser';
 
 export function toToken(offset, fromCallback, arg1, arg2, arg3, arg4) {
@@ -193,7 +193,7 @@ export function transform(input, units, types) {
 
     // open var/call expressions (strict-mode)
     if (
-      (isChar(cur) || isAlpha(cur) || isFx(cur))
+      (isChar(cur) || isAlpha(cur))
       && (input[i + 1] === '=' || input[i + 1] === '(')
     ) {
       inCall = input[i + 1] === '(';

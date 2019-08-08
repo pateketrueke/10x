@@ -477,26 +477,14 @@ export function buildTree(tokens) {
   for (let i = 0; i < tokens.length; i += 1) {
     const t = tokens[i];
 
-    // symbol-expressions
-    if (t[0] === 'symbol') {
-      const end = tokens.slice(i + 1)
-        .findIndex(x => x[0] === 'expr' && x[1] === ';');
-
-      if (end > i) {
-        t[2] = tokens.splice(i + 1, i + end + 1);
-        root.push(t);
-        continue;
-      }
-    }
-
     // fix nested-nodes
     if (t[0] === 'def' && t[2]) {
       t[2] = buildTree(t[2]);
     }
 
     // handle nesting
-    if (t[0] === 'open' || t[0] === 'close') {
-      if (t[0] === 'open') {
+    if (['open', 'close'].includes(t[0]) || ['begin', 'end'].includes(t[2])) {
+      if (t[0] === 'open' || t[2] === 'begin') {
         const leaf = [];
 
         root._offset = i;
@@ -527,16 +515,88 @@ export function buildTree(tokens) {
   return tree;
 }
 
-export function cleanTree(ast) {
+export function fixToken(value, ast) {
+  const arr = Array.isArray(value);
+
+  let i = 0;
+  let key;
+
+  for (; i < ast.length; i += 1) {
+    if (ast[i][0] === 'expr' && ast[i][1] === ',') continue;
+    if (arr) {
+      value.push(ast[i][1]);
+    } else {
+      if (!key && ast[i][0] === 'symbol') {
+        key = ast[i][1].substr(1);
+      } else if (key) {
+        value[key] = ast[i][1];
+        key = null;
+      }
+    }
+  }
+}
+
+export function fixTree(ast) {
   return ast.reduce((prev, cur) => {
     // skip non math-tokens
     if (hasTagName(cur[0])) return prev;
 
+    const value = prev[prev.length - 1];
+
+    // concatenate symbol-values next units
+    // FIXME: this is alienating all tests...
+    // if (Array.isArray(cur[0])) {
+    //   const subTree = fixTree(cur);
+    //   const target = (value && value[2])
+    //     || (subTree[0][0] === 'symbol' ? {} : []);
+
+    //   fixToken(target, subTree);
+
+    //   if (value && !value[2]) value[2] = target;
+    //   else prev.push(['object', target]);
+    //   return prev;
+    // }
+
+    // if (value && !value[2] && value[0] === 'unit') {
+    //   let obj;
+    //   let key;
+
+    //   obj = subTree.reduce((p, v) => {
+    //     if (Array.isArray(v[0])) {
+    //       v = fixTree(v[]);
+    //     }
+
+    //     console.log({ v });
+
+    //     if (v[0] === 'expr') {
+    //       return p;
+    //     }
+
+    //     if (Array.isArray(p)) {
+    //       p.push(v[1]);
+    //       return p;
+    //     }
+
+    //     if (key) {
+    //       p[key] = v[1];
+    //       key = null;
+    //     } else if (v[0] === 'symbol') {
+    //       key = v[1].substr(1);
+    //     }
+
+    //     return p;
+    //   }, subTree[0][0] === 'symbol' ? {} : []);
+
+    //   value[2] = ['object', obj];
+
+    //   return prev;
+    // }
+
     // clean arguments/body from definitions...
     if ((cur[0] === 'def' || cur[0] === 'symbol') && Array.isArray(cur[2])) {
-      prev.push([cur[0], cur[1], cleanTree(cur[2])]);
+      prev.push([cur[0], cur[1], fixTree(cur[2])]);
     } else if (Array.isArray(cur[0])) {
-      prev.push(cleanTree(cur));
+      prev.push(fixTree(cur));
     } else {
       prev.push(cur);
     }
