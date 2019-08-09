@@ -83,15 +83,16 @@ export default class Solvente {
       let chunks;
 
       // split over single values...
-      chunks = reduceFromAST(fixTree(tokens.tree), this.convert, this.expressions).reduce((prev, cur) => {
-        const lastValue = prev[prev.length - 1] || [];
+      chunks = reduceFromAST(fixTree(tokens.tree), this.convert, this.expressions)
+        .reduce((prev, cur) => {
+          const lastValue = prev[prev.length - 1] || [];
 
-        if (lastValue[0] === 'number' && cur[0] === 'number') {
-          prev.push(['expr', ';', 'k'], cur);
-        } else prev.push(cur);
+          if (lastValue[0] === 'number' && cur[0] === 'number') {
+            prev.push(['expr', ';', 'k'], cur);
+          } else prev.push(cur);
 
-        return prev;
-      }, []);
+          return prev;
+        }, []);
 
       // join chunks into final expressions
       for (let i = 0; i < chunks.length; i += 1) {
@@ -110,8 +111,9 @@ export default class Solvente {
         }
       }
 
+      // FIXME: move this logic apart...
       info.results = normalized.map(x => {
-        const value = calculateFromTokens(x);
+        const value = calculateFromTokens(x).slice();
 
         value[1] = toNumber(value[1]);
 
@@ -138,7 +140,10 @@ export default class Solvente {
           fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
 
-        if (fixedUnit && !(['datetime', 'x-fraction'].includes(fixedUnit) || value[1] instanceof Date)) {
+        if (
+          fixedUnit
+          && !(['datetime', 'x-fraction'].includes(fixedUnit) || value[1] instanceof Date)
+        ) {
           // apply well-known inflections
           if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
             const [one, many] = this.inflections[fixedUnit];
@@ -156,7 +161,9 @@ export default class Solvente {
         return {
           val: value[1],
           type: value[0],
-          format: typeof fixedValue !== 'string' ? JSON.stringify(fixedValue) : fixedValue,
+          format: typeof fixedValue !== 'string'
+            ? JSON.stringify(fixedValue)
+            : fixedValue,
         };
       });
     } catch (e) {

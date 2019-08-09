@@ -120,18 +120,18 @@ export function reduceFromAST(tokens, convert, expressions) {
     let value = prev[prev.length - 1];
 
     // apply symbol-accessor op
-    if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
-      const args = reduceFromArgs(null, reduceFromAST(tokens[i + 1] || [], convert, expressions))
-        .map(x => calculateFromTokens(x))
-        .map(x => {
-          if (x[0] === 'string') return toValue(x[1]);
-          if (x[0] === 'number') return parseFloat(toNumber(x[1]));
-          return x[1];
-        });
+    // if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
+    //   const args = reduceFromArgs(null, reduceFromAST(tokens[i + 1] || [], convert, expressions))
+    //     .map(x => calculateFromTokens(x))
+    //     .map(x => {
+    //       if (x[0] === 'string') return toValue(x[1]);
+    //       if (x[0] === 'number') return parseFloat(toNumber(x[1]));
+    //       return x[1];
+    //     });
 
-      prev[prev.length - 1] = reduceFromEffect(value, args, cur[1]);
-      return prev;
-    }
+    //   prev[prev.length - 1] = reduceFromEffect(value, args, cur[1]);
+    //   return prev;
+    // }
 
     // just return from non-values or ops
     if (['string', 'object', 'boolean', 'undefined'].includes(cur[0])) {

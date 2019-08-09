@@ -144,18 +144,18 @@ export function toValue(value) {
   // simplify decimals
   if (typeof value === 'string') {
     // handle JSON-values
-    if (value.charAt() === '"' && value[value.length - 1] === '"') {
-      if (
-        (value[1] === '[' && value.charAt(value.length - 2) === ']')
-        || (value[1] === '{' && value.charAt(value.length - 2) === '}')
-      ) {
-        // this would allow to parse well-formed objects?
-        value = value.substr(1, value.length - 2);
-        value = value.replace(/\\(?!\\)/g, '');
-      }
+    // if (value.charAt() === '"' && value[value.length - 1] === '"') {
+    //   if (
+    //     (value[1] === '[' && value.charAt(value.length - 2) === ']')
+    //     || (value[1] === '{' && value.charAt(value.length - 2) === '}')
+    //   ) {
+    //     // this would allow to parse well-formed objects?
+    //     value = value.substr(1, value.length - 2);
+    //     value = value.replace(/\\(?!\\)/g, '');
+    //   }
 
-      return JSON.parse(value);
-    }
+    //   return JSON.parse(value);
+    // }
 
     if (value.includes('.')) {
       const [base, decimals] = value.replace('%', '').split('.');
@@ -555,30 +555,30 @@ export function fixTree(ast, symbol) {
       ? fixTree(tokens[i])
       : tokens[i];
 
-    if (prev && prev[0] === 'symbol' && ['unit', 'symbol'].includes(cur[0])) {
-      let subTree = fixTree(next || cur);
+    // if (prev && prev[0] === 'symbol' && ['unit', 'symbol'].includes(cur[0])) {
+    //   let subTree = fixTree(next || cur);
 
-      // keep side-effects without modification
-      if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
-        cur[2] = fixToken(subTree);
-        prev[2] = ['object', cur];
-      }
+    //   // keep side-effects without modification
+    //   if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
+    //     cur[2] = fixToken(subTree);
+    //     prev[2] = ['object', cur];
+    //   }
 
-      // FIXME: adjust tokens... so, units can be defs, and so?
-      if (!prev[2]) {
-        prev[2] = prev[2] || (prev[2] = []);
+    //   // FIXME: adjust tokens... so, units can be defs, and so?
+    //   if (!prev[2]) {
+    //     prev[2] = prev[2] || (prev[2] = []);
+    //     prev[2].push(cur, subTree);
 
-        // transform token on :set declarations
-        if (cur[0] === 'unit' && cur[1] === ':set') {
-          prev[2].push([cur[0] === 'unit' ? 'def' : cur[0], cur[1], [['expr', '=', 'equal'], subTree, ['expr', ';', 'k']]]);
-        } else {
-          prev[2].push(cur, subTree);
-        }
-      }
+    //     // transform token on :set declarations
+    //     // if (cur[0] === 'unit' && cur[1] === ':set') {
+    //     //   prev[2].push([cur[0] === 'unit' ? 'def' : cur[0], cur[1], [['expr', '=', 'equal'], subTree, ['expr', ';', 'k']]]);
+    //     // } else {
+    //     // }
+    //   }
 
-      tokens.splice(i, next ? 2 : 1);
-      continue;
-    }
+    //   tokens.splice(i, next ? 2 : 1);
+    //   continue;
+    // }
 
     if (cur[0] === 'def' && Array.isArray(cur[2])) {
       cur = [cur[0], cur[1], fixTree(cur[2])];
