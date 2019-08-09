@@ -220,20 +220,22 @@ describe('DSL', () => {
       expect(toTree(`"foo"::toUpperCase(36)`).length).to.eql(3);
     });
 
-    it('should consume only two-tokens', () => {
-      expect(toTree(`:set o' 1, 2, 3`).length).to.eql(5);
-      expect(toTree(`:set o' {:k v}, 1`).length).to.eql(3);
-      expect(toTree(`:set o' :foo "bar"`).length).to.eql(2);
-      expect(toTree(`:set o' "foo" "bar"`).length).to.eql(2);
+    // FIXME: probably they should consume more tokens... until ; is reached?
+    it.only('should consume only two-tokens', () => {
+      expect(toTree(`:set o' 1, 2, 3`)).to.eql([['symbol', ':set', ['object', ['unit', "o'", [['number', '1'], ['number', '2'], ['number', '3']]]]]]);
+      // expect(toTree(`:set o' 1, 2, 3`).length).to.eql(5);
+      // expect(toTree(`:set o' {:k v}, 1`).length).to.eql(3);
+      // expect(toTree(`:set o' :foo "bar"`).length).to.eql(2);
+      // expect(toTree(`:set o' "foo" "bar"`).length).to.eql(2);
 
-      expect(toTree(`:set buffer head(buffer)::concat tail(buffer)`).length).to.eql(3);
-      expect(toTree(`:set buffer "foo" "bar", "baz buzz", "bazzinga"`).length).to.eql(6);
+      // expect(toTree(`:set buffer head(buffer)::concat tail(buffer)`).length).to.eql(3);
+      // expect(toTree(`:set buffer "foo" "bar", "baz buzz", "bazzinga"`).length).to.eql(6);
 
-      expect(toTree(`:set headers :content-type "text/html"`).length).to.eql(2);
-      expect(toTree(`:set headers "Content-Type" "text/html", "Length: 0"`).length).to.eql(4);
-      expect(toTree(`:set headers {:content-type "text/html"}, "Length: 0"`).length).to.eql(3);
-      expect(toTree(`:set headers ["Content-Type" "text/html", "Length: 0"]`).length).to.eql(1);
-      expect(toTree(`:set headers [{:content-type "text/html"}, "Length: 0"]`).length).to.eql(1);
+      // expect(toTree(`:set headers :content-type "text/html"`).length).to.eql(2);
+      // expect(toTree(`:set headers "Content-Type" "text/html", "Length: 0"`).length).to.eql(4);
+      // expect(toTree(`:set headers {:content-type "text/html"}, "Length: 0"`).length).to.eql(3);
+      // expect(toTree(`:set headers ["Content-Type" "text/html", "Length: 0"]`).length).to.eql(1);
+      // expect(toTree(`:set headers [{:content-type "text/html"}, "Length: 0"]`).length).to.eql(1);
     });
 
     it('xxx', () => {

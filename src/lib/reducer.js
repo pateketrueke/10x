@@ -1,5 +1,7 @@
 import {
-  isFx, isSep, isTime, isExpr, toValue, toNumber, hasNum, hasMonths, hasTagName, hasOwnKeyword,
+  fixArgs,
+  isFx, isSep, isTime, isExpr,
+  toValue, toNumber, hasNum, hasMonths, hasTagName, hasOwnKeyword,
 } from './parser';
 
 import {
@@ -62,27 +64,7 @@ export function reduceFromTokens(tree, values) {
 }
 
 export function reduceFromArgs(keys, values) {
-  let offset = 0;
-
-  const locals = [];
-
-  // flatten all single-nodes
-  while (values.length === 1) values = values[0];
-
-  // break values into single arguments
-  for (let i = 0; i < values.length; i += 1) {
-    const stack = locals[offset] || (locals[offset] = []);
-    const cur = values[i];
-
-    stack.push(cur);
-
-    if (cur[0] === 'expr' && cur[1] === ',') {
-      stack.pop();
-      offset++;
-    }
-  }
-
-  if (!keys) return locals;
+  const locals = fixArgs(values);
 
   // compute a map from given units and values
   return keys.reduce((prev, cur, i) => {

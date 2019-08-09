@@ -552,6 +552,30 @@ export function fixToken(ast) {
   }, target);
 }
 
+export function fixArgs(values) {
+  let offset = 0;
+
+  const stack = [];
+
+  // flatten all single-nodes
+  while (values.length === 1) values = values[0];
+
+  // break values into single arguments
+  for (let i = 0; i < values.length; i += 1) {
+    const last = stack[offset] || (stack[offset] = []);
+    const cur = values[i];
+
+    last.push(cur);
+
+    if (cur[0] === 'expr' && cur[1] === ',') {
+      last.pop();
+      offset++;
+    }
+  }
+
+  return stack;
+}
+
 export function fixTree(ast, symbol) {
   const tokens = ast.filter(x => !hasTagName(x[0]));
 
@@ -560,15 +584,17 @@ export function fixTree(ast, symbol) {
   let obj = ast._object;
 
   for (let i = 0; i < tokens.length; i += 1) {
-    const prev = tokens[i - 1];
-    const next = tokens[i + 1];
-
-    let cur = Array.isArray(tokens[i][0])
+    const cur = Array.isArray(tokens[i][0])
       ? fixTree(tokens[i])
       : tokens[i];
 
+    const prev = tokens[i - 1];
+
+    // compose all tokens, or before a terminator ; char
     if (prev && prev[0] === 'symbol' && ['unit', 'symbol', 'number'].includes(cur[0])) {
-      let subTree = fixTree(next || []);
+      const cut = tokens.slice(i + 1).indexOf(';');
+      const offset = cut !== -1 ? cut : tokens.length - 1;
+      const subTree = fixTree(tokens.splice(i, i + offset).slice(1));
 
       // keep side-effects without modification
       if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
@@ -576,7 +602,6 @@ export function fixTree(ast, symbol) {
         prev[2] = ['object', cur];
       }
 
-      // FIXME: adjust tokens... so, units can be defs, and so?
       if (!prev[2]) {
         prev[2] = prev[2] || (prev[2] = []);
 
@@ -585,21 +610,14 @@ export function fixTree(ast, symbol) {
         } else {
           prev[2].push(cur);
 
+          // apply type
           if (arr || obj) {
             prev[2][0][2] = arr ? [] : {};
             prev[2] = ['object',  prev[2][0]];
           }
         }
-
-        // transform token on :set declarations
-        // if (cur[0] === 'unit' && cur[1] === ':set') {
-        //   prev[2].push([cur[0] === 'unit' ? 'def' : cur[0], cur[1], [['expr', '=', 'equal'], subTree, ['expr', ';', 'k']]]);
-        // } else {
-        // }
       }
-
-      tokens.splice(i, next ? 2 : 1);
-      continue;
+      break;
     }
 
     if (cur[0] === 'def' && Array.isArray(cur[2])) {
