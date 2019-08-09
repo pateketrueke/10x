@@ -209,7 +209,7 @@ describe('DSL', () => {
     });
   });
 
-  describe.only('Using :symbols for definitions', () => {
+  describe('Using :symbols for definitions', () => {
     // it('should handle if-then-else', () => {
     //   expect(toTree(':if (== 1 2) :do x {:then 3 :else 4}')).to.eql([
     //   ]);
@@ -244,7 +244,7 @@ describe('DSL', () => {
       // expect(toTree(`add5=sum<|5;`)).to.eql([]);
       // expect(toTree(`0|>toString(36)|>substr(2)`)).to.eql([]);
 
-      // FIXME: expect(toTree(':match x {:test 2 :whatever 3}')).to.eql([]);
+      expect(toTree(':match x {:test 2 :whatever 3}')).to.eql([]);
 
       // expect(toTree(`(1 2 3)::map(_ * 2)`)).to.eql([]);
       // expect(toTree(`[1,2,3]::map(_ * 2)`)).to.eql([]);
@@ -269,7 +269,6 @@ describe('DSL', () => {
 
       // expect(toTree(`i'=0; :while (< i' 3) 2 ~> i'++`)).to.eql([]);
       // expect(toTree(`i'=0; :while (< i' 3) :do 2 ~> i'++`)).to.eql([]);
-
     });
   });
 });

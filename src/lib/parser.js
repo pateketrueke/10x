@@ -540,7 +540,8 @@ export function fixToken(ast) {
       keyName = cur[1];
 
       if (cur[2]) {
-        prev[keyName] = cur[2];
+        if (cur[2].length === 0) prev[keyName] = cur[2][0];
+        else prev[keyName] = cur[2];
         keyName = null;
       }
     } else {
@@ -612,9 +613,13 @@ export function fixTree(ast, symbol) {
       if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
         cur[2] = fixToken(subTree);
         prev[2] = ['object', cur];
-      }
+      } else if (!prev[2]) {
+        // skip :symbol continuations
+        if (next && next[0] === 'symbol' && !['unit', 'symbol'].includes(cur[0])) {
+          tokens.splice(i, 0, cur, subTree);
+          continue;
+        }
 
-      if (!prev[2]) {
         prev[2] = prev[2] || (prev[2] = []);
 
         if (subTree.length) {
