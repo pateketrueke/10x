@@ -533,7 +533,6 @@ export function fixToken(ast) {
     if (cur[0] === 'expr' && cur[1] === ',') return prev;
 
     if (array) {
-      // console.log(1,{cur});
       prev.push(fixToken(cur));
       return prev;
     }
@@ -553,8 +552,6 @@ export function fixToken(ast) {
       keyName = null;
     } else if (prev[lastKeyName]) {
       prev[lastKeyName].push(cur);
-    } else {
-      console.log('WAT', lastKeyName, prev, cur);
     }
 
     return prev;
@@ -585,7 +582,7 @@ export function fixArgs(values) {
   return stack;
 }
 
-export function fixTree(ast, symbol) {
+export function fixTree(ast) {
   const tokens = ast.filter(x => !hasTagName(x[0]));
 
   let sym = false;
@@ -605,6 +602,17 @@ export function fixTree(ast, symbol) {
       let subTree;
 
       const rightNext = tokens[i + 2];
+
+      // FIXME: split from separators
+      // if (next && Array.isArray(next[0]) && next[0].length > 1 && !Array.isArray(next[0][0])) {
+      //   tokens.splice(i, i + 2);
+      //   prev[2] = ['object', [cur[0], cur[1], fixArgs(next).map(x => fixToken(fixTree(x))).reduce((p, x) => {
+      //     if (obj) Object.assign(p, x);
+      //     else p.push(x);
+      //     return p;
+      //   }, cur[2] || (obj ? {} : []))]];
+      //   continue;
+      // }
 
       // collect all ops from tokens
       if (next && next[0] === 'expr' && isOp(next[1])) {
@@ -637,9 +645,17 @@ export function fixTree(ast, symbol) {
         prev[2] = prev[2] || (prev[2] = []);
 
         if (subTree.length) {
-          prev[2].push(cur, subTree);
+          prev[2].push(cur);
+
+          // skip from expressions
+          if (subTree[0] !== 'expr') {
+            prev[2].push(subTree);
+          }
         } else {
           prev[2].push(cur);
+
+          // skip when tokens are not values...
+          if (!(arr || obj) && ['unit', 'symbol'].includes(cur[0])) continue;
 
           // apply type, but only on valid tokens...
           if ((arr || obj) && ['unit', 'symbol'].includes(prev[2][0][0])) {

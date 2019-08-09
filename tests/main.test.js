@@ -239,10 +239,20 @@ describe('DSL', () => {
     });
 
     it('should consume all tokens if they are ops', () => {
-      expect(toTree(':a b { :x [{ :y d * v / c } 2] :e 4 }')).to.eql([
+      expect(toTree(':a b { :y d, :k y }')).to.eql([
+        ['symbol', ':a', ['object', ['unit', 'b', {
+          ':y': [['unit', 'd']],
+          ':k': [['unit', 'y']],
+        }]]]
+      ]);
+
+      expect(toTree(':a b { :x [{ :y d * v / c, :k y } 2] :e 4 }')).to.eql([
         ['symbol', ':a', ['object', ['unit', 'b', {
           ':x': [[
-            { ':y': [['unit', 'd'], ['expr', '*', 'mul'], ['unit', 'v'], ['expr', '/', 'div'], ['unit', 'c']] },
+            {
+              ':y': [['unit', 'd'], ['expr', '*', 'mul'], ['unit', 'v'], ['expr', '/', 'div'], ['unit', 'c']],
+              ':k': [['unit', 'y']],
+            },
             ['number', '2'],
           ]],
           ':e': [['number', '4']],
