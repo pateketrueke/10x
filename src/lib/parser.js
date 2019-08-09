@@ -546,7 +546,10 @@ export function fixTokens(ast) {
         keyName = null;
       }
     } else if (keyName) {
-      prev[keyName] = [fixTokens(cur)];
+      const sub = fixTokens(cur);
+
+      // avoid wrapping tokens twice...
+      prev[keyName] = Array.isArray(sub[0]) ? sub : [sub];
       lastKeyName = keyName;
       keyName = null;
     } else if (prev[lastKeyName]) {

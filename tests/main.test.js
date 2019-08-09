@@ -250,8 +250,7 @@ describe('DSL', () => {
         ['symbol', ':a', ['object', ['unit', 'b', {
           ':x': [[
             {
-              // FIXME: somehow is nested twice...
-              ':y': [[['unit', 'd'], ['expr', '*', 'mul'], ['unit', 'v'], ['expr', '/', 'div'], ['unit', 'c']]],
+              ':y': [['unit', 'd'], ['expr', '*', 'mul'], ['unit', 'v'], ['expr', '/', 'div'], ['unit', 'c']],
               ':k': [['unit', 'y']],
             },
             ['number', '2'],
@@ -266,7 +265,7 @@ describe('DSL', () => {
       // console.log(calc(':match x {:test (2 * v), :whatever 3}').tokens);
       expect(toTree(':match x {:test (2 * 4), :whatever 3}')).to.eql([
         ['symbol', ':match', ['object', ['unit', 'x', {
-          ':test': [[['number', '2'], ['expr', '*', 'mul'], ['number', '4']]],
+          ':test': [['number', '2'], ['expr', '*', 'mul'], ['number', '4']],
           ':whatever': [['number', '3']],
         }]]],
       ]);
