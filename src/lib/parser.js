@@ -540,8 +540,7 @@ export function fixToken(ast) {
       keyName = cur[1];
 
       if (cur[2]) {
-        if (cur[2].length === 0) prev[keyName] = cur[2][0];
-        else prev[keyName] = cur[2];
+        prev[keyName] = cur[2][0];
         keyName = null;
       }
     } else {
