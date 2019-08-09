@@ -606,6 +606,12 @@ export function fixTree(ast, symbol) {
 
       const rightNext = tokens[i + 2];
 
+      // collect all ops from tokens
+      if (next && next[0] === 'expr' && isOp(next[1])) {
+        prev[2] = fixToken(tokens.splice(i, i + tokens.length));
+        continue;
+      }
+
       // ensure we consume from lists only!
       if (rightNext && rightNext[0] === 'expr' && rightNext[1] === ',') {
         const cut = tokens.slice(i + 1).indexOf(';');
@@ -619,7 +625,6 @@ export function fixTree(ast, symbol) {
 
       // keep side-effects without modification
       if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
-        // console.log(0,{subTree});
         cur[2] = fixToken(subTree);
         prev[2] = ['object', cur];
       } else if (!prev[2]) {

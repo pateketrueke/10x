@@ -238,6 +238,18 @@ describe('DSL', () => {
       expect(toTree(`:set headers [{:content-type "text/html"}, "Length: 0"]`).length).to.eql(1);
     });
 
+    it('should consume all tokens if they are ops', () => {
+      expect(toTree(':a b { :x [{ :y d * v / c } 2] :e 4 }')).to.eql([
+        ['symbol', ':a', ['object', ['unit', 'b', {
+          ':x': [[
+            { ':y': [['unit', 'd'], ['expr', '*', 'mul'], ['unit', 'v'], ['expr', '/', 'div'], ['unit', 'c']] },
+            ['number', '2'],
+          ]],
+          ':e': [['number', '4']],
+        }]]]
+      ]);
+    });
+
     it('should allow mixed structures, like for pattern-matching', () => {
       // FIXME: mixed sub/expressions as tokens...
       // console.log(calc(':match x {:test (2 * v), :whatever 3}').tokens);
