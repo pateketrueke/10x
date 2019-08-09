@@ -159,11 +159,51 @@ describe('DSL', () => {
     });
   });
 
-  describe('Tokenizer', () => {
-    it('should handle symbols, strings and object-like structures', () => {
+  describe.only('Tokenizer', () => {
+    it('should handle symbols and strings', () => {
       expect(toTree(':foo')).to.eql([['symbol', ':foo']]);
       expect(toTree('"foo"')).to.eql([['string', '"foo"']]);
+    });
+
+    it('should split strings and symbols', () => {
       expect(toTree(':foo "bar"')).to.eql([['symbol', ':foo'], ['string', '"bar"']]);
+      expect(toTree('"foo"')).to.eql([['string', '"foo"']]);
+      expect(toTree('"foo" :bar')).to.eql([['string', '"foo"'], ['symbol', ':bar']]);
+      expect(toTree('"foo" "bar"')).to.eql([['string', '"foo"'], ['string', '"bar"']]);
+
+      expect(toTree(':a "b" :c')).to.eql([['symbol', ':a'], ['string', '"b"'], ['symbol', ':c']]);
+      expect(toTree(':a "b" "c"')).to.eql([['symbol', ':a'], ['string', '"b"'], ['string', '"c"']]);
+
+      expect(toTree('"a" :b "c"')).to.eql([['string', '"a"'], ['symbol', ':b'], ['string', '"c"']]);
+      expect(toTree('"a" "b" :c')).to.eql([['string', '"a"'], ['string', '"b"'], ['symbol', ':c']]);
+    });
+
+    it('should keep symbols together', () => {
+      expect(toTree(':foo :bar')).to.eql([['symbol', ':foo', [['symbol', ':bar'], []]]]);
+      expect(toTree(':a :b :c')).to.eql([['symbol', ':a', [['symbol', ':b'], ['symbol', ':c']]]]);
+      expect(toTree(':a :b "c"')).to.eql([['symbol', ':a', [['symbol', ':b'], ['string', '"c"']]]]);
+      expect(toTree('"a" :b :c')).to.eql([['string', '"a"'], ['symbol', ':b', [['symbol', ':c'], []]]]);
+    });
+
+    it('should handle array-like values', () => {
+      expect(toTree('[:a]')).to.eql([[['symbol', ':a']]]);
+      expect(toTree(':a [:b]')).to.eql([['symbol', ':a'], [['symbol', ':b']]]);
+      expect(toTree(':a [:b "c"]')).to.eql([['symbol', ':a'], [['symbol', ':b'], ['string', '"c"']]]);
+      expect(toTree('"a" [:b "c"]')).to.eql([['string', '"a"'], [['symbol', ':b'], ['string', '"c"']]]);
+    });
+
+    it('should handle array-like values', () => {
+      expect(toTree('a[b]')).to.eql([]);
+      expect(toTree(':a[b]')).to.eql([['symbol', ':a']]);
+      expect(toTree('a[:b]')).to.eql([['unit', 'a'], [['symbol', ':b']]]);
+      expect(toTree(':a[:b]')).to.eql([['symbol', ':a'], [['symbol', ':b']]]);
+      expect(toTree('a[:b "c"]')).to.eql([['unit', 'a'], [['symbol', ':b'], ['string', '"c"']]]);
+      expect(toTree(':a[:b "c"]')).to.eql([['symbol', ':a'], [['symbol', ':b'], ['string', '"c"']]]);
+    });
+
+    it('should handle object-like values', () => {
+      expect(calc(':x a[:b "c"]').tree).to.eql([['symbol', ':x', ['object', ['unit', 'a', { b: ['string', '"c"'] }]]]]);
+      expect(calc(':x a{:b "c"}').tree).to.eql([['symbol', ':x', ['object', ['unit', 'a', { b: ['string', '"c"'] }]]]]);
     });
   });
 });
