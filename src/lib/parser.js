@@ -520,7 +520,7 @@ export function buildTree(tokens) {
 }
 
 // FIXME: cleanup...
-export function fixToken(ast) {
+export function fixTokens(ast) {
   if (!Array.isArray(ast[0])) return ast;
 
   const target = ast[0][0] === 'symbol' ? {} : [];
@@ -533,7 +533,7 @@ export function fixToken(ast) {
     if (cur[0] === 'expr' && cur[1] === ',') return prev;
 
     if (array) {
-      prev.push(fixToken(cur));
+      prev.push(fixTokens(cur));
       return prev;
     }
 
@@ -546,8 +546,7 @@ export function fixToken(ast) {
         keyName = null;
       }
     } else if (keyName) {
-      // console.log(2,{keyName,cur});
-      prev[keyName] = [fixToken(cur)];
+      prev[keyName] = [fixTokens(cur)];
       lastKeyName = keyName;
       keyName = null;
     } else if (prev[lastKeyName]) {
@@ -605,8 +604,14 @@ export function fixTree(ast) {
 
       // collect all ops from tokens
       if (next && next[0] === 'expr' && isOp(next[1])) {
-        prev[2] = fixToken(tokens.splice(i, i + tokens.length));
-        continue;
+        const fixedTree = fixTokens(fixArgs(tokens.splice(i, i + tokens.length)));
+        const target = fixTokens([prev, fixedTree.shift()]);
+
+        return fixedTree.reduce((p, c) => {
+          if (Array.isArray(p)) p.push(c);
+          else Object.assign(p, c);
+          return p;
+        }, target);
       }
 
       // ensure we consume from lists only!
@@ -622,7 +627,7 @@ export function fixTree(ast) {
 
       // keep side-effects without modification
       if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
-        cur[2] = fixToken(subTree);
+        cur[2] = fixTokens(subTree);
         prev[2] = ['object', cur];
       } else if (!prev[2]) {
         // skip :symbol continuations
