@@ -257,7 +257,9 @@ export function transform(input, units, types) {
 
       // handle units/expressions after maths, never before
       || (inMaths && (
-        vars[cur] || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
+        vars[cur]
+        || (isOp(cur) && (hasNum(prevToken) || hasNum(nextToken)))
+        || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
       ))
     ) {
       prev.push(toToken(i, fromSymbols, cur, units, null, prevToken));
