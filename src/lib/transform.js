@@ -255,11 +255,16 @@ export function transform(input, units, types) {
       || (isChar(cur) && ('[{'.includes(nextToken) || (isFx(prevToken) && prevToken[0] !== '-')))
       || ((hasNum(cur) || isChar(cur) || hasKeyword(cur, units)) && vars[prevToken])
 
-      // handle units/expressions after maths, never before
       || (inMaths && (
         vars[cur]
-        || (isOp(cur) && (hasNum(prevToken) || hasNum(nextToken)))
-        || (hasKeyword(cur, units) && (isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)))
+
+        // allow units between ops
+        || ((isChar(cur) || hasKeyword(cur, units)) && (
+          isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)
+        ))
+
+        // handle units/expressions after maths, never before
+        || (isOp(cur) && ((hasNum(prevToken) || isChar(prevToken)) || (isChar(nextToken) || hasNum(nextToken))))
       ))
     ) {
       prev.push(toToken(i, fromSymbols, cur, units, null, prevToken));
