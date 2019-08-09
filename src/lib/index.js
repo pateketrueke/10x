@@ -75,6 +75,7 @@ export default class Solvente {
       if (tokens.error) throw tokens.error;
 
       // mutates on AST manipulation!!!
+      // FIXME: clone deep?
       info.tree = fixTree(tokens.tree);
 
       const normalized = [];
@@ -83,7 +84,8 @@ export default class Solvente {
       let chunks;
 
       // split over single values...
-      chunks = reduceFromAST(fixTree(tokens.tree), this.convert, this.expressions)
+      // FIXME: clone the whole tre before...
+      chunks = reduceFromAST(info.tree, this.convert, this.expressions)
         .reduce((prev, cur) => {
           const lastValue = prev[prev.length - 1] || [];
 

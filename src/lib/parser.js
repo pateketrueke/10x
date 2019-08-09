@@ -526,12 +526,14 @@ export function fixToken(ast) {
   const target = ast[0][0] === 'symbol' ? {} : [];
   const array = Array.isArray(target);
 
+  let lastKeyName;
   let keyName;
 
   return ast.reduce((prev, cur) => {
     if (cur[0] === 'expr' && cur[1] === ',') return prev;
 
     if (array) {
+      // console.log(1,{cur});
       prev.push(fixToken(cur));
       return prev;
     }
@@ -541,11 +543,18 @@ export function fixToken(ast) {
 
       if (cur[2]) {
         prev[keyName] = cur[2];
+        lastKeyName = keyName;
         keyName = null;
       }
-    } else {
+    } else if (keyName) {
+      // console.log(2,{keyName,cur});
       prev[keyName] = [fixToken(cur)];
+      lastKeyName = keyName;
       keyName = null;
+    } else if (prev[lastKeyName]) {
+      prev[lastKeyName].push(cur);
+    } else {
+      console.log('WAT', lastKeyName, prev, cur);
     }
 
     return prev;
@@ -610,6 +619,7 @@ export function fixTree(ast, symbol) {
 
       // keep side-effects without modification
       if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
+        // console.log(0,{subTree});
         cur[2] = fixToken(subTree);
         prev[2] = ['object', cur];
       } else if (!prev[2]) {
@@ -626,10 +636,10 @@ export function fixTree(ast, symbol) {
         } else {
           prev[2].push(cur);
 
-          // apply type
-          if (arr || obj) {
+          // apply type, but only on valid tokens...
+          if ((arr || obj) && ['unit', 'symbol'].includes(prev[2][0][0])) {
             prev[2][0][2] = arr ? [] : {};
-            prev[2] = ['object',  prev[2][0]];
+            prev[2] = ['object', prev[2][0]];
           }
         }
       }
