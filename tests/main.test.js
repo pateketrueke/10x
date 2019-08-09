@@ -209,7 +209,7 @@ describe('DSL', () => {
     });
   });
 
-  describe('Using :symbols for definitions', () => {
+  describe.only('Using :symbols for definitions', () => {
     // it('should handle if-then-else', () => {
     //   expect(toTree(':if (== 1 2) :do x {:then 3 :else 4}')).to.eql([
     //   ]);
@@ -221,7 +221,7 @@ describe('DSL', () => {
     });
 
     // FIXME: probably they should consume more tokens... until ; is reached?
-    it.only('should consume only two-tokens', () => {
+    it('should consume all tokens if they are lists', () => {
       expect(toTree(`:set o' 1, 2, 3`)).to.eql([['symbol', ':set', ['object', ['unit', "o'", [['number', '1'], ['number', '2'], ['number', '3']]]]]]);
       // expect(toTree(`:set o' 1, 2, 3`).length).to.eql(5);
       // expect(toTree(`:set o' {:k v}, 1`).length).to.eql(3);

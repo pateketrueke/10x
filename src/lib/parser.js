@@ -584,17 +584,29 @@ export function fixTree(ast, symbol) {
   let obj = ast._object;
 
   for (let i = 0; i < tokens.length; i += 1) {
-    const cur = Array.isArray(tokens[i][0])
+    let cur = Array.isArray(tokens[i][0])
       ? fixTree(tokens[i])
       : tokens[i];
 
     const prev = tokens[i - 1];
+    const next = tokens[i + 1];
 
     // compose all tokens, or before a terminator ; char
     if (prev && prev[0] === 'symbol' && ['unit', 'symbol', 'number'].includes(cur[0])) {
-      const cut = tokens.slice(i + 1).indexOf(';');
-      const offset = cut !== -1 ? cut : tokens.length - 1;
-      const subTree = fixTree(tokens.splice(i, i + offset).slice(1));
+      let subTree;
+
+      const rightNext = tokens[i + 2];
+
+      // ensure we consume from lists only!
+      if (rightNext && rightNext[0] === 'expr' && rightNext[1] === ',') {
+        const cut = tokens.slice(i + 1).indexOf(';');
+        const offset = cut !== -1 ? cut : tokens.length - 1;
+
+        subTree = fixTree(tokens.splice(i, i + offset).slice(1));
+      } else {
+        subTree = fixTree(next || []);
+        tokens.splice(i, next ? 2 : 1);
+      }
 
       // keep side-effects without modification
       if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
@@ -617,7 +629,7 @@ export function fixTree(ast, symbol) {
           }
         }
       }
-      break;
+      continue;
     }
 
     if (cur[0] === 'def' && Array.isArray(cur[2])) {
