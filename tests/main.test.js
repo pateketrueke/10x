@@ -239,9 +239,10 @@ describe('DSL', () => {
     });
 
     it('should allow mixed structures, like for pattern-matching', () => {
-      expect(toTree(':match x {:test 2 :whatever 3}')).to.eql([
+      // FIXME: mixed sub/expressions as tokens...
+      expect(toTree(':match x {:test (2 * 4), :whatever 3}')).to.eql([
         ['symbol', ':match', ['object', ['unit', 'x', {
-          ':test': [['number', '2']],
+          ':test': [[['number', '2'], ['expr', '*', 'mul'], ['number', '4']]],
           ':whatever': [['number', '3']],
         }]]],
       ]);
