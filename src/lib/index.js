@@ -64,7 +64,7 @@ export default class Solvente {
 
     try {
       const tokens = transform(all, this.units, out.types);
-      const fixedAST = tokens.ast.map(x => toToken(x._offset, () => x.slice()));
+      const fixedAST = tokens.ast.map(x => toToken(x, () => x.slice()));
 
       info.error = tokens.error;
       info.tokens = fixedAST;

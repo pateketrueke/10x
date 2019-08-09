@@ -487,6 +487,10 @@ export function buildTree(tokens) {
       if (t[0] === 'open' || t[2] === 'begin') {
         const leaf = [];
 
+        // flag tokens for further detection...
+        if (t[1] === '{') root._object = true;
+        if (t[1] === '[') root._array = true;
+
         root._offset = i;
         root.push(leaf);
         stack.push(root);
@@ -532,10 +536,16 @@ export function fixToken(ast) {
       return prev;
     }
 
-    if (!keyName && ['unit', 'symbol'].includes(cur[0])) keyName = cur[1];
-    else {
+    if (!keyName && ['unit', 'symbol'].includes(cur[0])) {
+      keyName = cur[1];
+
+      if (cur[2]) {
+        prev[keyName.substr(1)] = cur[2];
+        keyName = null;
+      }
+    } else {
       prev[keyName.substr(1)] = fixToken(cur);
-      keyName = false;
+      keyName = null;
     }
 
     return prev;
@@ -546,6 +556,8 @@ export function fixTree(ast, symbol) {
   const tokens = ast.filter(x => !hasTagName(x[0]));
 
   let sym = false;
+  let arr = ast._array;
+  let obj = ast._object;
 
   for (let i = 0; i < tokens.length; i += 1) {
     const prev = tokens[i - 1];
@@ -555,7 +567,7 @@ export function fixTree(ast, symbol) {
       ? fixTree(tokens[i])
       : tokens[i];
 
-    if (prev && prev[0] === 'symbol' && ['unit', 'symbol'].includes(cur[0])) {
+    if (prev && prev[0] === 'symbol' && ['unit', 'symbol', 'number'].includes(cur[0])) {
       let subTree = fixTree(next || []);
 
       // keep side-effects without modification
@@ -567,7 +579,17 @@ export function fixTree(ast, symbol) {
       // FIXME: adjust tokens... so, units can be defs, and so?
       if (!prev[2]) {
         prev[2] = prev[2] || (prev[2] = []);
-        prev[2].push(cur, subTree);
+
+        if (subTree.length) {
+          prev[2].push(cur, subTree);
+        } else {
+          prev[2].push(cur);
+
+          if (arr || obj) {
+            prev[2][0][2] = arr ? [] : {};
+            prev[2] = ['object',  prev[2][0]];
+          }
+        }
 
         // transform token on :set declarations
         // if (cur[0] === 'unit' && cur[1] === ':set') {

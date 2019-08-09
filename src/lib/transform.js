@@ -4,6 +4,15 @@ import {
 } from './parser';
 
 export function toToken(offset, fromCallback, arg1, arg2, arg3, arg4) {
+  if (typeof offset === 'object') {
+    const t = toToken(offset._offset, fromCallback);
+
+    if (offset._object) t._object = true;
+    if (offset._array) t._array = true;
+
+    return t;
+  }
+
   const value = fromCallback(arg1, arg2, arg3, arg4);
 
   value._offset = offset;
@@ -163,7 +172,8 @@ export function transform(input, units, types) {
     } while (nextToken && nextToken.charAt() === ' ');
 
     // flag local variables
-    if (isChar(cur) && '(='.includes(nextToken)) vars[cur] = 1;
+    if (isChar(cur) && '[{(='.includes(nextToken)) vars[cur] = 1;
+    // if (isChar(prevToken) && '[{(='.includes(cur)) vars[prevToken] = 1;
 
     // handle expression blocks
     if (inExpr) {
@@ -242,7 +252,8 @@ export function transform(input, units, types) {
       || (isOp(prevToken) && hasNum(cur))
 
       // handle special unit-like values
-      || (isChar(cur) && '[{'.includes(nextToken))
+      || (isChar(cur) && ('[{'.includes(nextToken) || (isFx(prevToken) && prevToken[0] !== '-')))
+      || ((hasNum(cur) || isChar(cur) || hasKeyword(cur, units)) && vars[prevToken])
 
       // handle units/expressions after maths, never before
       || (inMaths && (

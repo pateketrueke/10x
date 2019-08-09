@@ -6,7 +6,7 @@ const value = ({ results }) => results.map(x => x.format);
 const toTree = (expr, opts) => calc(expr, opts).tree;
 
 describe('DSL', () => {
-  describe('Basic operations', () => {
+  describe('Basic math operations', () => {
     it('should handle common errors', () => {
        expect(calc('1ml - 1cm').error.message).to.eql('Cannot convert incompatible measures of volume and length');
     });
@@ -126,7 +126,7 @@ describe('DSL', () => {
     });
   });
 
-  describe('Formatting', () => {
+  describe('Markdown-like formatting', () => {
     it('should handle code tags', () => {
       expect(calc('foo `bar baz` buzz').tokens[2][0]).to.eql('code');
       expect(calc('foo `bar baz` buzz').tokens[2][1]).to.eql('`bar baz`');
@@ -159,7 +159,7 @@ describe('DSL', () => {
     });
   });
 
-  describe.only('Tokenizer', () => {
+  describe('Symbols, strings and objects', () => {
     it('should handle symbols and strings', () => {
       expect(toTree(':foo')).to.eql([['symbol', ':foo']]);
       expect(toTree('"foo"')).to.eql([['string', '"foo"']]);
@@ -179,10 +179,10 @@ describe('DSL', () => {
     });
 
     it('should keep symbols together', () => {
-      expect(toTree(':foo :bar')).to.eql([['symbol', ':foo', [['symbol', ':bar'], []]]]);
+      expect(toTree(':foo :bar')).to.eql([['symbol', ':foo', [['symbol', ':bar']]]]);
       expect(toTree(':a :b :c')).to.eql([['symbol', ':a', [['symbol', ':b'], ['symbol', ':c']]]]);
       expect(toTree(':a :b "c"')).to.eql([['symbol', ':a', [['symbol', ':b'], ['string', '"c"']]]]);
-      expect(toTree('"a" :b :c')).to.eql([['string', '"a"'], ['symbol', ':b', [['symbol', ':c'], []]]]);
+      expect(toTree('"a" :b :c')).to.eql([['string', '"a"'], ['symbol', ':b', [['symbol', ':c']]]]);
     });
 
     it('should handle array-like values', () => {
@@ -192,18 +192,87 @@ describe('DSL', () => {
       expect(toTree('"a" [:b "c"]')).to.eql([['string', '"a"'], [['symbol', ':b'], ['string', '"c"']]]);
     });
 
-    it('should handle array-like values', () => {
+    it('should handle object-like values', () => {
       expect(toTree('a[b]')).to.eql([]);
       expect(toTree(':a[b]')).to.eql([['symbol', ':a']]);
       expect(toTree('a[:b]')).to.eql([['unit', 'a'], [['symbol', ':b']]]);
       expect(toTree(':a[:b]')).to.eql([['symbol', ':a'], [['symbol', ':b']]]);
       expect(toTree('a[:b "c"]')).to.eql([['unit', 'a'], [['symbol', ':b'], ['string', '"c"']]]);
       expect(toTree(':a[:b "c"]')).to.eql([['symbol', ':a'], [['symbol', ':b'], ['string', '"c"']]]);
+      expect(toTree(':x a[]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', []]]]]);
+      expect(toTree(':x a{}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', {}]]]]);
+      expect(toTree(':x a[v 2]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', [['unit', 'v'], ['number', '2']]]]]]);
+      expect(toTree(':x a[:b c]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { b: [['unit', 'c']] }]]]]);
+      expect(toTree(':x a{:b c}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { b: [['unit', 'c']] }]]]]);
+      expect(toTree(':x a[:b "c"]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { b: ['string', '"c"'] }]]]]);
+      expect(toTree(':x a{:b "c"}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { b: ['string', '"c"'] }]]]]);
+    });
+  });
+
+  describe('Using :symbols for definitions', () => {
+    // it('should handle if-then-else', () => {
+    //   expect(toTree(':if (== 1 2) :do x {:then 3 :else 4}')).to.eql([
+    //   ]);
+    // });
+
+    it('should consume only two-tokens', () => {
+      expect(toTree(`:set o' 1, 2, 3`).length).to.eql(5);
+      expect(toTree(`:set o' {:k v}, 1`).length).to.eql(3);
+      expect(toTree(`:set o' :foo "bar"`).length).to.eql(2);
+      expect(toTree(`:set o' "foo" "bar"`).length).to.eql(2);
     });
 
-    it('should handle object-like values', () => {
-      expect(calc(':x a[:b "c"]').tree).to.eql([['symbol', ':x', ['object', ['unit', 'a', { b: ['string', '"c"'] }]]]]);
-      expect(calc(':x a{:b "c"}').tree).to.eql([['symbol', ':x', ['object', ['unit', 'a', { b: ['string', '"c"'] }]]]]);
+    it('xxx', () => {
+      // expect(toTree(':set buffer []')).to.eql([]);
+      // expect(calc(':set buffer [ 1 ]').tree).to.eql([]);
+      // expect(calc(':set buffer {:k v}').tree).to.eql([]);
+      // expect(toTree(':set buffer {:}')).to.eql([]);
+      // :set buffer 1, 2, 3;
+      // :set buffer head(buffer)::concat tail(buffer);
+      // :set buffer "foo" "bar", "baz buzz", "bazzinga";
+
+      // :set headers {};
+      // :set headers :content-type "text/html";
+      // :set headers "Content-Type" "text/html", "Length: 0";
+
+      // expect(toTree(`add5(a')=sum(a',5);`)).to.eql([]);
+      // expect(toTree(`add5(_)=sum<|5;`)).to.eql([]);
+      // expect(toTree(`add5=sum<|5;`)).to.eql([]);
+      // expect(toTree(`0|>toString(36)|>substr(2)`)).to.eql([]);
     });
+
+
+    // (1 2 3)::map(_ * 2);
+    // "[1,2,3]"::map(_ * 2);
+    // "[1,2,3]"::map(x', x' * 2);
+    // "[1,2,3]"::map(x', x' * 2 ~> 0);
+    // "[1,2,3]"::map(x' :do x' * 2 ~> 0);
+
+    // // control-flow? loops?
+    // :if (== 1 2) :do 1 ~> 2;
+    // :if (== 1 2) && (<= 1 2) :do 1 ~> 2;
+    // :if (== :false ((== 1 2) || (<= 1 2))) :do 1 ~> 2;
+
+    // :when (< 1 2) a, (> 2 1) b, :otherwise c;
+    // :when (< 1 2) a ~> :null, (> 2 1) b ~> :false, :otherwise c ~> :true;
+    // :when (< 1 2) :do a ~> :null, (> 2 1) :do b ~> :false, :otherwise :do c ~> :true;
+
+    // :loop (1..3) x;
+    // :loop (c'..f(3)) x;
+
+    // :repeat (5) 2 ~> :null;
+    // :repeat (5) :do 2 ~> :null;
+
+    // i'=0; :while (< i' 3) 2 ~> i'++;
+    // i'=0; :while (< i' 3) :do 2 ~> i'++;
+
+    // it('should handle pattern-matching', () => {
+    //   expect(toTree(':when x {:test 2 :whatever 3}')).to.eql([
+    //      ['symbol', ':when', ['object', ['unit', 'x', {
+    //        test: ['number', '2'],
+    //        whatever: ['number', '3'],
+    //      }]]],
+    //   ]);
+    // });
   });
 });
