@@ -202,10 +202,10 @@ describe('DSL', () => {
       expect(toTree(':x a[]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', []]]]]);
       expect(toTree(':x a{}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', {}]]]]);
       expect(toTree(':x a[v 2]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', [['unit', 'v'], ['number', '2']]]]]]);
-      expect(toTree(':x a[:b c]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': ['unit', 'c'] }]]]]);
-      expect(toTree(':x a{:b c}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': ['unit', 'c'] }]]]]);
-      expect(toTree(':x a[:b "c"]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': ['string', '"c"'] }]]]]);
-      expect(toTree(':x a{:b "c"}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': ['string', '"c"'] }]]]]);
+      expect(toTree(':x a[:b c]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['unit', 'c']] }]]]]);
+      expect(toTree(':x a{:b c}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['unit', 'c']] }]]]]);
+      expect(toTree(':x a[:b "c"]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['string', '"c"']] }]]]]);
+      expect(toTree(':x a{:b "c"}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['string', '"c"']] }]]]]);
     });
   });
 
@@ -241,8 +241,8 @@ describe('DSL', () => {
     it('should allow mixed structures, like for pattern-matching', () => {
       expect(toTree(':match x {:test 2 :whatever 3}')).to.eql([
         ['symbol', ':match', ['object', ['unit', 'x', {
-          ':test': ['number', '2'],
-          ':whatever': ['number', '3'],
+          ':test': [['number', '2']],
+          ':whatever': [['number', '3']],
         }]]],
       ]);
     });
