@@ -603,17 +603,6 @@ export function fixTree(ast) {
 
       const rightNext = tokens[i + 2];
 
-      // FIXME: split from separators
-      // if (next && Array.isArray(next[0]) && next[0].length > 1 && !Array.isArray(next[0][0])) {
-      //   tokens.splice(i, i + 2);
-      //   prev[2] = ['object', [cur[0], cur[1], fixArgs(next).map(x => fixToken(fixTree(x))).reduce((p, x) => {
-      //     if (obj) Object.assign(p, x);
-      //     else p.push(x);
-      //     return p;
-      //   }, cur[2] || (obj ? {} : []))]];
-      //   continue;
-      // }
-
       // collect all ops from tokens
       if (next && next[0] === 'expr' && isOp(next[1])) {
         prev[2] = fixToken(tokens.splice(i, i + tokens.length));
