@@ -540,11 +540,11 @@ export function fixToken(ast) {
       keyName = cur[1];
 
       if (cur[2]) {
-        prev[keyName.substr(1)] = cur[2];
+        prev[keyName] = cur[2];
         keyName = null;
       }
     } else {
-      prev[keyName.substr(1)] = fixToken(cur);
+      prev[keyName] = fixToken(cur);
       keyName = null;
     }
 
