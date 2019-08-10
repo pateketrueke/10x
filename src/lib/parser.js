@@ -629,7 +629,7 @@ export function fixTree(ast) {
       }
 
       // keep side-effects without modification
-      if (Array.isArray(subTree[0]) && subTree[0][0] !== 'fx') {
+      if (Array.isArray(subTree[0])) {
         cur[2] = fixTokens(subTree);
         prev[2] = ['object', cur];
       } else if (!prev[2]) {

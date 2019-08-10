@@ -75,7 +75,6 @@ export default class Solvente {
       if (tokens.error) throw tokens.error;
 
       // mutates on AST manipulation!!!
-      // FIXME: clone deep?
       info.tree = fixTree(tokens.tree);
 
       const normalized = [];

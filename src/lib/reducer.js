@@ -94,12 +94,19 @@ export function reduceFromEffect(value, args, def) {
 }
 
 export function reduceFromAST(tokens, convert, expressions) {
+  const fixedTokens = [];
+
   let isDate;
   let lastUnit;
   let lastOp = ['expr', '+', 'plus'];
 
-  return tokens.reduce((prev, cur, i) => {
-    let value = prev[prev.length - 1];
+  // return tokens.reduce((prev, cur, i) => {
+  for (let i = 0; i < tokens.length; i += 1) {
+    let value = fixedTokens[fixedTokens.length - 1];
+    let cur = tokens[i];
+
+    // FIXME: function application is the same as for symbols, units and such
+    // they all behave the same, but the consequences are different...
 
     // apply symbol-accessor op
     // if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
@@ -117,13 +124,13 @@ export function reduceFromAST(tokens, convert, expressions) {
 
     // just return from non-values or ops
     if (['string', 'object', 'boolean', 'undefined'].includes(cur[0])) {
-      prev.push(cur);
-      return prev;
+      fixedTokens.push(cur);
+      continue;
     }
 
     // handle logical expressions
     if (cur[0] === 'fx') {
-      const [op, ...body] = tokens.splice(i);
+      const [op, ...body] = tokens.slice(i);
       const args = [];
 
       let buffer = [];
@@ -140,8 +147,8 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // skip from non-arguments
       if (!args.length) {
-        prev.push(cur);
-        return prev;
+        fixedTokens.push(cur);
+        break;
       }
 
       // FIXME: validate input or something?
@@ -149,8 +156,8 @@ export function reduceFromAST(tokens, convert, expressions) {
       const result = evaluateComparison(cur[1], left[1], right ? right[1] : undefined, others.map(x => x[1]));
 
       // also, how these values are rendered back?
-      prev.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
-      return prev;
+      fixedTokens.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
+      break;
     }
 
     // handle var/call definitions
@@ -162,7 +169,7 @@ export function reduceFromAST(tokens, convert, expressions) {
       // define var/call
       if (isDef) {
         expressions[cur[1]] = cur[2];
-        return prev;
+        continue;
       }
 
       // side-effects will operate on previous values
@@ -170,9 +177,7 @@ export function reduceFromAST(tokens, convert, expressions) {
       const args = cur[2] || tokens[i + 1];
 
       // skip undefined calls
-      if (!call) {
-        return prev;
-      }
+      if (!call) continue;
 
       // compute valid sub-expressions from arguments
       const locals = reduceFromArgs(call[0].filter(x => x[0] === 'unit'), args);
@@ -214,7 +219,7 @@ export function reduceFromAST(tokens, convert, expressions) {
       if (left[0] === 'number' && cur[0] === 'number') {
         // distance between tokens should be short!
         if ((cur._offset || 1) - (left._offset || 0) <= 2) {
-          prev.push(lastOp);
+          fixedTokens.push(lastOp);
         }
       }
 
@@ -255,7 +260,8 @@ export function reduceFromAST(tokens, convert, expressions) {
       if (isTime(cur[2])) isDate = true;
     }
 
-    prev.push(cur);
-    return prev;
-  }, []);
+    fixedTokens.push(cur);
+  }
+
+  return fixedTokens;
 }

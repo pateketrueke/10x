@@ -210,11 +210,6 @@ describe('DSL', () => {
   });
 
   describe('Using :symbols for definitions', () => {
-    // it('should handle if-then-else', () => {
-    //   expect(toTree(':if (== 1 2) :do x {:then 3 :else 4}')).to.eql([
-    //   ]);
-    // });
-
     it('should handle ::symbols', () => {
       expect(toTree(`123::toString(36)`).length).to.eql(3);
       expect(toTree(`"foo"::toUpperCase(36)`).length).to.eql(3);
@@ -260,14 +255,15 @@ describe('DSL', () => {
       ]);
     });
 
-    it('should allow mixed structures, like for pattern-matching', () => {
-      // FIXME: mixed sub/expressions as tokens...
-      // console.log(calc(':match x {:test (2 * v), :whatever 3}').tokens);
+    it('should allow mixed structures, like for pattern-matching, if-then-else, etc.', () => {
       expect(toTree(':match x {:test (2 * 4), :whatever 3}')).to.eql([
         ['symbol', ':match', ['object', ['unit', 'x', {
           ':test': [['number', '2'], ['expr', '*', 'mul'], ['number', '4']],
           ':whatever': [['number', '3']],
         }]]],
+      ]);
+
+      expect(toTree(':if (==1 2)')).to.eql([
       ]);
     });
 
