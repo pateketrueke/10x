@@ -146,13 +146,13 @@ describe('DSL', () => {
       expect(toTree('always7=add5<|2;')).to.eql(toTree('always7=add5(2);'));
       expect(value('sum(x,y)=x+y;add5(x)=sum|>5;always7=add5|>2;always7')).to.eql(['7']);
 
-      // expect(value(`0|>sum 1|>sum(2)`)).to.eql([]);
-
-      expect(toTree(`0|>sum 1|>sum(2)`)).to.eql([
+      // expect(toTree('0|>sum 1|>sum(2);')).to.eql(toTree('0|>sum(1)|>sum(2);'));
+      expect(toTree('0|>sum(1)|>sum(2);')).to.eql([
         ['number', '0'],
-        ['fx', '|>', 'rpipe'], ['unit', 'sum'], ['number', '1'],
+        ['fx', '|>', 'rpipe'], ['def', 'sum', [[['number', '1']]]],
         ['fx', '|>', 'rpipe'], ['def', 'sum', [[['number', '2']]]],
-      ]);
+        ['expr', ';', 'k'],
+      ])
     });
   })
 

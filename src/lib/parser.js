@@ -591,18 +591,36 @@ export function fixApply(kind, body, args) {
 }
 
 export function fixCall(def) {
+  if (def.length < 3) return def;
+
   let args = [];
 
-  if (Array.isArray(def[0])) args = def.shift();
+  if (Array.isArray(def[0])) {
+    args = def.shift();
+  }
 
   for (let i = 0; i < def.length; i += 1) {
     const cur = def[i];
     const left = def[i - 1];
     const right = def[i + 1];
 
-    if (left && left[0] === 'unit' && cur[0] === 'fx' && right) {
-      def.splice(i, 2, fixApply(cur[2], right, args));
-      left[0] = 'def';
+    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
+      if (left[0] === 'unit') {
+        def.splice(i, 2, fixApply(cur[2], right, args));
+        left[0] = 'def';
+        continue;
+      }
+
+      if (right[0] === 'def' && def[i - 2]) {
+        // const fixedCall = cur[0] === 'lpipe' ? [args, ['expr', ',', 'or'], left] : [left, ['expr', ',', 'or'], args.slice()];
+
+        // args[0] = 'def';
+        // args[1] = def[i - 2][1];
+        // args[2] = fixedCall;
+
+        // def.splice(i - 3, 3, def[i - 2]);
+        continue;
+      }
     }
   }
 
@@ -610,7 +628,7 @@ export function fixCall(def) {
 }
 
 export function fixTree(ast) {
-  const tokens = ast.filter(x => !hasTagName(x[0]));
+  let tokens = ast.filter(x => !hasTagName(x[0]));
 
   let sym = false;
   let arr = ast._array;
@@ -627,6 +645,12 @@ export function fixTree(ast) {
     // look for partial-applications
     if (cur[0] === 'def') {
       if (cur[2]) cur[2] = fixCall(cur[2]);
+    }
+
+    if (next && next[0] === 'fx' && ['lpipe', 'rpipe'].includes(next[2]) && cur[0] !== 'symbol') {
+      tokens.splice(i, i + tokens.length, fixCall(tokens.slice(i)));
+      while (tokens.length === 1) tokens = tokens[0];
+      break;
     }
 
     // compose all tokens, or before a terminator ; char
