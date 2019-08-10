@@ -437,6 +437,7 @@ export function parseBuffer(text, fixeds) {
 
       // keep chars and numbers together
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
+      || (hasNum(last) && cur === '.' && next === '.')
     ) {
       buffer.push(cur);
     } else {
@@ -643,8 +644,14 @@ export function fixTree(ast) {
           prev[2].push(cur);
 
           // skip and reinject from expressions and side-effects
-          if (['fx', 'expr'].includes(subTree[0])) {
-            tokens.splice(i, 0, subTree);
+          if (['fx', 'expr', 'range'].includes(subTree[0])) {
+            // eat one more token in case of ranges...
+            if (subTree[0] === 'range') {
+              prev[2].push(next, rightNext);
+              tokens.splice(i, 1);
+            } else {
+              tokens.splice(i, 0, subTree);
+            }
           } else {
             prev[2].push(subTree);
           }

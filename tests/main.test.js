@@ -100,13 +100,6 @@ describe('DSL', () => {
       expect(value('1123foo', { types: [['0000foo', 'cm']] })).to.eql(['1,123 cm']);
     });
 
-    it('should handle local functions', () => {
-      expect(value('undef(1,2,3)')).to.eql([]);
-      expect(value("f(x',y)=x'*y;f(2, 3)")).to.eql(['6']);
-      expect(value("f(x',y)=(x'*y);f(2, 3)")).to.eql(['6']);
-      expect(value("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)")).to.eql(['-4']);
-    });
-
     it('should handle local expressions', () => {
       expect(value("x'=1.2;3x'")).to.eql(['3.6']);
     });
@@ -136,6 +129,30 @@ describe('DSL', () => {
       expect(value('1987-06-10T06:00:00.000Z')).to.eql(['Wed Jun 10 1987 06:00:00']);
     });
   });
+
+  describe.only('Function application', () => {
+    it('should handle local functions', () => {
+      expect(value('undef(1,2,3)')).to.eql([]);
+      expect(value("f(x',y)=x'*y;f(2, 3)")).to.eql(['6']);
+      expect(value("f(x',y)=(x'*y);f(2, 3)")).to.eql(['6']);
+      expect(value("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)")).to.eql(['-4']);
+    });
+
+    it('should handle partial application', () => {
+      expect(value(`sum(x,y)=x+y;add5(a')=sum(a',5);add5(3)`)).to.eql(['8']);
+      // expect(calc(`add5(_)=sum<|5;`).tokens).to.eql([]);
+      // expect(toTree(`add5=sum<|5;`)).to.eql([]);
+      // expect(toTree(`0|>toString(36)|>substr(2)`)).to.eql([]);
+
+      // expect(toTree(`(1 2 3)::map(_ * 2)`)).to.eql([]);
+      // expect(toTree(`[1,2,3]::map(_ * 2)`)).to.eql([]);
+      // expect(toTree(`"[1,2,3]"::map(_ * 2)`)).to.eql([]);
+
+      // FIXME: expect(calc(`"[1,2,3]"::map(x', x' * 2)`).tokens).to.eql([]);
+      // FIXME: expect(toTree(`"[1,2,3]"::map(x', x' * 2 ~> 0)`)).to.eql([]);
+      // FIXME: expect(toTree(`"[1,2,3]"::map(x' :do x' * 2 ~> 0)`)).to.eql([]);
+    });
+  })
 
   describe('Markdown-like formatting', () => {
     it('should handle code tags', () => {
@@ -280,44 +297,45 @@ describe('DSL', () => {
         ['symbol', ':else', ['number', '4']],
       ]);
 
-      expect(toTree(`:do x`)).to.eql([['symbol', ':do', [['unit', 'x']]]]);
-      expect(toTree(`:do x y z`)).to.eql([['symbol', ':do', [['unit', 'x'], ['unit', 'y']]], ['unit', 'z']]);
-      expect(toTree(`:do x, y`)).to.eql([['symbol', ':do', [['unit', 'x']]], ['expr', ',', 'or'], ['unit', 'y']]);
-      expect(toTree(`:do x ~> y`)).to.eql([['symbol', ':do', [['unit', 'x']]], ['fx', '~>', 'void'], ['unit', 'y']]);
-      expect(toTree(`:do x ~> :null`)).to.eql([['symbol', ':do', [['unit', 'x']]], ['fx', '~>', 'void'], ['symbol', null]]);
+      expect(toTree(':do x')).to.eql([['symbol', ':do', [['unit', 'x']]]]);
+      expect(toTree(':do x y z')).to.eql([['symbol', ':do', [['unit', 'x'], ['unit', 'y']]], ['unit', 'z']]);
+      expect(toTree(':do x, y')).to.eql([['symbol', ':do', [['unit', 'x']]], ['expr', ',', 'or'], ['unit', 'y']]);
+      expect(toTree(':do x ~> y')).to.eql([['symbol', ':do', [['unit', 'x']]], ['fx', '~>', 'void'], ['unit', 'y']]);
+      expect(toTree(':do x ~> :null')).to.eql([['symbol', ':do', [['unit', 'x']]], ['fx', '~>', 'void'], ['symbol', null]]);
 
-      // expect(toTree(`:when (< 1 2) :do a ~> :null, (> 2 1) :do b ~> :false, :otherwise :do c ~> :true`)).to.eql([]);
-    });
+      expect(toTree(':when (< 1 2) :do a ~> :null, (> 2 1) :do b ~> :false, :otherwise :do c ~> :true')).to.eql([
+        ['symbol', ':when'],
+        [['fx', '<', 'lt'], ['number', '1'], ['number', '2']],
+        ['symbol', ':do', [['unit', 'a']]], ['fx', '~>', 'void'], ['symbol', null], ['expr', ',', 'or'],
+        [['fx', '>', 'gt'], ['number', '2'], ['number', '1']],
+        ['symbol', ':do', [['unit', 'b']]], ['fx', '~>', 'void'], ['symbol', false], ['expr', ',', 'or'],
+        ['symbol', ':otherwise', [['symbol', ':do'], ['unit', 'c']]], ['fx', '~>', 'void'], ['symbol', true]
+      ]);
 
-    it('xxx', () => {
-      // expect(toTree(`add5(a')=sum(a',5);`)).to.eql([]);
-      // FIXME: expect(calc(`add5(_)=sum<|5;`).tokens).to.eql([]);
-      // expect(toTree(`add5=sum<|5;`)).to.eql([]);
-      // expect(toTree(`0|>toString(36)|>substr(2)`)).to.eql([]);
+      expect(toTree(':repeat 5 :do 3')).to.eql([['symbol', ':repeat', ['number', '5']], ['symbol', ':do', ['number', '3']]]);
+      expect(toTree(':loop 1..3 :do x')).to.eql([['symbol', ':loop'], ['range', '1..3'], ['symbol', ':do', [['unit', 'x']]]]);
 
-      // expect(toTree(`(1 2 3)::map(_ * 2)`)).to.eql([]);
-      // expect(toTree(`[1,2,3]::map(_ * 2)`)).to.eql([]);
-      // expect(toTree(`"[1,2,3]"::map(_ * 2)`)).to.eql([]);
-      // FIXME: expect(calc(`"[1,2,3]"::map(x', x' * 2)`).tokens).to.eql([]);
-      // FIXME: expect(toTree(`"[1,2,3]"::map(x', x' * 2 ~> 0)`)).to.eql([]);
-      // FIXME: expect(toTree(`"[1,2,3]"::map(x' :do x' * 2 ~> 0)`)).to.eql([]);
+      expect(toTree(`:loop c'..f(3) :do x`)).to.eql([
+        ['symbol', ':loop', [['unit', "c'"], ['range', '..'], ['def', 'f', [[['number', '3']]]]]],
+        ['symbol', ':do', [['unit', 'x']]],
+      ]);
 
-      // expect(toTree(`:if (== 1 2) :do 1 ~> 2`)).to.eql([]);
-      // expect(toTree(`:if (== 1 2) && (<= 1 2) :do 1 ~> 2`)).to.eql([]);
-      // expect(toTree(`:if (== :false ((== 1 2) || (<= 1 2))) :do 1 ~> 2`)).to.eql([]);
+      expect(toTree(`:loop x(c')..f(3) :do x`)).to.eql([
+        ['symbol', ':loop'],
+        ['def', 'x', [[['unit', "c'"]]]],
+        ['range', '..'],
+        ['def', 'f', [[['number', '3']]]],
+        ['symbol', ':do', [['unit', 'x']]],
+      ]);
 
-      // expect(toTree(`:when (< 1 2) a, (> 2 1) b, :otherwise c`)).to.eql([]);
-      // expect(toTree(`:when (< 1 2) a ~> :null, (> 2 1) b ~> :false, :otherwise c ~> :true`)).to.eql([]);
-      // expect(toTree(`:when (< 1 2) :do a ~> :null, (> 2 1) :do b ~> :false, :otherwise :do c ~> :true`)).to.eql([]);
-
-      // expect(toTree(`:loop (1..3) x`)).to.eql([]);
-      // expect(toTree(`:loop (c'..f(3)) x`)).to.eql([]);
-
-      // expect(toTree(`:repeat (5) 2 ~> :null`)).to.eql([]);
-      // expect(toTree(`:repeat (5) :do 2 ~> :null`)).to.eql([]);
-
-      // expect(toTree(`i'=0; :while (< i' 3) 2 ~> i'++`)).to.eql([]);
-      // expect(toTree(`i'=0; :while (< i' 3) :do 2 ~> i'++`)).to.eql([]);
+      expect(toTree(`:let i'=0; :while (< i' 3) :do n ~> 2, i'++`)).to.eql([
+        ['symbol', ':let'],
+        ['def', "i'", [['expr', '=', 'equal'], ['number', '0'], ['expr', ';', 'k']]],
+        ['symbol', ':while'], [['fx', '<', 'lt'], ['unit', "i'"], ['number', '3']],
+        ['symbol', ':do', [['unit', 'n']]],
+        ['fx', '~>', 'void'], ['number', '2'],
+        ['expr', ',', 'or'], ['unit', "i'"], ['fx', '++', 'inc'],
+      ]);
     });
   });
 });

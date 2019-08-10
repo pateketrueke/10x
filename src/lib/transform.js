@@ -74,7 +74,7 @@ export function fromSymbols(text, units, expression, previousToken) {
   }
 
   // handle range-values
-  if (text.charAt() === '.') {
+  if (text.includes('..')) {
     return ['range', text];
   }
 
@@ -232,9 +232,9 @@ export function transform(input, units, types) {
       || (cur[0] === ':')
       || (cur === '[]' || cur === '{}')
       || (cur === '|>' || cur === '<|')
-      || (cur[0] === '.' && cur[1] === '.')
       || (cur[0] === '"' || '=!<>'.includes(cur))
       || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]))
+      || (cur[0] === '.' && cur[1] === '.' && nextToken !== '.')
 
       // handle sub-calls, symbols and side-effects
       || (cur === '(' && (oldToken === ',' || isFx(nextToken) || isFx(prevToken) || hasNum(nextToken) || hasKeyword(nextToken, units)))
