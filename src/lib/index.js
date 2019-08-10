@@ -72,10 +72,7 @@ export default class Solvente {
       // mutates on AST manipulation!!!
       this.tree = fixTree(tokens.tree);
     } catch (e) {
-      this.error = {
-        message: e.message,
-        stack: e.stack,
-      };
+      this.error = e;
     }
 
     return this;
@@ -87,17 +84,22 @@ export default class Solvente {
     let offset = 0;
     let chunks;
 
-    // split over single values...
-    chunks = reduceFromAST(this.tree, this.convert, this.expressions)
-      .reduce((prev, cur) => {
-        const lastValue = prev[prev.length - 1] || [];
+    try {
+      // split over single values...
+      chunks = reduceFromAST(this.tree, this.convert, this.expressions)
+        .reduce((prev, cur) => {
+          const lastValue = prev[prev.length - 1] || [];
 
-        if (lastValue[0] === 'number' && cur[0] === 'number') {
-          prev.push(['expr', ';', 'k'], cur);
-        } else prev.push(cur);
+          if (lastValue[0] === 'number' && cur[0] === 'number') {
+            prev.push(['expr', ';', 'k'], cur);
+          } else prev.push(cur);
 
-        return prev;
-      }, []);
+          return prev;
+        }, []);
+    } catch (e) {
+      this.error = e;
+      return null;
+    }
 
     // join chunks into final expressions
     for (let i = 0; i < chunks.length; i += 1) {

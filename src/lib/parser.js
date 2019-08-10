@@ -142,39 +142,23 @@ export function toValue(value) {
   }
 
   // simplify decimals
-  if (typeof value === 'string') {
-    // handle JSON-values
-    // if (value.charAt() === '"' && value[value.length - 1] === '"') {
-    //   if (
-    //     (value[1] === '[' && value.charAt(value.length - 2) === ']')
-    //     || (value[1] === '{' && value.charAt(value.length - 2) === '}')
-    //   ) {
-    //     // this would allow to parse well-formed objects?
-    //     value = value.substr(1, value.length - 2);
-    //     value = value.replace(/\\(?!\\)/g, '');
-    //   }
+  if (value.includes('.')) {
+    const [base, decimals] = value.replace('%', '').split('.');
+    const input = decimals.split('');
+    const out = [];
 
-    //   return JSON.parse(value);
-    // }
+    for (let i = 0; i < input.length; i += 1) {
+      const old = out[out.length - 1];
 
-    if (value.includes('.')) {
-      const [base, decimals] = value.replace('%', '').split('.');
-      const input = decimals.split('');
-      const out = [];
-
-      for (let i = 0; i < input.length; i += 1) {
-        const old = out[out.length - 1];
-
-        if (old > 0) {
-          if (input[i] > 0) out.push(input[i]);
-          break;
-        }
-
-        out.push(input[i]);
+      if (old > 0) {
+        if (input[i] > 0) out.push(input[i]);
+        break;
       }
 
-      value = `${base}.${out.join('')}${hasPercent(value) ? '%' : ''}`;
+      out.push(input[i]);
     }
+
+    value = `${base}.${out.join('')}${hasPercent(value) ? '%' : ''}`;
   }
 
   return value;
@@ -626,6 +610,14 @@ export function fixTree(ast) {
       } else {
         subTree = fixTree(next || []);
         tokens.splice(i, next ? 2 : 1);
+      }
+
+      // keep pairs of symbols together
+      if (next && next[0] === 'symbol' && rightNext && rightNext[0] !== 'symbol') {
+        prev[2] = cur;
+        subTree[2] = rightNext;
+        tokens.splice(i, 1, subTree);
+        continue;
       }
 
       // keep side-effects without modification

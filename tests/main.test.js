@@ -1,14 +1,25 @@
 import { expect } from 'chai';
 import Solvente from '../src/lib';
 
-const calc = (expr, opts) => new Solvente(opts).resolve(expr);
-const value = (expr, opts) => calc(expr, opts).maths().map(x => x.format);
+const calc = (expr, opts) => {
+  const x = new Solvente(opts).resolve(expr);
+  if (x.error) throw x.error;
+  return x;
+};
+
+const value = (expr, opts) => {
+  const c = calc(expr, opts);
+  const x = c.maths();
+  if (c.error) throw c.error;
+  return x.map(x => x.format);
+}
+
 const toTree = (expr, opts) => calc(expr, opts).tree;
 
 describe('DSL', () => {
   describe('Basic math operations', () => {
     it('should handle common errors', () => {
-       expect(calc('1ml - 1cm').error.message).to.eql('Cannot convert incompatible measures of volume and length');
+      expect(()=> value('1ml - 1cm')).to.throw(/Cannot convert incompatible measures of volume and length/);
     });
 
     it('should handle most basic units', () => {
@@ -34,7 +45,7 @@ describe('DSL', () => {
     });
 
     it('should skip empty sub-expressions', () => {
-      expect(calc(';;;').results).to.eql([]);
+      expect(value(';;;')).to.eql([]);
     });
 
     it('should apply well-known inflections', () => {
@@ -51,9 +62,9 @@ describe('DSL', () => {
     });
 
     it('should validate nested sub-expressions', () => {
-      expect(calc('f(n').error.message).to.match(/Missing terminator for `\(n`/);
-      expect(calc('1+(2+(3-4)-2').error.message).to.match(/Missing terminator for `1\+\(`/);
-      expect(calc('1 + ( 2 + ( 3 - 4 ) - 2').error.message).to.match(/Missing terminator for `1 \+ \(`/);
+      expect(() => value('f(n')).to.throw(/Missing terminator for `\(n`/);
+      expect(() => value('1+(2+(3-4)-2')).to.throw(/Missing terminator for `1\+\(`/);
+      expect(() => value('1 + ( 2 + ( 3 - 4 ) - 2')).to.throw(/Missing terminator for `1 \+ \(`/);
     });
 
     it('should handle separated sub-expressions', () => {
@@ -90,7 +101,7 @@ describe('DSL', () => {
     });
 
     it('should handle local functions', () => {
-      expect(calc('undef(1,2,3)').results).to.eql([]);
+      expect(value('undef(1,2,3)')).to.eql([]);
       expect(value("f(x',y)=x'*y;f(2, 3)")).to.eql(['6']);
       expect(value("f(x',y)=(x'*y);f(2, 3)")).to.eql(['6']);
       expect(value("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)")).to.eql(['-4']);
@@ -264,6 +275,8 @@ describe('DSL', () => {
       ]);
 
       expect(toTree(':if (== 1 2) {:then 3 :else 4}')).to.eql([
+        ['symbol', ':if'], [['fx', '==', 'iseq'], ['number', '1'], ['number', '2']],
+        [['symbol', ':then', ['number', '3']], ['symbol', ':else', ['number', '4']]],
       ]);
     });
 
