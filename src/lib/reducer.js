@@ -110,11 +110,18 @@ export function reduceFromAST(tokens, convert, expressions) {
 
     // FIXME: function application is the same as for symbols, units and such
     // they all behave the same, but the consequences are different...
-    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && ['def', 'unit'].includes(right[0])) {
-      if (cur[2] === 'lpipe') right[2][0].unshift(left, ['expr', ',', 'or']);
-      if (cur[2] === 'rpipe') right[2][0].push(['expr', ',', 'or'], left);
+    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
+      const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
+
+      if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
+      if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
+
+      const result = reduceFromAST([rightToken], convert, expressions);
+      const subTree = result.concat(tokens.slice(i + 2));
+
       fixedTokens.pop();
-      continue;
+      fixedTokens.push(reduceFromAST(subTree,convert, expressions));
+      break;
     }
 
     // apply symbol-accessor op

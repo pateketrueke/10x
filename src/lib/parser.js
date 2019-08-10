@@ -604,6 +604,13 @@ export function fixCall(def) {
     const left = def[i - 1];
     const right = def[i + 1];
 
+    if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
+      cur[0] = 'def';
+      cur[2] = [[right]];
+      def.splice(i + 1, 1);
+      continue;
+    }
+
     if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
       if (left[0] !== 'def' && right[0] === 'def' && def[i - 2]) {
         def[i - 2][0] = 'def';
