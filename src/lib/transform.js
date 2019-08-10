@@ -262,6 +262,7 @@ export function transform(input, units, types) {
         vars[cur]
 
         // || (isChar(cur) && (hasNum(prevToken) || !nextToken))
+        || (vars[cur] && oldToken === ',')
 
         // allow units between ops
         || ((isChar(cur) || hasKeyword(cur, units)) && (
@@ -272,7 +273,12 @@ export function transform(input, units, types) {
         || (isOp(cur) && ((hasNum(prevToken) || isChar(prevToken)) || (isChar(nextToken) || hasNum(nextToken))))
       ))
     ) {
-      prev.push(toToken(i, fromSymbols, cur, units, null, prevToken));
+      const fixedToken = toToken(i, fromSymbols, cur, units, null, prevToken);
+
+      // register units to help detection and proper tokenization!
+      if (fixedToken[0] === 'unit') vars[fixedToken[1]] = 1;
+
+      prev.push(fixedToken);
     } else {
       prev.push(toToken(i, fromMarkdown, cur));
     }

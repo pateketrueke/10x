@@ -632,7 +632,7 @@ export function fixTree(ast) {
         prev[2] = ['object', cur];
       } else if (!prev[2]) {
         // skip :symbol continuations
-        if (next && ['fx', 'symbol'].includes(next[0]) && !['unit', 'symbol'].includes(cur[0])) {
+        if (next && next[0] === 'symbol' && !['unit', 'symbol'].includes(cur[0])) {
           tokens.splice(i, 0, cur, subTree);
           continue;
         }
@@ -642,8 +642,10 @@ export function fixTree(ast) {
         if (subTree.length) {
           prev[2].push(cur);
 
-          // skip from expressions
-          if (subTree[0] !== 'expr') {
+          // skip and reinject from expressions and side-effects
+          if (['fx', 'expr'].includes(subTree[0])) {
+            tokens.splice(i, 0, subTree);
+          } else {
             prev[2].push(subTree);
           }
         } else {

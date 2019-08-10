@@ -267,7 +267,7 @@ describe('DSL', () => {
     });
 
     it('should allow mixed structures, like for pattern-matching, if-then-else, etc.', () => {
-      expect(toTree(':match x {:test (2 * 4), :whatever 3}')).to.eql([
+      expect(toTree(':match x {:test (2 * 4) :whatever 3}')).to.eql([
         ['symbol', ':match', ['object', ['unit', 'x', {
           ':test': [['number', '2'], ['expr', '*', 'mul'], ['number', '4']],
           ':whatever': [['number', '3']],
@@ -279,6 +279,14 @@ describe('DSL', () => {
         ['symbol', ':then', ['number', '3']],
         ['symbol', ':else', ['number', '4']],
       ]);
+
+      expect(toTree(`:do x`)).to.eql([['symbol', ':do', [['unit', 'x']]]]);
+      expect(toTree(`:do x y z`)).to.eql([['symbol', ':do', [['unit', 'x'], ['unit', 'y']]], ['unit', 'z']]);
+      expect(toTree(`:do x, y`)).to.eql([['symbol', ':do', [['unit', 'x']]], ['expr', ',', 'or'], ['unit', 'y']]);
+      expect(toTree(`:do x ~> y`)).to.eql([['symbol', ':do', [['unit', 'x']]], ['fx', '~>', 'void'], ['unit', 'y']]);
+      expect(toTree(`:do x ~> :null`)).to.eql([['symbol', ':do', [['unit', 'x']]], ['fx', '~>', 'void'], ['symbol', null]]);
+
+      // expect(toTree(`:when (< 1 2) :do a ~> :null, (> 2 1) :do b ~> :false, :otherwise :do c ~> :true`)).to.eql([]);
     });
 
     it('xxx', () => {
