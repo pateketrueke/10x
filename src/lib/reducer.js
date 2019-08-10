@@ -103,10 +103,19 @@ export function reduceFromAST(tokens, convert, expressions) {
   // return tokens.reduce((prev, cur, i) => {
   for (let i = 0; i < tokens.length; i += 1) {
     let value = fixedTokens[fixedTokens.length - 1];
+
     let cur = tokens[i];
+    let left = tokens[i - 1]
+    let right = tokens[i + 1];
 
     // FIXME: function application is the same as for symbols, units and such
     // they all behave the same, but the consequences are different...
+    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && ['def', 'unit'].includes(right[0])) {
+      if (cur[2] === 'lpipe') right[2][0].unshift(left, ['expr', ',', 'or']);
+      if (cur[2] === 'rpipe') right[2][0].push(['expr', ',', 'or'], left);
+      fixedTokens.pop();
+      continue;
+    }
 
     // apply symbol-accessor op
     // if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
