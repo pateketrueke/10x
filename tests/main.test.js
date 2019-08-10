@@ -130,7 +130,7 @@ describe('DSL', () => {
     });
   });
 
-  describe.only('Function application', () => {
+  describe('Function application', () => {
     it('should handle local functions', () => {
       expect(value('undef(1,2,3)')).to.eql([]);
       expect(value("f(x',y)=x'*y;f(2, 3)")).to.eql(['6']);
