@@ -151,6 +151,7 @@ export function transform(input, units, types) {
   let inCall = false;
   let inMaths = false;
 
+  let oldToken;
   let prevToken;
   let nextToken;
 
@@ -173,7 +174,6 @@ export function transform(input, units, types) {
 
     // flag local variables
     if (isChar(cur) && '[{(='.includes(nextToken)) vars[cur] = 1;
-    // if (isChar(prevToken) && '[{(='.includes(cur)) vars[prevToken] = 1;
 
     // handle expression blocks
     if (inExpr) {
@@ -221,6 +221,8 @@ export function transform(input, units, types) {
       return prev;
     }
 
+    // FIXME: this can be improved now...
+
     if (
       // handle most values
       isSep(cur) || isNum(cur)
@@ -234,7 +236,7 @@ export function transform(input, units, types) {
       || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]))
 
       // handle sub-calls, symbols and side-effects
-      || (cur === '(' && (isFx(nextToken) || isFx(prevToken) || hasNum(nextToken) || hasKeyword(nextToken, units)))
+      || (cur === '(' && (oldToken === ',' || isFx(nextToken) || isFx(prevToken) || hasNum(nextToken) || hasKeyword(nextToken, units)))
       || (cur === ')' && (isFx(nextToken) || isFx(prevToken) || isOp(nextToken) || isSep(nextToken) || hasNum(prevToken) || hasKeyword(prevToken, units)))
 
       // handle operators
@@ -258,6 +260,8 @@ export function transform(input, units, types) {
       || (inMaths && (
         vars[cur]
 
+        || (isChar(cur) && hasNum(prevToken))
+
         // allow units between ops
         || ((isChar(cur) || hasKeyword(cur, units)) && (
           isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)
@@ -274,6 +278,7 @@ export function transform(input, units, types) {
 
     // FIXME: re-evaluate this shit...
     if (!isSep(cur, '( )')) prevToken = cur;
+    if (cur !== ' ') oldToken = cur;
     return prev;
   }, []);
 
