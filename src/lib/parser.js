@@ -605,20 +605,16 @@ export function fixCall(def) {
     const right = def[i + 1];
 
     if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
-      if (left[0] === 'unit') {
-        def.splice(i, 2, fixApply(cur[2], right, args));
-        left[0] = 'def';
+      if (left[0] !== 'def' && right[0] === 'def' && def[i - 2]) {
+        def[i - 2][0] = 'def';
+        def[i - 2][2] = [[left]];
+        def.splice(i - 3, 3, cur, def[i - 2]);
         continue;
       }
 
-      if (right[0] === 'def' && def[i - 2]) {
-        // const fixedCall = cur[0] === 'lpipe' ? [args, ['expr', ',', 'or'], left] : [left, ['expr', ',', 'or'], args.slice()];
-
-        // args[0] = 'def';
-        // args[1] = def[i - 2][1];
-        // args[2] = fixedCall;
-
-        // def.splice(i - 3, 3, def[i - 2]);
+      if (left[0] === 'unit') {
+        def.splice(i, 2, fixApply(cur[2], right, args));
+        left[0] = 'def';
         continue;
       }
     }
