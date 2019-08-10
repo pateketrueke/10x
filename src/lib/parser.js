@@ -575,14 +575,16 @@ export function fixArgs(values) {
   return stack;
 }
 
-export function fixInput(args) {
-  return args.reduce((p, c) => p.concat(c[0] === 'expr' ? [c] : [['expr', ',', 'or'], c]), []);
+export function fixInput(args, lpipe) {
+  return args.reduce((p, c) => p.concat(c[0] === 'expr' ? [c] : (
+    lpipe ? [['expr', ',', 'or'], c] : [c, ['expr', ',', 'or']]
+  )), []);
 }
 
 export function fixApply(kind, body, args) {
   if (!Array.isArray(args[0])) args = [];
 
-  if (kind === 'lpipe') return [body].concat(fixInput(args));
+  if (kind === 'lpipe') return [body].concat(fixInput(args, true));
   if (kind === 'rpipe') return fixInput(args).concat([body]);
 
   return [];
