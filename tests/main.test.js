@@ -130,7 +130,7 @@ describe('DSL', () => {
     });
   });
 
-  describe.only('Function application', () => {
+  describe('Function application', () => {
     it('should handle local functions', () => {
       expect(value('undef(1,2,3)')).to.eql([]);
       expect(value("f(x',y)=x'*y;f(2, 3)")).to.eql(['6']);
@@ -139,18 +139,32 @@ describe('DSL', () => {
     });
 
     it('should handle partial application', () => {
-      expect(value(`sum(x,y)=x+y;add5(a')=sum(a',5);add5(3)`)).to.eql(['8']);
-      // expect(calc(`add5(_)=sum<|5;`).tokens).to.eql([]);
-      // expect(toTree(`add5=sum<|5;`)).to.eql([]);
-      // expect(toTree(`0|>toString(36)|>substr(2)`)).to.eql([]);
+      expect(calc(`add5(_)=sum<|5;`, {}, true).tokens).to.eql([
+        ['def', 'add5', [
+          [['symbol', '_']],
+          ['expr', '=', 'equal'],
+          ['unit', 'sum'],
+          ['fx', '<|', 'lpipe'],
+          ['number', '5'],
+          ['expr', ';', 'k'],
+        ]],
+      ]);
 
-      // expect(toTree(`(1 2 3)::map(_ * 2)`)).to.eql([]);
-      // expect(toTree(`[1,2,3]::map(_ * 2)`)).to.eql([]);
-      // expect(toTree(`"[1,2,3]"::map(_ * 2)`)).to.eql([]);
+      expect(toTree(`add5=sum<|5;`)).to.eql([
+        ['def', 'add5', [
+          ['expr', '=', 'equal'],
+          ['unit', 'sum'],
+          ['fx', '<|', 'lpipe'],
+          ['number', '5'],
+          ['expr', ';', 'k'],
+        ]],
+      ]);
 
-      // FIXME: expect(calc(`"[1,2,3]"::map(x', x' * 2)`).tokens).to.eql([]);
-      // FIXME: expect(toTree(`"[1,2,3]"::map(x', x' * 2 ~> 0)`)).to.eql([]);
-      // FIXME: expect(toTree(`"[1,2,3]"::map(x' :do x' * 2 ~> 0)`)).to.eql([]);
+      expect(toTree(`0|>sum 1|>sum(2)`)).to.eql([
+        ['number', '0'],
+        ['fx', '|>', 'rpipe'], ['unit', 'sum'], ['number', '1'],
+        ['fx', '|>', 'rpipe'], ['def', 'sum', [[['number', '2']]]],
+      ]);
     });
   })
 
