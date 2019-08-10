@@ -140,27 +140,10 @@ describe('DSL', () => {
 
     it('should handle partial application', () => {
       expect(value('sum(x,y)=x+y;sum(5,3)')).to.eql(['8']);
-      expect(value('sum(x,y)=x+y;add5(z)=sum<|5;add5(3)')).to.eql(['8']);
+      expect(value('sum(x,y)=x+y;add5(x)=sum<|5;add5(3)')).to.eql(['8']);
       expect(toTree('add5(_)=sum(5,_);')).to.eql(toTree('add5(_)=sum<|5;'));
-
-      // expect(calc(`add5(_)=sum<|5;`, {}, true).tokens).to.eql([
-      //   ['def', 'add5', [
-      //     [['unit', '_']],
-      //     ['expr', '=', 'equal'],
-      //     ['def', 'sum', [[['number', '5'], ['expr', ',', 'or'], ['unit', '_']]]],
-      //     ['expr', ';', 'k'],
-      //   ]],
-      // ]);
-
-      // expect(toTree(`add5=sum<|5;`)).to.eql([
-      //   ['def', 'add5', [
-      //     ['expr', '=', 'equal'],
-      //     ['unit', 'sum'],
-      //     ['fx', '<|', 'lpipe'],
-      //     ['number', '5'],
-      //     ['expr', ';', 'k'],
-      //   ]],
-      // ]);
+      expect(toTree('always7=add5<|2;')).to.eql(toTree('always7=add5(2);'));
+      expect(value('sum(x,y)=x+y;add5(x)=sum<|5;always7=add5<|2;always7')).to.eql(['7']);
 
       // expect(toTree(`0|>sum 1|>sum(2)`)).to.eql([
       //   ['number', '0'],
