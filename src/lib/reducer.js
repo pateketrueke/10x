@@ -120,7 +120,7 @@ export function reduceFromAST(tokens, convert, expressions) {
       const subTree = result.concat(tokens.slice(i + 2));
 
       fixedTokens.pop();
-      fixedTokens.push(reduceFromAST(subTree,convert, expressions));
+      fixedTokens.push(reduceFromAST(subTree, convert, expressions)[0]);
       break;
     }
 
