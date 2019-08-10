@@ -575,6 +575,32 @@ export function fixArgs(values) {
   return stack;
 }
 
+export function fixApply(kind, body, args) {
+  if (kind === 'lpipe') return [body].concat(args.reduce((p, c) => p.concat([['expr', ',', 'or'], c]), []));
+  if (kind === 'rpipe') return args.reduce((p, c) => p.concat([['expr', ',', 'or'], c]), []).concat([body]);
+
+  return [];
+}
+
+export function fixCall(def) {
+  let args = [];
+
+  if (Array.isArray(def[0])) args = def.shift();
+
+  for (let i = 0; i < def.length; i += 1) {
+    const cur = def[i];
+    const left = def[i - 1];
+    const right = def[i + 1];
+
+    if (left && left[0] === 'unit' && cur[0] === 'fx' && right) {
+      def.splice(i, 2, fixApply(cur[2], right, args));
+      left[0] = 'def';
+    }
+  }
+
+  return [args].concat(def);
+}
+
 export function fixTree(ast) {
   const tokens = ast.filter(x => !hasTagName(x[0]));
 
@@ -589,6 +615,11 @@ export function fixTree(ast) {
 
     const prev = tokens[i - 1];
     const next = tokens[i + 1];
+
+    // look for partial-applications
+    if (cur[0] === 'def') {
+      if (cur[2]) cur[2] = fixCall(cur[2]);
+    }
 
     // compose all tokens, or before a terminator ; char
     if (prev && prev[0] === 'symbol' && ['unit', 'symbol', 'number'].includes(cur[0])) {
