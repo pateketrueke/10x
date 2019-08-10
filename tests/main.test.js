@@ -220,7 +220,7 @@ describe('DSL', () => {
     });
   });
 
-  describe.only('Using :symbols for definitions', () => {
+  describe('Using :symbols for definitions', () => {
     it('should handle ::symbols', () => {
       expect(toTree(`123::toString(36)`).length).to.eql(3);
       expect(toTree(`"foo"::toUpperCase(36)`).length).to.eql(3);
@@ -281,7 +281,7 @@ describe('DSL', () => {
       ]);
     });
 
-    it.only('xxx', () => {
+    it('xxx', () => {
       // expect(toTree(`add5(a')=sum(a',5);`)).to.eql([]);
       // FIXME: expect(calc(`add5(_)=sum<|5;`).tokens).to.eql([]);
       // expect(toTree(`add5=sum<|5;`)).to.eql([]);
@@ -298,7 +298,7 @@ describe('DSL', () => {
       // expect(toTree(`:if (== 1 2) && (<= 1 2) :do 1 ~> 2`)).to.eql([]);
       // expect(toTree(`:if (== :false ((== 1 2) || (<= 1 2))) :do 1 ~> 2`)).to.eql([]);
 
-      expect(calc(`:when (< 1 2) a, (> 2 1) b, :otherwise c`, {}, true).tokens).to.eql([]);
+      // expect(toTree(`:when (< 1 2) a, (> 2 1) b, :otherwise c`)).to.eql([]);
       // expect(toTree(`:when (< 1 2) a ~> :null, (> 2 1) b ~> :false, :otherwise c ~> :true`)).to.eql([]);
       // expect(toTree(`:when (< 1 2) :do a ~> :null, (> 2 1) :do b ~> :false, :otherwise :do c ~> :true`)).to.eql([]);
 

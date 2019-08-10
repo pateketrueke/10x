@@ -142,7 +142,7 @@ export function toValue(value) {
   }
 
   // simplify decimals
-  if (value.includes('.')) {
+  if (typeof value === 'string' && value.includes('.')) {
     const [base, decimals] = value.replace('%', '').split('.');
     const input = decimals.split('');
     const out = [];

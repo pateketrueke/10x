@@ -222,6 +222,7 @@ export function transform(input, units, types) {
     }
 
     // FIXME: this can be improved now...
+    // console.log({prevToken,cur,nextToken,inMaths});
 
     if (
       // handle most values
@@ -260,7 +261,7 @@ export function transform(input, units, types) {
       || (inMaths && (
         vars[cur]
 
-        || (isChar(cur) && hasNum(prevToken))
+        // || (isChar(cur) && (hasNum(prevToken) || !nextToken))
 
         // allow units between ops
         || ((isChar(cur) || hasKeyword(cur, units)) && (
