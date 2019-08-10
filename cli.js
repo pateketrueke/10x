@@ -19,6 +19,17 @@ const calc = new Solvente({
   expressions: sharedExpressions,
 });
 
-process.stdout.write(JSON.stringify(calc.resolve(argv.join(' '))));
+calc.resolve(argv.join(' '));
+
+const fixedResults = calc.maths();
+const fixedError = calc.error && calc.error.stack;
+
+process.stdout.write(JSON.stringify({
+  results: fixedResults,
+  error: fixedError,
+  tree: calc.tree,
+  input: calc.input,
+  tokens: calc.tokens,
+}));
 
 if (sharedFile) require('fs').writeFileSync(sharedFile, JSON.stringify(calc.expressions));

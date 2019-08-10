@@ -62,9 +62,9 @@ describe('DSL', () => {
     });
 
     it('should validate nested sub-expressions', () => {
-      expect(() => value('f(n')).to.throw(/Missing terminator for `\(n`/);
-      expect(() => value('1+(2+(3-4)-2')).to.throw(/Missing terminator for `1\+\(`/);
-      expect(() => value('1 + ( 2 + ( 3 - 4 ) - 2')).to.throw(/Missing terminator for `1 \+ \(`/);
+      expect(() => value('f(n')).to.throw(/Missing terminator/);
+      expect(() => value('1+(2+(3-4)-2')).to.throw(/Missing terminator/);
+      expect(() => value('1 + ( 2 + ( 3 - 4 ) - 2')).to.throw(/Missing terminator/);
     });
 
     it('should handle separated sub-expressions', () => {
@@ -220,7 +220,7 @@ describe('DSL', () => {
     });
   });
 
-  describe('Using :symbols for definitions', () => {
+  describe.only('Using :symbols for definitions', () => {
     it('should handle ::symbols', () => {
       expect(toTree(`123::toString(36)`).length).to.eql(3);
       expect(toTree(`"foo"::toUpperCase(36)`).length).to.eql(3);
@@ -274,9 +274,10 @@ describe('DSL', () => {
         }]]],
       ]);
 
-      expect(toTree(':if (== 1 2) {:then 3 :else 4}')).to.eql([
+      expect(toTree(':if (== 1 2) :then 3 :else 4')).to.eql([
         ['symbol', ':if'], [['fx', '==', 'iseq'], ['number', '1'], ['number', '2']],
-        [['symbol', ':then', ['number', '3']], ['symbol', ':else', ['number', '4']]],
+        ['symbol', ':then', ['number', '3']],
+        ['symbol', ':else', ['number', '4']],
       ]);
     });
 
@@ -297,7 +298,7 @@ describe('DSL', () => {
       // expect(toTree(`:if (== 1 2) && (<= 1 2) :do 1 ~> 2`)).to.eql([]);
       // expect(toTree(`:if (== :false ((== 1 2) || (<= 1 2))) :do 1 ~> 2`)).to.eql([]);
 
-      // expect(toTree(`:when (< 1 2) a, (> 2 1) b, :otherwise c`)).to.eql([]);
+      expect(toTree(`:when (< 1 2) a, (> 2 1) b, :otherwise c`)).to.eql([]);
       // expect(toTree(`:when (< 1 2) a ~> :null, (> 2 1) b ~> :false, :otherwise c ~> :true`)).to.eql([]);
       // expect(toTree(`:when (< 1 2) :do a ~> :null, (> 2 1) :do b ~> :false, :otherwise :do c ~> :true`)).to.eql([]);
 

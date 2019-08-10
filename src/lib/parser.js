@@ -483,6 +483,11 @@ export function buildTree(tokens) {
         root = stack.pop();
       }
     } else {
+      if (!root) {
+        stack.push(t);
+        break;
+      }
+
       root.push(t);
     }
   }
@@ -491,9 +496,10 @@ export function buildTree(tokens) {
   if (calls.length || stack.length) {
     depth = (calls[0] || stack[0])._offset;
 
-    const err = new Error(`Missing terminator for \`${
-      tokens.slice(0, Math.max(2, depth + 1)).map(x => x[1]).join('')
-    }\``);
+    const fixedTokens = tokens.slice(0, Math.max(2, depth + 1));
+    const fixedInput = fixedTokens.map(x => x[1]).join('');
+
+    const err = new Error(`Missing terminator.\n  ${fixedInput}\n  ${fixedInput.replace(/./g, '-')}^`);
 
     err.offset = depth;
 
@@ -626,7 +632,7 @@ export function fixTree(ast) {
         prev[2] = ['object', cur];
       } else if (!prev[2]) {
         // skip :symbol continuations
-        if (next && next[0] === 'symbol' && !['unit', 'symbol'].includes(cur[0])) {
+        if (next && ['fx', 'symbol'].includes(next[0]) && !['unit', 'symbol'].includes(cur[0])) {
           tokens.splice(i, 0, cur, subTree);
           continue;
         }
