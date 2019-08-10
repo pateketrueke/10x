@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import Solvente from '../src/lib';
 
 const calc = (expr, opts) => new Solvente(opts).resolve(expr);
-const value = ({ results }) => results.map(x => x.format);
+const value = (expr, opts) => calc(expr, opts).maths().map(x => x.format);
 const toTree = (expr, opts) => calc(expr, opts).tree;
 
 describe('DSL', () => {
@@ -12,11 +12,11 @@ describe('DSL', () => {
     });
 
     it('should handle most basic units', () => {
-      expect(value(calc('1cm'))).to.eql(['1 cm']);
+      expect(value('1cm')).to.eql(['1 cm']);
     });
 
     it('should handle most basic operators', () => {
-      expect(value(calc('1+2, 3-4, 5/6, 7*8'))).to.eql(['3', '-1', '0.83', '56']);
+      expect(value('1+2, 3-4, 5/6, 7*8')).to.eql(['3', '-1', '0.83', '56']);
     });
 
     it('should handle some logical operators', () => {
@@ -38,16 +38,16 @@ describe('DSL', () => {
     });
 
     it('should apply well-known inflections', () => {
-      expect(value(calc('2 weeks as day'))).to.eql(['14 days']);
-      expect(value(calc('1d'))).to.eql(['1 day']);
+      expect(value('2 weeks as day')).to.eql(['14 days']);
+      expect(value('1d')).to.eql(['1 day']);
     });
 
     it('should skip bad sequences from input', () => {
-      expect(value(calc('1 ) 2'))).to.eql(['1', '2']);
+      expect(value('1 ) 2')).to.eql(['1', '2']);
     });
 
     it('should handle nested sub-expressions', () => {
-      expect(value(calc('1 + ( 2 + ( 3 - 4 ) - 2 )'))).to.eql(['0']);
+      expect(value('1 + ( 2 + ( 3 - 4 ) - 2 )')).to.eql(['0']);
     });
 
     it('should validate nested sub-expressions', () => {
@@ -57,72 +57,72 @@ describe('DSL', () => {
     });
 
     it('should handle separated sub-expressions', () => {
-      expect(value(calc('1 2 or 3 4 or 5 6'))).to.eql(['3', '7', '11']);
+      expect(value('1 2 or 3 4 or 5 6')).to.eql(['3', '7', '11']);
     });
 
     it('should add basic operators between numbers', () => {
-      expect(value(calc('1 2 3'))).to.eql(['6']);
-      expect(value(calc('1 - 2 3'))).to.eql(['-4']);
-      expect(value(calc('1 ( 2 3 )'))).to.eql(['6']);
-      expect(value(calc('1 - ( 2 3 )'))).to.eql(['-4']);
-      expect(value(calc('1 2 3 / 4 5'))).to.eql(['8.75']);
+      expect(value('1 2 3')).to.eql(['6']);
+      expect(value('1 - 2 3')).to.eql(['-4']);
+      expect(value('1 ( 2 3 )')).to.eql(['6']);
+      expect(value('1 - ( 2 3 )')).to.eql(['-4']);
+      expect(value('1 2 3 / 4 5')).to.eql(['8.75']);
     });
 
     it('should handle converting to fractions', () => {
-      expect(value(calc('0.5 as fr'))).to.eql(['1/2']);
-      expect(value(calc('0.5 as frac'))).to.eql(['1/2']);
-      expect(value(calc('0.5 as fraction'))).to.eql(['1/2']);
-      expect(value(calc('0.5 as fractions'))).to.eql(['1/2']);
-      expect(value(calc('3 from 10 as fr'))).to.eql(['30/1']);
-      expect(value(calc('3 inches - 2 cm as fr'))).to.eql(['221/100 in']);
+      expect(value('0.5 as fr')).to.eql(['1/2']);
+      expect(value('0.5 as frac')).to.eql(['1/2']);
+      expect(value('0.5 as fraction')).to.eql(['1/2']);
+      expect(value('0.5 as fractions')).to.eql(['1/2']);
+      expect(value('3 from 10 as fr')).to.eql(['30/1']);
+      expect(value('3 inches - 2 cm as fr')).to.eql(['221/100 in']);
     });
 
     it('should handle converting from units', () => {
-      expect(value(calc('3cm as inches'))).to.eql(['1.18 in']);
+      expect(value('3cm as inches')).to.eql(['1.18 in']);
     });
 
     it('should skip converting from currencies', () => {
-      expect(value(calc('1 MXN as USD'))).to.eql(['1 USD']);
+      expect(value('1 MXN as USD')).to.eql(['1 USD']);
     });
 
     it('should handle fixed-length expressions', () => {
-      expect(value(calc('1123foo', { types: [['0000foo', 'cm']] }))).to.eql(['1,123 cm']);
+      expect(value('1123foo', { types: [['0000foo', 'cm']] })).to.eql(['1,123 cm']);
     });
 
     it('should handle local functions', () => {
       expect(calc('undef(1,2,3)').results).to.eql([]);
-      expect(value(calc("f(x',y)=x'*y;f(2, 3)"))).to.eql(['6']);
-      expect(value(calc("f(x',y)=(x'*y);f(2, 3)"))).to.eql(['6']);
-      expect(value(calc("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)"))).to.eql(['-4']);
+      expect(value("f(x',y)=x'*y;f(2, 3)")).to.eql(['6']);
+      expect(value("f(x',y)=(x'*y);f(2, 3)")).to.eql(['6']);
+      expect(value("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)")).to.eql(['-4']);
     });
 
     it('should handle local expressions', () => {
-      expect(value(calc("x'=1.2;3x'"))).to.eql(['3.6']);
+      expect(value("x'=1.2;3x'")).to.eql(['3.6']);
     });
 
     it('should handle external expressions', () => {
-      expect(value(calc('2x', { expressions: { x: [['expr', '=', 'equal'], ['number', 1.5], ['expr', ';', 'k']] } }))).to.eql(['3']);
+      expect(value('2x', { expressions: { x: [['expr', '=', 'equal'], ['number', 1.5], ['expr', ';', 'k']] } })).to.eql(['3']);
     });
 
     it('should handle number suffixes', () => {
-      expect(value(calc('Jun 3rd'))).to.eql(['Sun Jun 03 2012 00:00:00']);
-      expect(value(calc('Jun 20ty'))).to.eql(['Wed Jun 20 2012 00:00:00']);
-      expect(value(calc('Jun 4th'))).to.eql(['Mon Jun 04 2012 00:00:00']);
-      expect(value(calc('Jun 10th'))).to.eql(['Sun Jun 10 2012 00:00:00']);
+      expect(value('Jun 3rd')).to.eql(['Sun Jun 03 2012 00:00:00']);
+      expect(value('Jun 20ty')).to.eql(['Wed Jun 20 2012 00:00:00']);
+      expect(value('Jun 4th')).to.eql(['Mon Jun 04 2012 00:00:00']);
+      expect(value('Jun 10th')).to.eql(['Sun Jun 10 2012 00:00:00']);
     });
 
     it('should handle well-known dates', () => {
-      expect(value(calc('900am'))).to.eql(['Fri Mar 02 2012 09:00:00']);
-      expect(value(calc('900 am'))).to.eql(['Fri Mar 02 2012 09:00:00']);
-      expect(value(calc('9:00 am'))).to.eql(['Fri Mar 02 2012 09:00:00']);
-      expect(value(calc('now'))).to.eql(['Fri Mar 02 2012 11:38:49']);
-      expect(value(calc('today'))).to.eql(['Fri Mar 02 2012 00:00:00']);
-      expect(value(calc('tomorrow'))).to.eql(['Sat Mar 03 2012 11:38:49']);
-      expect(value(calc('yesterday'))).to.eql(['Thu Mar 01 2012 11:38:49']);
+      expect(value('900am')).to.eql(['Fri Mar 02 2012 09:00:00']);
+      expect(value('900 am')).to.eql(['Fri Mar 02 2012 09:00:00']);
+      expect(value('9:00 am')).to.eql(['Fri Mar 02 2012 09:00:00']);
+      expect(value('now')).to.eql(['Fri Mar 02 2012 11:38:49']);
+      expect(value('today')).to.eql(['Fri Mar 02 2012 00:00:00']);
+      expect(value('tomorrow')).to.eql(['Sat Mar 03 2012 11:38:49']);
+      expect(value('yesterday')).to.eql(['Thu Mar 01 2012 11:38:49']);
     });
 
     it('should allow ISO dates', () => {
-      expect(value(calc('1987-06-10T06:00:00.000Z'))).to.eql(['Wed Jun 10 1987 06:00:00']);
+      expect(value('1987-06-10T06:00:00.000Z')).to.eql(['Wed Jun 10 1987 06:00:00']);
     });
   });
 
@@ -263,7 +263,7 @@ describe('DSL', () => {
         }]]],
       ]);
 
-      expect(toTree(':if (==1 2)')).to.eql([
+      expect(toTree(':if (== 1 2) {:then 3 :else 4}')).to.eql([
       ]);
     });
 

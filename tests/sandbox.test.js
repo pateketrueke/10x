@@ -67,7 +67,7 @@ const cases = [
   ['1987-06-10T06:00:00.000Z+1986-04-14T12:59:59.000Z', ['Mon Sep 24 3973 18:59:59']],
 ];
 
-const calc = new Solvente();
+const c = new Solvente();
 const time = new Date(1330688329321);
 
 tk.freeze(time);
@@ -75,11 +75,11 @@ tk.freeze(time);
 describe('Sandbox', () => {
   cases.forEach(test => {
     if (test) it(test[0], () => {
-      const x = calc.resolve(test[0]);
+      const x = c.resolve(test[0]);
 
       if (x.error) throw x.error;
 
-      deepEqual(x.results.map(x => x.format), test[1]);
+      deepEqual(c.maths().map(x => x.format), test[1]);
     });
   });
 });

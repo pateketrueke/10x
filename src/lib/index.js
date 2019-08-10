@@ -37,6 +37,10 @@ export default class Solvente {
       ...(opts.types || []),
     ];
 
+    this.tokens = [];
+    this.input = [];
+    this.tree = [];
+
     // try built-ins first
     this.convert = (num, base, target) => {
       return convertFrom(num, base, target);
@@ -51,129 +55,121 @@ export default class Solvente {
   }
 
   resolve(sample) {
-    let info = {
-      tokens: [],
-      input: [],
-      tree: [],
-    };
+    const ast = parseBuffer(sample, unitFrom(this.types));
 
-    const out = parseBuffer(sample, unitFrom(this.types));
-    const all = joinTokens(out.tokens, this.units, out.types);
-
-    info.input = all;
+    this.input = joinTokens(ast.tokens, this.units, ast.types);
 
     try {
-      const tokens = transform(all, this.units, out.types);
+      const tokens = transform(this.input, this.units, ast.types);
       const fixedAST = tokens.ast.map(x => toToken(x, () => x.slice()));
 
-      info.error = tokens.error;
-      info.tokens = fixedAST;
-
-      // FIXME: make math lazy in order to manipulate AST...
+      this.error = tokens.error;
+      this.tokens = fixedAST;
 
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
 
       // mutates on AST manipulation!!!
-      info.tree = fixTree(tokens.tree);
-
-      const normalized = [];
-
-      let offset = 0;
-      let chunks;
-
-      // split over single values...
-      // FIXME: clone the whole tre before...
-      chunks = reduceFromAST(info.tree, this.convert, this.expressions)
-        .reduce((prev, cur) => {
-          const lastValue = prev[prev.length - 1] || [];
-
-          if (lastValue[0] === 'number' && cur[0] === 'number') {
-            prev.push(['expr', ';', 'k'], cur);
-          } else prev.push(cur);
-
-          return prev;
-        }, []);
-
-      // join chunks into final expressions
-      for (let i = 0; i < chunks.length; i += 1) {
-        const cur = chunks[i];
-
-        normalized[offset] = normalized[offset] || [];
-        normalized[offset].push(cur);
-
-        // make sure we split from all remaining separators
-        if (cur[0] === 'expr' && isSep(cur[1])) {
-          normalized[offset].pop();
-
-          // ensure we keep no empty chunks
-          if (normalized[offset].length) offset += 1;
-          else normalized.length = offset;
-        }
-      }
-
-      // FIXME: move this logic apart...
-      info.results = normalized.map(x => {
-        const value = calculateFromTokens(x).slice();
-
-        value[1] = toNumber(value[1]);
-
-        if (
-          value[2]
-          && value[0] === 'number'
-          && !(isInt(value[1]) || value[1] instanceof Date)
-        ) {
-          // remove trailing words from units
-          value[1] = value[1].replace(/[\sa-z/-]+$/ig, '');
-        }
-
-        let fixedValue = toValue(value[1]);
-        let fixedUnit = value[2];
-
-        // adjust unit-fractions
-        if (fixedUnit && fixedUnit.indexOf('fr-') === 0) {
-          fixedValue = toFraction(fixedValue);
-          fixedUnit = fixedUnit.split('fr-')[1];
-        }
-
-        // add thousand separators
-        if (isInt(fixedValue)) {
-          fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        }
-
-        if (
-          fixedUnit
-          && !(['datetime', 'x-fraction'].includes(fixedUnit) || value[1] instanceof Date)
-        ) {
-          // apply well-known inflections
-          if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
-            const [one, many] = this.inflections[fixedUnit];
-            const base = parseFloat(fixedValue);
-
-            if (base === 1.0 && one) fixedUnit = one;
-            if (base !== 1.0 && many) fixedUnit = many;
-          }
-
-          if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
-            fixedValue += ` ${fixedUnit}`;
-          }
-        }
-
-        return {
-          val: value[1],
-          type: value[0],
-          format: typeof fixedValue !== 'string'
-            ? JSON.stringify(fixedValue)
-            : fixedValue,
-        };
-      });
+      this.tree = fixTree(tokens.tree);
     } catch (e) {
-      info.error = {
+      this.error = {
         message: e.message,
         stack: e.stack,
       };
     }
 
-    return info;
+    return this;
+  }
+
+  maths() {
+    const normalized = [];
+
+    let offset = 0;
+    let chunks;
+
+    // split over single values...
+    chunks = reduceFromAST(this.tree, this.convert, this.expressions)
+      .reduce((prev, cur) => {
+        const lastValue = prev[prev.length - 1] || [];
+
+        if (lastValue[0] === 'number' && cur[0] === 'number') {
+          prev.push(['expr', ';', 'k'], cur);
+        } else prev.push(cur);
+
+        return prev;
+      }, []);
+
+    // join chunks into final expressions
+    for (let i = 0; i < chunks.length; i += 1) {
+      const cur = chunks[i];
+
+      normalized[offset] = normalized[offset] || [];
+      normalized[offset].push(cur);
+
+      // make sure we split from all remaining separators
+      if (cur[0] === 'expr' && isSep(cur[1])) {
+        normalized[offset].pop();
+
+        // ensure we keep no empty chunks
+        if (normalized[offset].length) offset += 1;
+        else normalized.length = offset;
+      }
+    }
+
+    // FIXME: move this logic apart...
+    return normalized.map(x => {
+      const value = calculateFromTokens(x).slice();
+
+      value[1] = toNumber(value[1]);
+
+      if (
+        value[2]
+        && value[0] === 'number'
+        && !(isInt(value[1]) || value[1] instanceof Date)
+      ) {
+        // remove trailing words from units
+        value[1] = value[1].replace(/[\sa-z/-]+$/ig, '');
+      }
+
+      let fixedValue = toValue(value[1]);
+      let fixedUnit = value[2];
+
+      // adjust unit-fractions
+      if (fixedUnit && fixedUnit.indexOf('fr-') === 0) {
+        fixedValue = toFraction(fixedValue);
+        fixedUnit = fixedUnit.split('fr-')[1];
+      }
+
+      // add thousand separators
+      if (isInt(fixedValue)) {
+        fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      }
+
+      if (
+        fixedUnit
+        && !(['datetime', 'x-fraction'].includes(fixedUnit) || value[1] instanceof Date)
+      ) {
+        // apply well-known inflections
+        if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
+          const [one, many] = this.inflections[fixedUnit];
+          const base = parseFloat(fixedValue);
+
+          if (base === 1.0 && one) fixedUnit = one;
+          if (base !== 1.0 && many) fixedUnit = many;
+        }
+
+        if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
+          fixedValue += ` ${fixedUnit}`;
+        }
+      }
+
+      return {
+        val: value[1],
+        type: value[0],
+        format: typeof fixedValue !== 'string'
+          ? JSON.stringify(fixedValue)
+          : fixedValue,
+      };
+    });
   }
 }
