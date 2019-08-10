@@ -594,15 +594,40 @@ export function fixCall(def) {
   if (def.length < 3) return def;
 
   let args = [];
+  let stack = [];
+
+  let inUnit = false;
+  let inPipe = false;
 
   if (Array.isArray(def[0])) {
     args = def.shift();
   }
 
+
   for (let i = 0; i < def.length; i += 1) {
     const cur = def[i];
     const left = def[i - 1];
     const right = def[i + 1];
+    const rightNext = def[i + 2];
+
+    if (['lpipe', 'rpipe'].includes(cur[2])) inPipe = true;
+
+    // if (inUnit) {
+    //   if (inPipe) {
+    //     const call = stack.shift();
+
+    //     call[0] = 'def';
+    //     call[2] = [fixInput(stack, cur[2] === 'lpipe')];
+
+    //     def.splice(i - stack.length, stack.length);
+    //     // inUnit = false;
+    //     stack = [];
+    //   } else {
+    //     stack.push(cur);
+    //   }
+    //   continue;
+    // }
+
 
     if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
       cur[0] = 'def';
@@ -611,7 +636,20 @@ export function fixCall(def) {
       continue;
     }
 
-    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
+    // if (left && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
+    //   if (left[0] === 'fx' && (!rightNext || rightNext[0] == 'fx')) {
+    //     cur[0] = 'def';
+    //     cur[2] = [[right]];
+    //     def.splice(i + 1, 1);
+    //   } else {
+    //     // inUnit = true;
+    //     // inPipe = false;
+    //     // stack.push(cur);
+    //   }
+    //   continue;
+    // }
+
+    if (left && cur[0] === 'fx' && inPipe && right) {
       if (left[0] !== 'def' && right[0] === 'def' && def[i - 2]) {
         def[i - 2][0] = 'def';
         def[i - 2][2] = [[left]];

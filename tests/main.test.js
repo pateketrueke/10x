@@ -130,7 +130,7 @@ describe('DSL', () => {
     });
   });
 
-  describe('Function application', () => {
+  describe.only('Function application', () => {
     it('should handle local functions', () => {
       expect(value('undef(1,2,3)')).to.eql([]);
       expect(value("f(x',y)=x'*y;f(2, 3)")).to.eql(['6']);
@@ -148,7 +148,8 @@ describe('DSL', () => {
       expect(toTree('0|>sum 1|>sum 2;')).to.eql(toTree('0|>sum(1)|>sum(2);'));
       expect(toTree('0|>sum 1|>sum(2);')).to.eql(toTree('0|>sum(1)|>sum(2);'));
       expect(value('sum(x,y)=x+y;0|>sum 1|>sum 2')).to.eql(['3']);
-      expect(value('sum(x,y)=x+y;0|>sum 1|>sum(2)')).to.eql(['3']);
+      expect(toTree('sum(x,y,z)=x+y+z;0|>sum 1 2|>sum(3,4)')).to.eql(toTree('sum(x,y,z)=x+y+z;0|>sum(1,2)|>sum 3 4'));
+      expect(value('sum(x,y,z)=x+y+z;0|>sum 1 2|>sum 3 4')).to.eql(['10']);
     });
   })
 
