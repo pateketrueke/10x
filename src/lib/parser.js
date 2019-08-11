@@ -790,8 +790,15 @@ export function fixTree(ast) {
       continue;
     }
 
-    if (cur[0] === 'def' && Array.isArray(cur[2])) {
-      cur = [cur[0], cur[1], fixTree(cur[2])];
+    // ensure all trees are fixed
+    if (cur[0] === 'def' && cur[2]) {
+      cur[2] = fixTree(cur[2]);
+
+      // re-assembly nested subtrees
+      if (cur[2][0][0] === 'expr' && cur[2][0][1] === '=' && !cur[2][2]) {
+        cur[2][1].unshift(cur[2][0]);
+        cur[2] = cur[2][1];
+      }
     }
 
     tokens[i] = cur;
