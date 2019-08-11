@@ -422,12 +422,14 @@ export function parseBuffer(text, fixeds) {
       // non-keywords
       || (last === '\\')
       || (last === cur && isFmt(cur))
-      || (last === '-' && isNum(cur))
       || (last !== ' ' && isAny(cur))
+      || (last === '-' && isNum(cur))
+      || (last === '_' && isChar(cur))
       || (hasNum(last) && cur === '%')
       || (isMoney(last) && hasNum(cur))
       || (isChar(last) && isAny(cur, ':'))
       || (last === ',' && isNum(cur) && !open)
+      || (isChar(last) && cur === '_' && isChar(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
 
       // keep some separators between numbers
@@ -633,10 +635,12 @@ export function fixCall(def) {
 
     // handle units with single arguments
     if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
-      cur[0] = 'def';
-      cur[2] = [[right]];
-      def.splice(i + 1, 1);
-      continue;
+      if (right[0] !== 'expr') {
+        cur[0] = 'def';
+        cur[2] = [[right]];
+        def.splice(i + 1, 1);
+        continue;
+      }
     }
 
     // handle partial-application calls
