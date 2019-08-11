@@ -73,12 +73,18 @@ export function reduceFromArgs(keys, values) {
   }, {});
 }
 
-export function reduceFromEffect(value, args, def) {
+export function reduceFromInput(token) {
   // make sure we're parsing values!
-  let fixedValue = value[1];
+  let fixedValue = token[1];
 
-  if (value[0] === 'string') fixedValue = toValue(fixedValue);
-  if (value[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
+  if (token[0] === 'string') fixedValue = toValue(fixedValue);
+  if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
+
+  return fixedValue;
+}
+
+export function reduceFromEffect(value, args, def) {
+  let fixedValue = reduceFromInput(value);
 
   // apply side-effects
   if (def.substr(0, 2) === '::') {
@@ -125,18 +131,13 @@ export function reduceFromAST(tokens, convert, expressions) {
     }
 
     // apply symbol-accessor op
-    // if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
-    //   const args = reduceFromArgs(null, reduceFromAST(tokens[i + 1] || [], convert, expressions))
-    //     .map(x => calculateFromTokens(x))
-    //     .map(x => {
-    //       if (x[0] === 'string') return toValue(x[1]);
-    //       if (x[0] === 'number') return parseFloat(toNumber(x[1]));
-    //       return x[1];
-    //     });
+    if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
+      const args = fixArgs(reduceFromAST(tokens[i + 1] || [], convert, expressions), false)
+        .map(x => reduceFromInput(calculateFromTokens(x)));
 
-    //   prev[prev.length - 1] = reduceFromEffect(value, args, cur[1]);
-    //   return prev;
-    // }
+      fixedTokens[fixedTokens.length - 1] = reduceFromEffect(value, args, cur[1]);
+      continue;
+    }
 
     // just return from non-values or ops
     if (['string', 'object', 'boolean', 'undefined'].includes(cur[0])) {

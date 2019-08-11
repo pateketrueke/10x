@@ -551,13 +551,15 @@ export function fixTokens(ast) {
   }, target);
 }
 
-export function fixArgs(values) {
+export function fixArgs(values, flatten) {
   let offset = 0;
 
   const stack = [];
 
   // flatten all single-nodes
-  while (values.length === 1) values = values[0];
+  if (flatten !== false) {
+    while (values.length === 1) values = values[0];
+  }
 
   // break values into single arguments
   for (let i = 0; i < values.length; i += 1) {
