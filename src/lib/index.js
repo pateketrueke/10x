@@ -17,26 +17,35 @@ import {
 
 export default class Solvente {
   constructor(opts = {}) {
-    this.expressions = {
-      ...DEFAULT_EXPRESSIONS,
-      ...(opts.expressions || {}),
-    };
+    Object.defineProperty(this, 'expressions', {
+      value: {
+        ...DEFAULT_EXPRESSIONS,
+        ...(opts.expressions || {}),
+      },
+    });
 
-    this.inflections = {
-      ...DEFAULT_INFLECTIONS,
-      ...(opts.inflections || {}),
-    };
+    Object.defineProperty(this, 'inflections', {
+      value: {
+        ...DEFAULT_INFLECTIONS,
+        ...(opts.inflections || {}),
+      },
+    });
 
-    this.units = {
-      ...DEFAULT_MAPPINGS,
-      ...(opts.units || {}),
-    };
+    Object.defineProperty(this, 'units', {
+      value: {
+        ...DEFAULT_MAPPINGS,
+        ...(opts.units || {}),
+      },
+    });
 
-    this.types = [
-      ...DEFAULT_TYPES,
-      ...(opts.types || []),
-    ];
+    Object.defineProperty(this, 'types', {
+      value: [
+        ...DEFAULT_TYPES,
+        ...(opts.types || []),
+      ],
+    });
 
+    // public properties
     this.tokens = [];
     this.input = [];
     this.tree = [];
