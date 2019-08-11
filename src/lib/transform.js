@@ -64,8 +64,8 @@ export function fromMarkdown(text) {
 
 export function fromSymbols(text, units, expression, previousToken) {
   // handle white-space
-  if (text === ' ') {
-    return ['text', ' '];
+  if (text === ' ' || text === '\n') {
+    return ['text', text];
   }
 
   // handle placeholders
@@ -223,9 +223,6 @@ export function transform(input, units, types) {
 
       return prev;
     }
-
-    // FIXME: this can be improved now...
-    // console.log({prevToken,cur,nextToken,inMaths});
 
     if (
       // handle most values
