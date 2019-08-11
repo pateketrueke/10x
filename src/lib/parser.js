@@ -606,7 +606,7 @@ export function fixApply(kind, body, args) {
   return [];
 }
 
-export function fixCalls(def) {
+export function fixCalls(def, expr) {
   if (def.length < 3) return def;
 
   let args = [];
@@ -625,6 +625,9 @@ export function fixCalls(def) {
     // append all given tokens to previous unit-definitions
     if (left && left[0] === 'def' && cur[0] !== 'fx') {
       if (left[2] && cur[0] !== 'expr') {
+        // const cut = def.slice(i).findIndex(x => x[0] === 'expr' && x[1] === ';');
+        // const subTree = cut >= 0 ? def.splice(i, i + cut - 2) : def.splice(i);
+
         const cut = def.slice(i + 1).findIndex(x => ['fx', 'expr'].includes(x[0]));
         const subTree = cut >= 0 ? def.splice(i, i + cut - 1) : def.splice(i);
 
@@ -659,6 +662,10 @@ export function fixCalls(def) {
         continue;
       }
     }
+  }
+
+  if (expr) {
+    return args.concat(def);
   }
 
   return [args].concat(def);
@@ -706,6 +713,19 @@ export function fixTree(ast) {
     if (next && next[0] === 'fx' && ['lpipe', 'rpipe'].includes(next[2]) && cur[0] !== 'symbol') {
       tokens.splice(i, i + tokens.length, fixCalls(tokens.slice(i)));
       while (tokens.length === 1) tokens = tokens[0];
+
+      // if (prev[0] === 'expr' && prev[1] === '=') {
+      //   tokens.splice(i, i + tokens.length, fixCalls(tokens.slice(i)));
+      //   while (tokens.length === 1) tokens = tokens[0];
+      //   break;
+      // }
+
+      // const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' || x[0] === 'fx');
+      // const cut = offset >= 0 ? tokens.splice(i, i + offset) : tokens.splice(i);
+
+      // console.log({tokens});
+
+      // tokens.splice(i, 0, fixCalls(cut));
       break;
     }
 
