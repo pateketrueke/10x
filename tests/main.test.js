@@ -138,7 +138,7 @@ describe('DSL', () => {
       expect(value("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)")).to.eql(['-4']);
     });
 
-    it('should handle partial application', () => {
+    it.only('should handle partial application', () => {
       expect(value('sum(x,y)=x+y;sum(5,3)')).to.eql(['8']);
       expect(value('sum(x,y)=x+y;add5(_)=sum<|5;add5(3)')).to.eql(['8']);
       expect(toTree('add5(_)=sum(5,_);')).to.eql(toTree('add5(_)=sum<|5;'));
@@ -147,8 +147,17 @@ describe('DSL', () => {
       expect(toTree('0|>sum 1|>sum 2;')).to.eql(toTree('0|>sum(1)|>sum(2);'));
       expect(toTree('0|>sum 1|>sum(2);')).to.eql(toTree('0|>sum(1)|>sum(2);'));
       expect(value('sum(x,y)=x+y;0|>sum 1|>sum 2')).to.eql(['3']);
-      expect(toTree('sum(x,y,z)=x+y+z;0|>sum 1 2|>sum(3,4)')).to.eql(toTree('sum(x,y,z)=x+y+z;0|>sum(1,2)|>sum 3 4'));
+      expect(toTree('0|>sum 1 2|>sum(3,4)')).to.eql(toTree('0|>sum(1,2)|>sum 3 4'));
       expect(value('sum(x,y,z)=x+y+z;0|>sum 1 2|>sum 3 4')).to.eql(['10']);
+
+      // FIXME: using a _ placeholder could determine the position of the injected argument?
+      expect(toTree('0|>sum 1 2 3')).to.eql([
+        ['number', '0'],
+        ['fx', '|>', 'rpipe'],
+        ['def', 'sum', [[['number', '1'], ['expr', ',', 'or'], ['number', '2'], ['expr', ',', 'or'], ['number', '3']]]],
+      ]);
+
+      expect(value('sum(a,b,c)=a+b+c;0|>sum 1 2 3')).to.eql(['6']);
     });
   })
 

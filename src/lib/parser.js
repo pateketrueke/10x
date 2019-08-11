@@ -608,13 +608,14 @@ export function fixCall(def) {
     const cur = def[i];
     const left = def[i - 1];
     const right = def[i + 1];
-    const rightNext = def[i + 2];
 
     // append all given tokens to previous unit-definitions
     if (left && left[0] === 'def' && cur[0] !== 'fx') {
       if (left[2]) {
-        left[2][0].push(['expr', ',', 'or'], cur);
-        def.splice(i, 1);
+        const cut = def.slice(i + 1).findIndex(x => ['fx', 'expr'].includes(x[0]));
+        const subTree = cut >= 0 ? def.splice(i, i + cut - 1) : def.splice(i);
+
+        left[2][0] = left[2][0].concat(fixInput(subTree, true));
         continue;
       }
     }
