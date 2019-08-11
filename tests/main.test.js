@@ -161,6 +161,26 @@ describe('DSL', () => {
       expect(value('sum(a,b,c)=a+b+c;0<|sum _ 2 3')).to.eql(['5']);
       expect(value('sum(a,b,c)=a+b+c;0<|sum 1 _ 3')).to.eql(['4']);
       expect(value('sum(a,b,c)=a+b+c;0<|sum 1 2 _')).to.eql(['3']);
+
+      expect(toTree('a= b() <| c 1 2;')).to.eql([
+        ['def', 'a', [
+          ['expr', '=', 'equal'],
+          ['def', 'b', [[]]],
+          ['fx', '<|', 'lpipe'],
+          ['def', 'c', [[['number', '1'], ['expr', ',', 'or'], ['number', '2']]]],
+          ['expr', ';', 'k'],
+        ]]
+      ]);
+
+      expect(toTree('a= b() <| c 1;')).to.eql([
+        ['def', 'a', [
+          ['expr', '=', 'equal'],
+          ['def', 'b', [[]]],
+          ['fx', '<|', 'lpipe'],
+          ['def', 'c', [[['number', '1']]]],
+          ['expr', ';', 'k'],
+        ]]
+      ]);
     });
   })
 

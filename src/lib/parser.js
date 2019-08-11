@@ -624,7 +624,7 @@ export function fixCalls(def) {
 
     // append all given tokens to previous unit-definitions
     if (left && left[0] === 'def' && cur[0] !== 'fx') {
-      if (left[2]) {
+      if (left[2] && cur[0] !== 'expr') {
         const cut = def.slice(i + 1).findIndex(x => ['fx', 'expr'].includes(x[0]));
         const subTree = cut >= 0 ? def.splice(i, i + cut - 1) : def.splice(i);
 
