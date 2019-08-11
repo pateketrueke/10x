@@ -592,7 +592,7 @@ export function fixArgs(values, flatten) {
 }
 
 export function fixInput(args, lpipe) {
-  return args.reduce((p, c) => p.concat(c[0] === 'expr' ? [c] : (
+  return args.filter(x => !hasTagName(x[0])).reduce((p, c) => p.concat(c[0] === 'expr' ? [c] : (
     lpipe ? [['expr', ',', 'or'], c] : [c, ['expr', ',', 'or']]
   )), []);
 }
@@ -606,7 +606,7 @@ export function fixApply(kind, body, args) {
   return [];
 }
 
-export function fixCall(def) {
+export function fixCalls(def) {
   if (def.length < 3) return def;
 
   let args = [];
@@ -679,13 +679,35 @@ export function fixTree(ast) {
     const prev = tokens[i - 1];
     const next = tokens[i + 1];
 
+    // skip and merge empty leafs
+    if (cur.length === 0) {
+      if (prev && prev[0] === 'def') {
+        tokens.splice(i, 1);
+        prev[2] = [cur];
+      }
+      continue;
+    }
+
     // look for partial-applications
-    if (cur[0] === 'def') {
-      if (cur[2]) cur[2] = fixCall(cur[2]);
+    if (cur[0] === 'def' && cur[2]) {
+      const fixedDef = fixTree(cur[2]);
+      const lastOffset = fixedDef.length - 1;
+
+      if (
+        (fixedDef[0][0] === 'expr' && fixedDef[0][1] === '=')
+        && (fixedDef[lastOffset][0] === 'expr' && fixedDef[lastOffset][1] === ';')
+      ) {
+        const first = fixedDef.shift();
+        const last = fixedDef.pop();
+
+        cur[2] = [first].concat(fixCalls(fixedDef)).concat([last]);
+      } else {
+        cur[2] = fixCalls(cur[2]);
+      }
     }
 
     if (next && next[0] === 'fx' && ['lpipe', 'rpipe'].includes(next[2]) && cur[0] !== 'symbol') {
-      tokens.splice(i, i + tokens.length, fixCall(tokens.slice(i)));
+      tokens.splice(i, i + tokens.length, fixCalls(tokens.slice(i)));
       while (tokens.length === 1) tokens = tokens[0];
       break;
     }

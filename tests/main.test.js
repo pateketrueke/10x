@@ -138,7 +138,7 @@ describe('DSL', () => {
       expect(value("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)")).to.eql(['-4']);
     });
 
-    it.only('should handle partial application', () => {
+    it('should handle partial application', () => {
       expect(value('sum(x,y)=x+y;sum(5,3)')).to.eql(['8']);
       expect(value('sum(x,y)=x+y;add5(_)=sum<|5;add5(3)')).to.eql(['8']);
       expect(toTree('add5(_)=sum(5,_);')).to.eql(toTree('add5(_)=sum<|5;'));
