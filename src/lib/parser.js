@@ -405,6 +405,11 @@ export function parseBuffer(text, fixeds) {
       inBlock = false;
     }
 
+    // disable quotes from separators
+    if (inBlock && cur === '"' && isSep(next)) {
+      inBlock = false;
+    }
+
     if (
       inBlock || typeof last === 'undefined'
 
