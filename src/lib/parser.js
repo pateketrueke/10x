@@ -349,7 +349,7 @@ export function parseBuffer(text, fixeds) {
   let offset = 0;
   let open = 0;
 
-  const chars = text.replace(/\s/g, ' ').split('');
+  const chars = text.split('');
   const tokens = [];
   const types = {};
 
@@ -378,6 +378,12 @@ export function parseBuffer(text, fixeds) {
     const next = chars[i + 1];
     const cur = chars[i];
 
+    if (cur === '\n' && inBlock !== 'multiline') {
+      tokens[++offset] = [cur];
+      inBlock = false;
+      continue;
+    }
+
     if (!inBlock) {
       // skip closing chars if they're not well paired
       if (!open && cur === ')') {
@@ -394,15 +400,15 @@ export function parseBuffer(text, fixeds) {
 
         // enable comments, skip everything
         || (last === '/' && '/*'.includes(cur))
-      ) inBlock = true;
-    } else if (
+      ) inBlock = cur === '*' ? 'multiline' : 'block';
+    } else if (cur === '*' && next === '/') {
       // disable multiline-style comments
-      cur === '*'
-      && next === '/'
-      && buffer.join('').includes('/*')
-      && buffer.join('').indexOf('/*') <= Math.max(0, buffer.join('').indexOf('//'))
-    ) {
-      inBlock = false;
+      if (inBlock === 'multiline') {
+        buffer.push(cur, next);
+        chars.splice(i, 1);
+        inBlock = false;
+        continue;
+      }
     }
 
     // disable quotes from separators
