@@ -697,10 +697,7 @@ export function fixTree(ast) {
         (fixedDef[0][0] === 'expr' && fixedDef[0][1] === '=')
         && (fixedDef[lastOffset][0] === 'expr' && fixedDef[lastOffset][1] === ';')
       ) {
-        const first = fixedDef.shift();
-        const last = fixedDef.pop();
-
-        cur[2] = [first].concat(fixCalls(fixedDef)).concat([last]);
+        cur[2] = fixedDef;
       } else {
         cur[2] = fixCalls(cur[2]);
       }
