@@ -139,12 +139,11 @@ describe('DSL', () => {
     });
 
     it('should handle partial application', () => {
-      // FIXME: symbols as args...
       expect(value('sum(x,y)=x+y;sum(5,3)')).to.eql(['8']);
-      expect(value('sum(x,y)=x+y;add5(x)=sum<|5;add5(3)')).to.eql(['8']);
+      expect(value('sum(x,y)=x+y;add5(_)=sum<|5;add5(3)')).to.eql(['8']);
       expect(toTree('add5(_)=sum(5,_);')).to.eql(toTree('add5(_)=sum<|5;'));
       expect(toTree('always7=add5<|2;')).to.eql(toTree('always7=add5(2);'));
-      expect(value('sum(x,y)=x+y;add5(x)=sum|>5;always7=add5|>2;always7')).to.eql(['7']);
+      expect(value('sum(x,y)=x+y;add5(_)=sum|>5;always7=add5|>2;always7')).to.eql(['7']);
       expect(toTree('0|>sum 1|>sum 2;')).to.eql(toTree('0|>sum(1)|>sum(2);'));
       expect(toTree('0|>sum 1|>sum(2);')).to.eql(toTree('0|>sum(1)|>sum(2);'));
       expect(value('sum(x,y)=x+y;0|>sum 1|>sum 2')).to.eql(['3']);
@@ -237,9 +236,16 @@ describe('DSL', () => {
   });
 
   describe('Using :symbols for definitions', () => {
-    it('should handle ::symbols', () => {
+    it('should apply ::symbol-calls', () => {
       expect(toTree(`123::toString(36)`).length).to.eql(3);
+      expect(value(`123::toString(36)`)).to.eql(['3f']);
       expect(toTree(`"foo"::toUpperCase(36)`).length).to.eql(3);
+      expect(value(`"foo"::toUpperCase(36)`)).to.eql(['FOO']);
+    });
+
+    it('should treat symbols as units too', () => {
+      expect(value('sum(x,_)=x+_;sum(1,2)')).to.eql(['3']);
+      expect(value('sum(x,:y)=x+:y;sum(1,2)')).to.eql(['3']);
     });
 
     it('should consume all tokens if they are lists', () => {

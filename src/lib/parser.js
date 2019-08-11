@@ -196,6 +196,7 @@ export function joinTokens(data, units, types) {
     ) {
       stack.push(cur);
       inFmt = false;
+      offset++;
       continue;
     }
 

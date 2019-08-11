@@ -182,6 +182,9 @@ export function transform(input, units, types) {
       // handle nested calls
       if (token[0] === 'unit' && nextToken === '(') token[0] = 'def';
 
+      // reassign symbols as valid units
+      if (token[0] === 'symbol') token[0] = 'unit';
+
       // append all nodes
       inExpr[2].push(token);
 
