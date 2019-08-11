@@ -625,9 +625,6 @@ export function fixCalls(def, expr) {
     // append all given tokens to previous unit-definitions
     if (left && left[0] === 'def' && cur[0] !== 'fx') {
       if (left[2] && cur[0] !== 'expr') {
-        // const cut = def.slice(i).findIndex(x => x[0] === 'expr' && x[1] === ';');
-        // const subTree = cut >= 0 ? def.splice(i, i + cut - 2) : def.splice(i);
-
         const cut = def.slice(i + 1).findIndex(x => ['fx', 'expr'].includes(x[0]));
         const subTree = cut >= 0 ? def.splice(i, i + cut - 1) : def.splice(i);
 
@@ -711,21 +708,17 @@ export function fixTree(ast) {
     }
 
     if (next && next[0] === 'fx' && ['lpipe', 'rpipe'].includes(next[2]) && cur[0] !== 'symbol') {
+      const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' || x[0] === 'fx');
+
+      if (prev && prev[0] !== 'expr' && offset > 0) {
+        if (prev[0] === 'def' && !prev[2]) {
+          tokens.splice(i + 1, 0, ...fixCalls(tokens.splice(i + 1, i + offset - 1)));
+          continue;
+        }
+      }
+
       tokens.splice(i, i + tokens.length, fixCalls(tokens.slice(i)));
       while (tokens.length === 1) tokens = tokens[0];
-
-      // if (prev[0] === 'expr' && prev[1] === '=') {
-      //   tokens.splice(i, i + tokens.length, fixCalls(tokens.slice(i)));
-      //   while (tokens.length === 1) tokens = tokens[0];
-      //   break;
-      // }
-
-      // const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' || x[0] === 'fx');
-      // const cut = offset >= 0 ? tokens.splice(i, i + offset) : tokens.splice(i);
-
-      // console.log({tokens});
-
-      // tokens.splice(i, 0, fixCalls(cut));
       break;
     }
 
