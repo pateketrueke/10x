@@ -264,10 +264,13 @@ export function transform(input, units, types) {
       || (inMaths && (
         vars[cur]
 
-        // || (isChar(cur) && (hasNum(prevToken) || !nextToken))
+        // allow placeholders
+        || (cur === '_')
+
+        // handle units after separators
         || (vars[cur] && oldToken === ',')
 
-        // allow units between ops
+        // allow units between ops/expressions
         || ((isChar(cur) || hasKeyword(cur, units)) && (
           isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)
         ))

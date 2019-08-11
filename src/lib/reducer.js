@@ -106,7 +106,6 @@ export function reduceFromAST(tokens, convert, expressions) {
   let lastUnit;
   let lastOp = ['expr', '+', 'plus'];
 
-  // return tokens.reduce((prev, cur, i) => {
   for (let i = 0; i < tokens.length; i += 1) {
     let value = fixedTokens[fixedTokens.length - 1];
 
@@ -114,13 +113,18 @@ export function reduceFromAST(tokens, convert, expressions) {
     let left = tokens[i - 1]
     let right = tokens[i + 1];
 
-    // FIXME: function application is the same as for symbols, units and such
-    // they all behave the same, but the consequences are different...
+    // partial calls
     if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
       const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
+      const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
 
-      if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
-      if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
+      // inject argument!
+      if (placeholder >= 0) {
+        rightToken[2][0][placeholder] = left;
+      } else {
+        if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
+        if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
+      }
 
       const result = reduceFromAST([rightToken], convert, expressions);
       const subTree = result.concat(tokens.slice(i + 2));

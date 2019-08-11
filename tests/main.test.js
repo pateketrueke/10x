@@ -150,14 +150,17 @@ describe('DSL', () => {
       expect(toTree('0|>sum 1 2|>sum(3,4)')).to.eql(toTree('0|>sum(1,2)|>sum 3 4'));
       expect(value('sum(x,y,z)=x+y+z;0|>sum 1 2|>sum 3 4')).to.eql(['10']);
 
-      // FIXME: using a _ placeholder could determine the position of the injected argument?
       expect(toTree('0|>sum 1 2 3')).to.eql([
         ['number', '0'],
         ['fx', '|>', 'rpipe'],
         ['def', 'sum', [[['number', '1'], ['expr', ',', 'or'], ['number', '2'], ['expr', ',', 'or'], ['number', '3']]]],
       ]);
 
-      expect(value('sum(a,b,c)=a+b+c;0|>sum 1 2 3')).to.eql(['6']);
+      expect(value('sum(a,b,c)=a+b+c;2|>sum 4 6')).to.eql(['12']);
+      expect(value('sum(a,b,c)=a+b+c;0<|sum 1 2 3')).to.eql(['3']);
+      expect(value('sum(a,b,c)=a+b+c;0<|sum _ 2 3')).to.eql(['5']);
+      expect(value('sum(a,b,c)=a+b+c;0<|sum 1 _ 3')).to.eql(['4']);
+      expect(value('sum(a,b,c)=a+b+c;0<|sum 1 2 _')).to.eql(['3']);
     });
   })
 
