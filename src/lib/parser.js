@@ -621,6 +621,13 @@ export function fixCalls(def) {
     const left = tokens[i - 1];
     const right = tokens[i + 1];
 
+    // group unit-calls and arguments
+    if (cur[0] === 'def' && !cur[2] && right && Array.isArray(right[0])) {
+      tokens.splice(i + 1, 1);
+      cur[2] = [right];
+      continue;
+    }
+
     // append all given tokens to previous unit-definitions
     if (left && left[0] === 'def' && cur[0] !== 'fx') {
       if (left[2] && cur[0] !== 'expr') {

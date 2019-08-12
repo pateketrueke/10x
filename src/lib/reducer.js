@@ -114,7 +114,29 @@ export function reduceFromAST(tokens, convert, expressions) {
     let right = tokens[i + 1];
 
     // partial calls
-    // FIXME: how these works?
+    // FIXME: how these works? they should work on single arguments, e.g.
+    // n5=sum<|5; (internally called as sum(_,5))
+    // ^ it would defined as `n5(_)=sum(_,5);`
+    // console.log({left,cur,right});
+    // if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
+      // const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
+      // const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
+
+      // // inject argument!
+      // if (placeholder >= 0) {
+      //   rightToken[2][0][placeholder] = left;
+      // } else {
+      //   if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
+      //   if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
+      // }
+
+      // const result = reduceFromAST([rightToken], convert, expressions);
+      // const subTree = result.concat(tokens.slice(i + 2));
+
+      // fixedTokens.pop();
+      // fixedTokens.push(reduceFromAST(subTree, convert, expressions)[0]);
+      // break;
+    // }
 
     // apply symbol-accessor op
     if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
@@ -176,7 +198,7 @@ export function reduceFromAST(tokens, convert, expressions) {
       }
 
       // side-effects will operate on previous values
-      const call = expressions[cur[1]];
+      const call = expressions[cur[1]] ? expressions[cur[1]].slice() : null;
       const args = cur[2] || tokens[i + 1];
 
       // skip undefined calls
@@ -184,6 +206,12 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // compute valid sub-expressions from arguments
       const locals = reduceFromArgs(call[0].filter(x => x[0] === 'unit'), args);
+
+      // prepend the  _ symbol to already curried functions
+      if (call[1][0] === 'def') {
+        call.splice(1, 0, ...(args[0] || [['unit', '_']]), ['fx', '<|', 'lpipe']);
+        call.unshift([]);
+      }
 
       // replace all given units within the AST
       cur = reduceFromTokens(call.slice(2), locals);
