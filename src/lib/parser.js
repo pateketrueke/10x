@@ -714,7 +714,7 @@ export function fixTree(ast) {
       }
 
       // otherwise, we just fix everything!
-      tokens.splice(i, i + tokens.length, fixCalls(tokens.slice(i)));
+      tokens.splice(i, i + tokens.length, ...fixCalls(tokens.slice(i)));
       while (tokens.length === 1) tokens = tokens[0];
       break;
     }

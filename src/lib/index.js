@@ -1,10 +1,10 @@
 import {
-  transform, toToken,
+  transform, toToken, toList,
 } from './transform';
 
 import {
   parseBuffer, joinTokens, fixTree,
-  isOp, isInt, isSep, toFraction, toNumber, toValue,
+  isInt, toFraction, toNumber, toValue,
 } from './parser';
 
 import { reduceFromAST } from './reducer';
@@ -87,100 +87,74 @@ export default class Solvente {
     return this;
   }
 
-  maths() {
-    const normalized = [];
+  result(token) {
+    token[1] = toNumber(token[1]);
 
-    let offset = 0;
-    let chunks;
+    if (
+      token[2]
+      && token[0] === 'number'
+      && !(isInt(token[1]) || token[1] instanceof Date)
+    ) {
+      // remove trailing words from units
+      token[1] = token[1].replace(/[\sa-z/-]+$/ig, '');
+    }
+
+    let fixedValue = toValue(token[1]);
+    let fixedUnit = token[2];
+
+    // adjust unit-fractions
+    if (fixedUnit && fixedUnit.indexOf('fr-') === 0) {
+      fixedValue = toFraction(fixedValue);
+      fixedUnit = fixedUnit.split('fr-')[1];
+    }
+
+    // add thousand separators
+    if (isInt(fixedValue)) {
+      fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    if (
+      fixedUnit
+      && !(['datetime', 'x-fraction'].includes(fixedUnit) || token[1] instanceof Date)
+    ) {
+      // apply well-known inflections
+      if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
+        const [one, many] = this.inflections[fixedUnit];
+        const base = parseFloat(fixedValue);
+
+        if (base === 1.0 && one) fixedUnit = one;
+        if (base !== 1.0 && many) fixedUnit = many;
+      }
+
+      if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
+        fixedValue += ` ${fixedUnit}`;
+      }
+    }
+
+    return {
+      val: token[1],
+      type: token[0],
+      format: typeof fixedValue !== 'string'
+        ? JSON.stringify(fixedValue)
+        : fixedValue,
+    };
+  }
+
+  maths(tokens) {
+    tokens = tokens || this.tree;
+
+    const chunks = toList(tokens, false);
+    const results = [];
 
     try {
-      // split over single values...
-      chunks = reduceFromAST(this.tree, this.convert, this.expressions)
-        .reduce((prev, cur) => {
-          const lastValue = prev[prev.length - 1] || [];
-
-          if (lastValue[0] === 'number' && cur[0] === 'number') {
-            prev.push(['expr', ';', 'k'], cur);
-          } else prev.push(cur);
-
-          return prev;
-        }, []);
+      chunks.forEach(ast => {
+        results.push(...toList(reduceFromAST(ast, this.convert, this.expressions)));
+      });
     } catch (e) {
       this.error = e;
       return null;
     }
 
-    // join chunks into final expressions
-    for (let i = 0; i < chunks.length; i += 1) {
-      const cur = chunks[i];
-
-      normalized[offset] = normalized[offset] || [];
-      normalized[offset].push(cur);
-
-      // make sure we split from all remaining separators
-      if (cur[0] === 'expr' && isSep(cur[1])) {
-        normalized[offset].pop();
-
-        // ensure we keep no empty chunks
-        if (normalized[offset].length) offset += 1;
-        else normalized.length = offset;
-      }
-    }
-
-    // FIXME: move this logic apart...
-    return normalized.map(x => {
-      const value = calculateFromTokens(x).slice();
-
-      value[1] = toNumber(value[1]);
-
-      if (
-        value[2]
-        && value[0] === 'number'
-        && !(isInt(value[1]) || value[1] instanceof Date)
-      ) {
-        // remove trailing words from units
-        value[1] = value[1].replace(/[\sa-z/-]+$/ig, '');
-      }
-
-      let fixedValue = toValue(value[1]);
-      let fixedUnit = value[2];
-
-      // adjust unit-fractions
-      if (fixedUnit && fixedUnit.indexOf('fr-') === 0) {
-        fixedValue = toFraction(fixedValue);
-        fixedUnit = fixedUnit.split('fr-')[1];
-      }
-
-      // add thousand separators
-      if (isInt(fixedValue)) {
-        fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-      }
-
-      if (
-        fixedUnit
-        && !(['datetime', 'x-fraction'].includes(fixedUnit) || value[1] instanceof Date)
-      ) {
-        // apply well-known inflections
-        if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
-          const [one, many] = this.inflections[fixedUnit];
-          const base = parseFloat(fixedValue);
-
-          if (base === 1.0 && one) fixedUnit = one;
-          if (base !== 1.0 && many) fixedUnit = many;
-        }
-
-        if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
-          fixedValue += ` ${fixedUnit}`;
-        }
-      }
-
-      return {
-        val: value[1],
-        type: value[0],
-        format: typeof fixedValue !== 'string'
-          ? JSON.stringify(fixedValue)
-          : fixedValue,
-      };
-    });
+    return results.map(x => this.result(calculateFromTokens(x)));
   }
 }

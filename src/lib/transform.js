@@ -1,7 +1,41 @@
 import {
-  isOp, isFx, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr, hasKeyword, hasOwnKeyword, hasDatetime, hasMonths, hasDays,
-  getOp, buildTree,
+  isOp, isFx, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr,
+  hasKeyword, hasOwnKeyword, hasDatetime, hasMonths, hasDays,
+  buildTree, getOp,
 } from './parser';
+
+export function toList(tokens, nums) {
+  const normalized = [];
+
+  let chunks = [];
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    if (tokens[i][0] === 'expr' && isSep(tokens[i][1])) {
+      normalized.push(chunks);
+      chunks = [];
+      continue;
+    }
+
+    if (nums !== false) {
+      const lastValue = chunks[chunks.length - 1] || [];
+
+      if (lastValue[0] === 'number' && tokens[i][0] === 'number') {
+        normalized.push(chunks);
+        chunks = [tokens[i]];
+        continue;
+      }
+    }
+
+    chunks.push(tokens[i]);
+  }
+
+  if (chunks.length) {
+    normalized.push(chunks);
+    chunks = [];
+  }
+
+  return normalized;
+}
 
 export function toToken(offset, fromCallback, arg1, arg2, arg3, arg4) {
   if (typeof offset === 'object') {
