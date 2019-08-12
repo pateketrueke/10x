@@ -10,6 +10,8 @@ export function toList(tokens, nums) {
   let chunks = [];
 
   for (let i = 0; i < tokens.length; i += 1) {
+    if (!tokens[i]) continue;
+
     if (tokens[i][0] === 'expr' && isSep(tokens[i][1])) {
       normalized.push(chunks);
       chunks = [];
