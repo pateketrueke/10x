@@ -665,6 +665,12 @@ export function fixCalls(def) {
         continue;
       }
     }
+
+    // unit-calls without arguments receives _
+    if (left && left[0] === 'fx' && cur[0] === 'unit' && right && right[0] === 'expr') {
+      cur[2] = [[['symbol', '_']]];
+      cur[0] = 'def';
+    }
   }
 
   return [].concat(args.length ? [args] : []).concat(tokens);
