@@ -150,8 +150,11 @@ export function operateExpression(ops, expr) {
           } else {
             result = toNumber(prev[1]);
           }
-        } else if (hasPercent(next[1])) {
-          result = parseFloat(prev[1]) + (parseFloat(prev[1]) * (parseFloat(next[1]) / 100));
+        } else if (hasPercent(next[1]) || hasPercent(prev[1])) {
+          // FIXME: improve this shit=
+          result = hasPercent(next[1])
+            ? parseFloat(prev[1]) + (parseFloat(prev[1]) * (parseFloat(next[1]) / 100))
+            : parseFloat(next[1]) + (parseFloat(next[1]) * (parseFloat(prev[1]) / 100));
         } else {
           result = evaluateExpression(cur[1], parseFloat(toNumber(prev[1])), parseFloat(toNumber(next[1])));
         }
