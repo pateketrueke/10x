@@ -689,17 +689,7 @@ export function fixTree(ast) {
 
     // look for partial-applications
     if (cur[0] === 'def' && cur[2]) {
-      const fixedDef = fixTree(cur[2]);
-      const lastOffset = fixedDef.length - 1;
-
-      if (
-        (fixedDef[0][0] === 'expr' && fixedDef[0][1] === '=')
-        && (fixedDef[lastOffset][0] === 'expr' && fixedDef[lastOffset][1] === ';')
-      ) {
-        cur[2] = fixedDef;
-      } else {
-        cur[2] = fixCalls(cur[2]);
-      }
+      cur[2] = fixCalls(fixTree(cur[2]));
     }
 
     if (next && next[0] === 'fx' && ['lpipe', 'rpipe'].includes(next[2]) && cur[0] !== 'symbol') {
