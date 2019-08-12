@@ -123,7 +123,6 @@ export function reduceFromAST(tokens, convert, expressions) {
     // FIXME: how these works? they should work on single arguments, e.g.
     // n5=sum<|5; (internally called as sum(_,5))
     // ^ it would defined as `n5(_)=sum(_,5);`
-    // console.log({left,cur,right});
     if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
       const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
       const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
