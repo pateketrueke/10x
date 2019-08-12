@@ -607,7 +607,8 @@ export function fixApply(kind, body, args) {
 }
 
 export function fixCalls(def) {
-  let tokens = def.filter(x => !hasTagName(x[0]));
+  const tokens = def.filter(x => !hasTagName(x[0]));
+
   let args = [];
 
   // eat arguments from input, usually an array
@@ -656,6 +657,13 @@ export function fixCalls(def) {
         left[0] = 'def';
         continue;
       }
+    }
+
+    // append expressions after unit-calls
+    if (left && left[0] === 'def' && Array.isArray(cur[0])) {
+      tokens.splice(i, 1);
+      left[2] = [cur];
+      continue;
     }
   }
 
