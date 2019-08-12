@@ -8,13 +8,13 @@ const calc = (expr, opts, no) => {
 };
 
 const value = (expr, opts, no) => {
-  const c = calc(expr, opts);
+  const c = calc(expr, opts, no);
   const x = c.maths();
   if (!no && c.error) throw c.error;
   return x.map(x => x.format);
 }
 
-const toTree = (expr, opts) => calc(expr, opts).tree;
+const toTree = (expr, opts) => calc(expr, opts, true).tree;
 
 describe('DSL', () => {
   describe('Basic math operations', () => {

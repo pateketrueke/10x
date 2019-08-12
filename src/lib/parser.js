@@ -710,6 +710,7 @@ export function fixTree(ast) {
     if (next && next[0] === 'fx' && ['lpipe', 'rpipe'].includes(next[2]) && cur[0] !== 'symbol') {
       const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' || x[0] === 'fx');
 
+      // make sure we're extending valid combinations...
       if (prev && prev[0] !== 'expr' && offset > 0) {
         if (prev[0] === 'def' && !prev[2]) {
           tokens.splice(i + 1, 0, ...fixCalls(tokens.splice(i + 1, i + offset - 1)));
@@ -717,6 +718,7 @@ export function fixTree(ast) {
         }
       }
 
+      // otherwise, we just fix everything!
       tokens.splice(i, i + tokens.length, fixCalls(tokens.slice(i)));
       while (tokens.length === 1) tokens = tokens[0];
       break;
