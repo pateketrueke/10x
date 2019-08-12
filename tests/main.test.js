@@ -9,7 +9,7 @@ const calc = (expr, opts, no) => {
 
 const value = (expr, opts, no) => {
   const c = calc(expr, opts, no);
-  const x = c.maths();
+  const x = c.eval();
   if (!no && c.error) throw c.error;
   return x.map(x => x ? x.format : x);
 }

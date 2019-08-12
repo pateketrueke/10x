@@ -34,7 +34,7 @@ describe('Playbook', () => {
 
       if (x.error) throw x.error;
 
-      deepEqual(c.maths().map(x => x.format), test[1]);
+      deepEqual(c.eval().map(x => x.format), test[1]);
     });
   });
 });

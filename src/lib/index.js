@@ -50,11 +50,6 @@ export default class Solvente {
     this.input = [];
     this.tree = [];
 
-    // try built-ins first
-    this.convert = (num, base, target) => {
-      return convertFrom(num, base, target);
-    };
-
     // extend units from custom expressions
     if (typeof opts.expressions === 'object') {
       Object.keys(opts.expressions).forEach(key => {
@@ -87,7 +82,7 @@ export default class Solvente {
     return this;
   }
 
-  result(token) {
+  value(token) {
     token[1] = toNumber(token[1]);
 
     if (
@@ -140,7 +135,7 @@ export default class Solvente {
     };
   }
 
-  maths(tokens) {
+  eval(tokens) {
     tokens = tokens || this.tree;
 
     const chunks = toList(tokens, false);
@@ -148,13 +143,13 @@ export default class Solvente {
 
     try {
       chunks.forEach(ast => {
-        results.push(...toList(reduceFromAST(ast, this.convert, this.expressions)));
+        results.push(...toList(reduceFromAST(ast, convertFrom, this.expressions)));
       });
     } catch (e) {
       this.error = e;
       return null;
     }
 
-    return results.map(x => this.result(calculateFromTokens(x)));
+    return results.map(x => this.value(calculateFromTokens(x)));
   }
 }
