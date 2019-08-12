@@ -200,6 +200,7 @@ export function transform(input, units, types) {
 
     // flag possible expressions
     if (hasNum(cur) || isFx(cur)) inMaths = true;
+    else if (cur === ';') inMaths = false;
 
     let inExpr = stack[stack.length - 1];
     let key = i;
