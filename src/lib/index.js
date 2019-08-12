@@ -70,7 +70,7 @@ export default class Solvente {
 
     try {
       const tokens = transform(this.input, this.units, ast.types);
-      const fixedAST = tokens.ast.map(x => toToken(x, () => x.slice()));
+      const fixedAST = JSON.parse(JSON.stringify(tokens.ast));
 
       this.error = tokens.error;
       this.tokens = fixedAST;

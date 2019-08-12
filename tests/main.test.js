@@ -11,7 +11,7 @@ const value = (expr, opts, no) => {
   const c = calc(expr, opts, no);
   const x = c.maths();
   if (!no && c.error) throw c.error;
-  return x.map(x => x.format);
+  return x.map(x => x ? x.format : x);
 }
 
 const toTree = (expr, opts) => calc(expr, opts, true).tree;
