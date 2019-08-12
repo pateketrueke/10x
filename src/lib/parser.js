@@ -658,13 +658,6 @@ export function fixCalls(def) {
         continue;
       }
     }
-
-    // append expressions after unit-calls
-    if (left && left[0] === 'def' && Array.isArray(cur[0])) {
-      tokens.splice(i, 1);
-      left[2] = [cur];
-      continue;
-    }
   }
 
   return [args].concat(tokens);
