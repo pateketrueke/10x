@@ -644,9 +644,9 @@ export function fixCalls(def) {
 
     // handle partial-application calls
     if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
-      if (left[0] !== 'def' && right[0] === 'def' && tokens[i - 2]) {
+      if (Array.isArray(left[0]) && right[0] === 'def' && tokens[i - 2]) {
         tokens[i - 2][0] = 'def';
-        tokens[i - 2][2] = [[left]];
+        tokens[i - 2][2] = [left];
         tokens.splice(i - 3, 3, cur, tokens[i - 2]);
         continue;
       }
