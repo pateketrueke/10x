@@ -102,6 +102,7 @@ describe('DSL', () => {
 
     it('should handle local expressions', () => {
       expect(value("x'=1.2;3x'")).to.eql(['3.6']);
+      expect(value('just1_fix=0.1;2just1_fix')).to.eql(['0.2']);
     });
 
     it('should handle external expressions', () => {

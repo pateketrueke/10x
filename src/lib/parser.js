@@ -429,8 +429,8 @@ export function parseBuffer(text, fixeds) {
       || (isMoney(last) && hasNum(cur))
       || (isChar(last) && isAny(cur, ':'))
       || (last === ',' && isNum(cur) && !open)
-      || (isChar(last) && cur === '_' && isChar(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
+      || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
 
       // keep some separators between numbers
       || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
