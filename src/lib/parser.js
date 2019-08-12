@@ -606,27 +606,25 @@ export function fixApply(kind, body, args) {
   return [];
 }
 
-export function fixCalls(def, expr) {
-  if (def.length < 3) return def;
-
+export function fixCalls(def) {
+  let tokens = def.filter(x => !hasTagName(x[0]));
   let args = [];
-  let stack = [];
 
   // eat arguments from input, usually an array
-  if (Array.isArray(def[0])) {
-    args = def.shift();
+  if (Array.isArray(tokens[0])) {
+    args = tokens.shift();
   }
 
-  for (let i = 0; i < def.length; i += 1) {
-    const cur = def[i];
-    const left = def[i - 1];
-    const right = def[i + 1];
+  for (let i = 0; i < tokens.length; i += 1) {
+    const cur = tokens[i];
+    const left = tokens[i - 1];
+    const right = tokens[i + 1];
 
     // append all given tokens to previous unit-definitions
     if (left && left[0] === 'def' && cur[0] !== 'fx') {
       if (left[2] && cur[0] !== 'expr') {
-        const cut = def.slice(i + 1).findIndex(x => ['fx', 'expr'].includes(x[0]));
-        const subTree = cut >= 0 ? def.splice(i, i + cut - 1) : def.splice(i);
+        const cut = tokens.slice(i + 1).findIndex(x => ['fx', 'expr'].includes(x[0]));
+        const subTree = cut >= 0 ? tokens.splice(i, i + cut - 1) : tokens.splice(i);
 
         left[2][0] = left[2][0].concat(fixInput(subTree, true));
         continue;
@@ -638,34 +636,30 @@ export function fixCalls(def, expr) {
       if (right[0] !== 'expr') {
         cur[0] = 'def';
         cur[2] = [[right]];
-        def.splice(i + 1, 1);
+        tokens.splice(i + 1, 1);
         continue;
       }
     }
 
     // handle partial-application calls
     if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
-      if (left[0] !== 'def' && right[0] === 'def' && def[i - 2]) {
-        def[i - 2][0] = 'def';
-        def[i - 2][2] = [[left]];
-        def.splice(i - 3, 3, cur, def[i - 2]);
+      if (left[0] !== 'def' && right[0] === 'def' && tokens[i - 2]) {
+        tokens[i - 2][0] = 'def';
+        tokens[i - 2][2] = [[left]];
+        tokens.splice(i - 3, 3, cur, tokens[i - 2]);
         continue;
       }
 
       // compose from previous calls
       if (left[0] === 'unit') {
-        def.splice(i, 2, fixApply(cur[2], right, args));
+        tokens.splice(i, 2, fixApply(cur[2], right, args));
         left[0] = 'def';
         continue;
       }
     }
   }
 
-  if (expr) {
-    return args.concat(def);
-  }
-
-  return [args].concat(def);
+  return [args].concat(tokens);
 }
 
 export function fixTree(ast) {
