@@ -612,7 +612,7 @@ export function fixCalls(def) {
   let args = [];
 
   // eat arguments from input, usually an array
-  if (Array.isArray(tokens[0])) {
+  if (Array.isArray(tokens[0][0])) {
     args = tokens.shift();
   }
 
@@ -624,8 +624,8 @@ export function fixCalls(def) {
     // append all given tokens to previous unit-definitions
     if (left && left[0] === 'def' && cur[0] !== 'fx') {
       if (left[2] && cur[0] !== 'expr') {
-        const cut = tokens.slice(i + 1).findIndex(x => ['fx', 'expr'].includes(x[0]));
-        const subTree = cut >= 0 ? tokens.splice(i, i + cut - 1) : tokens.splice(i);
+        const cut = tokens.slice(i).findIndex(x => ['fx', 'expr'].includes(x[0]));
+        const subTree = cut > 0 ? tokens.splice(i, cut) : tokens.splice(i);
 
         left[2][0] = left[2][0].concat(fixInput(subTree, true));
         continue;
@@ -660,7 +660,7 @@ export function fixCalls(def) {
     }
   }
 
-  return [args].concat(tokens);
+  return [].concat(args.length ? [args] : []).concat(tokens);
 }
 
 export function fixTree(ast) {
