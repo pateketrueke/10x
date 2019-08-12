@@ -57,6 +57,7 @@ export const isExpr = x => /^(?:from|for|to|of|a[ts]|in)$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
 export const isMoney = x => CURRENCY_MAPPINGS[x];
 export const isAlpha = x => ALPHA_MAPPINGS[x];
+export const isUpper = x => /^[A-Z]+/.test(x);
 export const isJoin = x => '_.'.includes(x);
 
 export const getOp = x => OP_TYPES[x];
@@ -429,8 +430,8 @@ export function parseBuffer(text, fixeds) {
       || (last === '_' && isChar(cur))
       || (hasNum(last) && cur === '%')
       || (isMoney(last) && hasNum(cur))
-      || (isChar(last) && isAny(cur, ':'))
       || (last === ',' && isNum(cur) && !open)
+      || (isChar(last) && isAny(cur, ':') && next !== ':')
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
       || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
 
@@ -448,8 +449,8 @@ export function parseBuffer(text, fixeds) {
       || ('+-'.includes(last) && cur === last)
       || ('.|&'.includes(last) && last === cur)
       || ('!<>='.includes(last) && cur === '=')
-      || (last === ':' && (cur === ':' || hasNum(cur) || isChar(cur)))
       || ('-|~'.includes(last) && cur === '>') || (last === '<' && '|-'.includes(cur))
+      || (last === ':' && (cur === ':' || hasNum(cur) || (isChar(cur) && !isUpper(cur))))
 
       // keep chars and numbers together
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
