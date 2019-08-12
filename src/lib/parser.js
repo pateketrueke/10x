@@ -617,7 +617,7 @@ export function fixCalls(def) {
   }
 
   for (let i = 0; i < tokens.length; i += 1) {
-    const cur = tokens[i];
+    const cur = tokens[i].slice();
     const left = tokens[i - 1];
     const right = tokens[i + 1];
 
