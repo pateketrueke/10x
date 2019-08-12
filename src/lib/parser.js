@@ -641,7 +641,7 @@ export function fixCalls(def) {
 
     // handle units with single arguments
     if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
-      if (right[0] !== 'expr') {
+      if (right && right[0] !== 'expr') {
         cur[0] = 'def';
         cur[2] = [[right]];
         tokens.splice(i + 1, 1);
@@ -668,7 +668,7 @@ export function fixCalls(def) {
     }
 
     // unit-calls without arguments receives _
-    if (left && left[0] === 'fx' && cur[0] === 'unit' && right && right[0] === 'expr') {
+    if (left && left[0] === 'fx' && cur[0] === 'unit' && (!right || right[0] === 'expr')) {
       cur[2] = [[['symbol', '_']]];
       cur[0] = 'def';
     }

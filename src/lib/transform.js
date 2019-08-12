@@ -269,8 +269,8 @@ export function transform(input, units, types) {
       || (cur === '[]' || cur === '{}')
       || (cur === '|>' || cur === '<|')
       || (cur[0] === '"' || '=!<>'.includes(cur))
-      || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]))
       || (cur[0] === '.' && cur[1] === '.' && nextToken !== '.')
+      || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]) && cur !== '//')
 
       // handle sub-calls, symbols and side-effects
       || (cur === '(' && (oldToken === ',' || isFx(nextToken) || isFx(prevToken) || hasNum(nextToken) || hasKeyword(nextToken, units)))
