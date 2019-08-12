@@ -57,8 +57,14 @@ export function reduceFromTokens(tree, values) {
       return reduceFromTokens(item, values);
     }
 
-    // one matches, replace!
-    if (values[item[1]]) return values[item[1]];
+    // replace token within unit-calls
+    if (item[0] === 'def') {
+      item[2][0] = reduceFromTokens(item[2][0], values);
+    }
+
+    // return as soon one matches!
+    if (item[0] === 'unit' && values[item[1]]) return values[item[1]];
+
     return item;
   });
 }
@@ -199,7 +205,7 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // side-effects will operate on previous values
       const call = expressions[cur[1]] ? expressions[cur[1]].slice() : null;
-      const args = cur[2] || tokens[i + 1];
+      const args = cur[2];
 
       // skip undefined calls
       if (!call) continue;
