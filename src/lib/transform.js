@@ -269,6 +269,7 @@ export function transform(input, units, types) {
       || (cur[0] === ':')
       || (cur === '[]' || cur === '{}')
       || (cur === '|>' || cur === '<|')
+      || (isChar(cur) && nextToken === '::')
       || (cur[0] === '"' || '=!<>'.includes(cur))
       || (cur[0] === '.' && cur[1] === '.' && nextToken !== '.')
       || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]) && cur !== '//')

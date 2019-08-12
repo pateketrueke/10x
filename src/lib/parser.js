@@ -16,6 +16,8 @@ const OP_TYPES = {
   '&&': 'and',
   '||': 'x-or',
   '~>': 'void',
+  '->': 'func',
+  '<-': 'bind',
   '|>': 'rpipe',
   '<|': 'lpipe',
   '<': 'lt',
@@ -447,7 +449,7 @@ export function parseBuffer(text, fixeds) {
       || ('.|&'.includes(last) && last === cur)
       || ('!<>='.includes(last) && cur === '=')
       || (last === ':' && (cur === ':' || hasNum(cur) || isChar(cur)))
-      || ('|~'.includes(last) && cur === '>') || (last === '<' && cur === '|')
+      || ('-|~'.includes(last) && cur === '>') || (last === '<' && '|-'.includes(cur))
 
       // keep chars and numbers together
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
