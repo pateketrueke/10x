@@ -124,25 +124,25 @@ export function reduceFromAST(tokens, convert, expressions) {
     // n5=sum<|5; (internally called as sum(_,5))
     // ^ it would defined as `n5(_)=sum(_,5);`
     // console.log({left,cur,right});
-    // if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
-      // const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
-      // const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
+    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
+      const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
+      const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
 
-      // // inject argument!
-      // if (placeholder >= 0) {
-      //   rightToken[2][0][placeholder] = left;
-      // } else {
-      //   if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
-      //   if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
-      // }
+      // inject argument!
+      if (placeholder >= 0) {
+        rightToken[2][0][placeholder] = left;
+      } else {
+        if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
+        if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
+      }
 
-      // const result = reduceFromAST([rightToken], convert, expressions);
-      // const subTree = result.concat(tokens.slice(i + 2));
+      const result = reduceFromAST([rightToken], convert, expressions);
+      const subTree = result.concat(tokens.slice(i + 2));
 
-      // fixedTokens.pop();
-      // fixedTokens.push(reduceFromAST(subTree, convert, expressions)[0]);
-      // break;
-    // }
+      fixedTokens.pop();
+      fixedTokens.push(reduceFromAST(subTree, convert, expressions)[0]);
+      break;
+    }
 
     // apply symbol-accessor op
     if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
