@@ -661,6 +661,7 @@ export function fixCalls(def) {
       // compose from previous calls
       if (left[0] === 'unit') {
         tokens.splice(i, 2, fixApply(cur[2], right, args));
+        left._curry = cur.slice();
         left[0] = 'def';
         continue;
       }

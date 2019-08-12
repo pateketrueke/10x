@@ -213,8 +213,8 @@ export function reduceFromAST(tokens, convert, expressions) {
       const locals = reduceFromArgs(call[0].filter(x => x[0] === 'unit'), args);
 
       // prepend the  _ symbol to already curried functions
-      if (call[1][0] === 'def') {
-        call.splice(1, 0, ...(args[0] || [['unit', '_']]), ['fx', '<|', 'lpipe']);
+      if (call[1][0] === 'def' && call[1]._curry) {
+        call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
         call.unshift([]);
       }
 
