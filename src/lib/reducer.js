@@ -232,7 +232,19 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // replace all given units within the AST
       cur = reduceFromTokens(call.slice(2), locals);
-      console.log({cur,args:args[0],locals});
+
+      if (cur[0][0] === 'fn') {
+        const fixedArgs = fixArgs(args);
+
+        // apply lambda-calls as we have arguments
+        while (cur[0][0] === 'fn' && fixedArgs.length) {
+          locals[cur[0][1]] = fixedArgs.shift();
+          cur[0][2] = reduceFromTokens(cur[0][2], locals);
+          cur[0][0] = 'def';
+          cur = cur[0][2];
+        }
+      }
+
       cur = calculateFromTokens(reduceFromAST(cur, convert, expressions));
     }
 

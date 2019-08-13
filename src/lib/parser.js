@@ -613,7 +613,7 @@ export function fixApply(kind, body, args) {
   return [];
 }
 
-export function fixCalls(def) {
+export function fixCalls(def, skip) {
   const tokens = def.filter(x => !hasTagName(x[0]));
 
   let args = [];
@@ -684,18 +684,15 @@ export function fixCalls(def) {
       cur[0] = 'def';
     }
 
+    // decorate lambda-calls as they can be nested...
     if (cur[0] === 'unit' && right && right[0] === 'fx' && right[2] === 'func') {
       const offset = tokens.slice(i).findIndex(x => x[0] === 'expr' && isSep(x[1]));
       const subTree = offset > 0 ? tokens.splice(i + 1, i + offset - 2) : tokens.splice(i + 1);
-      const definition = fixCalls(subTree.slice(1));
 
-      tokens.splice(i - 1, 0, []);
+      if (!skip) tokens.splice(i - 1, 0, []);
 
+      cur[2] = fixCalls(subTree.slice(1), true);
       cur[0] = 'fn';
-      cur[1] = x => { console.log({x,definition}); };
-
-      // tokens.splice(i, 0, ['number', '4'], ['fx', '<|', 'lpipe']);
-      // console.log(require('util').inspect({tokens},{depth:10,colors:true}));
       break;
     }
   }
