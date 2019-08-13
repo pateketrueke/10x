@@ -419,7 +419,7 @@ export function parseBuffer(text, fixeds) {
     }
 
     // disable quotes from separators
-    if (inBlock && cur === '"' && last !== '\\' && isSep(next, '\n')) {
+    if (inBlock !== 'multiline' && cur === '"' && last !== '\\' && isSep(next, '\n')) {
       inBlock = false;
     }
 
@@ -435,15 +435,17 @@ export function parseBuffer(text, fixeds) {
       || (hasNum(last) && cur === '%')
       || (isMoney(last) && hasNum(cur))
       || (last === ',' && isNum(cur) && !open)
-      || (isChar(last) && isAny(cur, ':') && next !== ':')
+      || (buffer[0] === ':' && cur === '-' && isNum(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
+      || (isChar(last) && isAny(cur, ':') && !':-'.includes(next) && !isNum(next))
       || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
 
       // keep some separators between numbers
       || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
 
       // handle checkboxes
-      || (last === '[' && next === ']') || (' x'.includes(last) && cur === ']' && chars[i - 2] === '[')
+      || (' x'.includes(last) && cur === ']')
+      || (last === '[' && !hasNum(cur) && next === ']')
 
       // handle numbers, including negatives between ops; notice all N-N are splitted
       || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
@@ -726,7 +728,11 @@ export function fixTree(ast) {
 
     // look for partial-applications
     if (cur[0] === 'def' && cur[2]) {
-      cur[2] = fixCalls(fixTree(cur[2]));
+      if (cur[2]._array || cur[2]._object) {
+        // FIXME: what to do?
+      } else {
+        cur[2] = fixCalls(fixTree(cur[2]));
+      }
     }
 
     if (next && next[0] === 'fx' && ['lpipe', 'rpipe'].includes(next[2]) && cur[0] !== 'symbol') {

@@ -198,10 +198,6 @@ export function transform(input, units, types) {
       return prev;
     }
 
-    // flag possible expressions
-    if (hasNum(cur) || isFx(cur)) inMaths = true;
-    else if (cur === ';') inMaths = false;
-
     let inExpr = stack[stack.length - 1];
     let key = i;
 
@@ -209,8 +205,14 @@ export function transform(input, units, types) {
       nextToken = input[++key];
     } while (nextToken && nextToken.charAt() === ' ');
 
-    // flag local variables
-    if (isChar(cur) && '[{(='.includes(nextToken)) vars[cur] = 1;
+    // always disable evaluation on ;
+    if (cur === ';') inMaths = false;
+
+    // flag possible expressions
+    if (
+      hasNum(cur) || isFx(cur)
+      || (vars[cur] && isOp(nextToken))
+    ) inMaths = true;
 
     // handle expression blocks
     if (inExpr) {
@@ -258,12 +260,17 @@ export function transform(input, units, types) {
         units[cur] = cur;
       }
 
+      // save as local too!
+      vars[cur] = 1;
+
       return prev;
     }
 
     if (
+      vars[cur]
+
       // handle most values
-      isSep(cur) || isNum(cur)
+      || isSep(cur) || isNum(cur)
 
       // keep logical ops
       || (cur[0] === ':')
@@ -297,16 +304,8 @@ export function transform(input, units, types) {
       || ((hasNum(cur) || isChar(cur) || hasKeyword(cur, units)) && vars[prevToken])
 
       || (inMaths && (
-        vars[cur]
-
-        // allow placeholders
-        || (cur === '_')
-
-        // handle units after separators
-        || (vars[cur] && oldToken === ',')
-
         // allow units between ops/expressions
-        || ((isChar(cur) || hasKeyword(cur, units)) && (
+        ((isChar(cur) || hasKeyword(cur, units)) && (
           isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)
         ))
 
@@ -314,12 +313,12 @@ export function transform(input, units, types) {
         || (isOp(cur) && ((hasNum(prevToken) || isChar(prevToken)) || (isChar(nextToken) || hasNum(nextToken))))
       ))
     ) {
-      const fixedToken = toToken(i, fromSymbols, cur, units, null, prevToken);
+      const t = toToken(i, fromSymbols, cur, units, null, prevToken);
 
       // register units to help detection and proper tokenization!
-      if (fixedToken[0] === 'unit') vars[fixedToken[1]] = 1;
+      if (['unit', 'def'].includes(t[0])) vars[t[1]] = 1;
 
-      prev.push(fixedToken);
+      prev.push(t);
     } else {
       prev.push(toToken(i, fromMarkdown, cur));
     }

@@ -99,6 +99,9 @@ export function reduceFromEffect(value, args, def) {
     fixedValue = fixedValue[def.substr(1)];
   }
 
+  // FIXME: apply ranges, e.g. n-m, -n, n..-m, etc.
+  console.log({value,args,def});
+
   fixedValue = typeof fixedValue === 'string' ? `"${fixedValue}"` : fixedValue;
 
   // recast previous token with the new value
@@ -119,16 +122,7 @@ export function reduceFromAST(tokens, convert, expressions) {
     let left = tokens[i - 1]
     let right = tokens[i + 1];
 
-    // lambda calls
-
-    // if (cur[0] === 'fn') {
-    //   continue;
-    // }
-
     // partial calls
-    // FIXME: how these works? they should work on single arguments, e.g.
-    // n5=sum<|5; (internally called as sum(_,5))
-    // ^ it would defined as `n5(_)=sum(_,5);`
     if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
       const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
       const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
