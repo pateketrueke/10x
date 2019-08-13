@@ -21,7 +21,7 @@ const calc = new Solvente({
 
 calc.resolve(argv.join(' '));
 
-const fixedResults = calc.maths();
+const fixedResults = calc.eval();
 const fixedError = calc.error && calc.error.stack;
 
 process.stdout.write(JSON.stringify({

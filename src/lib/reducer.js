@@ -196,12 +196,6 @@ export function reduceFromAST(tokens, convert, expressions) {
       break;
     }
 
-    // lambda calls
-    // // console.log({call,args,locals});
-    // if (cur[0] === 'unit') { // && right && right[0] === 'fx' && right[2] === 'func') {
-    // }
-    // console.log({left,cur,right});
-
     // handle var/call definitions
     if (cur[0] === 'def') {
       const isDef = cur[2]
