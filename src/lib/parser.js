@@ -2,6 +2,10 @@ import {
   TIME_UNITS, CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
 } from './convert';
 
+import {
+  reduceFromTokens
+} from './reducer';
+
 const TAG_TYPES = ['blockquote', 'comment', 'heading', 'check', 'em', 'b', 'code', 'text'];
 
 const OP_TYPES = {
@@ -671,9 +675,28 @@ export function fixCalls(def) {
     }
 
     // unit-calls without arguments receives _
-    if (left && left[0] === 'fx' && cur[0] === 'unit' && (!right || right[0] === 'expr')) {
+    if (left
+      && left[0] === 'fx'
+      && cur[0] === 'unit'
+      && (!right || (right[0] === 'expr' && isSep(right[1])))
+    ) {
       cur[2] = [[['symbol', '_']]];
       cur[0] = 'def';
+    }
+
+    if (cur[0] === 'unit' && right && right[0] === 'fx' && right[2] === 'func') {
+      const offset = tokens.slice(i).findIndex(x => x[0] === 'expr' && isSep(x[1]));
+      const subTree = offset > 0 ? tokens.splice(i + 1, i + offset - 2) : tokens.splice(i + 1);
+      const definition = fixCalls(subTree.slice(1));
+
+      tokens.splice(i - 1, 0, []);
+
+      cur[0] = 'fn';
+      cur[1] = x => { console.log({x,definition}); };
+
+      // tokens.splice(i, 0, ['number', '4'], ['fx', '<|', 'lpipe']);
+      // console.log(require('util').inspect({tokens},{depth:10,colors:true}));
+      break;
     }
   }
 

@@ -83,6 +83,9 @@ export default class Solvente {
   }
 
   value(token) {
+    console.log({token});
+    if (!token || !Array.isArray(token)) return null;
+
     token[1] = toNumber(token[1]);
 
     if (

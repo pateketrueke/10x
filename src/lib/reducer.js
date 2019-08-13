@@ -119,6 +119,12 @@ export function reduceFromAST(tokens, convert, expressions) {
     let left = tokens[i - 1]
     let right = tokens[i + 1];
 
+    // lambda calls
+
+    // if (cur[0] === 'fn') {
+    //   continue;
+    // }
+
     // partial calls
     // FIXME: how these works? they should work on single arguments, e.g.
     // n5=sum<|5; (internally called as sum(_,5))
@@ -153,7 +159,7 @@ export function reduceFromAST(tokens, convert, expressions) {
     }
 
     // just return from non-values or ops
-    if (['string', 'object', 'boolean', 'undefined'].includes(cur[0])) {
+    if (['string', 'object', 'boolean', 'function', 'undefined'].includes(cur[0])) {
       fixedTokens.push(cur);
       continue;
     }
@@ -168,7 +174,7 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // split on consecutive values
       for (let i = 0; i < body.length; i += 1) {
-        if (['string', 'symbol', 'number', 'object', 'boolean', 'undefined'].includes(body[i][0])) offset++;
+        if (['string', 'symbol', 'number', 'object', 'boolean', 'function', 'undefined'].includes(body[i][0])) offset++;
         if (offset >= 0) {
           buffer = args[offset] || (args[offset] = []);
           buffer.push(body[i]);
@@ -182,13 +188,19 @@ export function reduceFromAST(tokens, convert, expressions) {
       }
 
       // FIXME: validate input or something?
-      const [left, right, ...others] = args.map(x => calculateFromTokens(reduceFromAST(x, convert, expressions)));
-      const result = evaluateComparison(cur[1], left[1], right ? right[1] : undefined, others.map(x => x[1]));
+      const [lft, rgt, ...others] = args.map(x => calculateFromTokens(reduceFromAST(x, convert, expressions)));
+      const result = evaluateComparison(cur[1], lft[1], rgt ? rgt[1] : undefined, others.map(x => x[1]));
 
       // also, how these values are rendered back?
       fixedTokens.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
       break;
     }
+
+    // lambda calls
+    // // console.log({call,args,locals});
+    // if (cur[0] === 'unit') { // && right && right[0] === 'fx' && right[2] === 'func') {
+    // }
+    // console.log({left,cur,right});
 
     // handle var/call definitions
     if (cur[0] === 'def') {
@@ -220,6 +232,7 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // replace all given units within the AST
       cur = reduceFromTokens(call.slice(2), locals);
+      console.log({cur,args:args[0],locals});
       cur = calculateFromTokens(reduceFromAST(cur, convert, expressions));
     }
 
