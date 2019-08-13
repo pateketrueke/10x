@@ -273,11 +273,11 @@ describe('DSL', () => {
   });
 
   describe('Using :symbols for definitions', () => {
-    it('should apply ::symbol-calls', () => {
-      expect(toTree(`123::toString(36)`).length).to.eql(3);
-      expect(value(`123::toString(36)`)).to.eql(['3f']);
-      expect(toTree(`"foo"::toUpperCase(36)`).length).to.eql(3);
-      expect(value(`"foo"::toUpperCase(36)`)).to.eql(['FOO']);
+    it('should apply :symbol-calls', () => {
+      expect(toTree('123:toString(36)').length).to.eql(3);
+      expect(value('123:toString(36)')).to.eql(['3f']);
+      expect(toTree(`"foo":toUpperCase()`).length).to.eql(3);
+      expect(value(`"foo":toUpperCase()`)).to.eql(['FOO']);
     });
 
     it('should treat symbols as units too', () => {
@@ -292,7 +292,7 @@ describe('DSL', () => {
       expect(toTree(`:set o' :foo "bar"`).length).to.eql(2);
       expect(toTree(`:set o' "foo" "bar"`).length).to.eql(2);
 
-      expect(toTree(`:set buffer head(buffer)::concat tail(buffer)`).length).to.eql(3);
+      expect(toTree(`:set buffer head(buffer):concat tail(buffer)`).length).to.eql(3);
       expect(toTree(`:set buffer "foo" "bar", "baz buzz", "bazzinga"`).length).to.eql(6);
       expect(toTree(`:set buffer "foo", "bar", "baz buzz", "bazzinga"`).length).to.eql(1);
 

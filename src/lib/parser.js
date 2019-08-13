@@ -435,6 +435,7 @@ export function parseBuffer(text, fixeds) {
       || (hasNum(last) && cur === '%')
       || (isMoney(last) && hasNum(cur))
       || (last === ',' && isNum(cur) && !open)
+      || (last === '.' && cur === '-' && isNum(next))
       || (buffer[0] === ':' && cur === '-' && isNum(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
       || (isChar(last) && isAny(cur, ':') && !':-'.includes(next) && !isNum(next))

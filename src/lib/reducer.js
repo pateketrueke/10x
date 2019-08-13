@@ -90,22 +90,29 @@ export function reduceFromInput(token) {
 }
 
 export function reduceFromEffect(value, args, def) {
-  let fixedValue = reduceFromInput(value);
+  const fixedValue = reduceFromInput(value);
 
-  // apply side-effects
+  let fixedResult;
+
+  // FIXME: apply ranges, e.g. n-m, -n, n..-m, etc. (strings, arrays only)
+  console.log({value,args,def});
+  console.log({fixedValue});
+
   if (def.substr(0, 2) === '::') {
-    fixedValue = fixedValue[def.substr(2)](...args);
+    // FIXME: what to do?
   } else {
-    fixedValue = fixedValue[def.substr(1)];
+    fixedResult = fixedValue[def.substr(1)];
   }
 
-  // FIXME: apply ranges, e.g. n-m, -n, n..-m, etc.
-  console.log({value,args,def});
+  // apply side-effects!
+  if (typeof fixedResult === 'function') {
+    fixedResult = fixedResult.apply(fixedValue, args);
+  }
 
-  fixedValue = typeof fixedValue === 'string' ? `"${fixedValue}"` : fixedValue;
+  fixedResult = typeof fixedResult === 'string' ? `"${fixedResult}"` : fixedResult;
 
   // recast previous token with the new value
-  return [typeof fixedValue, fixedValue];
+  return [typeof fixedResult, fixedResult];
 }
 
 export function reduceFromAST(tokens, convert, expressions) {
