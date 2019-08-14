@@ -99,6 +99,11 @@ export function fromMarkdown(text) {
 }
 
 export function fromSymbols(text, units, expression, previousToken) {
+  // handle mixed objects
+  if (text === '[]' || text === '{}') {
+    return ['object', text === '[]' ? [] : {}];
+  }
+
   // handle white-space
   if (text === ' ' || text === '\n') {
     return ['text', text];

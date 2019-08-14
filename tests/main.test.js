@@ -264,8 +264,8 @@ describe('DSL', () => {
       expect(toTree(':a[:b]')).to.eql([['symbol', ':a'], [['symbol', ':b']]]);
       expect(toTree('a[:b "c"]')).to.eql([['unit', 'a'], [['symbol', ':b'], ['string', '"c"']]]);
       expect(toTree(':a[:b "c"]')).to.eql([['symbol', ':a'], [['symbol', ':b'], ['string', '"c"']]]);
-      expect(toTree(':x a[]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', []]]]]);
-      expect(toTree(':x a{}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', {}]]]]);
+      expect(toTree(':x a[]')).to.eql([['symbol', ':x', [['unit', 'a'], ['object', []]]]]);
+      expect(toTree(':x a{}')).to.eql([['symbol', ':x', [['unit', 'a'], ['object', {}]]]]);
       expect(toTree(':x a[v 2]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', [['unit', 'v'], ['number', '2']]]]]]);
       expect(toTree(':x a[:b c]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['unit', 'c']] }]]]]);
       expect(toTree(':x a{:b c}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['unit', 'c']] }]]]]);

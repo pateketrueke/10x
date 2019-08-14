@@ -457,6 +457,7 @@ export function parseBuffer(text, fixeds) {
       || (last === '.' && cur === '-' && isNum(next))
       || (buffer[0] === ':' && cur === '-' && isNum(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
+      || (last === '[' && cur === ']') || (last === '{' && cur === '}')
       || (isChar(last) && isAny(cur, ':') && !':-'.includes(next) && !isNum(next))
       || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
 
