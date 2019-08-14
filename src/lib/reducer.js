@@ -125,22 +125,25 @@ export function reduceFromEffect(value, args, def, cb) {
     const input = def[2][0][2].shift();
     const body = def[2][0][2];
 
-    args = fixArgs(def[2]).map(x => {
-      if (x[0][0] === 'fn') {
+    // args = fixArgs(def[2]);
+    args = def[2].map(x => {
+      if (x[0] === 'fn') {
         return (...context) => {
-          let retval = cb(reduceFromTokens(body[0][0], reduceFromArgs(input, context)));
+          let retval = cb(reduceFromTokens(body[0], reduceFromArgs(input, context)));
 
           while (retval.length === 1) retval = retval[0];
-          return retval;
+
+          return cb([retval]);
         };
       }
 
-      return reduceFromInput(x[0]);
+      return x;
     });
   }
 
   // apply side-effects!
   if (typeof fixedResult === 'function') {
+    // console.log({fixedValue,fixedResult,args});
     fixedResult = fixedResult.apply(fixedValue, args);
   }
 
@@ -293,6 +296,8 @@ export function reduceFromAST(tokens, convert, expressions) {
       // side-effects will operate on previous values
       const call = expressions[cur[1]] ? expressions[cur[1]].slice() : null;
       const args = cur[2];
+
+      // console.log(args);
 
       // skip undefined calls
       if (!call) continue;

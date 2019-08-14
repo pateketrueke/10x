@@ -739,8 +739,10 @@ export function fixTree(ast) {
 
     // look for partial-applications
     if (cur[0] === 'def' && cur[2]) {
-      if (!(cur[2]._array || cur[2]._object)) {
-        cur[2] = fixCalls(fixTree(cur[2]));
+      cur[2] = fixTree(cur[2]);
+
+      if (!(arr || obj)) {
+        cur[2] = fixCalls(cur[2]);
       }
     }
 
