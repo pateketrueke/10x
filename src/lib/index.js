@@ -87,16 +87,18 @@ export default class Solvente {
       return null;
     }
 
-    token[1] = toNumber(token[1]);
-
-    if (
-      token[2]
-      && token[0] === 'number'
-      && !(isInt(token[1]) || token[1] instanceof Date)
-    ) {
-      // remove trailing words from units
-      token[1] = token[1].replace(/[\sa-z/-]+$/ig, '');
+    if (token[0] === 'number') {
+      token[1] = toNumber(token[1]);
     }
+
+    // if (
+    //   token[2]
+    //   && token[0] === 'number'
+    //   && !(isInt(token[1]) || token[1] instanceof Date)
+    // ) {
+    //   // remove trailing words from units
+    //   token[1] = token[1].replace(/[\sa-z/-]+$/ig, '');
+    // }
 
     let fixedValue = toValue(token[1]);
     let fixedUnit = token[2];
