@@ -184,6 +184,7 @@ export function transform(input, units, types) {
   const stack = [];
   const vars = {};
 
+  let depth = 0;
   let inCall = false;
   let inMaths = false;
 
@@ -214,6 +215,10 @@ export function transform(input, units, types) {
       || (vars[cur] && isOp(nextToken))
     ) inMaths = true;
 
+    // flag possible subcalls
+    if (cur === '(') depth++;
+    if (cur === ')') depth--;
+
     // handle expression blocks
     if (inExpr) {
       const token = toToken(i, fromSymbols, cur, units, true);
@@ -234,7 +239,7 @@ export function transform(input, units, types) {
         inMaths = false;
 
         // close var-expressions
-        if (nextToken !== '=') {
+        if (nextToken !== '=' && depth === inExpr._depth) {
           prev.push(inExpr);
           inExpr = false;
           stack.pop();
@@ -252,8 +257,12 @@ export function transform(input, units, types) {
       (isChar(cur) || isAlpha(cur))
       && (input[i + 1] === '=' || input[i + 1] === '(')
     ) {
+      const token = toToken(i, () => ['def', cur, []]);
+
       inCall = input[i + 1] === '(';
-      stack.push(['def', cur, []]);
+      stack.push(token);
+
+      token._depth = depth;
 
       // don't override builtins!
       if (!hasOwnKeyword(units, cur)) {
