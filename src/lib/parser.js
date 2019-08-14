@@ -408,12 +408,6 @@ export function parseBuffer(text, fixeds) {
     }
 
     if (!inFormat) {
-      if (cur === '\n' && inBlock !== 'multiline') {
-        tokens[++offset] = [cur];
-        inBlock = false;
-        continue;
-      }
-
       if (!inBlock) {
         // skip closing chars if they're not well paired
         if (!open && cur === ')') {
@@ -443,15 +437,8 @@ export function parseBuffer(text, fixeds) {
       }
     }
 
-    // always break from multiline tokens!
-    if (cur === '\n' && inBlock !== 'multiline') {
-      tokens[++offset] = [cur];
-      inBlock = false;
-      continue;
-    }
-
     // make sure we're keeping newlines intact
-    if (last === '\n') {
+    if (!inBlock && !inFormat && last === '\n') {
       tokens[++offset] = [cur];
       continue;
     }
