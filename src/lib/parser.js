@@ -547,6 +547,9 @@ export function fixTokens(ast, flatten) {
   return ast.reduce((prev, cur) => {
     if (cur[0] === 'expr' && cur[1] === ',') return prev;
 
+    // flatten nested tokens...
+    while (cur.length === 1) cur = cur[0];
+
     if (array) {
       prev.push(fixTokens(cur));
       return prev;

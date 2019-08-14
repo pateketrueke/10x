@@ -140,7 +140,17 @@ export function reduceFromAST(tokens, convert, expressions) {
       if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && isSep(cur[1])))) {
         const branches = fixTokens(fixedStack, false);
 
-        console.log({branches});
+        if (branches[':if']) {
+          const test = branches[':if'][0];
+          const subTree = branches[':if'].slice(1);
+          const retval = calculateFromTokens(reduceFromAST(test, convert, expressions));
+
+          if (retval[1]) {
+            fixedTokens.push(calculateFromTokens(reduceFromAST(subTree, convert, expressions)));
+          } else if (branches[':else']) {
+            fixedTokens.push(calculateFromTokens(reduceFromAST(branches[':else'], convert, expressions)));
+          }
+        }
 
         isSymbol = false;
       }
