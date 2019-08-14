@@ -281,9 +281,8 @@ describe('DSL', () => {
       expect(value(`"foo":toUpperCase()`)).to.eql(['FOO']);
     });
 
-    it('should treat symbols as units too', () => {
+    it('should allow _ symbol as unit (placeholder)', () => {
       expect(value('sum(x,_)=x+_;sum(1,2)')).to.eql(['3']);
-      expect(value('sum(x,:y)=x+:y;sum(1,2)')).to.eql(['3']);
     });
 
     it('should consume all tokens if they are lists', () => {
