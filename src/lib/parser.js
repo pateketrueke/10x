@@ -378,12 +378,33 @@ export function parseBuffer(text, fixeds) {
       col++;
     }
 
-    // keep formatting block together, some symbols are required twice!
-    if (!inFormat && isFmt(last)) {
-      inFormat = '~*'.includes(last) ? (cur === last ? [i, last] : false) : [i, last];
-      console.log({row,col,last,cur,next});
-    } else if (inFormat && inFormat[1] === last && inFormat[0] !== i - 1) {
+    // keep formatting blocks together
+    if (!inBlock && !inFormat && isFmt(cur) && !isOp(last)) {
+      if (cur === '*')  {
+        inFormat = next === '*';
+      } else if (cur === '_') {
+        inFormat = isSep(last, '( )')
+          && (next === '_' || isChar(next) || isNum(next));
+      } else if (cur === '~') {
+        inFormat = next !== '>';
+      } else {
+        inFormat = true;
+      }
+
+      if (inFormat) {
+        if (buffer.length) tokens[++offset] = [cur];
+        else buffer.push(cur);
+
+        inFormat = [i, cur];
+        continue;
+      }
+    }
+
+    // disable formatting (avoid escapes)
+    if (inFormat && inFormat[0] !== i - 1 && inFormat[1] === cur && last !== '\\' && cur !== next) {
       inFormat = false;
+      buffer.push(cur);
+      continue;
     }
 
     if (!inFormat) {
@@ -420,11 +441,6 @@ export function parseBuffer(text, fixeds) {
           continue;
         }
       }
-
-      // disable quotes from separators
-      // if (inBlock !== 'multiline' && cur === '"' && last !== '\\' && isSep(next, '\n')) {
-      //   inBlock = false;
-      // }
     }
 
     // always break from multiline tokens!
@@ -444,8 +460,6 @@ export function parseBuffer(text, fixeds) {
       inBlock || inFormat || typeof last === 'undefined'
 
       // non-keywords
-      || (last === '\\')
-      || (last === cur && isFmt(cur))
       || (last !== ' ' && isAny(cur))
       || (last === '-' && isNum(cur))
       || (last === '_' && isChar(cur))

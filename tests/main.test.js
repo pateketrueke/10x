@@ -203,6 +203,7 @@ describe('DSL', () => {
 
     it('should handle bold tags', () => {
       expect(calc('foo **bar baz** buzz').tokens[2][0]).to.eql('b');
+      expect(calc('foo __bar baz__ buzz').tokens[2][0]).to.eql('b');
       expect(calc('foo __bar baz__ buzz').tokens[2][1]).to.eql('__bar baz__');
     });
 
