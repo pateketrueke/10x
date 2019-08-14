@@ -177,7 +177,6 @@ export function joinTokens(data, units, types) {
   let offset = 0;
   let depth = 0;
 
-  let inFmt = false;
   let inCall = false;
 
   let hasDate = false;
@@ -202,16 +201,7 @@ export function joinTokens(data, units, types) {
         ) || (data[i - 1] === '_' && (isSep(cur, ' ') || isOp(cur) || isFx(cur)))
     ) {
       stack.push(cur);
-      inFmt = false;
       offset++;
-      continue;
-    }
-
-    // keep formatting blocks together
-    if (inFmt && oldChar.indexOf(cur) === 0) {
-      buffer[offset - 1].push(cur);
-      buffer.length = offset;
-      inFmt = false;
       continue;
     }
 
@@ -258,15 +248,6 @@ export function joinTokens(data, units, types) {
     let nextToken;
 
     do { nextToken = data[++key]; } while (nextToken === ' ');
-
-    // keep formatting block together, ** symbols required twice!
-    if (isFmt(cur[0]) && cur[1] !== '>' && (cur.length === 2 || cur !== '*')) {
-      inFmt = !inFmt;
-    } else if (inFmt) {
-      buffer[offset - 1].push(cur);
-      buffer.length = offset;
-      continue;
-    }
 
     if (
       // glue ISO-dates together
@@ -353,8 +334,12 @@ export function joinTokens(data, units, types) {
 
 export function parseBuffer(text, fixeds) {
   let inBlock = false;
+  let inFormat = false;
+
   let offset = 0;
   let open = 0;
+  let row = 0;
+  let col = 0;
 
   const chars = text.split('');
   const tokens = [];
@@ -385,46 +370,77 @@ export function parseBuffer(text, fixeds) {
     const next = chars[i + 1];
     const cur = chars[i];
 
+    // increase line/column
+    if (cur === '\n') {
+      col = 0;
+      row++;
+    } else {
+      col++;
+    }
+
+    // handle formatting blocks
+    if (!inFormat && isFmt(last)) {
+      inFormat = isOp(last) ? ((next === last || isChar(next)) && [i, last]) : [i, last];
+    } else if (inFormat && inFormat[1] === last && inFormat[0] !== i - 1) {
+      inFormat = false;
+    }
+
+    if (!inFormat) {
+      if (cur === '\n' && inBlock !== 'multiline') {
+        tokens[++offset] = [cur];
+        inBlock = false;
+        continue;
+      }
+
+      if (!inBlock) {
+        // skip closing chars if they're not well paired
+        if (!open && cur === ')') {
+          buffer.push(cur);
+          continue;
+        }
+
+        // FIXME:  warn if we're inside maths...
+        if (cur === '(') open++;
+        if (cur === ')') open--;
+
+        if (
+          // enable headings/blockquotes, skip everything
+          ('#>'.includes(cur) && col === 1)
+
+          // enable comments, skip everything
+          || (last === '/' && '/*'.includes(cur))
+        ) inBlock = cur === '*' ? 'multiline' : 'block';
+      } else if (cur === '*' && next === '/') {
+        // disable multiline-style comments
+        if (inBlock === 'multiline') {
+          buffer.push(cur, next);
+          chars.splice(i, 1);
+          inBlock = false;
+          continue;
+        }
+      }
+
+      // disable quotes from separators
+      if (inBlock !== 'multiline' && cur === '"' && last !== '\\' && isSep(next, '\n')) {
+        inBlock = false;
+      }
+    }
+
+    // always break from multiline tokens!
     if (cur === '\n' && inBlock !== 'multiline') {
       tokens[++offset] = [cur];
       inBlock = false;
       continue;
     }
 
-    if (!inBlock) {
-      // skip closing chars if they're not well paired
-      if (!open && cur === ')') {
-        buffer.push(cur);
-        continue;
-      }
-
-      if (cur === '(') open++;
-      if (cur === ')') open--;
-
-      if (
-        // enable headings/blockquotes, skip everything
-        ('#>'.includes(cur) && i === 0)
-
-        // enable comments, skip everything
-        || (last === '/' && '/*'.includes(cur))
-      ) inBlock = cur === '*' ? 'multiline' : 'block';
-    } else if (cur === '*' && next === '/') {
-      // disable multiline-style comments
-      if (inBlock === 'multiline') {
-        buffer.push(cur, next);
-        chars.splice(i, 1);
-        inBlock = false;
-        continue;
-      }
-    }
-
-    // disable quotes from separators
-    if (inBlock !== 'multiline' && cur === '"' && last !== '\\' && isSep(next, '\n')) {
-      inBlock = false;
+    // make sure we're keeping newlines intact
+    if (last === '\n') {
+      tokens[++offset] = [cur];
+      continue;
     }
 
     if (
-      inBlock || typeof last === 'undefined'
+      inBlock || inFormat || typeof last === 'undefined'
 
       // non-keywords
       || (last === '\\')
