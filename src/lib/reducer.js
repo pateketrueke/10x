@@ -58,7 +58,7 @@ export function reduceFromTokens(tree, values) {
     }
 
     // replace token within unit-calls
-    if (item[0] === 'def') {
+    if (item[0] === 'def' && item[2]) {
       item[2][0] = reduceFromTokens(item[2][0], values);
     }
 
@@ -95,8 +95,8 @@ export function reduceFromEffect(value, args, def) {
   let fixedResult;
 
   // FIXME: apply ranges, e.g. n-m, -n, n..-m, etc. (strings, arrays only)
-  console.log({value,args,def});
-  console.log({fixedValue});
+  // console.log({value,args,def});
+  // console.log({fixedValue});
 
   if (def.substr(0, 2) === '::') {
     // FIXME: what to do?
