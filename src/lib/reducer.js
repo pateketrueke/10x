@@ -1,5 +1,5 @@
 import {
-  fixArgs,
+  fixArgs, fixTokens,
   isFx, isSep, isTime, isExpr,
   toValue, toNumber, hasNum, hasMonths, hasTagName, hasOwnKeyword,
 } from './parser';
@@ -117,8 +117,11 @@ export function reduceFromEffect(value, args, def) {
 
 export function reduceFromAST(tokens, convert, expressions) {
   const fixedTokens = [];
+  const fixedStack = [];
 
   let isDate;
+  let isSymbol;
+
   let lastUnit;
   let lastOp = ['expr', '+', 'plus'];
 
@@ -128,6 +131,21 @@ export function reduceFromAST(tokens, convert, expressions) {
     let cur = tokens[i];
     let left = tokens[i - 1]
     let right = tokens[i + 1];
+
+    // collect all tokens after symbols
+    if (isSymbol || (!left && cur[0] === 'symbol'))  {
+      isSymbol = true;
+      fixedStack.push(cur);
+
+      if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && isSep(cur[1])))) {
+        const branches = fixTokens(fixedStack, false);
+
+        console.log({branches});
+
+        isSymbol = false;
+      }
+      continue;
+    }
 
     // partial calls
     if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {

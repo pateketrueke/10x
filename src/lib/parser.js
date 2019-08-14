@@ -535,7 +535,7 @@ export function buildTree(tokens) {
 }
 
 // FIXME: cleanup...
-export function fixTokens(ast) {
+export function fixTokens(ast, flatten) {
   if (!Array.isArray(ast[0])) return ast;
 
   const target = ast[0][0] === 'symbol' ? {} : [];
@@ -564,7 +564,7 @@ export function fixTokens(ast) {
       const sub = fixTokens(cur);
 
       // avoid wrapping tokens twice...
-      prev[keyName] = Array.isArray(sub[0]) ? sub : [sub];
+      prev[keyName] = (flatten !== false && Array.isArray(sub[0])) ? sub : [sub];
       lastKeyName = keyName;
       keyName = null;
     } else if (prev[lastKeyName]) {
@@ -707,7 +707,6 @@ export function fixCalls(def, skip) {
 export function fixTree(ast) {
   let tokens = ast.filter(x => !hasTagName(x[0]));
 
-  let sym = false;
   let arr = ast._array;
   let obj = ast._object;
 
