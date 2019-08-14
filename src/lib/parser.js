@@ -378,9 +378,10 @@ export function parseBuffer(text, fixeds) {
       col++;
     }
 
-    // handle formatting blocks
+    // keep formatting block together, some symbols are required twice!
     if (!inFormat && isFmt(last)) {
-      inFormat = isOp(last) ? ((next === last || isChar(next)) && [i, last]) : [i, last];
+      inFormat = '~*'.includes(last) ? (cur === last ? [i, last] : false) : [i, last];
+      console.log({row,col,last,cur,next});
     } else if (inFormat && inFormat[1] === last && inFormat[0] !== i - 1) {
       inFormat = false;
     }
@@ -421,9 +422,9 @@ export function parseBuffer(text, fixeds) {
       }
 
       // disable quotes from separators
-      if (inBlock !== 'multiline' && cur === '"' && last !== '\\' && isSep(next, '\n')) {
-        inBlock = false;
-      }
+      // if (inBlock !== 'multiline' && cur === '"' && last !== '\\' && isSep(next, '\n')) {
+      //   inBlock = false;
+      // }
     }
 
     // always break from multiline tokens!
