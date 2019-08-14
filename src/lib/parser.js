@@ -26,6 +26,7 @@ const OP_TYPES = {
   '<|': 'lpipe',
   '<': 'lt',
   '>': 'gt',
+  '!': 'not',
   '[': 'begin',
   ']': 'end',
   '{': 'begin',

@@ -140,15 +140,28 @@ export function reduceFromAST(tokens, convert, expressions) {
       if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && isSep(cur[1])))) {
         const branches = fixTokens(fixedStack, false);
 
-        if (branches[':if']) {
-          const test = branches[':if'][0];
-          const subTree = branches[':if'].slice(1);
+        // handle if-then-else logic
+        if (branches[':if'] || branches[':unless']) {
+          const ifBranch = branches[':if'] || branches[':unless'];
+          const orBranch = branches[':else'] || branches[':otherwise'];
+
+          let not = branches[':unless'] && !branches[':if'];
+          let test = (branches[':if'] || branches[':unless']).shift();
+
+          // handle negative variations
+          if (test[0] === 'expr' && test[2] === 'not') {
+            not = true;
+            test = ifBranch.shift();
+            test = [].concat.apply([test[0]], test.slice(1));
+          }
+
           const retval = calculateFromTokens(reduceFromAST(test, convert, expressions));
 
-          if (retval[1]) {
-            fixedTokens.push(calculateFromTokens(reduceFromAST(subTree, convert, expressions)));
-          } else if (branches[':else']) {
-            fixedTokens.push(calculateFromTokens(reduceFromAST(branches[':else'], convert, expressions)));
+          // evaluate respective branches
+          if (not ? !retval[1] : retval[1]) {
+            fixedTokens.push(calculateFromTokens(reduceFromAST(ifBranch, convert, expressions)));
+          } else if (orBranch) {
+            fixedTokens.push(calculateFromTokens(reduceFromAST(orBranch, convert, expressions)));
           }
         }
 
