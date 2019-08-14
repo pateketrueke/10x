@@ -517,19 +517,19 @@ export function buildTree(tokens) {
     }
   }
 
-  // handle exceptions
-  if (calls.length || stack.length) {
-    depth = (calls[0] || stack[0])._offset;
+  // // handle exceptions
+  // if (calls.length || stack.length) {
+  //   depth = (calls[0] || stack[0])._offset;
 
-    const fixedTokens = tokens.slice(0, Math.max(2, depth + 1));
-    const fixedInput = fixedTokens.map(x => x[1]).join('');
+  //   const fixedTokens = tokens.slice(0, Math.max(2, depth + 1));
+  //   const fixedInput = fixedTokens.map(x => x[1]).join('');
 
-    const err = new Error(`Missing terminator.\n  ${fixedInput}\n  ${fixedInput.replace(/./g, '-')}^`);
+  //   const err = new Error(`Missing terminator.\n  ${fixedInput}\n  ${fixedInput.replace(/./g, '-')}^`);
 
-    err.offset = depth;
+  //   err.offset = depth;
 
-    throw err;
-  }
+  //   throw err;
+  // }
 
   return tree;
 }
@@ -694,8 +694,9 @@ export function fixCalls(def, skip) {
 
       if (!skip) tokens.splice(i - 1, 0, []);
 
-      cur[2] = fixCalls(subTree.slice(1), true);
+      cur[2] = [[['unit', cur[1]]], fixCalls(subTree.slice(1), true)];
       cur[0] = 'fn';
+      cur[1] = '$';
       break;
     }
   }
@@ -733,6 +734,21 @@ export function fixTree(ast) {
         // FIXME: what to do?
       } else {
         cur[2] = fixCalls(fixTree(cur[2]));
+      }
+    }
+
+    // compose lambda-calls with multiple arguments...
+    if (cur[0] === 'unit' && next && next[0] === 'expr' && next[1] === ',') {
+      const offset = tokens.slice(i).findIndex(x => x[0] === 'fx' && x[2] === 'func');
+
+      if (offset > 0) {
+        const cut = tokens.slice(i + 1).findIndex(x => x[0] === 'expr' && x[1] === ';');
+        const endPos = i + offset + (cut >= 0 ? offset - cut : tokens.length);
+        const args = tokens.splice(i, i + offset - 1).slice(1);
+        const subTree = tokens.splice(i, endPos - 1).slice(1);
+
+        tokens.splice(i, 0, ['fn', '$', [[['unit', cur[1]]].concat(args), fixTree(subTree)]]);
+        break;
       }
     }
 

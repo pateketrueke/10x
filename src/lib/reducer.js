@@ -70,11 +70,11 @@ export function reduceFromTokens(tree, values) {
 }
 
 export function reduceFromArgs(keys, values) {
-  const locals = fixArgs(values);
+  const props = keys.filter(x => x[0] === 'unit');
 
   // compute a map from given units and values
-  return keys.reduce((prev, cur, i) => {
-    prev[cur[1]] = locals[i];
+  return props.reduce((prev, cur, i) => {
+    prev[cur[1]] = values.shift();
     return prev;
   }, {});
 }
@@ -217,7 +217,7 @@ export function reduceFromAST(tokens, convert, expressions) {
       if (!call) continue;
 
       // compute valid sub-expressions from arguments
-      const locals = reduceFromArgs(call[0].filter(x => x[0] === 'unit'), args);
+      const locals = reduceFromArgs(call[0], fixArgs(args));
 
       // prepend the  _ symbol to already curried functions
       if (call[1][0] === 'def' && call[1]._curry) {
@@ -233,8 +233,9 @@ export function reduceFromAST(tokens, convert, expressions) {
 
         // apply lambda-calls as we have arguments
         while (cur[0][0] === 'fn' && fixedArgs.length) {
-          locals[cur[0][1]] = fixedArgs.shift();
-          cur[0][2] = reduceFromTokens(cur[0][2], locals);
+          Object.assign(locals, reduceFromArgs(cur[0][2][0], fixedArgs));
+
+          cur[0][2] = reduceFromTokens(cur[0][2][1], locals);
           cur[0][0] = 'def';
           cur = cur[0][2];
         }
