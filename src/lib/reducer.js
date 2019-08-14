@@ -51,22 +51,30 @@ export function reduceFromValue(token) {
 }
 
 export function reduceFromTokens(tree, values) {
-  return tree.map(item => {
+  return tree.reduce((prev, cur) => {
+    const item = cur.slice();
+
     // iterate until we visit all tokens
     if (Array.isArray(item[0])) {
-      return reduceFromTokens(item, values);
+      prev.push(reduceFromTokens(item, values));
+      return prev;
     }
 
     // replace token within unit-calls
     if (item[0] === 'def' && item[2]) {
-      item[2][0] = reduceFromTokens(item[2][0], values);
+      item[2] = [reduceFromTokens(item[2][0], values)];
     }
 
     // return as soon one matches!
-    if (item[0] === 'unit' && values[item[1]]) return values[item[1]];
+    if (item[0] === 'unit' && values[item[1]]) {
+      prev.push(values[item[1]]);
+      return prev;
+    }
 
-    return item;
-  });
+    prev.push(item);
+
+    return prev;
+  }, []);
 }
 
 export function reduceFromArgs(keys, values) {
@@ -78,6 +86,8 @@ export function reduceFromArgs(keys, values) {
 
     if (!Array.isArray(value)) {
       value = [typeof value, typeof value === 'string' ? `"${value}"` : value];
+    } else if (typeof value[0] !== 'string') {
+      value = [typeof value, value];
     }
 
     prev[cur[1]] = value;
@@ -111,18 +121,26 @@ export function reduceFromEffect(value, args, def, cb) {
   }
 
   // handle lambda-calls as side-effects
-  if (!args.length && def[2][1][0] === 'fn') {
-    const input = def[2][1][2].shift();
-    const body = def[2][1][2];
+  if (!args.length && def[2][0][0] === 'fn') {
+    const input = def[2][0][2].shift();
+    const body = def[2][0][2];
 
-    // FIXME: pass more arguments, not just one...
-    args[0] = (...context) =>
-      cb(reduceFromTokens(body, reduceFromArgs(input, context)));
+    args = fixArgs(def[2]).map(x => {
+      if (x[0][0] === 'fn') {
+        return (...context) => {
+          let retval = cb(reduceFromTokens(body[0][0], reduceFromArgs(input, context)));
+
+          while (retval.length === 1) retval = retval[0];
+          return retval;
+        };
+      }
+
+      return reduceFromInput(x[0]);
+    });
   }
 
   // apply side-effects!
   if (typeof fixedResult === 'function') {
-    console.log({fixedResult,args,def});
     fixedResult = fixedResult.apply(fixedValue, args);
   }
 
