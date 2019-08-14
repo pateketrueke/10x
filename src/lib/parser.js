@@ -727,8 +727,6 @@ export function fixTree(ast) {
     const prev = tokens[i - 1];
     const next = tokens[i + 1];
 
-    // console.log({prev,cur,next});
-
     // skip and merge empty leafs
     if (cur.length === 0) {
       if (prev && prev[0] === 'def') {
@@ -750,6 +748,8 @@ export function fixTree(ast) {
       const offset = tokens.slice(i).findIndex(x => x[0] === 'fx' && x[2] === 'func');
 
       if (offset > 0) {
+        // console.log({offset,tokens});
+
         const cut = tokens.slice(i + 1).findIndex(x => x[0] === 'expr' && x[1] === ';');
         const endPos = cut >= 0 ? cut : tokens.length;
 
@@ -860,7 +860,7 @@ export function fixTree(ast) {
     }
 
     // merge lambda-calls and symbols as single tokens
-    if (prev && prev[0] === 'symbol' && cur[1] && cur[1][0] === 'fn') {
+    if (prev && prev[0] === 'symbol' && cur[0][0] === 'fn') {
       tokens.splice(i, 1);
       prev[2] = cur;
       continue;

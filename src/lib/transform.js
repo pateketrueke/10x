@@ -236,7 +236,7 @@ export function transform(input, units, types) {
       if (cur === ';' || (inCall && cur === ')')) {
         prevToken = 'def';
         inCall = false;
-        inMaths = false;
+        inMaths = depth > 0;
 
         // close var-expressions
         if (nextToken !== '=' && depth === inExpr._depth) {
@@ -315,7 +315,7 @@ export function transform(input, units, types) {
       || (inMaths && (
         // allow units between ops/expressions
         ((isChar(cur) || hasKeyword(cur, units)) && (
-          isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)
+          depth || isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)
         ))
 
         // handle units/expressions after maths, never before
