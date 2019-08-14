@@ -116,9 +116,6 @@ export function reduceFromEffect(value, args, def, cb) {
   let fixedResult;
 
   // FIXME: apply ranges, e.g. n-m, -n, n..-m, etc. (strings, arrays only)
-  // console.log({value,args,def});
-  // console.log({fixedValue});
-
   if (def[1].substr(0, 2) === '::') {
     // FIXME: what to do?
   } else {
@@ -127,23 +124,33 @@ export function reduceFromEffect(value, args, def, cb) {
 
   // handle lambda-calls as side-effects
   if (!args.length && def[2][0][0] === 'fn') {
-    const input = def[2][0][2].shift();
-    const body = Array.isArray(def[2][0][2][0][0])
-      ? def[2][0][2][0][0]
-      : def[2][0][2][0];
+    const input = def[2][0][2][0];
+    const body = def[2][0][2].slice(1);
 
     args = fixArgs(def[2]).map(x => {
-      if (x[0][0] === 'fn') {
-        return (...context) => cb(reduceFromTokens(body, reduceFromArgs(input, context))).pop();
+      const t = Array.isArray(x[0]) ? x[0] : x;
+      const b = body[0].length === 1 ? body[0] : body;
+
+      if (t[0] === 'fn') {
+        return (...context) => cb(reduceFromTokens(b, reduceFromArgs(input, context)));
       }
 
-      return x[0];
+      return t;
     });
   }
 
   // apply side-effects!
   if (typeof fixedResult === 'function') {
-    fixedResult = fixedResult.apply(fixedValue, args);
+    fixedResult = fixedResult.apply(fixedValue, args.map(x => {
+      // FIXME: use classes/symbols to properly identify tokens?
+      if (typeof x !== 'function') return [x];
+      return x;
+    }));
+
+    // FIXME: how to check this side-effect?
+    if (typeof fixedResult !== typeof fixedValue) {
+      fixedResult = fixedValue;
+    }
   }
 
   fixedResult = typeof fixedResult === 'string' ? `"${fixedResult}"` : fixedResult;
@@ -170,7 +177,7 @@ export function reduceFromAST(tokens, convert, expressions) {
     let right = tokens[i + 1];
 
     // collect all tokens after symbols
-    if (isSymbol || (!left && cur[0] === 'symbol'))  {
+    if (isSymbol || (!value && cur[0] === 'symbol'))  {
       isSymbol = true;
       fixedStack.push(cur);
 
