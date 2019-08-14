@@ -74,7 +74,13 @@ export function reduceFromArgs(keys, values) {
 
   // compute a map from given units and values
   return props.reduce((prev, cur, i) => {
-    prev[cur[1]] = values.shift();
+    let value = values.shift();
+
+    if (!Array.isArray(value)) {
+      value = [typeof value, typeof value === 'string' ? `"${value}"` : value];
+    }
+
+    prev[cur[1]] = value;
     return prev;
   }, {});
 }
@@ -89,7 +95,7 @@ export function reduceFromInput(token) {
   return fixedValue;
 }
 
-export function reduceFromEffect(value, args, def) {
+export function reduceFromEffect(value, args, def, cb) {
   const fixedValue = value.map(x => reduceFromInput(x));
 
   let fixedResult;
@@ -104,17 +110,14 @@ export function reduceFromEffect(value, args, def) {
     fixedResult = fixedValue[def[1].substr(1)];
   }
 
-  // FIXME: lambda is not available here... fix before!
-  // also, lists of values can be used... dont-fix before!!
-  // only if the relationship is value:symbol(lambda)
+  // handle lambda-calls as side-effects
   if (!args.length && def[2][1][0] === 'fn') {
     const input = def[2][1][2].shift();
     const body = def[2][1][2];
 
-    args[0] = (...context) => {
-      // FIXME: evaluate context and so...
-      console.log({body}, reduceFromArgs(input, context));
-    };
+    // FIXME: pass more arguments, not just one...
+    args[0] = (...context) =>
+      cb(reduceFromTokens(body, reduceFromArgs(input, context)));
   }
 
   // apply side-effects!
@@ -212,7 +215,7 @@ export function reduceFromAST(tokens, convert, expressions) {
         .map(x => reduceFromInput(calculateFromTokens(x)));
 
       value = reduceFromAST(fixArgs(left), convert, expressions);
-      value = reduceFromEffect(value, args, cur);
+      value = reduceFromEffect(value, args, cur, x => reduceFromAST(x, convert, expressions));
 
       fixedTokens[fixedTokens.length - 1] = value;
       continue;
