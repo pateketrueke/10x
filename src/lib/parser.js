@@ -751,9 +751,7 @@ export function fixTree(ast) {
 
     // look for partial-applications
     if (cur[0] === 'def' && cur[2]) {
-      if (cur[2]._array || cur[2]._object) {
-        // FIXME: what to do?
-      } else {
+      if (!(cur[2]._array || cur[2]._object)) {
         cur[2] = fixCalls(fixTree(cur[2]));
       }
     }
@@ -869,6 +867,13 @@ export function fixTree(ast) {
           }
         }
       }
+      continue;
+    }
+
+    // merge lambda-calls and symbols as single tokens
+    if (prev && prev[0] === 'symbol' && cur[1] && cur[1][0] === 'fn') {
+      tokens.splice(i, 1);
+      prev[2] = cur;
       continue;
     }
 
