@@ -134,7 +134,7 @@ describe('DSL', () => {
   describe('Function application', () => {
     it('should handle local functions', () => {
       expect(value('undef(1,2,3)')).to.eql([]);
-      expect(value("f(x',y)=x'*y;f(2, 3)")).to.eql(['6']);
+      expect(value("f(x',y)=x'*y;f(2,3)")).to.eql(['6']);
       expect(value("f(x',y)=(x'*y);f(2, 3)")).to.eql(['6']);
       expect(value("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)")).to.eql(['-4']);
     });

@@ -84,6 +84,9 @@ export function reduceFromArgs(keys, values) {
   return props.reduce((prev, cur, i) => {
     let value = values.shift();
 
+    // unwrap from nested values
+    while (value.length === 1) value = value[0];
+
     if (!Array.isArray(value)) {
       value = [typeof value, typeof value === 'string' ? `"${value}"` : value];
     } else if (typeof value[0] !== 'string') {
@@ -296,8 +299,6 @@ export function reduceFromAST(tokens, convert, expressions) {
       // side-effects will operate on previous values
       const call = expressions[cur[1]] ? expressions[cur[1]].slice() : null;
       const args = cur[2];
-
-      // console.log(args);
 
       // skip undefined calls
       if (!call) continue;
