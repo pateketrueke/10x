@@ -122,6 +122,7 @@ export function reduceFromEffect(value, args, def, cb) {
 
   // apply side-effects!
   if (typeof fixedResult === 'function') {
+    console.log({fixedResult,args,def});
     fixedResult = fixedResult.apply(fixedValue, args);
   }
 

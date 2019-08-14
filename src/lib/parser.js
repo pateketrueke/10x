@@ -708,19 +708,6 @@ export function fixCalls(def, skip) {
       cur[2] = [[['symbol', '_']]];
       cur[0] = 'def';
     }
-
-    // decorate lambda-calls as they can be nested...
-    if (cur[0] === 'unit' && right && right[0] === 'fx' && right[2] === 'func') {
-      const offset = tokens.slice(i).findIndex(x => x[0] === 'expr' && isSep(x[1]));
-      const subTree = offset > 0 ? tokens.splice(i + 1, i + offset - 2) : tokens.splice(i + 1);
-
-      if (!skip) tokens.splice(i - 1, 0, []);
-
-      cur[2] = [[['unit', cur[1]]], fixCalls(subTree.slice(1), true)];
-      cur[0] = 'fn';
-      cur[1] = '$';
-      break;
-    }
   }
 
   return [].concat(args.length ? [args] : []).concat(tokens);
@@ -740,6 +727,8 @@ export function fixTree(ast) {
     const prev = tokens[i - 1];
     const next = tokens[i + 1];
 
+    // console.log({prev,cur,next});
+
     // skip and merge empty leafs
     if (cur.length === 0) {
       if (prev && prev[0] === 'def') {
@@ -757,12 +746,12 @@ export function fixTree(ast) {
     }
 
     // compose lambda-calls with multiple arguments...
-    if (cur[0] === 'unit' && next && next[0] === 'expr' && next[1] === ',') {
+    if (cur[0] === 'unit' && next && ((next[0] === 'expr' && next[1] === ',') || (next[0] === 'fx' && next[2] === 'func'))) {
       const offset = tokens.slice(i).findIndex(x => x[0] === 'fx' && x[2] === 'func');
 
       if (offset > 0) {
         const cut = tokens.slice(i + 1).findIndex(x => x[0] === 'expr' && x[1] === ';');
-        const endPos = cut >= 0 ? cut - 2 : tokens.length;
+        const endPos = cut >= 0 ? cut : tokens.length;
 
         const args = tokens.splice(i, offset);
         const subTree = tokens.splice(i, endPos).slice(1);
