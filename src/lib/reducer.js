@@ -222,11 +222,13 @@ export function reduceFromAST(tokens, convert, expressions) {
       // prepend the  _ symbol to already curried functions
       if (call[1][0] === 'def' && call[1]._curry) {
         call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
-        call.unshift([]);
       }
 
+      // make sure we don't cut definitions without arguments
+      const cut = (call[0][0] === 'expr' && call[0][1] === '=') ? 1 : 2;
+
       // replace all given units within the AST
-      cur = reduceFromTokens(call.slice(2), locals);
+      cur = reduceFromTokens(call.slice(cut), locals);
 
       if (cur[0][0] === 'fn') {
         const fixedArgs = fixArgs(args);
@@ -234,10 +236,7 @@ export function reduceFromAST(tokens, convert, expressions) {
         // apply lambda-calls as we have arguments
         while (cur[0][0] === 'fn' && fixedArgs.length) {
           Object.assign(locals, reduceFromArgs(cur[0][2][0], fixedArgs));
-
-          cur[0][2] = reduceFromTokens(cur[0][2][1], locals);
-          cur[0][0] = 'def';
-          cur = cur[0][2];
+          cur = reduceFromTokens(cur[0][2][1], locals);
         }
       }
 
