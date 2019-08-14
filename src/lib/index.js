@@ -110,9 +110,9 @@ export default class Solvente {
     }
 
     // add thousand separators
-    if (isInt(fixedValue)) {
-      fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
+    // if (isInt(fixedValue)) {
+    //   fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    // }
 
     if (
       fixedUnit

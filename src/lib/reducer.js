@@ -109,7 +109,9 @@ export function reduceFromInput(token) {
 }
 
 export function reduceFromEffect(value, args, def, cb) {
-  const fixedValue = value.map(x => reduceFromInput(x));
+  const fixedValue = value[0][0] !== 'object'
+    ? value.map(x => reduceFromInput(x))
+    : reduceFromInput(value[0]);
 
   let fixedResult;
 
@@ -126,27 +128,21 @@ export function reduceFromEffect(value, args, def, cb) {
   // handle lambda-calls as side-effects
   if (!args.length && def[2][0][0] === 'fn') {
     const input = def[2][0][2].shift();
-    const body = def[2][0][2];
+    const body = Array.isArray(def[2][0][2][0][0])
+      ? def[2][0][2][0][0]
+      : def[2][0][2][0];
 
-    // args = fixArgs(def[2]);
-    args = def[2].map(x => {
-      if (x[0] === 'fn') {
-        return (...context) => {
-          let retval = cb(reduceFromTokens(body[0], reduceFromArgs(input, context)));
-
-          while (retval.length === 1) retval = retval[0];
-
-          return cb([retval]);
-        };
+    args = fixArgs(def[2]).map(x => {
+      if (x[0][0] === 'fn') {
+        return (...context) => cb(reduceFromTokens(body, reduceFromArgs(input, context))).pop();
       }
 
-      return x;
+      return x[0];
     });
   }
 
   // apply side-effects!
   if (typeof fixedResult === 'function') {
-    // console.log({fixedValue,fixedResult,args});
     fixedResult = fixedResult.apply(fixedValue, args);
   }
 
@@ -237,7 +233,7 @@ export function reduceFromAST(tokens, convert, expressions) {
     // apply symbol-accessor op
     if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
       const args = fixArgs(reduceFromAST(tokens[i + 1] || [], convert, expressions), false)
-        .map(x => reduceFromInput(calculateFromTokens(x)));
+        .map(x => calculateFromTokens(x));
 
       value = reduceFromAST(fixArgs(left), convert, expressions);
       value = reduceFromEffect(value, args, cur, x => reduceFromAST(x, convert, expressions));

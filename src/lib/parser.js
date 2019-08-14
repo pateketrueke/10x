@@ -458,8 +458,8 @@ export function parseBuffer(text, fixeds) {
       || (buffer[0] === ':' && cur === '-' && isNum(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
       || (last === '[' && cur === ']') || (last === '{' && cur === '}')
-      || (isChar(last) && isAny(cur, ':') && !':-'.includes(next) && !isNum(next))
       || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
+      || (isChar(last) && isAny(cur, ':') && !(':-'.includes(next) || isNum(next) || isChar(next)))
 
       // keep some separators between numbers
       || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
