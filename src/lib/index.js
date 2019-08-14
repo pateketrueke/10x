@@ -83,6 +83,10 @@ export default class Solvente {
   }
 
   value(token) {
+    if (!token) {
+      return null;
+    }
+
     token[1] = toNumber(token[1]);
 
     if (

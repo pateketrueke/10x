@@ -746,12 +746,9 @@ export function fixTree(ast) {
         const endPos = cut >= 0 ? cut - 2 : tokens.length;
 
         const args = tokens.splice(i, offset);
-        const subTree = tokens.splice(i, endPos);
+        const subTree = tokens.splice(i, endPos).slice(1);
 
-        // tokens.splice(i, 0, ['fn', '$', [[['unit', cur[1]]].concat(args), fixTree(subTree)]]);
-        // console.log({prev,cur,next});
-        tokens.splice(i, 0, ['number', '0']);
-        // console.log({args,subTree,tokens});
+        tokens.splice(i, 0, ['fn', '$', [args, fixTree(subTree)]]);
         break;
       }
     }
