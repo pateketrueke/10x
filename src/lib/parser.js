@@ -748,10 +748,8 @@ export function fixTree(ast) {
       const offset = tokens.slice(i).findIndex(x => x[0] === 'fx' && x[2] === 'func');
 
       if (offset > 0) {
-        // console.log({offset,tokens});
-
-        const cut = tokens.slice(i + 1).findIndex(x => x[0] === 'expr' && x[1] === ';');
-        const endPos = cut >= 0 ? cut : tokens.length;
+        const cut = tokens.slice(offset).findIndex(x => x[0] === 'expr' && isSep(x[1]));
+        const endPos = cut >= 0 ? cut : tokens.length - offset;
 
         const args = tokens.splice(i, offset);
         const subTree = tokens.splice(i, endPos).slice(1);
