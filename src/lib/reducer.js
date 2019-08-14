@@ -163,6 +163,8 @@ export function reduceFromAST(tokens, convert, expressions) {
           } else if (orBranch) {
             fixedTokens.push(calculateFromTokens(reduceFromAST(orBranch, convert, expressions)));
           }
+        } else {
+          console.log({branches});
         }
 
         isSymbol = false;

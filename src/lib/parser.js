@@ -734,7 +734,7 @@ export function fixTree(ast) {
 
   for (let i = 0; i < tokens.length; i += 1) {
     let cur = Array.isArray(tokens[i][0])
-      ? fixTree(tokens[i])
+      ? fixTree(fixCalls(tokens[i]))
       : tokens[i];
 
     const prev = tokens[i - 1];
@@ -870,17 +870,6 @@ export function fixTree(ast) {
         }
       }
       continue;
-    }
-
-    // ensure all trees are fixed
-    if (cur[0] === 'def' && cur[2]) {
-      cur[2] = fixTree(cur[2]);
-
-      // re-assembly nested subtrees
-      if (cur[2][0][0] === 'expr' && cur[2][0][1] === '=' && !cur[2][2]) {
-        cur[2][1].unshift(cur[2][0]);
-        cur[2] = cur[2][1];
-      }
     }
 
     tokens[i] = cur;
