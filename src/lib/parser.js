@@ -347,6 +347,14 @@ export function parseBuffer(text, fixeds) {
   const types = {};
 
   for (let i = 0; i < chars.length; i += 1) {
+    // increase line/column
+    if (chars[i] === '\n') {
+      col = 0;
+      row++;
+    } else {
+      col++;
+    }
+
     const buffer = tokens[offset] || (tokens[offset] = []);
 
     // consume fixed-length units first...
@@ -355,10 +363,10 @@ export function parseBuffer(text, fixeds) {
 
     if (fixedType) {
       if (i > 0) {
-        tokens[offset] = [chars[i - 1]];
-        tokens[++offset] = [fixedValue];
+        tokens[offset] = [{ cur: chars[i - 1], row, col: col }];
+        tokens[++offset] = [{ cur: fixedValue, row, col: col }];
       } else {
-        tokens[offset] = [fixedValue];
+        tokens[offset] = [{ cur: fixedValue, row, col: col }];
       }
 
       offset++;
@@ -367,17 +375,9 @@ export function parseBuffer(text, fixeds) {
       continue;
     }
 
-    const last = buffer[buffer.length - 1];
+    const last = (buffer[buffer.length - 1] || {}).cur;
     const next = chars[i + 1];
     const cur = chars[i];
-
-    // increase line/column
-    if (cur === '\n') {
-      col = 0;
-      row++;
-    } else {
-      col++;
-    }
 
     // keep formatting blocks together
     if (!inBlock && !inFormat && isFmt(cur) && !isOp(last)) {
@@ -394,7 +394,7 @@ export function parseBuffer(text, fixeds) {
 
       if (inFormat) {
         if (buffer.length) tokens[++offset] = [cur];
-        else buffer.push(cur);
+        else buffer.push({ cur, row, col });
 
         inFormat = [i, cur];
         continue;
@@ -404,7 +404,7 @@ export function parseBuffer(text, fixeds) {
     // disable formatting (avoid escapes)
     if (inFormat && inFormat[0] !== i - 1 && inFormat[1] === cur && last !== '\\' && cur !== next) {
       inFormat = false;
-      buffer.push(cur);
+      buffer.push({ cur, row, col });
       continue;
     }
 
@@ -412,7 +412,7 @@ export function parseBuffer(text, fixeds) {
       if (!inBlock) {
         // skip closing chars if they're not well paired
         if (!open && cur === ')') {
-          buffer.push(cur);
+          buffer.push({ cur, row, col });
           continue;
         }
 
@@ -430,7 +430,7 @@ export function parseBuffer(text, fixeds) {
       } else if (cur === '*' && next === '/') {
         // disable multiline-style comments
         if (inBlock === 'multiline') {
-          buffer.push(cur, next);
+          buffer.push({ cur, row, col }, next);
           chars.splice(i, 1);
           inBlock = false;
           continue;
@@ -455,7 +455,7 @@ export function parseBuffer(text, fixeds) {
       || (isMoney(last) && hasNum(cur))
       || (last === ',' && isNum(cur) && !open)
       || (last === '.' && cur === '-' && isNum(next))
-      || (buffer[0] === ':' && cur === '-' && isNum(next))
+      || (buffer[0].cur === ':' && cur === '-' && isNum(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
       || (last === '[' && cur === ']') || (last === '{' && cur === '}')
       || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
@@ -483,14 +483,25 @@ export function parseBuffer(text, fixeds) {
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
       || (hasNum(last) && cur === '.' && next === '.')
     ) {
-      buffer.push(cur);
+      buffer.push({ cur, row, col });
     } else {
-      tokens[++offset] = [cur];
+      tokens[++offset] = [{ cur, row, col }];
     }
   }
 
   return {
-    tokens: tokens.map(l => l.join('')),
+    tokens: tokens.map(l => {
+      const value = l.map(t => t.cur).join('');
+
+      // FIXME: work over these tokens...
+      console.log({
+        content: value,
+        begin: [l[0].row, l[0].col - 1],
+        end: [l[l.length - 1].row, l[l.length - 1].col],
+      });
+
+      return value;
+    }),
     types,
   };
 }

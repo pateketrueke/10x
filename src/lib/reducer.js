@@ -198,6 +198,8 @@ export function reduceFromAST(tokens, convert, expressions) {
       if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && isSep(cur[1])))) {
         const branches = fixTokens(fixedStack, false);
 
+        console.log({branches});
+
         // handle if-then-else logic
         if (branches[':if'] || branches[':unless']) {
           const ifBranch = branches[':if'] || branches[':unless'];
@@ -221,8 +223,6 @@ export function reduceFromAST(tokens, convert, expressions) {
           } else if (orBranch) {
             fixedTokens.push(calculateFromTokens(cb(orBranch)));
           }
-        } else {
-          console.log({branches});
         }
 
         isSymbol = false;
