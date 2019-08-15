@@ -260,8 +260,8 @@ export function parseBuffer(text, units) {
       || (last !== ' ' && isAny(cur))
       || (last === '-' && isNum(cur))
       || (last === '_' && isChar(cur))
-      || (hasNum(last) && cur === '%')
       || (isMoney(last) && hasNum(cur))
+      || (hasNum(last) && '%:'.includes(cur))
       || (last === '.' && cur === '-' && isNum(next))
       || (buffer[0].cur === ':' && cur === '-' && isNum(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
@@ -305,9 +305,9 @@ export function parseBuffer(text, units) {
 
   // re-assign tokens on the fly!
   return tokens.reduce((prev, cur, i) => {
-    const oldestValue = i > 2 ? prev[prev.length - 3].content : null;
-    const olderValue = i > 1 ? prev[prev.length - 2].content : null;
-    const lastValue = i > 0 ? prev[prev.length - 1].content : null;
+    const oldestValue = i > 2 ? (prev[prev.length - 3] || {}).content : null;
+    const olderValue = i > 1 ? (prev[prev.length - 2] || {}).content : null;
+    const lastValue = i > 0 ? (prev[prev.length - 1] || {}).content : null;
     const value = cur.map(t => t.cur).join('');
 
     // keep long-format dates, e.g. `Jun 10, 1987`
@@ -320,11 +320,23 @@ export function parseBuffer(text, units) {
     }
 
     if (
-      // keep numbers and units together, e.g `5 days` or `$15,000 MXN`
-      (hasNum(olderValue) && lastValue === ' ' && hasKeyword(value, units))
+      // handle fractions,
+      (isInt(olderValue) && lastValue === '/' && isInt(value))
 
-      // keep well-known date formats, e.g `Jun 10`, `Jun, 1987` or `Jun 10, 1987`
+      // handle checkboxes,
+      || (olderValue === '[' && ' x'.includes(lastValue) && value === ']')
+
+      // skip numbers within groups or parenthesis
+      || ('{[(<'.includes(olderValue) && hasNum(lastValue) && '>)]}'.includes(value))
+
+      // keep numbers and units together, e.g `5 days` or `$15,000 MXN`
+      || (hasNum(olderValue) && lastValue === ' ' && hasKeyword(value, units))
+
+      // keep well-known dates, e.g `Jun 10`, `Jun, 1987` or `Jun 10, 1987`
       || (hasMonths(olderValue) && ' ,'.includes(lastValue) && isNum(value))
+
+      // keep hours-like values together, e.g. `200 am`, '4 pm' or `16:20:00 pm`
+      || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || RE_HOURS.test(olderValue + lastValue + value))
     ) {
       prev[prev.length - 2].content += lastValue + value;
       prev[prev.length - 2].end[1] = cur[cur.length - 1].col + 1;
@@ -334,10 +346,6 @@ export function parseBuffer(text, units) {
 
     // FIXME: needed?
     // handle placeholders
-    // keep hours-like values together
-    // keep symbol-like values together
-    // handle fractions,
-    // skip numbers within parenthesis
     // keep mixed units together, e.g. ft-us
 
     prev.push({
