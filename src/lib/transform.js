@@ -8,6 +8,10 @@ import {
   buildTree,
 } from './tree';
 
+import {
+  toToken,
+} from './ast';
+
 export function fromMarkdown(text) {
   // handle code blocks
   if (text.charAt() === '`' && text.charAt(text.length - 1) === '`') {
@@ -137,7 +141,7 @@ export function fromSymbols(text, units, expression, previousToken) {
   return [hasNum(text) ? 'number' : 'unit', text];
 }
 
-export function transform(input, units, types) {
+export function transform(input, units) {
   const stack = [];
   const vars = {};
 
@@ -149,7 +153,8 @@ export function transform(input, units, types) {
   let prevToken;
   let nextToken;
 
-  console.log({ input });
+  input = input.map(x => x.content);
+  console.log({input});
 
   // FIXME: concatenation happens here... so, as soon tokens are detected
   // text-nodes are keept together, also, other expressions remain grouped
@@ -164,15 +169,7 @@ export function transform(input, units, types) {
   // ... N|U [Op] N|U ...
   // ... N|U [Op] ( ... N|U [Op] N|U ... ) ...
 
-  return [];
-
   const body = input.reduce((prev, cur, i) => {
-    // resolve from given types
-    if (hasOwnKeyword(types, cur)) {
-      prev.push(toToken(i, () => ['number', cur, types[cur]]));
-      return prev;
-    }
-
     let inExpr = stack[stack.length - 1];
     let key = i;
 

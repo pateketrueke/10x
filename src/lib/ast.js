@@ -1,3 +1,7 @@
+import {
+  isSep, hasTagName, hasPercent,
+} from './parser';
+
 export function highestCommonFactor(a, b) {
   return b !== 0 ? highestCommonFactor(b, a % b) : a;
 }

@@ -1,3 +1,7 @@
+import {
+  isSep, hasTagName,
+} from './parser';
+
 export function buildTree(tokens) {
   let root = [];
   let depth = 0;
