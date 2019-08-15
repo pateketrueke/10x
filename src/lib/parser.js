@@ -615,7 +615,7 @@ export function fixArgs(values, flatten) {
 
     last.push(cur);
 
-    if (cur[0] === 'expr' && cur[1] === ',') {
+    if (cur[0] === 'expr' && isSep(cur[1])) {
       last.pop();
       offset++;
     }

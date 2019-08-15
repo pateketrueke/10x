@@ -137,9 +137,13 @@ export function reduceFromEffect(value, args, def, cb) {
           Object.assign(fixedArgs, reduceFromArgs(input, context));
 
           const peek = cb(reduceFromTokens(b[0], fixedArgs));
-          const subTree = peek.concat(reduceFromTokens(b.slice(1), fixedArgs));
+          const subTree = cb(reduceFromTokens(b.slice(1), fixedArgs));
 
-          return subTree[subTree.length - 1].pop();
+          // return the last value from additional expressions
+          if (subTree.length) return subTree.pop();
+
+          // otherwise, we evaluate and return
+          return calculateFromTokens(peek);
         };
       }
 
@@ -157,6 +161,11 @@ export function reduceFromEffect(value, args, def, cb) {
   }
 
   fixedResult = typeof fixedResult === 'string' ? `"${fixedResult}"` : fixedResult;
+
+  // flatten back nested values from side-effects...
+  if (fixedResult[0] === 'object' && Array.isArray(fixedResult[1])) {
+    fixedResult[1] = fixedResult[1].map(x => x.length === 1 ? x[0] : x);
+  }
 
   // recast previous token with the new value
   return [typeof fixedResult, fixedResult];
