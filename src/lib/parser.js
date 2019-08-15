@@ -85,6 +85,10 @@ export const hasKeyword = (x, units) => {
   if (!x) return false;
 
   const key = x.replace(RE_NO_ALPHA, '');
+
+  // skip further detection on white-space
+  if (key.includes(' ')) return false;
+
   const test = key && (hasOwnKeyword(units, key) || hasOwnKeyword(units, key.toLowerCase()));
 
   return test;
@@ -305,9 +309,9 @@ export function parseBuffer(text, units) {
 
   // re-assign tokens on the fly!
   return tokens.reduce((prev, cur, i) => {
-    const oldestValue = i > 2 ? (prev[prev.length - 3] || {}).content : null;
-    const olderValue = i > 1 ? (prev[prev.length - 2] || {}).content : null;
-    const lastValue = i > 0 ? (prev[prev.length - 1] || {}).content : null;
+    const oldestValue = (prev[prev.length - 3] || {}).content;
+    const olderValue = (prev[prev.length - 2] || {}).content;
+    const lastValue = (prev[prev.length - 1] || {}).content;
     const value = cur.map(t => t.cur).join('');
 
     // keep long-format dates, e.g. `Jun 10, 1987`
@@ -329,11 +333,11 @@ export function parseBuffer(text, units) {
       // skip numbers within groups or parenthesis
       || ('{[(<'.includes(olderValue) && hasNum(lastValue) && '>)]}'.includes(value))
 
-      // keep numbers and units together, e.g `5 days` or `$15,000 MXN`
-      || (hasNum(olderValue) && lastValue === ' ' && hasKeyword(value, units))
-
       // keep well-known dates, e.g `Jun 10`, `Jun, 1987` or `Jun 10, 1987`
       || (hasMonths(olderValue) && ' ,'.includes(lastValue) && isNum(value))
+
+      // keep numbers and units together, e.g `5 days` or `$15,000 MXN`; also handle mixed-units
+      || (hasNum(olderValue) && ' /-'.includes(lastValue) && hasKeyword(olderValue + lastValue + value, units))
 
       // keep hours-like values together, e.g. `200 am`, '4 pm' or `16:20:00 pm`
       || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || RE_HOURS.test(olderValue + lastValue + value))
@@ -343,10 +347,6 @@ export function parseBuffer(text, units) {
       prev.pop();
       return prev;
     }
-
-    // FIXME: needed?
-    // handle placeholders
-    // keep mixed units together, e.g. ft-us
 
     prev.push({
       content: value,
