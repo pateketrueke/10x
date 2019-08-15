@@ -3,7 +3,7 @@ import {
 } from './transform';
 
 import {
-  parseBuffer, joinTokens, fixTree,
+  parseBuffer, fixTree,
   isInt, toFraction, toNumber, toValue,
 } from './parser';
 

@@ -172,170 +172,6 @@ export function toValue(value) {
   return value;
 }
 
-// FIXME: needed?
-export function joinTokens(data, units, types) {
-  const buffer = [];
-
-  let offset = 0;
-  let depth = 0;
-
-  let inCall = false;
-
-  let hasDate = false;
-  let hasUnit = false;
-
-  for (let i = 0; i < data.length; i += 1) {
-    const cur = data[i];
-    const next = data[i + 1];
-
-    // accumulated tokens from current line
-    const stack = buffer[offset] || (buffer[offset] = []);
-
-    // last added token on the stack
-    const oldChar = stack[stack.length - 1]
-      || (buffer.length > 1 && buffer[offset - 1][0]);
-
-    // handle placeholders
-    if (
-      (cur === '_'
-        && (isSep(next, '}]) ') || isOp(next) || isFx(next))
-        && (isSep(oldChar, ' ([{') || isOp(oldChar) || isFx(oldChar))
-        ) || (data[i - 1] === '_' && (isSep(cur, ' ') || isOp(cur) || isFx(cur)))
-    ) {
-      stack.push(cur);
-      offset++;
-      continue;
-    }
-
-    // handle unit expressions, with numbers
-    if (cur === ' ' && !hasUnit && hasNum(oldChar) && !hasNum(next) && hasKeyword(next, units)) {
-      buffer.splice(offset - 1, 2, [oldChar + cur + next]);
-      hasUnit = !hasNum(next);
-      data.splice(i - 1, 1);
-      stack.pop();
-      continue;
-    }
-
-    // keep previous month-format plus year
-    if (hasDate) {
-      // break on given years...
-      if (oldChar === ',' && cur === ' ' && isInt(next)) {
-        stack.push(cur, next);
-        data.splice(i, 1);
-        hasDate = false;
-        continue;
-      }
-
-      // break on any word...
-      if (isChar(cur) || isOp(cur) || isAny(cur)) {
-        buffer[++offset] = [stack[stack.length - 1]];
-        buffer[++offset] = [cur];
-        stack.pop();
-        hasDate = false;
-      }
-
-      // keep eating tokens...
-      if (cur === ' ' || cur === ',' || (isInt(cur) || isNth(cur))) {
-        stack.push(cur);
-      }
-
-      continue;
-    }
-
-    // reset flags to continue
-    hasDate = false;
-    hasUnit = !!types[cur];
-
-    let key = i;
-    let nextToken;
-
-    do { nextToken = data[++key]; } while (nextToken === ' ');
-
-    if (
-      // glue ISO-dates together
-      (hasNum(cur)
-        && hasDatetime(oldChar) === 'ISO'
-        && cur.charAt() === '.' && cur.charAt(cur.length - 1) === 'Z')
-
-      // glue hours together
-      || ((isInt(oldChar) || (hasNum(oldChar) && oldChar[oldChar.length - 1] === ':')) && cur[0] === ':' && hasNum(cur))
-    ) {
-      buffer[offset - 1].push(cur);
-      buffer.length = offset;
-      continue;
-    }
-
-    if (
-      // keep hours-like values together
-      (isInt(oldChar) && cur === ' ' && ['am', 'pm'].includes(next))
-
-      // keep symbol-like values together
-      || (oldChar[0] === ':' && isOp(cur, ':') && (isInt(next) || isChar(next)))
-    ) {
-      buffer[offset - 1].push(cur + next);
-      buffer.splice(offset, 1);
-      data.splice(i, 1);
-      stack.pop();
-      continue;
-    }
-
-    // flag well-known date formats
-    if (hasMonths(cur)) hasDate = true;
-
-    if (
-      // handle fractions,
-      (isInt(oldChar) && cur === '/' && isInt(next))
-
-      // skip numbers within parenthesis
-      || (!inCall && (oldChar === '(' && hasNum(cur) && next === ')'))
-
-      // keep mixed units together, e.g. ft-us
-      || (
-        hasKeyword(oldChar, units)
-        && '/-'.includes(cur) && isChar(next)
-        && hasKeyword(oldChar + cur + next, units)
-      ) || (isInt(oldChar) && cur === ' ' && hasKeyword(next, units))
-    ) {
-      buffer.splice(offset - 1, 2, [oldChar + cur + next]);
-      data.splice(i, 1);
-      stack.pop();
-      continue;
-    }
-
-    if (
-      isAny(cur)
-
-      // concatenate until we reach ops/units
-      || (!isOp(nextToken, '()')
-        && (isChar(cur) || cur === ' ')
-        && !(isSep(stack[0]) || isOp(stack[0])))
-
-      // handle other ops between words...
-      || (next === '-' && isChar(cur) && !isOp(oldChar))
-      || (cur === '-' && isChar(next) && !isOp(oldChar))
-    ) {
-      // make sure we're not adding units... or keywords
-      if (cur !== ' ' && !(isExpr(next) || hasKeyword(next, units))) {
-        stack.push(cur);
-        continue;
-      }
-    }
-
-    // flag possible def/call expressions
-    if ((isChar(cur) || isFx(cur)) && nextToken === '(') inCall = true;
-    if (cur === ';' || cur === ')') inCall = false;
-
-    // otherwise, just continue splitting...
-    if (!buffer[offset].length) offset--;
-    buffer[++offset] = [cur];
-    offset++;
-  }
-
-  return buffer.map(x => x.join(''));
-}
-
-// this.input = joinTokens(ast.tokens, this.units, ast.types);
-// FIXME: see if we can merge logic from above...
 export function parseBuffer(text, units) {
   let inBlock = false;
   let inFormat = false;
@@ -416,6 +252,7 @@ export function parseBuffer(text, units) {
       }
     }
 
+    // FIXME: clean combinations...
     if (
       inBlock || inFormat || typeof last === 'undefined'
 
@@ -494,6 +331,14 @@ export function parseBuffer(text, units) {
       prev.pop();
       return prev;
     }
+
+    // FIXME: needed?
+    // handle placeholders
+    // keep hours-like values together
+    // keep symbol-like values together
+    // handle fractions,
+    // skip numbers within parenthesis
+    // keep mixed units together, e.g. ft-us
 
     prev.push({
       content: value,
