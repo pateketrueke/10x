@@ -1,10 +1,10 @@
 import {
-  isInt, isTime, isExpr, hasPercent, toValue, toNumber, toFraction,
+  isInt, isTime, isExpr, hasPercent,
 } from './parser';
 
 import {
-  toToken,
-} from './transform';
+  toToken, toValue, toNumber, toFraction,
+} from './ast';
 
 export function calculateFromMS(diff) {
   const hourTime = 1000 * 60;

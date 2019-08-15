@@ -1,11 +1,10 @@
-import {
-  transform, toToken, toList,
-} from './transform';
+import { isInt, parseBuffer } from './parser';
+import { transform } from './transform';
+import { fixTree } from './tree';
 
 import {
-  parseBuffer, fixTree,
-  isInt, toFraction, toNumber, toValue,
-} from './parser';
+  toFraction, toNumber, toValue, toToken, toList,
+} from './ast';
 
 import { reduceFromAST } from './reducer';
 import { calculateFromTokens } from './solver';

@@ -1,8 +1,12 @@
 import {
-  fixArgs, fixTokens,
   isFx, isSep, isTime, isExpr,
-  toValue, toNumber, hasNum, hasMonths, hasTagName, hasOwnKeyword,
+  hasNum, hasMonths, hasTagName, hasOwnKeyword,
 } from './parser';
+
+import {
+  toValue, toNumber,
+  fixArgs, fixTokens,
+} from './ast';
 
 import {
   evaluateComparison, calculateFromTokens,
