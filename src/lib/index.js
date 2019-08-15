@@ -61,7 +61,8 @@ export default class Solvente {
   resolve(sample) {
     const ast = parseBuffer(sample, unitFrom(this.types));
 
-    this.input = joinTokens(ast.tokens, this.units, ast.types);
+    // this.input = joinTokens(ast.tokens, this.units, ast.types);
+    this.input = ast.tokens.slice();
 
     try {
       const tokens = transform(this.input, this.units, ast.types);

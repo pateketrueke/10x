@@ -172,6 +172,7 @@ export function toValue(value) {
   return value;
 }
 
+// FIXME: needed?
 export function joinTokens(data, units, types) {
   const buffer = [];
 
@@ -333,51 +334,33 @@ export function joinTokens(data, units, types) {
   return buffer.map(x => x.join(''));
 }
 
-export function parseBuffer(text, fixeds) {
+export function parseBuffer(text) {
   let inBlock = false;
   let inFormat = false;
 
   let offset = 0;
   let open = 0;
   let row = 0;
-  let col = 0;
+  let col = -1;
 
   const chars = text.split('');
   const tokens = [];
   const types = {};
 
   for (let i = 0; i < chars.length; i += 1) {
+    const buffer = tokens[offset] || (tokens[offset] = []);
+    const last = (buffer[buffer.length - 1] || {}).cur;
+    const next = chars[i + 1];
+    const cur = chars[i];
+
     // increase line/column
-    if (chars[i] === '\n') {
+    // once found, add it and then break...
+    if (last === '\n') {
       col = 0;
       row++;
     } else {
       col++;
     }
-
-    const buffer = tokens[offset] || (tokens[offset] = []);
-
-    // consume fixed-length units first...
-    const fixedUnit = fixeds(chars.slice(i));
-    const [fixedValue, fixedType] = fixedUnit || [];
-
-    if (fixedType) {
-      if (i > 0) {
-        tokens[offset] = [{ cur: chars[i - 1], row, col: col }];
-        tokens[++offset] = [{ cur: fixedValue, row, col: col }];
-      } else {
-        tokens[offset] = [{ cur: fixedValue, row, col: col }];
-      }
-
-      offset++;
-      types[fixedValue] = fixedType;
-      chars.splice(i, fixedValue.length - 1);
-      continue;
-    }
-
-    const last = (buffer[buffer.length - 1] || {}).cur;
-    const next = chars[i + 1];
-    const cur = chars[i];
 
     // keep formatting blocks together
     if (!inBlock && !inFormat && isFmt(cur) && !isOp(last)) {
@@ -393,7 +376,7 @@ export function parseBuffer(text, fixeds) {
       }
 
       if (inFormat) {
-        if (buffer.length) tokens[++offset] = [cur];
+        if (buffer.length) tokens[++offset] = [{ cur, row, col }];
         else buffer.push({ cur, row, col });
 
         inFormat = [i, cur];
@@ -430,18 +413,12 @@ export function parseBuffer(text, fixeds) {
       } else if (cur === '*' && next === '/') {
         // disable multiline-style comments
         if (inBlock === 'multiline') {
-          buffer.push({ cur, row, col }, next);
+          buffer.push({ cur: cur + next, row, col: col + 1 });
           chars.splice(i, 1);
           inBlock = false;
           continue;
         }
       }
-    }
-
-    // make sure we're keeping newlines intact
-    if (!inBlock && !inFormat && last === '\n') {
-      tokens[++offset] = [cur];
-      continue;
     }
 
     if (
@@ -493,14 +470,11 @@ export function parseBuffer(text, fixeds) {
     tokens: tokens.map(l => {
       const value = l.map(t => t.cur).join('');
 
-      // FIXME: work over these tokens...
-      console.log({
+      return {
         content: value,
-        begin: [l[0].row, l[0].col - 1],
-        end: [l[l.length - 1].row, l[l.length - 1].col],
-      });
-
-      return value;
+        begin: value === '\n' ? [l[0].row, l[0].col] : [l[0].row, l[0].col],
+        end: value === '\n' ? [l[0].row, l[0].col + 1] : [l[l.length - 1].row, l[l.length - 1].col + 1],
+      };
     }),
     types,
   };

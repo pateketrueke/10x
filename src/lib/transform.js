@@ -197,6 +197,10 @@ export function transform(input, units, types) {
   let prevToken;
   let nextToken;
 
+  console.log({ input });
+
+  return [];
+
   const body = input.reduce((prev, cur, i) => {
     // resolve from given types
     if (hasOwnKeyword(types, cur)) {
