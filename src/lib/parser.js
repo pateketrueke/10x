@@ -50,7 +50,7 @@ const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}
 
 export const isFx = y => y && y.length >= 2 && '-+=~:<!|&>'.includes(y[0]);
 export const isOp = (a, b = '') => `${b}-+=~<!|&>*/`.includes(a);
-export const isSep = (a, b = '') => `${b}{[]}|;,`.includes(a);
+export const isSep = (a, b = '') => `${b}{[]}|;:,.`.includes(a);
 export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
 
 export const isFmt = x => /^["`_*~]$/.test(x);
