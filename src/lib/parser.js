@@ -51,7 +51,7 @@ const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}
 export const isFx = y => y && y.length >= 2 && '-+=~:<!|&>'.includes(y[0]);
 export const isOp = (a, b = '') => `${b}-+=~<!|&>*/`.includes(a);
 export const isSep = (a, b = '') => `${b}{[]}|;:,.`.includes(a);
-export const isChar = (a, b = '') => /^[a-zA-Z]+/.test(a) || b.includes(a);
+export const isChar = a => /^[a-zA-Z]+/.test(a);
 
 export const isFmt = x => /^["`_*~]$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
@@ -334,10 +334,13 @@ export function joinTokens(data, units, types) {
   return buffer.map(x => x.join(''));
 }
 
+// this.input = joinTokens(ast.tokens, this.units, ast.types);
+// FIXME: see if we can merge logic from above...
 export function parseBuffer(text) {
   let inBlock = false;
   let inFormat = false;
 
+  let oldChar = '';
   let offset = 0;
   let open = 0;
   let row = 0;
@@ -345,7 +348,6 @@ export function parseBuffer(text) {
 
   const chars = text.split('');
   const tokens = [];
-  const types = {};
 
   for (let i = 0; i < chars.length; i += 1) {
     const buffer = tokens[offset] || (tokens[offset] = []);
@@ -354,7 +356,6 @@ export function parseBuffer(text) {
     const cur = chars[i];
 
     // increase line/column
-    // once found, add it and then break...
     if (last === '\n') {
       col = 0;
       row++;
@@ -393,15 +394,9 @@ export function parseBuffer(text) {
 
     if (!inFormat) {
       if (!inBlock) {
-        // skip closing chars if they're not well paired
-        if (!open && cur === ')') {
-          buffer.push({ cur, row, col });
-          continue;
-        }
-
-        // FIXME:  warn if we're inside maths...
-        if (cur === '(') open++;
-        if (cur === ')') open--;
+        // flag to allow numbers with commas as separators
+        if (cur === '(' && isChar(oldChar)) open++;
+        else if (cur === ')' && open) open--;
 
         if (
           // enable headings/blockquotes, skip everything
@@ -430,10 +425,10 @@ export function parseBuffer(text) {
       || (last === '_' && isChar(cur))
       || (hasNum(last) && cur === '%')
       || (isMoney(last) && hasNum(cur))
-      || (last === ',' && isNum(cur) && !open)
       || (last === '.' && cur === '-' && isNum(next))
       || (buffer[0].cur === ':' && cur === '-' && isNum(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
+      || (last === ',' && isNum(cur) && isNum(oldChar) && !open)
       || (last === '[' && cur === ']') || (last === '{' && cur === '}')
       || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
       || (isChar(last) && isAny(cur, ':') && !(':-'.includes(next) || isNum(next) || isChar(next)))
@@ -461,23 +456,25 @@ export function parseBuffer(text) {
       || (hasNum(last) && cur === '.' && next === '.')
     ) {
       buffer.push({ cur, row, col });
+
+      // store for open/close checks
+      if (last !== ' ') {
+        oldChar = last;
+      }
     } else {
       tokens[++offset] = [{ cur, row, col }];
     }
   }
 
-  return {
-    tokens: tokens.map(l => {
-      const value = l.map(t => t.cur).join('');
+  return tokens.map(l => {
+    const value = l.map(t => t.cur).join('');
 
-      return {
-        content: value,
-        begin: value === '\n' ? [l[0].row, l[0].col] : [l[0].row, l[0].col],
-        end: value === '\n' ? [l[0].row, l[0].col + 1] : [l[l.length - 1].row, l[l.length - 1].col + 1],
-      };
-    }),
-    types,
-  };
+    return {
+      content: value,
+      begin: value === '\n' ? [l[0].row, l[0].col] : [l[0].row, l[0].col],
+      end: value === '\n' ? [l[0].row, l[0].col + 1] : [l[l.length - 1].row, l[l.length - 1].col + 1],
+    };
+  });
 }
 
 export function buildTree(tokens) {
