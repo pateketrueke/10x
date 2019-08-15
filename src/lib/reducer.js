@@ -172,6 +172,8 @@ export function reduceFromEffect(value, args, def, cb) {
 }
 
 export function reduceFromAST(tokens, convert, expressions) {
+  const cb = x => reduceFromAST(x, convert, Object.assign({}, expressions));
+
   const fixedTokens = [];
   const fixedStack = [];
 
@@ -211,13 +213,13 @@ export function reduceFromAST(tokens, convert, expressions) {
             test = [].concat.apply([test[0]], test.slice(1));
           }
 
-          const retval = calculateFromTokens(reduceFromAST(test, convert, expressions));
+          const retval = calculateFromTokens(cb(test));
 
           // evaluate respective branches
           if (not ? !retval[1] : retval[1]) {
-            fixedTokens.push(calculateFromTokens(reduceFromAST(ifBranch, convert, expressions)));
+            fixedTokens.push(calculateFromTokens(cb(ifBranch)));
           } else if (orBranch) {
-            fixedTokens.push(calculateFromTokens(reduceFromAST(orBranch, convert, expressions)));
+            fixedTokens.push(calculateFromTokens(cb(orBranch)));
           }
         } else {
           console.log({branches});
@@ -241,21 +243,21 @@ export function reduceFromAST(tokens, convert, expressions) {
         if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
       }
 
-      const result = reduceFromAST([rightToken], convert, expressions);
+      const result = cb([rightToken]);
       const subTree = result.concat(tokens.slice(i + 2));
 
       fixedTokens.pop();
-      fixedTokens.push(reduceFromAST(subTree, convert, expressions)[0]);
+      fixedTokens.push(cb(subTree)[0]);
       break;
     }
 
     // apply symbol-accessor op
     if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
-      const args = fixArgs(reduceFromAST(tokens[i + 1] || [], convert, expressions), false)
+      const args = fixArgs(cb(tokens[i + 1] || []), false)
         .map(x => calculateFromTokens(x));
 
-      value = reduceFromAST(fixArgs(left), convert, expressions);
-      value = reduceFromEffect(value, args, cur, x => reduceFromAST(x, convert, expressions));
+      value = cb(fixArgs(left));
+      value = reduceFromEffect(value, args, cur, cb);
 
       fixedTokens[fixedTokens.length - 1] = value;
       continue;
@@ -291,7 +293,7 @@ export function reduceFromAST(tokens, convert, expressions) {
       }
 
       // FIXME: validate input or something?
-      const [lft, rgt, ...others] = args.map(x => calculateFromTokens(reduceFromAST(x, convert, expressions)));
+      const [lft, rgt, ...others] = args.map(x => calculateFromTokens(cb(x)));
       const result = evaluateComparison(cur[1], lft[1], rgt ? rgt[1] : undefined, others.map(x => x[1]));
 
       // also, how these values are rendered back?
@@ -342,7 +344,7 @@ export function reduceFromAST(tokens, convert, expressions) {
         }
       }
 
-      cur = calculateFromTokens(reduceFromAST(cur, convert, expressions));
+      cur = calculateFromTokens(cb(cur));
     }
 
     // handle unit expressions
@@ -362,7 +364,7 @@ export function reduceFromAST(tokens, convert, expressions) {
 
     // handle resolution by recursion
     if (Array.isArray(cur[0])) {
-      cur = calculateFromTokens(reduceFromAST(cur, convert, expressions));
+      cur = calculateFromTokens(cb(cur));
     }
 
     // convert into Date values
