@@ -126,13 +126,21 @@ export function reduceFromEffect(value, args, def, cb) {
   if (!args.length && def[2][0][0] === 'fn') {
     const input = def[2][0][2][0];
     const body = def[2][0][2].slice(1);
+    const fixedArgs = {};
 
     args = fixArgs(def[2]).map(x => {
       const t = Array.isArray(x[0]) ? x[0] : x;
-      const b = body[0].length === 1 ? body[0] : body;
+      const b = fixArgs(body[0].length === 1 ? body[0] : body);
 
       if (t[0] === 'fn') {
-        return (...context) => cb(reduceFromTokens(b, reduceFromArgs(input, context)));
+        return (...context) => {
+          Object.assign(fixedArgs, reduceFromArgs(input, context));
+
+          const peek = cb(reduceFromTokens(b[0], fixedArgs));
+          const subTree = peek.concat(reduceFromTokens(b.slice(1), fixedArgs));
+
+          return subTree[subTree.length - 1].pop();
+        };
       }
 
       return t;
@@ -146,11 +154,6 @@ export function reduceFromEffect(value, args, def, cb) {
       if (typeof x !== 'function') return [x];
       return x;
     }));
-
-    // FIXME: how to check this side-effect?
-    if (typeof fixedResult !== typeof fixedValue) {
-      fixedResult = fixedValue;
-    }
   }
 
   fixedResult = typeof fixedResult === 'string' ? `"${fixedResult}"` : fixedResult;
