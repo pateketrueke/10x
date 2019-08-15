@@ -105,7 +105,7 @@ export function fromSymbols(text, units, expression, previousToken) {
   }
 
   // handle white-space
-  if (text === ' ' || text === '\n') {
+  if (text === '...' || text === ' ' || text === '\n') {
     return ['text', text];
   }
 
