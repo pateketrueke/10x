@@ -59,7 +59,7 @@ export default class Solvente {
   }
 
   resolve(sample) {
-    this.input = parseBuffer(sample);
+    this.input = parseBuffer(sample, this.units);
 
     try {
       const tokens = transform(this.input, this.units);

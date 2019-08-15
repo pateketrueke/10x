@@ -336,7 +336,7 @@ export function joinTokens(data, units, types) {
 
 // this.input = joinTokens(ast.tokens, this.units, ast.types);
 // FIXME: see if we can merge logic from above...
-export function parseBuffer(text) {
+export function parseBuffer(text, units) {
   let inBlock = false;
   let inFormat = false;
 
@@ -466,15 +466,26 @@ export function parseBuffer(text) {
     }
   }
 
-  return tokens.map(l => {
-    const value = l.map(t => t.cur).join('');
+  return tokens.reduce((prev, cur, i) => {
+    const olderValue = i > 1 ? prev[prev.length - 2].content : null;
+    const lastValue = i > 0 ? prev[prev.length - 1].content : null;
+    const value = cur.map(t => t.cur).join('');
 
-    return {
+    // keep numbers and units together
+    if (hasNum(olderValue) && lastValue.includes(' ') && hasKeyword(value, units)) {
+      prev[prev.length - 2].content += lastValue + value;
+      prev.pop();
+      return prev;
+    }
+
+    prev.push({
       content: value,
-      begin: value === '\n' ? [l[0].row, l[0].col] : [l[0].row, l[0].col],
-      end: value === '\n' ? [l[0].row, l[0].col + 1] : [l[l.length - 1].row, l[l.length - 1].col + 1],
-    };
-  });
+      begin: value === '\n' ? [cur[0].row, cur[0].col] : [cur[0].row, cur[0].col],
+      end: value === '\n' ? [cur[0].row, cur[0].col + 1] : [cur[cur.length - 1].row, cur[cur.length - 1].col + 1],
+    });
+
+    return prev;
+  }, []);
 }
 
 export function buildTree(tokens) {

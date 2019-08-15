@@ -199,6 +199,19 @@ export function transform(input, units, types) {
 
   console.log({ input });
 
+  // FIXME: concatenation happens here... so, as soon tokens are detected
+  // text-nodes are keept together, also, other expressions remain grouped
+  // for easier evaluation later... numbers+units should be joined here too!
+
+  // but.... how identify expressions? I mean, as text is just the opossite...
+  // semantics? how we identify an expressión?
+
+  // ... => N|U
+
+  // ... Op N|U ...
+  // ... N|U [Op] N|U ...
+  // ... N|U [Op] ( ... N|U [Op] N|U ... ) ...
+
   return [];
 
   const body = input.reduce((prev, cur, i) => {
