@@ -45,7 +45,7 @@ const RE_ISO = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2})?/;
 const RE_DATE = /^[a-z]{3}(?:\s\d{1,2})?(?:,\s(?:\d{2}|\d{4}))?$/i;
 const RE_DAYS = /^(?:now|to(?:day|night|morrow)|yesterday|week(?:end)?)$/i;
 const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
-const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\b/i;
+const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\w*\b/i;
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
 export const isFx = y => y && y.length >= 2 && '-+=~:<!|&>'.includes(y[0]);
@@ -466,14 +466,31 @@ export function parseBuffer(text, units) {
     }
   }
 
+  // re-assign tokens on the fly!
   return tokens.reduce((prev, cur, i) => {
+    const oldestValue = i > 2 ? prev[prev.length - 3].content : null;
     const olderValue = i > 1 ? prev[prev.length - 2].content : null;
     const lastValue = i > 0 ? prev[prev.length - 1].content : null;
     const value = cur.map(t => t.cur).join('');
 
-    // keep numbers and units together
-    if (hasNum(olderValue) && lastValue.includes(' ') && hasKeyword(value, units)) {
+    // keep long-format dates, e.g. `Jun 10, 1987`
+    if (hasMonths(oldestValue) && olderValue === ',' && isNum(value)) {
+      prev[prev.length - 3].content += olderValue + lastValue + value;
+      prev[prev.length - 3].end[1] = cur[cur.length - 1].col + 1;
+      prev.pop();
+      prev.pop();
+      return prev;
+    }
+
+    if (
+      // keep numbers and units together, e.g `5 days` or `$15,000 MXN`
+      (hasNum(olderValue) && lastValue === ' ' && hasKeyword(value, units))
+
+      // keep well-known date formats, e.g `Jun 10`, `Jun, 1987` or `Jun 10, 1987`
+      || (hasMonths(olderValue) && ' ,'.includes(lastValue) && isNum(value))
+    ) {
       prev[prev.length - 2].content += lastValue + value;
+      prev[prev.length - 2].end[1] = cur[cur.length - 1].col + 1;
       prev.pop();
       return prev;
     }
