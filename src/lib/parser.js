@@ -537,20 +537,6 @@ export function buildTree(tokens) {
     }
   }
 
-  // // handle exceptions
-  // if (calls.length || stack.length) {
-  //   depth = (calls[0] || stack[0])._offset;
-
-  //   const fixedTokens = tokens.slice(0, Math.max(2, depth + 1));
-  //   const fixedInput = fixedTokens.map(x => x[1]).join('');
-
-  //   const err = new Error(`Missing terminator.\n  ${fixedInput}\n  ${fixedInput.replace(/./g, '-')}^`);
-
-  //   err.offset = depth;
-
-  //   throw err;
-  // }
-
   return tree;
 }
 

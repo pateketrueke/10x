@@ -334,7 +334,15 @@ export function transform(input, units, types) {
 
       prev.push(t);
     } else {
-      prev.push(toToken(i, fromMarkdown, cur));
+      const token = toToken(i, fromMarkdown, cur);
+      const old = prev[prev.length - 1];
+
+      // concatenate text tokens
+      if (old && old[0] === 'text' && token[0] === 'text') {
+        old[1] += token[1];
+      } else {
+        prev.push(token);
+      }
     }
 
     // FIXME: re-evaluate this shit...
