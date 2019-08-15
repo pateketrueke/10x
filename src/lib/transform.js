@@ -142,6 +142,41 @@ export function fromSymbols(text, units, expression, previousToken) {
 }
 
 export function transform(input, units) {
+  const tokens = input.slice();
+
+  let mayNumber = false;
+  let inMaths = false;
+  let older = null;
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const prev = (tokens[i - 1] || {}).content;
+    const cur = tokens[i].content;
+
+    let key = i;
+    let nextToken;
+
+    do { nextToken = (tokens[++key] || {}).content; } while (nextToken === ' ');
+
+    console.log({inMaths,older,prev,cur,nextToken});
+
+    // flag for further checks
+    if (!' \n'.includes(prev)) older = prev;
+  }
+
+  // while (tokens.length) {
+  //   const cur = tokens.shift();
+  //   const next = tokens[i + 1];
+
+  //   if (!inMaths) {
+  //     if ((hasNum(cur) || isSep(cur, '()')) && (hasNum(next) || isOp(nextToken))) mayNumber = true;
+  //   }
+
+  //   console.log({mayNumber, inMaths, cur});
+  // }
+
+  return tokens;
+}
+export function old_transform(input, units) {
   const stack = [];
   const vars = {};
 
@@ -154,7 +189,6 @@ export function transform(input, units) {
   let nextToken;
 
   input = input.map(x => x.content);
-  console.log({input});
 
   // FIXME: concatenation happens here... so, as soon tokens are detected
   // text-nodes are keept together, also, other expressions remain grouped
@@ -168,6 +202,8 @@ export function transform(input, units) {
   // ... Op N|U ...
   // ... N|U [Op] N|U ...
   // ... N|U [Op] ( ... N|U [Op] N|U ... ) ...
+
+  // also, as soon one non-keyword is introduced we must break from math-mode...
 
   const body = input.reduce((prev, cur, i) => {
     let inExpr = stack[stack.length - 1];
