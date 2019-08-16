@@ -3,7 +3,7 @@ import {
 } from './parser';
 
 import {
-  fixInput,
+  fixArgs, fixInput,
 } from './ast';
 
 export function buildTree(tokens) {
@@ -81,11 +81,7 @@ export function fixTree(ast) {
       const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' && isSep(x[1]));
       const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
 
-      if (Array.isArray(subTree[0])) {
-        prev[2] = { args: cur, body: fixTree(subTree.slice(2)) };
-      } else {
-        prev[2] = { body: fixTree(subTree.slice(1)) };
-      }
+      prev[2] = { args: fixArgs(cur), body: fixTree(subTree.slice(2)) };
 
       console.log({prev});
       continue;

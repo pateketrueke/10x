@@ -117,6 +117,14 @@ export function toList(tokens, nums) {
 }
 
 export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
+  if (Array.isArray(token)) {
+    const newToken = token.slice();
+
+    newToken._offset = token._offset;
+
+    return newToken;
+  }
+
   const value = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
   value._offset = [token.begin, token.end];

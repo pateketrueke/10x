@@ -271,7 +271,7 @@ export function transform(input, units) {
   }, []));
 
   // copy all tokens to protect them!
-  const fixedBody = fixArgs(body.map(x => x.slice()), null);
+  const fixedBody = fixArgs(body.map(x => toToken(x)), null);
 
   // handle errors during tree-building
   let fixedTree;
@@ -283,9 +283,6 @@ export function transform(input, units) {
   } catch (e) {
     _e = e;
   }
-
-  // console.log(_e);
-  // console.log({fixedBody, fixedTree});
 
   return {
     ast: body,
