@@ -2,6 +2,10 @@ import {
   isSep, isChar, isAlpha, hasTagName,
 } from './parser';
 
+import {
+  fixInput,
+} from './ast';
+
 export function buildTree(tokens) {
   let root = [];
   let depth = 0;
@@ -14,7 +18,7 @@ export function buildTree(tokens) {
     const p = root && root[root.length - 1];
     const t = tokens[i];
 
-    // open var/call expressions (strict-mode)
+    // flag var/call expressions (strict-mode)
     if (p && p[0] === 'unit' && (isChar(p[1]) || isAlpha(p[1])) && ('(='.includes(t[1]))) {
       p._call = t[1] === '(';
       p[0] = 'def';
@@ -58,13 +62,13 @@ export function fixTree(ast) {
     const next = tokens[i + 1];
 
     // skip and merge empty leafs
-    if (cur.length === 0) {
-      if (prev && prev[0] === 'def') {
-        tokens.splice(i, 1);
-        prev[2] = [cur];
-      }
-      continue;
-    }
+    // if (cur.length === 0) {
+    //   if (prev && prev[0] === 'def') {
+    //     tokens.splice(i, 1);
+    //     prev[2] = [cur];
+    //   }
+    //   continue;
+    // }
 
     // look for partial-applications
     // if (next && next[0] === 'expr' && next[2] === 'equal' && cur[0] === 'unit') {
@@ -72,6 +76,20 @@ export function fixTree(ast) {
     //   cur[0] = 'def';
     //   break;
     // }
+
+    if (prev && prev[0] === 'def' && prev._call && Array.isArray(cur[0])) {
+      const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' && isSep(x[1]));
+      const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
+
+      if (Array.isArray(subTree[0])) {
+        prev[2] = { args: cur, body: fixTree(subTree.slice(2)) };
+      } else {
+        prev[2] = { body: fixTree(subTree.slice(1)) };
+      }
+
+      console.log({prev});
+      continue;
+    }
 
     // if (cur[0] === 'def' && cur[2]) {
     //   cur[2] = fixTree(cur[2]);
@@ -101,12 +119,12 @@ export function fixTree(ast) {
       const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' || x[0] === 'fx');
 
       // make sure we're extending valid combinations...
-      if (prev && prev[0] !== 'expr' && offset > 0) {
-        if (prev[0] === 'def' && !prev[2]) {
-          tokens.splice(i + 1, 0, ...fixCalls(tokens.splice(i + 1, i + offset - 1)));
-          continue;
-        }
-      }
+      // if (prev && prev[0] !== 'expr' && offset > 0) {
+      //   if (prev[0] === 'def' && !prev[2]) {
+      //     tokens.splice(i + 1, 0, ...fixCalls(tokens.splice(i + 1, i + offset - 1)));
+      //     continue;
+      //   }
+      // }
 
       // otherwise, we just fix everything!
       tokens.splice(i, i + tokens.length, ...fixCalls(tokens.slice(i)));
@@ -224,60 +242,60 @@ export function fixCalls(def, skip) {
     const right = tokens[i + 1];
 
     // group unit-calls and arguments
-    if (cur[0] === 'def' && !cur[2] && right && Array.isArray(right[0])) {
-      tokens.splice(i + 1, 1);
-      cur[2] = [right];
-      continue;
-    }
+    // if (cur[0] === 'def' && !cur[2] && right && Array.isArray(right[0])) {
+    //   tokens.splice(i + 1, 1);
+    //   cur[2] = [right];
+    //   continue;
+    // }
 
     // append all given tokens to previous unit-definitions
-    if (left && left[0] === 'def' && cur[0] !== 'fx') {
-      if (left[2] && cur[0] !== 'expr') {
-        const cut = tokens.slice(i).findIndex(x => ['fx', 'expr'].includes(x[0]));
-        const subTree = cut > 0 ? tokens.splice(i, cut) : tokens.splice(i);
+    // if (left && left[0] === 'def' && cur[0] !== 'fx') {
+    //   if (left[2] && cur[0] !== 'expr') {
+    //     const cut = tokens.slice(i).findIndex(x => ['fx', 'expr'].includes(x[0]));
+    //     const subTree = cut > 0 ? tokens.splice(i, cut) : tokens.splice(i);
 
-        left[2][0] = left[2][0].concat(fixInput(subTree, true));
-        continue;
-      }
-    }
+    //     left[2][0] = left[2][0].concat(fixInput(subTree, true));
+    //     continue;
+    //   }
+    // }
 
     // handle units with single arguments
-    if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
-      if (right && right[0] !== 'expr') {
-        cur[0] = 'def';
-        cur[2] = [[right]];
-        tokens.splice(i + 1, 1);
-        continue;
-      }
-    }
+    // if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
+    //   if (right && right[0] !== 'expr') {
+    //     cur[0] = 'def';
+    //     cur[2] = [[right]];
+    //     tokens.splice(i + 1, 1);
+    //     continue;
+    //   }
+    // }
 
-    // handle partial-application calls
-    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
-      if (Array.isArray(left[0]) && right[0] === 'def' && tokens[i - 2]) {
-        tokens[i - 2][0] = 'def';
-        tokens[i - 2][2] = [left];
-        tokens.splice(i - 3, 3, cur, tokens[i - 2]);
-        continue;
-      }
+    // // handle partial-application calls
+    // if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
+    //   if (Array.isArray(left[0]) && right[0] === 'def' && tokens[i - 2]) {
+    //     tokens[i - 2][0] = 'def';
+    //     tokens[i - 2][2] = [left];
+    //     tokens.splice(i - 3, 3, cur, tokens[i - 2]);
+    //     continue;
+    //   }
 
-      // compose from previous calls
-      if (left[0] === 'unit') {
-        tokens.splice(i, 2, fixApply(cur[2], right, args));
-        left._curry = cur.slice();
-        left[0] = 'def';
-        continue;
-      }
-    }
+    //   // compose from previous calls
+    //   if (left[0] === 'unit') {
+    //     tokens.splice(i, 2, fixApply(cur[2], right, args));
+    //     left._curry = cur.slice();
+    //     left[0] = 'def';
+    //     continue;
+    //   }
+    // }
 
-    // unit-calls without arguments receives _
-    if (left
-      && left[0] === 'fx'
-      && cur[0] === 'unit'
-      && (!right || (right[0] === 'expr' && isSep(right[1])))
-    ) {
-      cur[2] = [[['symbol', '_']]];
-      cur[0] = 'def';
-    }
+    // // unit-calls without arguments receives _
+    // if (left
+    //   && left[0] === 'fx'
+    //   && cur[0] === 'unit'
+    //   && (!right || (right[0] === 'expr' && isSep(right[1])))
+    // ) {
+    //   cur[2] = [[['symbol', '_']]];
+    //   cur[0] = 'def';
+    // }
   }
 
   return [].concat(args.length ? [args] : []).concat(tokens);

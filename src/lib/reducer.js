@@ -65,9 +65,9 @@ export function reduceFromTokens(tree, values) {
     }
 
     // replace token within unit-calls
-    if (item[0] === 'def' && item[2]) {
-      item[2] = [reduceFromTokens(item[2][0], values)];
-    }
+    // if (item[0] === 'def' && item[2]) {
+    //   item[2] = [reduceFromTokens(item[2][0], values)];
+    // }
 
     // return as soon one matches!
     if (item[0] === 'unit' && values[item[1]]) {
@@ -235,25 +235,25 @@ export function reduceFromAST(tokens, convert, expressions) {
     }
 
     // partial calls
-    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
-      const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
-      const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
+    // if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
+    //   const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
+    //   const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
 
-      // inject argument!
-      if (placeholder >= 0) {
-        rightToken[2][0][placeholder] = left;
-      } else {
-        if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
-        if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
-      }
+    //   // inject argument!
+    //   if (placeholder >= 0) {
+    //     rightToken[2][0][placeholder] = left;
+    //   } else {
+    //     if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
+    //     if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
+    //   }
 
-      const result = cb([rightToken]);
-      const subTree = result.concat(tokens.slice(i + 2));
+    //   const result = cb([rightToken]);
+    //   const subTree = result.concat(tokens.slice(i + 2));
 
-      fixedTokens.pop();
-      fixedTokens.push(cb(subTree)[0]);
-      break;
-    }
+    //   fixedTokens.pop();
+    //   fixedTokens.push(cb(subTree)[0]);
+    //   break;
+    // }
 
     // apply symbol-accessor op
     if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
@@ -306,51 +306,51 @@ export function reduceFromAST(tokens, convert, expressions) {
     }
 
     // handle var/call definitions
-    if (cur[0] === 'def') {
-      // console.log({left,cur,right});
-      const isDef = cur[2]
-        && ((cur[2][0][0] === 'expr' && cur[2][0][1] === '=')
-        || (cur[2][1] && cur[2][1][0] === 'expr' && cur[2][1][1] === '='));
+    // if (cur[0] === 'def') {
+    //   // console.log({left,cur,right});
+    //   const isDef = cur[2]
+    //     && ((cur[2][0][0] === 'expr' && cur[2][0][1] === '=')
+    //     || (cur[2][1] && cur[2][1][0] === 'expr' && cur[2][1][1] === '='));
 
-      // define var/call
-      if (isDef) {
-        expressions[cur[1]] = cur[2];
-        continue;
-      }
+    //   // define var/call
+    //   if (isDef) {
+    //     expressions[cur[1]] = cur[2];
+    //     continue;
+    //   }
 
-      // side-effects will operate on previous values
-      const call = expressions[cur[1]] ? expressions[cur[1]].slice() : null;
-      const args = cur[2];
+    //   // side-effects will operate on previous values
+    //   const call = expressions[cur[1]] ? expressions[cur[1]].slice() : null;
+    //   const args = cur[2];
 
-      // skip undefined calls
-      if (!call) continue;
+    //   // skip undefined calls
+    //   if (!call) continue;
 
-      // compute valid sub-expressions from arguments
-      const locals = reduceFromArgs(call[0], fixArgs(args));
+    //   // compute valid sub-expressions from arguments
+    //   const locals = reduceFromArgs(call[0], fixArgs(args));
 
-      // prepend the  _ symbol to already curried functions
-      if (call[1][0] === 'def' && call[1]._curry) {
-        call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
-      }
+    //   // prepend the  _ symbol to already curried functions
+    //   if (call[1][0] === 'def' && call[1]._curry) {
+    //     call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
+    //   }
 
-      // make sure we don't cut definitions without arguments
-      const cut = (call[0][0] === 'expr' && call[0][1] === '=') ? 1 : 2;
+    //   // make sure we don't cut definitions without arguments
+    //   const cut = (call[0][0] === 'expr' && call[0][1] === '=') ? 1 : 2;
 
-      // replace all given units within the AST
-      cur = reduceFromTokens(call.slice(cut), locals);
+    //   // replace all given units within the AST
+    //   cur = reduceFromTokens(call.slice(cut), locals);
 
-      if (cur[0][0] === 'fn') {
-        const fixedArgs = fixArgs(args);
+    //   if (cur[0][0] === 'fn') {
+    //     const fixedArgs = fixArgs(args);
 
-        // apply lambda-calls as we have arguments
-        while (cur[0][0] === 'fn' && fixedArgs.length) {
-          Object.assign(locals, reduceFromArgs(cur[0][2][0], fixedArgs));
-          cur = reduceFromTokens(cur[0][2][1], locals);
-        }
-      }
+    //     // apply lambda-calls as we have arguments
+    //     while (cur[0][0] === 'fn' && fixedArgs.length) {
+    //       Object.assign(locals, reduceFromArgs(cur[0][2][0], fixedArgs));
+    //       cur = reduceFromTokens(cur[0][2][1], locals);
+    //     }
+    //   }
 
-      cur = calculateFromTokens(cb(cur));
-    }
+    //   cur = calculateFromTokens(cb(cur));
+    // }
 
     // handle unit expressions
     if (cur[0] === 'unit' && hasOwnKeyword(expressions, cur[1])) {

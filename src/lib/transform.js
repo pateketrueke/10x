@@ -284,8 +284,8 @@ export function transform(input, units) {
     _e = e;
   }
 
-  console.log(_e);
-  console.log({fixedBody, fixedTree});
+  // console.log(_e);
+  // console.log({fixedBody, fixedTree});
 
   return {
     ast: body,
