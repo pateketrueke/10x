@@ -247,14 +247,11 @@ export function transform(input, units) {
       }
 
       // append separators to disambiguate
-      if (last && last[0] !== 'expr') {
-        if (isSep(last[1]) && prev[prev.length - 1][1] === '\n') {
-          prev[prev.length - 2][0] = 'expr';
-          prev[prev.length - 2][1] = last[1];
-          prev[prev.length - 2][2] = getOp(last[1]);
-        } else if (prev[prev.length - 1][0] !== 'text') {
-          prev.push(['expr', null]);
-        }
+      if (last
+        && last[0] !== 'expr'
+        && prev[prev.length - 1][0] !== 'text'
+      ) {
+        prev.push(['expr', null]);
       }
     } else {
       prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
