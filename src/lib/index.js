@@ -148,11 +148,10 @@ export default class Solvente {
   }
 
   eval(tokens) {
-    const chunks = (tokens || this.tree).slice();
     const results = [];
 
     try {
-      chunks.forEach(ast => {
+      (tokens || this.tree).forEach(ast => {
         results.push(...toList(reduceFromAST(ast, convertFrom, this.expressions)));
       });
     } catch (e) {
