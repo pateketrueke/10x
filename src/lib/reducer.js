@@ -4,13 +4,13 @@ import {
 } from './parser';
 
 import {
+  evaluateComparison, calculateFromTokens,
+} from './solver';
+
+import {
   toValue, toNumber,
   fixArgs, fixTokens,
 } from './ast';
-
-import {
-  evaluateComparison, calculateFromTokens,
-} from './solver';
 
 export function reduceFromValue(token) {
   let text = token[1];

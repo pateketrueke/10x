@@ -13,11 +13,6 @@ export function buildTree(tokens) {
   for (let i = 0; i < tokens.length; i += 1) {
     const t = tokens[i];
 
-    // fix nested-nodes
-    if (t[0] === 'def' && t[2]) {
-      t[2] = buildTree(t[2]);
-    }
-
     // handle nesting
     if (['open', 'close'].includes(t[0]) || ['begin', 'end'].includes(t[2])) {
       if (t[0] === 'open' || t[2] === 'begin') {
@@ -27,7 +22,6 @@ export function buildTree(tokens) {
         if (t[1] === '{') root._object = true;
         if (t[1] === '[') root._array = true;
 
-        root._offset = i;
         root.push(leaf);
         stack.push(root);
         root = leaf;
@@ -71,13 +65,19 @@ export function fixTree(ast) {
     }
 
     // look for partial-applications
-    if (cur[0] === 'def' && cur[2]) {
-      cur[2] = fixTree(cur[2]);
-
-      if (!(arr || obj)) {
-        cur[2] = fixCalls(cur[2]);
-      }
+    if (next && next[0] === 'expr' && next[2] === 'equal' && cur[0] === 'unit') {
+      cur[2] = fixTree(tokens.splice(i + 1)).concat([['expr', ';', 'k']]);
+      cur[0] = 'def';
+      break;
     }
+
+    // if (cur[0] === 'def' && cur[2]) {
+    //   cur[2] = fixTree(cur[2]);
+
+    //   if (!(arr || obj)) {
+    //     cur[2] = fixCalls(cur[2]);
+    //   }
+    // }
 
     // compose lambda-calls with multiple arguments...
     if (cur[0] === 'unit' && next && ((next[0] === 'expr' && next[1] === ',') || (next[0] === 'fx' && next[2] === 'func'))) {
