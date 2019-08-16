@@ -1,5 +1,5 @@
 import {
-  isSep, hasTagName,
+  isSep, isChar, isAlpha, hasTagName,
 } from './parser';
 
 export function buildTree(tokens) {
@@ -8,10 +8,59 @@ export function buildTree(tokens) {
 
   const tree = root;
   const stack = [];
-  const calls = [];
+  const inCalls = [];
 
   for (let i = 0; i < tokens.length; i += 1) {
+    const p = root && root[root.length - 1];
     const t = tokens[i];
+
+    // FIXME: below seems to create a nested stack of def-calls, good or not...
+    // handle expression blocks
+    if (inCalls.length) {
+      // // handle nested calls
+      // if (token[0] === 'unit' && nextToken === '(') token[0] = 'def';
+
+      // // reassign _ placeholder
+      // if (token[0] === 'symbol' && token[1] === '_') token[0] = 'unit';
+
+      // append all sub-tokens
+      inCalls[inCalls.length - 1][2].push(t);
+
+      // // ensure we close and continue eating...
+      // if (cur === ';' || (inCall && cur === ')')) {
+      //   prevToken = 'def';
+      //   inCall = false;
+      //   inMaths = depth > 0;
+
+      //   // close var-expressions
+      //   if (nextToken !== '=' && depth === inExpr._depth) {
+      //     prev.push(inExpr);
+      //     inExpr = false;
+      //     stack.pop();
+      //   }
+      // }
+
+      continue;
+    }
+
+    // // skip separators after numbers, preceding keywords
+    // if (hasNum(prevToken) && ':,'.includes(cur) && nextToken && isExpr(nextToken)) return prev;
+
+    // open var/call expressions (strict-mode)
+    // console.log({p,t});
+    if (p && p[0] === 'unit' && (isChar(p[1]) || isAlpha(p[1])) && t[0] === 'expr' && ('(='.includes(t[1]))) {
+      inCalls.push(p);
+      p[0] = 'def';
+
+      // resolve sub-calls
+      if (t[1] === '(') {
+        p._call = true;
+        p[2] = [];
+      } else {
+        p[2] = [t];
+      }
+      continue;
+    }
 
     // handle nesting
     if (['open', 'close'].includes(t[0]) || ['begin', 'end'].includes(t[2])) {
@@ -65,11 +114,11 @@ export function fixTree(ast) {
     }
 
     // look for partial-applications
-    if (next && next[0] === 'expr' && next[2] === 'equal' && cur[0] === 'unit') {
-      cur[2] = fixTree(tokens.splice(i + 1)).concat([['expr', ';', 'k']]);
-      cur[0] = 'def';
-      break;
-    }
+    // if (next && next[0] === 'expr' && next[2] === 'equal' && cur[0] === 'unit') {
+    //   cur[2] = fixTree(tokens.splice(i + 1)).concat([['expr', ';', 'k']]);
+    //   cur[0] = 'def';
+    //   break;
+    // }
 
     // if (cur[0] === 'def' && cur[2]) {
     //   cur[2] = fixTree(cur[2]);

@@ -139,7 +139,12 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   }
 
   // return definitions as units
-  if (isChar(text) && '(='.includes(rightToken)) {
+  if (
+    isChar(text)
+
+    // make sure we're validating right after...
+    && ('(='.includes(rightToken) || isOp(rightToken) || isSep(rightToken))
+  ) {
     return ['unit', text];
   }
 
@@ -174,6 +179,7 @@ export function transform(input, units) {
   let mayNumber = false;
   let inMaths = false;
   let older = null;
+  let depth = 0;
   let inc = 0;
 
   for (let i = 0; i < tokens.length; i += 1) {
@@ -185,6 +191,16 @@ export function transform(input, units) {
     let nextToken;
 
     do { nextToken = (tokens[++key] || {}).content; } while (nextToken === ' ');
+
+    if (cur === '(') depth++;
+    if (cur === ')') depth--;
+
+    if (cur === ')' && depth <= 0) {
+      inMaths = false;
+      depth = 0;
+    }
+
+    if (isChar(cur) && nextToken === '(') inMaths = stack._fixed = true;
 
     // detect possible expressions
     if (!inMaths) {

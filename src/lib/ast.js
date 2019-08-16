@@ -207,11 +207,7 @@ export function fixArgs(values, flatten) {
     last.push(cur);
 
     // normalize raw separators
-    if (cur[0] === 'expr' && (cur[1] === null || isSep(cur[1]))) {
-      if (flatten === null) {
-        cur[0] = 'text';
-      }
-
+    if (cur[0] === 'expr' && (flatten === null ? cur[1] === null : isSep(cur[1]))) {
       last.pop();
       offset++;
     }
