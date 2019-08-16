@@ -197,11 +197,17 @@ export function fixArgs(values, flatten) {
 
     last.push(cur);
 
-    if (cur[0] === 'expr' && isSep(cur[1])) {
+    if (cur[0] === 'expr' && (cur[1] === null || isSep(cur[1]))) {
+      if (flatten === null) {
+        cur[0] = 'text';
+      }
+
       last.pop();
       offset++;
     }
   }
+
+  console.log({stack});
 
   return stack;
 }

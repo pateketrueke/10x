@@ -10,7 +10,7 @@ import {
 
 import {
   toToken,
-  fixStrings,
+  fixArgs, fixStrings,
 } from './ast';
 
 export function fromMarkdown(text) {
@@ -138,6 +138,11 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     return ['unit', text].concat(fixedUnit !== text ? fixedUnit : []);
   }
 
+  // return definitions as units
+  if (isChar(text) && '(='.includes(rightToken)) {
+    return ['unit', text];
+  }
+
   return [hasNum(text) ? 'number' : 'text', text];
 }
 
@@ -184,7 +189,7 @@ export function transform(input, units) {
     // detect possible expressions
     if (!inMaths) {
       if (
-        (hasNum(cur) && (!nextToken
+        ((hasNum(cur) || isChar(cur)) && (!nextToken
           || isOp(nextToken)
           || isExpr(nextToken)
           || isSep(nextToken, '()')
@@ -203,12 +208,14 @@ export function transform(input, units) {
         ))
       ) mayNumber = stack._fixed = true;
 
+      // if (mayNumber) console.log({older,prev,cur,nextToken});
+
       // break also on new lines!
       if (isSep(cur, '\n') || (mayNumber && (
         // brute-force strategy for matching near ops/tokens
-        !(isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
-        && !(isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
-        && !(!nextToken || hasNum(nextToken) || hasKeyword(nextToken, units))
+        !(!nextToken || hasNum(nextToken) || hasKeyword(nextToken, units))
+        && !(!prev || isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
+        // && !(!older || isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
       ))) {
         if (stack.length) {
           if (hasNum(stack[0].content)) {
@@ -233,11 +240,21 @@ export function transform(input, units) {
     const last = prev[prev.length - 1];
 
     if (cur._fixed || (last && last._fixed)) {
-      prev.push(...tokenize(cur, units));
+      if (!last || last[1] !== null) {
+        prev.push(...tokenize(cur, units));
+      } else {
+        prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
+      }
 
       // append separators to disambiguate
       if (last && last[0] !== 'expr') {
-        prev.push(['expr', ',', 'or']);
+        if (isSep(last[1]) && prev[prev.length - 1][1] === '\n') {
+          prev[prev.length - 2][0] = 'expr';
+          prev[prev.length - 2][1] = last[1];
+          prev[prev.length - 2][2] = getOp(last[1]);
+        } else if (prev[prev.length - 1][0] !== 'text') {
+          prev.push(['expr', null]);
+        }
       }
     } else {
       prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
@@ -251,7 +268,7 @@ export function transform(input, units) {
   let _e;
 
   try {
-    fixedTree = buildTree(body)
+    fixedTree = fixArgs(body, null).map(x => buildTree(x));
   } catch (e) {
     _e = e;
   }

@@ -1,6 +1,7 @@
 import { isInt, parseBuffer } from './parser';
 import { transform } from './transform';
 import { fixTree } from './tree';
+import { fixArgs } from './ast';
 
 import {
   toFraction, toNumber, toValue, toToken, toList,
