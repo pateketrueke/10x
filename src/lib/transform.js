@@ -229,7 +229,7 @@ export function transform(input, units) {
   }
 
   // merge non-fixed chunks
-  console.log(fixStrings(chunks.reduce((prev, cur) => {
+  const body = fixStrings(chunks.reduce((prev, cur) => {
     const last = prev[prev.length - 1];
 
     if (cur._fixed || (last && last._fixed)) {
@@ -239,5 +239,21 @@ export function transform(input, units) {
     }
 
     return prev;
-  }, [])));
+  }, []));
+
+  // handle errors during tree-building
+  let fixedTree;
+  let _e;
+
+  try {
+    fixedTree = buildTree(body)
+  } catch (e) {
+    _e = e;
+  }
+
+  return {
+    ast: body,
+    tree: fixedTree,
+    error: _e || undefined,
+  };
 }
