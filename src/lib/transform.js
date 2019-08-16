@@ -92,12 +92,12 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   }
 
   // handle expressions
-  if (isExpr(text)) {
-    if (leftToken[0] === 'number' && rightToken) {
-      return ['expr', text];
-    }
-
-    return ['text', text];
+  if (
+    isExpr(text)
+    && leftToken[0] === 'number'
+    && (hasNum(rightToken) || hasKeyword(rightToken, units))
+  ) {
+    return ['expr', text];
   }
 
   // handle operators
@@ -138,7 +138,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     return ['unit', text].concat(fixedUnit !== text ? fixedUnit : []);
   }
 
-  return [hasNum(text) ? 'number' : 'unit', text];
+  return [hasNum(text) ? 'number' : 'text', text];
 }
 
 export function tokenize(input, units) {
@@ -155,7 +155,7 @@ export function tokenize(input, units) {
 
     do { nextToken = input[++key]; } while (nextToken && nextToken.content === ' ');
 
-    lastToken = toToken(cur, fromSymbols, units, lastToken, nextToken);
+    lastToken = toToken(cur, fromSymbols, units, lastToken, nextToken && nextToken.content);
 
     prev.push(lastToken);
     return prev;
@@ -184,16 +184,16 @@ export function transform(input, units) {
     // detect possible expressions
     if (!inMaths) {
       if (
-        (hasNum(cur) && (
-          isOp(nextToken)
+        (hasNum(cur) && (!nextToken
+          || isOp(nextToken)
           || isExpr(nextToken)
           || isSep(nextToken, '()')
           // || isFx(nextToken)
           // || hasNum(nextToken)
           // || hasKeyword(nextToken, units)
         ))
-        || ((isSep(cur, '()') || isOp(cur)) && (
-          hasNum(nextToken)
+        || ((isSep(cur, '()') || isOp(cur)) && (!nextToken
+          || hasNum(nextToken)
           // isOp(nextToken)
           // || isExpr(nextToken)
           // ||
@@ -204,10 +204,11 @@ export function transform(input, units) {
       ) mayNumber = stack._fixed = true;
 
       // break also on new lines!
-      if (cur === '\n' || (mayNumber && (
+      if (isSep(cur, '\n') || (mayNumber && (
         // brute-force strategy for matching near ops/tokens
         !(isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
         && !(isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
+        && !(!nextToken || hasNum(nextToken) || hasKeyword(nextToken, units))
       ))) {
         if (stack.length) {
           if (hasNum(stack[0].content)) {
@@ -227,18 +228,16 @@ export function transform(input, units) {
     if (!' \n'.includes(prev)) older = prev;
   }
 
-  console.log({chunks});
-
   // merge non-fixed chunks
-  // console.log(fixStrings(chunks.reduce((prev, cur) => {
-  //   const last = prev[prev.length - 1];
+  console.log(fixStrings(chunks.reduce((prev, cur) => {
+    const last = prev[prev.length - 1];
 
-  //   if (cur._fixed || (last && last._fixed)) {
-  //     prev.push(...tokenize(cur, units));
-  //   } else {
-  //     prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
-  //   }
+    if (cur._fixed || (last && last._fixed)) {
+      prev.push(...tokenize(cur, units));
+    } else {
+      prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
+    }
 
-  //   return prev;
-  // }, [])));
+    return prev;
+  }, [])));
 }
