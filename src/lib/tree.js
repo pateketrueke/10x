@@ -14,45 +14,10 @@ export function buildTree(tokens) {
     const p = root && root[root.length - 1];
     const t = tokens[i];
 
-    // handle expression blocks
-    if (inCalls.length) {
-      const fn = inCalls[inCalls.length - 1];
-
-      if (t[0] === 'expr' && t[1] === ';') {
-        // resume
-        root.push(t);
-        inCalls.pop();
-        continue;
-      }
-
-      // append all sub-tokens
-      fn[2].push(t);
-
-      // ensure we close sub-calls!
-      if (t[0] === 'close') {
-        const n = tokens[i + 1];
-
-        // recursively build nested trees...
-        fn[2] = buildTree(fn[2].slice(1));
-
-        if (!n || (n[0] === 'expr' && n[2] === 'equal')) {
-          fn[2] = [fn[2]];
-        } else {
-          inCalls.pop();
-        }
-      }
-      continue;
-    }
-
     // open var/call expressions (strict-mode)
     if (p && p[0] === 'unit' && (isChar(p[1]) || isAlpha(p[1])) && ('(='.includes(t[1]))) {
-      inCalls.push(p);
-
-      // resolve sub-calls
       p._call = t[1] === '(';
       p[0] = 'def';
-      p[2] = [t];
-      continue;
     }
 
     // handle nesting

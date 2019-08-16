@@ -174,8 +174,13 @@ export function fixStrings(tokens, split) {
       && prev[prev.length - 1][0] === 'text'
       && cur[0] === 'text' && (split === false || cur[1] !== '\n')
     ) {
-      prev[prev.length - 1][1] += cur[1];
-      prev[prev.length - 1]._offset[1] = cur._offset[1];
+      if (!cur._offset) {
+        // console.log({cur});
+        prev.push(cur);
+      } else {
+        prev[prev.length - 1][1] += cur[1];
+        prev[prev.length - 1]._offset[1] = cur._offset[1];
+      }
     } else {
       prev.push(cur);
 
