@@ -187,36 +187,35 @@ export function transform(input, units) {
         (hasNum(cur) && (
           isOp(nextToken)
           || isExpr(nextToken)
-          // || isSep(nextToken, '()')
+          || isSep(nextToken, '()')
           // || isFx(nextToken)
           // || hasNum(nextToken)
           // || hasKeyword(nextToken, units)
         ))
-        // || ((isSep(cur, '()') || isOp(cur)) && (
-        //   false
-        //   // isOp(nextToken)
-        //   // || isExpr(nextToken)
-        //   // ||
-        //   // isFx(nextToken)
-        //   // || hasNum(nextToken)
-        //   // || hasKeyword(nextToken, units)
-        // ))
-      ) mayNumber = true;
+        || ((isSep(cur, '()') || isOp(cur)) && (
+          hasNum(nextToken)
+          // isOp(nextToken)
+          // || isExpr(nextToken)
+          // ||
+          // isFx(nextToken)
+          // || hasNum(nextToken)
+          // || hasKeyword(nextToken, units)
+        ))
+      ) mayNumber = stack._fixed = true;
 
-      if (
-        isSep(cur)
-
-        || mayNumber && (
-          // brute-force strategy for matching near ops/tokens
-          !(isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
-          && !(isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
-      )) {
+      // break also on new lines!
+      if (cur === '\n' || (mayNumber && (
+        // brute-force strategy for matching near ops/tokens
+        !(isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
+        && !(isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
+      ))) {
         if (stack.length) {
           if (hasNum(stack[0].content)) {
             stack._fixed = true;
           }
 
           chunks[++inc] = [tokens[i]];
+          mayNumber = false;
           continue;
         }
       }
@@ -228,16 +227,18 @@ export function transform(input, units) {
     if (!' \n'.includes(prev)) older = prev;
   }
 
+  console.log({chunks});
+
   // merge non-fixed chunks
-  console.log(fixStrings(chunks.reduce((prev, cur) => {
-    const last = prev[prev.length - 1];
+  // console.log(fixStrings(chunks.reduce((prev, cur) => {
+  //   const last = prev[prev.length - 1];
 
-    if (cur._fixed || (last && last._fixed)) {
-      prev.push(...tokenize(cur, units));
-    } else {
-      prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
-    }
+  //   if (cur._fixed || (last && last._fixed)) {
+  //     prev.push(...tokenize(cur, units));
+  //   } else {
+  //     prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
+  //   }
 
-    return prev;
-  }, [])));
+  //   return prev;
+  // }, [])));
 }
