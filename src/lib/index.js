@@ -148,23 +148,18 @@ export default class Solvente {
   }
 
   eval(tokens) {
-    tokens = tokens || this.tree;
+    const chunks = (tokens || this.tree).slice();
+    const results = [];
 
-    console.log({tokens});
+    try {
+      chunks.forEach(ast => {
+        results.push(...toList(reduceFromAST(ast, convertFrom, this.expressions)));
+      });
+    } catch (e) {
+      this.error = e;
+      return null;
+    }
 
-    // const chunks = toList(tokens, false);
-    // const results = [];
-
-    // try {
-    //   chunks.forEach(ast => {
-    //     results.push(...toList(reduceFromAST(ast, convertFrom, this.expressions)));
-    //   });
-    // } catch (e) {
-    //   this.error = e;
-    //   return null;
-    // }
-
-    // return results.map(x => this.value(calculateFromTokens(x)));
-    return [];
+    return results.map(x => this.value(calculateFromTokens(x)));
   }
 }
