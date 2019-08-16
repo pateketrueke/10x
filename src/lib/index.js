@@ -72,7 +72,15 @@ export default class Solvente {
       if (tokens.error) throw tokens.error;
 
       // mutates on AST manipulation!!!
-      this.tree = fixTree(tokens.tree);
+      this.tree = tokens.tree.reduce((prev, cur) => {
+        const subTree = fixTree(cur);
+
+        if (subTree.length) {
+          prev.push(subTree);
+        }
+
+        return prev;
+      }, []);
     } catch (e) {
       this.error = e;
     }
@@ -142,18 +150,21 @@ export default class Solvente {
   eval(tokens) {
     tokens = tokens || this.tree;
 
-    const chunks = toList(tokens, false);
-    const results = [];
+    console.log({tokens});
 
-    try {
-      chunks.forEach(ast => {
-        results.push(...toList(reduceFromAST(ast, convertFrom, this.expressions)));
-      });
-    } catch (e) {
-      this.error = e;
-      return null;
-    }
+    // const chunks = toList(tokens, false);
+    // const results = [];
 
-    return results.map(x => this.value(calculateFromTokens(x)));
+    // try {
+    //   chunks.forEach(ast => {
+    //     results.push(...toList(reduceFromAST(ast, convertFrom, this.expressions)));
+    //   });
+    // } catch (e) {
+    //   this.error = e;
+    //   return null;
+    // }
+
+    // return results.map(x => this.value(calculateFromTokens(x)));
+    return [];
   }
 }
