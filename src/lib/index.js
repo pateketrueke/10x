@@ -110,7 +110,7 @@ export default class Solvente {
     let fixedUnit = token[2];
 
     // adjust unit-fractions
-    if (fixedUnit && fixedUnit.indexOf('fr-') === 0) {
+    if (typeof fixedUnit === 'string' && fixedUnit.indexOf('fr-') === 0) {
       fixedValue = toFraction(fixedValue);
       fixedUnit = fixedUnit.split('fr-')[1];
     }
