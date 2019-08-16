@@ -10,6 +10,7 @@ import {
 
 import {
   toToken,
+  fixStrings,
 } from './ast';
 
 export function fromMarkdown(text) {
@@ -54,7 +55,7 @@ export function fromMarkdown(text) {
   return ['text', text];
 }
 
-export function fromSymbols(text, units, expression, previousToken) {
+export function fromSymbols(text, units, leftToken, rightToken) {
   // handle mixed objects
   if (text === '[]' || text === '{}') {
     return ['object', text === '[]' ? [] : {}];
@@ -90,14 +91,13 @@ export function fromSymbols(text, units, expression, previousToken) {
     return ['string', text];
   }
 
-  // try most char-expressions as valid units...
-  if (expression && (isChar(text) || isAlpha(text))) {
-    return ['unit', text];
-  }
-
   // handle expressions
-  if (isExpr(text) && !isExpr(previousToken)) {
-    return ['expr', text];
+  if (isExpr(text)) {
+    if (leftToken[0] === 'number' && rightToken) {
+      return ['expr', text];
+    }
+
+    return ['text', text];
   }
 
   // handle operators
@@ -139,6 +139,27 @@ export function fromSymbols(text, units, expression, previousToken) {
   }
 
   return [hasNum(text) ? 'number' : 'unit', text];
+}
+
+export function tokenize(input, units) {
+  let lastToken;
+
+  return input.reduce((prev, cur, i) => {
+    if (cur.content === ' ') {
+      prev.push(toToken(cur, fromMarkdown));
+      return prev;
+    }
+
+    let key = i;
+    let nextToken;
+
+    do { nextToken = input[++key]; } while (nextToken && nextToken.content === ' ');
+
+    lastToken = toToken(cur, fromSymbols, units, lastToken, nextToken);
+
+    prev.push(lastToken);
+    return prev;
+  }, []);
 }
 
 export function transform(input, units) {
@@ -208,211 +229,15 @@ export function transform(input, units) {
   }
 
   // merge non-fixed chunks
-  console.log(chunks.reduce((prev, cur) => {
+  console.log(fixStrings(chunks.reduce((prev, cur) => {
     const last = prev[prev.length - 1];
 
     if (cur._fixed || (last && last._fixed)) {
-      prev.push(cur);
+      prev.push(...tokenize(cur, units));
     } else {
-      last.push(...cur);
+      prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
     }
 
     return prev;
-  }, []));
-}
-export function old_transform(input, units) {
-  const stack = [];
-  const vars = {};
-
-  let depth = 0;
-  let inCall = false;
-  let inMaths = false;
-
-  let oldToken;
-  let prevToken;
-  let nextToken;
-
-  input = input.map(x => x.content);
-
-  // FIXME: concatenation happens here... so, as soon tokens are detected
-  // text-nodes are keept together, also, other expressions remain grouped
-  // for easier evaluation later... numbers+units should be joined here too!
-
-  // but.... how identify expressions? I mean, as text is just the opossite...
-  // semantics? how we identify an expressión?
-
-  // ... => N|U
-
-  // ... Op N|U ...
-  // ... N|U [Op] N|U ...
-  // ... N|U [Op] ( ... N|U [Op] N|U ... ) ...
-
-  // also, as soon one non-keyword is introduced we must break from math-mode...
-
-  const body = input.reduce((prev, cur, i) => {
-    let inExpr = stack[stack.length - 1];
-    let key = i;
-
-    do {
-      nextToken = input[++key];
-    } while (nextToken && nextToken.charAt() === ' ');
-
-    // always disable evaluation on ;
-    if (cur === ';') inMaths = false;
-
-    // flag possible expressions
-    if (
-      hasNum(cur) || isFx(cur)
-      || (vars[cur] && isOp(nextToken))
-    ) inMaths = true;
-
-    // flag possible subcalls
-    if (cur === '(') depth++;
-    if (cur === ')') depth--;
-
-    // handle expression blocks
-    if (inExpr) {
-      const token = toToken(i, fromSymbols, cur, units, true);
-
-      // handle nested calls
-      if (token[0] === 'unit' && nextToken === '(') token[0] = 'def';
-
-      // reassign _ placeholder
-      if (token[0] === 'symbol' && token[1] === '_') token[0] = 'unit';
-
-      // append all nodes
-      inExpr[2].push(token);
-
-      // ensure we close and continue eating...
-      if (cur === ';' || (inCall && cur === ')')) {
-        prevToken = 'def';
-        inCall = false;
-        inMaths = depth > 0;
-
-        // close var-expressions
-        if (nextToken !== '=' && depth === inExpr._depth) {
-          prev.push(inExpr);
-          inExpr = false;
-          stack.pop();
-        }
-      }
-
-      return prev;
-    }
-
-    // skip separators after numbers, preceding keywords
-    if (hasNum(prevToken) && ':,'.includes(cur) && nextToken && isExpr(nextToken)) return prev;
-
-    // open var/call expressions (strict-mode)
-    if (
-      (isChar(cur) || isAlpha(cur))
-      && (input[i + 1] === '=' || input[i + 1] === '(')
-    ) {
-      const token = toToken(i, () => ['def', cur, []]);
-
-      inCall = input[i + 1] === '(';
-      stack.push(token);
-
-      token._depth = depth;
-
-      // don't override builtins!
-      if (!hasOwnKeyword(units, cur)) {
-        units[cur] = cur;
-      }
-
-      // save as local too!
-      vars[cur] = 1;
-
-      return prev;
-    }
-
-    if (
-      vars[cur]
-
-      // handle most values
-      || isSep(cur) || isNum(cur)
-
-      // keep logical ops
-      || (cur[0] === ':')
-      || (cur === '[]' || cur === '{}')
-      || (cur === '|>' || cur === '<|')
-      || (isChar(cur) && nextToken === '::')
-      || (cur[0] === '"' || '=!<>'.includes(cur))
-      || (cur[0] === '.' && cur[1] === '.' && nextToken !== '.')
-      || (cur.length === 2 && isOp(cur[0]) && isOp(cur[1]) && cur !== '//')
-
-      // handle sub-calls, symbols and side-effects
-      || (cur === '(' && (oldToken === ',' || isFx(nextToken) || isFx(prevToken) || hasNum(nextToken) || hasKeyword(nextToken, units)))
-      || (cur === ')' && (isFx(nextToken) || isFx(prevToken) || isOp(nextToken) || isSep(nextToken) || hasNum(prevToken) || hasKeyword(prevToken, units)))
-
-      // handle operators
-      || (isOp(cur) && (
-        ((isFx(prevToken) || hasNum(prevToken)) && nextToken === '(')
-        || ((isFx(prevToken) || hasNum(prevToken)) && (hasNum(nextToken) || hasKeyword(nextToken, units)))
-      ))
-
-      // allow keywords after some dates
-      || (isExpr(prevToken) && hasMonths(cur))
-      || (hasDatetime(prevToken) && isExpr(cur) && isNum(nextToken))
-      || hasDays(cur) || hasMonths(cur) || (hasNum(prevToken) && isExpr(cur))
-
-      // handle expressions between numbers/units
-      || (isOp(prevToken) && hasNum(cur))
-
-      // handle special unit-like values
-      || (isChar(cur) && ('[{'.includes(nextToken) || (isFx(prevToken) && prevToken[0] !== '-')))
-      || ((hasNum(cur) || isChar(cur) || hasKeyword(cur, units)) && vars[prevToken])
-
-      || (inMaths && (
-        // allow units between ops/expressions
-        ((isChar(cur) || hasKeyword(cur, units)) && (
-          depth || isOp(nextToken) || isExpr(prevToken) || isOp(prevToken)
-        ))
-
-        // handle units/expressions after maths, never before
-        || (isOp(cur) && ((hasNum(prevToken) || isChar(prevToken)) || (isChar(nextToken) || hasNum(nextToken))))
-      ))
-    ) {
-      const t = toToken(i, fromSymbols, cur, units, null, prevToken);
-
-      // register units to help detection and proper tokenization!
-      if (['unit', 'def'].includes(t[0])) vars[t[1]] = 1;
-
-      prev.push(t);
-    } else {
-      const token = toToken(i, fromMarkdown, cur);
-      const old = prev[prev.length - 1];
-
-      // concatenate text tokens
-      if (old && old[0] === 'text' && token[0] === 'text') {
-        old[1] += token[1];
-      } else {
-        prev.push(token);
-      }
-    }
-
-    // FIXME: re-evaluate this shit...
-    if (!isSep(cur, '( )')) prevToken = cur;
-    if (cur !== ' ') oldToken = cur;
-    return prev;
-  }, []);
-
-  // append remaining tokens from calls
-  if (stack.length) body.push(stack[0]);
-
-  // handle errors during tree-building
-  let fixedTree;
-  let _e;
-
-  try {
-    fixedTree = buildTree(body)
-  } catch (e) {
-    _e = e;
-  }
-
-  return {
-    ast: body,
-    tree: fixedTree,
-    error: _e || undefined,
-  };
+  }, [])));
 }

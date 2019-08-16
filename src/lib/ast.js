@@ -116,19 +116,10 @@ export function toList(tokens, nums) {
   return normalized;
 }
 
-export function toToken(offset, fromCallback, arg1, arg2, arg3, arg4) {
-  if (typeof offset === 'object') {
-    const t = toToken(offset._offset, fromCallback);
+export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
+  const value = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
-    if (offset._object) t._object = true;
-    if (offset._array) t._array = true;
-
-    return t;
-  }
-
-  const value = fromCallback(arg1, arg2, arg3, arg4);
-
-  value._offset = offset;
+  value._offset = [token.begin, token.end];
 
   return value;
 }
@@ -174,6 +165,19 @@ export function fixTokens(ast, flatten) {
 
     return prev;
   }, target);
+}
+
+export function fixStrings(tokens) {
+  return tokens.reduce((prev, cur) => {
+    if (prev.length && prev[prev.length - 1][0] === 'text' && cur[0] === 'text') {
+      prev[prev.length - 1][1] += cur[1];
+      prev[prev.length - 1]._offset[1] = cur._offset[1];
+    } else {
+      prev.push(cur);
+    }
+
+    return prev;
+  }, [])
 }
 
 export function fixArgs(values, flatten) {
