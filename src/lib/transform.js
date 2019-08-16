@@ -1,5 +1,5 @@
 import {
-  isOp, isFx, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr,
+  isOp, isFx, isAny, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr,
   hasKeyword, hasOwnKeyword, hasDatetime, hasMonths, hasDays,
   getOp,
 } from './parser';
@@ -143,12 +143,15 @@ export function fromSymbols(text, units, expression, previousToken) {
 
 export function transform(input, units) {
   const tokens = input.slice();
+  const chunks = [];
 
   let mayNumber = false;
   let inMaths = false;
   let older = null;
+  let inc = 0;
 
   for (let i = 0; i < tokens.length; i += 1) {
+    const stack = chunks[inc] || (chunks[inc] = []);
     const prev = (tokens[i - 1] || {}).content;
     const cur = tokens[i].content;
 
@@ -157,24 +160,65 @@ export function transform(input, units) {
 
     do { nextToken = (tokens[++key] || {}).content; } while (nextToken === ' ');
 
-    console.log({inMaths,older,prev,cur,nextToken});
+    // detect possible expressions
+    if (!inMaths) {
+      if (
+        (hasNum(cur) && (
+          isOp(nextToken)
+          || isExpr(nextToken)
+          // || isSep(nextToken, '()')
+          // || isFx(nextToken)
+          // || hasNum(nextToken)
+          // || hasKeyword(nextToken, units)
+        ))
+        // || ((isSep(cur, '()') || isOp(cur)) && (
+        //   false
+        //   // isOp(nextToken)
+        //   // || isExpr(nextToken)
+        //   // ||
+        //   // isFx(nextToken)
+        //   // || hasNum(nextToken)
+        //   // || hasKeyword(nextToken, units)
+        // ))
+      ) mayNumber = true;
+
+      if (
+        isSep(cur)
+
+        || mayNumber && (
+          // brute-force strategy for matching near ops/tokens
+          !(isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
+          && !(isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
+      )) {
+        if (stack.length) {
+          if (hasNum(stack[0].content)) {
+            stack._fixed = true;
+          }
+
+          chunks[++inc] = [tokens[i]];
+          continue;
+        }
+      }
+    }
+
+    stack.push(tokens[i]);
 
     // flag for further checks
     if (!' \n'.includes(prev)) older = prev;
   }
 
-  // while (tokens.length) {
-  //   const cur = tokens.shift();
-  //   const next = tokens[i + 1];
+  // merge non-fixed chunks
+  console.log(chunks.reduce((prev, cur) => {
+    const last = prev[prev.length - 1];
 
-  //   if (!inMaths) {
-  //     if ((hasNum(cur) || isSep(cur, '()')) && (hasNum(next) || isOp(nextToken))) mayNumber = true;
-  //   }
+    if (cur._fixed || (last && last._fixed)) {
+      prev.push(cur);
+    } else {
+      last.push(...cur);
+    }
 
-  //   console.log({mayNumber, inMaths, cur});
-  // }
-
-  return tokens;
+    return prev;
+  }, []));
 }
 export function old_transform(input, units) {
   const stack = [];
