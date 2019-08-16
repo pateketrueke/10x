@@ -18,11 +18,18 @@ export function buildTree(tokens) {
     if (inCalls.length) {
       const fn = inCalls[inCalls.length - 1];
 
+      if (t[0] === 'expr' && t[1] === ';') {
+        // resume
+        root.push(t);
+        inCalls.pop();
+        continue;
+      }
+
       // append all sub-tokens
       fn[2].push(t);
 
       // ensure we close sub-calls!
-      if (fn._call && t[0] === 'close') {
+      if (t[0] === 'close') {
         const n = tokens[i + 1];
 
         // recursively build nested trees...
@@ -64,11 +71,6 @@ export function buildTree(tokens) {
         root = stack.pop();
       }
     } else {
-      if (!root) {
-        stack.push(t);
-        break;
-      }
-
       root.push(t);
     }
   }

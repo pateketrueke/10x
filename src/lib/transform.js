@@ -143,7 +143,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     isChar(text)
 
     // make sure we're validating right after...
-    && ('(='.includes(rightToken) || isOp(rightToken) || isSep(rightToken))
+    && ('(='.includes(rightToken) || isOp(rightToken) || isSep(rightToken, '()'))
   ) {
     return ['unit', text];
   }
@@ -196,10 +196,11 @@ export function transform(input, units) {
     if (cur === ')') depth--;
 
     if (cur === ')' && depth <= 0) {
-      inMaths = false;
+      inMaths = nextToken === '=';
       depth = 0;
     }
 
+    if (prev === ';') inMaths = mayNumber = false;
     if (isChar(cur) && nextToken === '(') inMaths = stack._fixed = true;
 
     // detect possible expressions
@@ -269,18 +270,19 @@ export function transform(input, units) {
     return prev;
   }, []));
 
+  // copy all tokens to protect them!
+  const fixedBody = fixArgs(body.map(x => x.slice()), null);
+
   // handle errors during tree-building
   let fixedTree;
   let _e;
 
   try {
     // FIXME: last newline is missing on final tree...
-    fixedTree = fixArgs(body, null).map(x => buildTree(x)).filter(x => x.length);
+    fixedTree = fixedBody.map(x => buildTree(x)).filter(x => x.length);
   } catch (e) {
     _e = e;
   }
-
-  // console.log({fixedTree});
 
   return {
     ast: body,
