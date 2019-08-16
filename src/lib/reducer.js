@@ -306,51 +306,52 @@ export function reduceFromAST(tokens, convert, expressions) {
     }
 
     // handle var/call definitions
-    // if (cur[0] === 'def') {
-    //   // console.log({left,cur,right});
-    //   const isDef = cur[2]
-    //     && ((cur[2][0][0] === 'expr' && cur[2][0][1] === '=')
-    //     || (cur[2][1] && cur[2][1][0] === 'expr' && cur[2][1][1] === '='));
+    if (cur[0] === 'def' && cur._call) {
+      // define var/call
+      if (cur._body) {
+        expressions[cur[1]] = cur[2];
+        continue;
+      }
 
-    //   // define var/call
-    //   if (isDef) {
-    //     expressions[cur[1]] = cur[2];
-    //     continue;
-    //   }
+      // side-effects will operate on previous values
+      const def = expressions[cur[1]];
+      const call = cur[2];
 
-    //   // side-effects will operate on previous values
-    //   const call = expressions[cur[1]] ? expressions[cur[1]].slice() : null;
-    //   const args = cur[2];
+      // skip undefined calls
+      if (!call) {
+        console.log('NODEF',{cur})
+        continue;
+      }
 
-    //   // skip undefined calls
-    //   if (!call) continue;
+      // compute valid sub-expressions from arguments
+      // console.log(cb(def.args));
+      // console.log(cb(call.args));
 
-    //   // compute valid sub-expressions from arguments
-    //   const locals = reduceFromArgs(call[0], fixArgs(args));
+      const locals = reduceFromArgs(cb(def.args), cb(call.args));
 
-    //   // prepend the  _ symbol to already curried functions
-    //   if (call[1][0] === 'def' && call[1]._curry) {
-    //     call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
-    //   }
+      // // prepend the  _ symbol to already curried functions
+      // if (call[1][0] === 'def' && call[1]._curry) {
+      //   call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
+      // }
 
-    //   // make sure we don't cut definitions without arguments
-    //   const cut = (call[0][0] === 'expr' && call[0][1] === '=') ? 1 : 2;
+      // replace all given units within the AST
+      cur = cb(reduceFromTokens(def.body, locals));
+      cur = calculateFromTokens(cur);
 
-    //   // replace all given units within the AST
-    //   cur = reduceFromTokens(call.slice(cut), locals);
+      // console.log({cur,def,locals});
+      // cur = cb(cur);
+      // console.log({cur});
 
-    //   if (cur[0][0] === 'fn') {
-    //     const fixedArgs = fixArgs(args);
+      // if (cur[0][0] === 'fn') {
+      //   const fixedArgs = fixArgs(args);
 
-    //     // apply lambda-calls as we have arguments
-    //     while (cur[0][0] === 'fn' && fixedArgs.length) {
-    //       Object.assign(locals, reduceFromArgs(cur[0][2][0], fixedArgs));
-    //       cur = reduceFromTokens(cur[0][2][1], locals);
-    //     }
-    //   }
-
-    //   cur = calculateFromTokens(cb(cur));
-    // }
+      //   // apply lambda-calls as we have arguments
+      //   while (cur[0][0] === 'fn' && fixedArgs.length) {
+      //     Object.assign(locals, reduceFromArgs(cur[0][2][0], fixedArgs));
+      //     cur = reduceFromTokens(cur[0][2][1], locals);
+      //   }
+      // }
+    }
 
     // handle unit expressions
     if (cur[0] === 'unit' && hasOwnKeyword(expressions, cur[1])) {
