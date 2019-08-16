@@ -240,6 +240,11 @@ export function transform(input, units) {
 
           chunks[++inc] = [tokens[i]];
           mayNumber = false;
+
+          // ensure we break apart from new-lines
+          if (tokens[i].content === '\n') {
+            inc++;
+          }
           continue;
         }
       }
@@ -253,22 +258,10 @@ export function transform(input, units) {
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
-    const last = prev[prev.length - 1];
+    const lastChunk = prev[prev.length - 1];
 
-    if (cur._fixed || (last && last._fixed)) {
-      if (!last || last[1] !== null) {
-        prev.push(...tokenize(cur, units));
-      } else {
-        prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
-      }
-
-      // append separators to disambiguate
-      if (last
-        && last[0] !== 'expr'
-        && prev[prev.length - 1][0] !== 'text'
-      ) {
-        prev.push(['expr', null]);
-      }
+    if (cur._fixed) {
+      prev.push(...tokenize(cur, units), ['expr', null]);
     } else {
       prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
     }
@@ -281,10 +274,13 @@ export function transform(input, units) {
   let _e;
 
   try {
-    fixedTree = fixArgs(body, null).map(x => buildTree(x));
+    // FIXME: last newline is missing on final tree...
+    fixedTree = fixArgs(body, null).map(x => buildTree(x)).filter(x => x.length);
   } catch (e) {
     _e = e;
   }
+
+  // console.log({fixedTree});
 
   return {
     ast: body,

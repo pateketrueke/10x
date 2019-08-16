@@ -21,14 +21,16 @@ export function buildTree(tokens) {
       // append all sub-tokens
       fn[2].push(t);
 
-
       // ensure we close sub-calls!
       if (fn._call && t[0] === 'close') {
         const n = tokens[i + 1];
 
         // recursively build nested trees...
-        if (n && !(n[0] === 'expr' && n[2] === 'equal')) {
-          fn[2] = buildTree(fn[2].slice(1));
+        fn[2] = buildTree(fn[2].slice(1));
+
+        if (!n || (n[0] === 'expr' && n[2] === 'equal')) {
+          fn[2] = [fn[2]];
+        } else {
           inCalls.pop();
         }
       }
