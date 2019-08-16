@@ -6,6 +6,7 @@ global.console.log = (...args) => {
 
 const Solvente = require('./dist/solvente.js');
 
+const returnRawJSON = process.argv.slice(2).indexOf('--raw') !== -1;
 const sharedFileOffset = process.argv.slice(2).indexOf('--shared');
 const sharedFilePath = sharedFileOffset >= 0 && process.argv.slice(2)[sharedFileOffset + 1];
 const sharedFile = sharedFilePath && require('path').resolve(sharedFilePath);
@@ -27,11 +28,11 @@ const fixedResults = calc.eval();
 const fixedError = calc.error && calc.error.stack;
 
 process.stdout.write(JSON.stringify({
-  results: fixedResults,
-  error: fixedError,
-  tree: calc.tree,
-  input: calc.input,
-  tokens: calc.tokens,
+  error: returnRawJSON ? JSON.stringify(fixedError) : fixedError,
+  tree: returnRawJSON ? JSON.stringify(calc.tree) : calc.tree,
+  input: calc.input.map(x => returnRawJSON ? JSON.stringify(x) : x),
+  tokens: calc.tokens.map(x => returnRawJSON ? JSON.stringify(x) : x),
+  results: fixedResults.map(x => returnRawJSON ? JSON.stringify(x) : x),
 }));
 
 if (sharedFile) require('fs').writeFileSync(sharedFile, JSON.stringify(calc.expressions));
