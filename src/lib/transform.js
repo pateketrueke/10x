@@ -270,6 +270,8 @@ export function transform(input, units) {
     _e = e;
   }
 
+  console.log({fixedTree}, fixedTree.length);
+
   return {
     ast: body,
     tree: fixedTree,

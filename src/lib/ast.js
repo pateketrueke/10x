@@ -167,13 +167,22 @@ export function fixTokens(ast, flatten) {
   }, target);
 }
 
-export function fixStrings(tokens) {
+export function fixStrings(tokens, split) {
   return tokens.reduce((prev, cur) => {
-    if (prev.length && prev[prev.length - 1][0] === 'text' && cur[0] === 'text') {
+    if (
+      prev.length
+      && prev[prev.length - 1][0] === 'text'
+      && cur[0] === 'text' && (split === false || cur[1] !== '\n')
+    ) {
       prev[prev.length - 1][1] += cur[1];
       prev[prev.length - 1]._offset[1] = cur._offset[1];
     } else {
       prev.push(cur);
+
+      // make sure we break!
+      if (split !== false && cur[1] === '\n') {
+        prev.push(['expr', null]);
+      }
     }
 
     return prev;
@@ -197,6 +206,7 @@ export function fixArgs(values, flatten) {
 
     last.push(cur);
 
+    // normalize raw separators
     if (cur[0] === 'expr' && (cur[1] === null || isSep(cur[1]))) {
       if (flatten === null) {
         cur[0] = 'text';
@@ -207,7 +217,21 @@ export function fixArgs(values, flatten) {
     }
   }
 
-  console.log({stack});
+  if (flatten === null) {
+    return stack.reduce((prev, cur) => {
+      const firstValue = cur.findIndex(t => t[0] !== 'text');
+
+      // prepend non values
+      if (firstValue > 0) {
+        prev.push(cur.slice(0, firstValue), cur.slice(firstValue));
+        return prev;
+      }
+
+      prev.push(fixStrings(cur, false));
+
+      return prev;
+    }, []);
+  }
 
   return stack;
 }
