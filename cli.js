@@ -1,5 +1,7 @@
 global.console.log = (...args) => {
-  process.stderr.write(require('util').inspect(args, { colors: true, depth: 10 }) + '\n');
+  args.forEach(value => {
+    process.stderr.write(require('util').inspect(value, { colors: true, depth: 10 }) + '\n');
+  });
 };
 
 const Solvente = require('./dist/solvente.js');

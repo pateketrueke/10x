@@ -234,6 +234,11 @@ export function transform(input, units) {
 
     if (cur._fixed || (last && last._fixed)) {
       prev.push(...tokenize(cur, units));
+
+      // append separators to disambiguate
+      if (last && last[0] !== 'expr') {
+        prev.push(['expr', ',', 'or']);
+      }
     } else {
       prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
     }
