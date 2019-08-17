@@ -1,9 +1,10 @@
 import {
-  isSep, isChar, isAlpha, hasTagName,
+  hasTagName,
+  isSep, isChar, isAlpha,
 } from './parser';
 
 import {
-  fixArgs, fixApply, fixInput,
+  fixCut, fixArgs, fixApply, fixInput,
 } from './ast';
 
 export function buildTree(tokens) {
@@ -83,8 +84,9 @@ export function fixTree(ast) {
 
       // update token definition
       prev._body = subTree.length > 2;
+      // console.log({prev,cur});
       prev[2] = {
-        args: hasArray ? fixArgs(cur) : [],
+        args: hasArray ? fixArgs(cur, true) : [],
         body: fixCalls(subTree.slice(hasArray ? 2 : 1), cur),
       };
       continue;
@@ -99,7 +101,7 @@ export function fixTree(ast) {
         const endPos = cut >= 0 ? cut : tokens.length - offset;
 
         tokens.splice(i, 0, ['fn', '$', {
-          args: tokens.splice(i, offset),
+          args: fixArgs(tokens.splice(i, offset), true),
           body: fixTree(tokens.splice(i, endPos).slice(1)),
         }]);
         break;
@@ -133,7 +135,7 @@ export function fixTree(ast) {
 
       // collect all ops from tokens
       if (next && next[0] === 'expr' && isOp(next[1])) {
-        const fixedTree = fixTokens(fixArgs(tokens.splice(i, i + tokens.length)));
+        const fixedTree = fixTokens(tokens.splice(i, i + tokens.length));
         const target = fixTokens([prev, fixedTree.shift()]);
 
         return fixedTree.reduce((p, c) => {
@@ -272,22 +274,22 @@ export function fixCalls(tokens, def) {
 
       // compose from previous calls, e.g. `def=fn<|5` or `def(_)=fn<|5 _`
       if (left[0] === 'unit') {
-        if (!Array.isArray(def) || !(def[0] === 'expr' && def[2] === 'equal')) {
+        if (!Array.isArray(def[0]) && !(def[0] === 'expr' && def[2] === 'equal')) {
           throw new Error(`Expecting group or definition, given '${def}'`);
         }
 
         // FIXME: this looks like a pattern...
-        const offset = tokens.slice(i + 1).findIndex(x => (x[0] === 'expr' && isSep(x[1])) || x[0] === 'fx')
-        const subTree = (offset >= 0 ? tokens.splice(i, offset) : tokens.splice(i)).slice(1);
+        const subTree = fixCut(tokens, 1, i).slice(1);
         const fixedArgs = def[0] !== 'expr' ? def : [];
 
         left._curry = cur;
         left._body = false;
         left[0] = 'def';
         left[2] = {
-          args: fixApply(cur[2], subTree, fixedArgs),
+          args: fixArgs(fixApply(cur[2], subTree, fixedArgs), true),
           body: [],
         };
+        console.log({left});
         continue;
       }
     }

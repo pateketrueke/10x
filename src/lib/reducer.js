@@ -56,27 +56,25 @@ export function reduceFromValue(token) {
 
 export function reduceFromTokens(tree, values) {
   return tree.reduce((prev, cur) => {
-    const item = cur.slice();
-
     // iterate until we visit all tokens
-    if (Array.isArray(item[0])) {
-      prev.push(reduceFromTokens(item, values));
+    if (Array.isArray(cur[0])) {
+      prev.push(reduceFromTokens(cur, values));
       return prev;
     }
 
     // replace token within unit-calls
-    if (item[0] === 'def' && item[2]) {
-      console.log('DEF_RE_TOKEN?');
-      // item[2] = [reduceFromTokens(item[2][0], values)];
+    if (cur[0] === 'def' && cur[2]) {
+      console.log('DEF_RE_TOKEN?', { cur, values });
+      // cur[2] = [reduceFromTokens(cur[2][0], values)];
     }
 
     // return as soon one matches!
-    if (item[0] === 'unit' && values[item[1]]) {
-      prev.push(values[item[1]]);
+    if (cur[0] === 'unit' && values[cur[1]]) {
+      prev.push(values[cur[1]]);
       return prev;
     }
 
-    prev.push(item);
+    prev.push(cur);
 
     return prev;
   }, []);
@@ -306,8 +304,6 @@ export function reduceFromAST(tokens, convert, expressions) {
       fixedTokens.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
       break;
     }
-
-    // console.log({cur},expressions);
 
     // handle var/call definitions
     if (cur[0] === 'def') {

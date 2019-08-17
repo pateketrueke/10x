@@ -207,15 +207,20 @@ export function fixArgs(values, flatten) {
 
   const stack = [];
 
-  // flatten all single-nodes
-  if (flatten !== false) {
-    while (values.length === 1) values = values[0];
+  // FIXME: also, a pattern...
+  if (flatten === true) {
+    return values.map(x => {
+      while (x.length === 1) x = x[0];
+      return x;
+    });
   }
 
   // break values into single arguments
   for (let i = 0; i < values.length; i += 1) {
     const last = stack[offset] || (stack[offset] = []);
     const cur = values[i];
+
+    // console.log({cur});
 
     last.push(cur);
 
@@ -246,7 +251,7 @@ export function fixArgs(values, flatten) {
 }
 
 export function fixInput(args, lpipe) {
-  return args.filter(x => !hasTagName(x[0])).reduce((p, c) => p.concat(c[0] === 'expr' ? [c] : (
+  return args.filter(x => !hasTagName(x[0])).reduce((p, c) => p.concat(c[0] === 'expr' ? [] : (
     lpipe ? [['expr', ',', 'or'], c] : [c, ['expr', ',', 'or']]
   )), []);
 }
@@ -258,4 +263,11 @@ export function fixApply(kind, body, args) {
   if (kind === 'rpipe') return fixInput(args).concat([body]);
 
   return [];
+}
+
+export function fixCut(ast, slice, offset) {
+  const pos = ast.slice(offset + slice).findIndex(x => (x[0] === 'expr' && isSep(x[1])) || x[0] === 'fx');
+  const subTree = pos >= 0 ? ast.splice(offset, pos) : ast.splice(offset);
+
+  return subTree;
 }

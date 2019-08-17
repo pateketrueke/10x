@@ -148,6 +148,8 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     return ['unit', text];
   }
 
+  // console.log({text,leftToken,rightToken});
+
   return [hasNum(text) ? 'number' : 'text', text];
 }
 
