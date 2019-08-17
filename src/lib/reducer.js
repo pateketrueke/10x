@@ -378,23 +378,17 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
       return;
     }
 
-    // compute valid sub-expressions from arguments
-    // console.log(cb(def.args));
-    // console.log(cb(call.args));
-
     // FIXME: improve error objects and such...
     if (def.args.length && def.args.length !== call.args.length) {
       throw new Error(`Expecting ${ctx.cur[1]}#${def.args.length} args, given ${call.args.length}`);
     }
 
-    const locals = reduceFromArgs(cb(def.args), cb(call.args));
+    // prepend _ symbol for currying
+    if (!def.args.length) {
+      def.args.unshift(['unit', '_']);
+    }
 
-    // // prepend the  _ symbol to already curried functions
-    // if (call[1][0] === 'def' && call[1]._curry) {
-    //   console.log('DEF_CURRY');
-    //   // call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
-    // }
-    // console.log({def,locals});
+    const locals = reduceFromArgs(cb(def.args), cb(call.args));
 
     // replace all given units within the AST
     ctx.cur = reduceFromTokens(def.body, locals);

@@ -282,6 +282,11 @@ export function fixCalls(tokens, def) {
         const subTree = fixCut(tokens, 1, i).slice(1);
         const fixedArgs = def[0] !== 'expr' ? def : [];
 
+        // prepend _ symbol for currying
+        if (!fixedArgs.length) {
+          fixedArgs.unshift(['unit', '_']);
+        }
+
         left._curry = cur;
         left._body = false;
         left[0] = 'def';
