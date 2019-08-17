@@ -153,7 +153,7 @@ export default class Solvente {
     try {
       (tokens || this.tree).forEach(ast => {
         results.push(...toList(reduceFromAST({
-          units: true,
+          use: ['definitions', 'matchers', 'effects', 'units'],
           ...opts,
           ast,
         }, convertFrom, this.expressions)));

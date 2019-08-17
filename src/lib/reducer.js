@@ -356,63 +356,63 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
 //   }
 // }
 
-// export function reduceFromDefs(ctx, tokens, convert, expressions) {
-//   // handle var/call definitions
-//   if (cur[0] === 'def') {
-//     // define var/call
-//     if (cur._body) {
-//       expressions[cur[1]] = cur[2];
-//       continue;
-//     }
+export function reduceFromDefs(cb, ctx, convert, expressions) {
+  // handle var/call definitions
+  if (ctx.cur[0] === 'def') {
+    // define var/call
+    if (ctx.cur._body) {
+      expressions[ctx.cur[1]] = ctx.cur[2];
+      return;
+    }
 
-//     // side-effects will operate on previous values
-//     const def = expressions[cur[1]];
-//     const call = cur[2];
+    // side-effects will operate on previous values
+    const def = expressions[ctx.cur[1]];
+    const call = ctx.cur[2];
 
-//     // skip undefined calls
-//     if (!call) {
-//       console.log('NODEF',{cur})
-//       continue;
-//     }
+    // skip undefined calls
+    if (!call) {
+      console.log('NODEF',ctx.cur)
+      return;
+    }
 
-//     // compute valid sub-expressions from arguments
-//     // console.log(cb(def.args));
-//     // console.log(cb(call.args));
+    // compute valid sub-expressions from arguments
+    // console.log(cb(def.args));
+    // console.log(cb(call.args));
 
-//     // FIXME: improve error objects and such...
-//     if (def.args.length && def.args.length !== call.args.length) {
-//       throw new Error(`Expecting ${cur[1]}#${def.args.length} args, given ${call.args.length}`);
-//     }
+    // FIXME: improve error objects and such...
+    if (def.args.length && def.args.length !== call.args.length) {
+      throw new Error(`Expecting ${ctx.cur[1]}#${def.args.length} args, given ${call.args.length}`);
+    }
 
-//     const locals = reduceFromArgs(cb(def.args), cb(call.args));
+    const locals = reduceFromArgs(cb(def.args), cb(call.args));
 
-//     // // prepend the  _ symbol to already curried functions
-//     // if (call[1][0] === 'def' && call[1]._curry) {
-//     //   console.log('DEF_CURRY');
-//     //   // call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
-//     // }
-//     // console.log({def,locals});
+    // // prepend the  _ symbol to already curried functions
+    // if (call[1][0] === 'def' && call[1]._curry) {
+    //   console.log('DEF_CURRY');
+    //   // call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
+    // }
+    // console.log({def,locals});
 
-//     // replace all given units within the AST
-//     cur = reduceFromTokens(def.body, locals);
+    // replace all given units within the AST
+    ctx.cur = reduceFromTokens(def.body, locals);
 
-//     if (cur[0][0] === 'fn') {
-//       const fixedArgs = cb(call.args);
+    if (ctx.cur[0][0] === 'fn') {
+      const fixedArgs = cb(call.args);
 
-//       if (cur.length > 1) {
-//         console.log('FNX', cur);
-//       }
+      if (ctx.cur.length > 1) {
+        console.log('FNX', ctx.cur);
+      }
 
-//       // apply lambda-calls as we have arguments
-//       while (cur[0][0] === 'fn' && fixedArgs.length) {
-//         Object.assign(locals, reduceFromArgs(cur[0][2].args, fixedArgs));
-//         cur = reduceFromTokens(cur[0][2].body, locals);
-//       }
-//     }
+      // apply lambda-calls as we have arguments
+      while (ctx.cur[0][0] === 'fn' && fixedArgs.length) {
+        Object.assign(locals, reduceFromArgs(ctx.cur[0][2].args, fixedArgs));
+        ctx.cur = reduceFromTokens(ctx.cur[0][2].body, locals);
+      }
+    }
 
-//     cur = calculateFromTokens(cb(cur));
-//   }
-// }
+    ctx.cur = calculateFromTokens(cb(ctx.cur));
+  }
+}
 
 // FIXME: split into phases, let maths to be reusable...
 export function reduceFromAST(opts, convert, expressions) {
@@ -430,6 +430,12 @@ export function reduceFromAST(opts, convert, expressions) {
     lastOp: ['expr', '+', 'plus'],
   }
 
+  const use = options.use || [];
+  const useDefs = use.includes('definitions');
+  const useLogic = use.includes('matchers');
+  const useFX = use.includes('effects');
+  const useUnits = use.includes('units');
+
   for (let i = 0; i < tokens.length; i += 1) {
     // shared context
     ctx.cur = tokens[i];
@@ -437,7 +443,10 @@ export function reduceFromAST(opts, convert, expressions) {
     ctx.right = tokens[i + 1];
     ctx.current = fixedTokens[fixedTokens.length - 1];
 
-    if (options.units) reduceFromUnits(cb, ctx, convert, expressions);
+    // if (options.matchers) reduceFromLogic(cb, ctx, convert, expressions);
+    // if (options.effects) reduceFromFX(cb, ctx, convert, expressions);
+    if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
+    if (useUnits) reduceFromUnits(cb, ctx, convert, expressions);
 
     fixedTokens.push(ctx.cur);
   }
