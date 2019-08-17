@@ -199,13 +199,18 @@ export function transform(input, units) {
 
     do { nextToken = (tokens[++key] || {}).content; } while (isAny(nextToken, ' \n'));
 
-    // console.log({cur,nextToken});
-
     // flag possible ops
     if (
+      // allow any operator, or side-effect followed by words, e.g. `+a`, `<-x`
       ((isOp(cur) || isFx(cur)) && isChar(nextToken))
+
+      // allow most words folllwed by operators and side-effects, e.g. `a+`, `x->`
       || (isChar(cur) && (isOp(nextToken) || isFx(nextToken)))
+
+      // within parenthesis, followed by any word, number; alone, or followed by an operator or side-effect, e.g. `(a`, `(1`
       || (depth && (isChar(cur) || hasNum(cur)) && (!nextToken || isOp(nextToken) || isFx(nextToken)))
+
+      // any number alone, or followed by an operator, side-effect, expression, more numbers or units are allowed, e.g. `1+`, `1->`, `1 1`, `1 cm`, `1 from`
       || (hasNum(cur) && (!nextToken || isOp(nextToken) || isFx(nextToken) || hasNum(nextToken) || isExpr(nextToken) || hasKeyword(nextToken, units)))
     ) hasOps = true;
 
@@ -225,8 +230,6 @@ export function transform(input, units) {
 
     stack.push(tokens[i]);
   }
-
-  // console.log({chunks});
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
@@ -254,8 +257,6 @@ export function transform(input, units) {
   } catch (e) {
     _e = e;
   }
-
-  // console.log({fixedBody});
 
   return {
     ast: body,
