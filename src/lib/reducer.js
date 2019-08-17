@@ -185,12 +185,12 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   if (ctx.cur[0] === 'unit') {
     if (!hasOwnKeyword(expressions, ctx.cur[1])) {
       if (!ctx.root || !hasOwnKeyword(expressions, ctx.root.cur[1])) {
-        let token = ctx.root ? ctx.root.tokens[0] : ctx;
+        let token = ctx.root;
 
         // traverse most top-expression available...
-        while (ctx.root && Array.isArray(token[0])) token = ctx.root.root;
+        while (token && token.cur[0][0] !== 'def') token = token.root;
 
-        throw new Error(`Missing unit \`${ctx.cur[1]}\` for \`${token.cur[1]}#${token.cur[2].args.length}\` args`);
+        throw new ParseError(`Missing unit \`${ctx.cur[1]}\` for \`${token.cur[0][1]}#${token.cur[0][2].args.length}\` args`, token);
       }
       return;
     }
@@ -384,6 +384,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
     // define var/call
     if (ctx.cur._body) {
       expressions[ctx.cur[1]] = ctx.cur[2];
+      expressions[ctx.cur[1]]._offset = ctx.cur._offset;
       return;
     }
 
@@ -399,7 +400,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
     // FIXME: improve error objects and such...
     if (def.args.length && def.args.length !== call.args.length) {
-      throw new Error(`Expecting ${ctx.cur[1]}#${def.args.length} args, given ${call.args.length}`);
+      throw new ParseError(`Expecting ${ctx.cur[1]}#${def.args.length} args, given ${call.args.length}`, ctx);
     }
 
     // prepend _ symbol for currying
@@ -409,7 +410,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
     call.args.forEach((arg, i) => {
       if (typeof arg === 'undefined') {
-        throw new Error(`Missing unit ${def.args[i][1]} for ${ctx.cur[1]}#${ctx.cur[2].args.length} args`);
+        throw new ParseError(`Missing unit ${def.args[i][1]} for ${ctx.cur[1]}#${ctx.cur[2].args.length} args`, ctx);
       }
     });
 
@@ -469,14 +470,10 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
     ctx.right = tokens[i + 1];
     ctx.current = ctx.ast[ctx.ast.length - 1];
 
-    try {
-      // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
-      if (useFX) reduceFromFX(cb, ctx, convert, expressions);
-      if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
-      if (useUnits) reduceFromUnits(cb, ctx, convert, expressions);
-    } catch (e) {
-      throw new ParseError(e.message, ctx, expressions);
-    }
+    // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
+    if (useFX) reduceFromFX(cb, ctx, convert, expressions);
+    if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
+    if (useUnits) reduceFromUnits(cb, ctx, convert, expressions);
 
     ctx.ast.push(ctx.cur);
   }

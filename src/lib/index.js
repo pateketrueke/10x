@@ -170,7 +170,7 @@ export default class Solvente {
         }, convertFrom, this.expressions)));
       });
     } catch (e) {
-      this.error = ParseError.build(e, source || this.source);
+      this.error = ParseError.build(e, source || this.source, this.expressions);
       return [];
     }
 
