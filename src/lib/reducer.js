@@ -395,7 +395,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
     // FIXME: improve error objects and such...
     if (def.args.length && def.args.length !== call.args.length && def.body[0][0] !== 'fn') {
-      throw new ParseError(`Expecting \`${ctx.cur[1]}#${def.args.length}\` args, given ${call.args.length}`, ctx);
+      throw new ParseError(`Expecting \`${ctx.cur[1]}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
     }
 
     // prepend _ symbol for currying
@@ -432,7 +432,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
       }
 
       if (fixedArgs.length) {
-        throw new ParseError(`Expecting \`${token[1]}#${fixedLength - fixedArgs.length}\` args, given ${fixedLength}`, ctx);
+        throw new ParseError(`Expecting \`${token[1]}.#${fixedLength - fixedArgs.length}\` args, given #${fixedLength}`, ctx);
       }
     }
 
