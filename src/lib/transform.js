@@ -143,7 +143,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     isChar(text)
 
     // make sure we're validating right after...
-    && ('(='.includes(rightToken) || isOp(rightToken) || isSep(rightToken, '()'))
+    && ('(='.includes(rightToken) || isOp(rightToken) || isFx(rightToken) || isSep(rightToken, '()'))
   ) {
     return ['unit', text];
   }
@@ -200,8 +200,12 @@ export function transform(input, units) {
       depth = 0;
     }
 
-    if (prev === ';') inMaths = mayNumber = false;
-    if (isChar(cur) && nextToken === '(') inMaths = stack._fixed = true;
+    if (prev === ';') {
+      inMaths = mayNumber = false;
+    } else if (
+      (isChar(cur) && nextToken === '(')
+      || (mayNumber && cur === '=' && (isChar(nextToken) || hasNum(nextToken)))
+    ) inMaths = stack._fixed = true;
 
     // detect possible expressions
     if (!inMaths) {
@@ -225,12 +229,10 @@ export function transform(input, units) {
         ))
       ) mayNumber = stack._fixed = true;
 
-      // if (mayNumber) console.log({older,prev,cur,nextToken});
-
       // break also on new lines!
       if (isSep(cur, '\n') || (mayNumber && (
         // brute-force strategy for matching near ops/tokens
-        !(!nextToken || hasNum(nextToken) || hasKeyword(nextToken, units))
+        !(!nextToken || isOp(nextToken) || isFx(nextToken) || hasNum(nextToken) || hasKeyword(nextToken, units))
         && !(!prev || isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
         // && !(!older || isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
       ))) {
@@ -283,6 +285,8 @@ export function transform(input, units) {
   } catch (e) {
     _e = e;
   }
+
+  // console.log({body});
 
   return {
     ast: body,

@@ -305,8 +305,10 @@ export function reduceFromAST(tokens, convert, expressions) {
       break;
     }
 
+    // console.log({cur},expressions);
+
     // handle var/call definitions
-    if (cur[0] === 'def' && cur._call) {
+    if (cur[0] === 'def') {
       // define var/call
       if (cur._body) {
         expressions[cur[1]] = cur[2];
@@ -335,22 +337,19 @@ export function reduceFromAST(tokens, convert, expressions) {
       // }
 
       // replace all given units within the AST
-      cur = cb(reduceFromTokens(def.body, locals));
-      cur = calculateFromTokens(cur);
+      cur = reduceFromTokens(def.body, locals);
 
-      // console.log({cur,def,locals});
-      // cur = cb(cur);
-      // console.log({cur});
+      if (cur[0][0] === 'fn') {
+        const fixedArgs = cb(call.args);
 
-      // if (cur[0][0] === 'fn') {
-      //   const fixedArgs = fixArgs(args);
+        // apply lambda-calls as we have arguments
+        while (cur[0][0] === 'fn' && fixedArgs.length) {
+          Object.assign(locals, reduceFromArgs(cur[0][2][0], fixedArgs));
+          cur = reduceFromTokens(cur[0][2][1], locals);
+        }
+      }
 
-      //   // apply lambda-calls as we have arguments
-      //   while (cur[0][0] === 'fn' && fixedArgs.length) {
-      //     Object.assign(locals, reduceFromArgs(cur[0][2][0], fixedArgs));
-      //     cur = reduceFromTokens(cur[0][2][1], locals);
-      //   }
-      // }
+      cur = calculateFromTokens(cb(cur));
     }
 
     // handle unit expressions

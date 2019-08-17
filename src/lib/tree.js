@@ -19,10 +19,7 @@ export function buildTree(tokens) {
     const t = tokens[i];
 
     // flag var/call expressions (strict-mode)
-    if (p && p[0] === 'unit' && (isChar(p[1]) || isAlpha(p[1])) && ('(='.includes(t[1]))) {
-      p._call = t[1] === '(';
-      p[0] = 'def';
-    }
+    if (p && p[0] === 'unit' && (isChar(p[1]) || isAlpha(p[1])) && ('(='.includes(t[1]))) p[0] = 'def';
 
     // handle nesting
     if (['open', 'close'].includes(t[0]) || ['begin', 'end'].includes(t[2])) {
@@ -77,15 +74,17 @@ export function fixTree(ast) {
     //   break;
     // }
 
-    if (prev && prev[0] === 'def' && prev._call && Array.isArray(cur[0])) {
+
+    if (prev && prev[0] === 'def') {
       const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' && isSep(x[1]));
       const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
+      const hasArray = Array.isArray(cur[0]);
 
       // update token definition
       prev._body = subTree.length > 2;
       prev[2] = {
-        args: fixArgs(cur),
-        body: fixCalls(fixTree(subTree.slice(2))),
+        args: hasArray ? fixArgs(cur) : [],
+        body: fixCalls(fixTree(subTree.slice(hasArray ? 2 :1))),
       };
       continue;
     }
