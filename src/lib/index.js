@@ -4,12 +4,13 @@ import { fixTree } from './tree';
 
 import {
   fixArgs,
-  ParseError,
 } from './ast';
 
 import {
   toFraction, toNumber, toValue, toToken, toList,
 } from './ast';
+
+import ParseError from './error';
 
 import { reduceFromAST } from './reducer';
 import { calculateFromTokens } from './solver';

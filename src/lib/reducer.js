@@ -8,10 +8,11 @@ import {
 } from './solver';
 
 import {
-  ParseError,
   toValue, toNumber,
   fixArgs, fixTokens,
 } from './ast';
+
+import ParseError from './error';
 
 export function reduceFromValue(token) {
   let text = token[1];
@@ -317,7 +318,9 @@ export function reduceFromFX(cb, ctx, convert, expressions) {
     const args = fixArgs(cb(ctx.tokens[ctx.i + 1] || []), false)
       .map(x => calculateFromTokens(x));
 
-    ctx.current = cb(fixArgs(left));
+    console.log('SYM_FX',{args,ctx});
+
+    ctx.current = cb(fixArgs(ctx.left));
     ctx.current = reduceFromEffect(cb, ctx.cur, args, ctx.current);
 
     ctx.stack[ctx.stack.length - 1] = ctx.current;
@@ -381,7 +384,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
     // FIXME: improve error objects and such...
     if (def.args.length && def.args.length !== call.args.length) {
-      throw new ParseError(`Expecting ${ctx.cur[1]}#${def.args.length} args, given ${call.args.length}`, def, ctx.cur, call);
+      throw new Error(`Expecting ${ctx.cur[1]}#${def.args.length} args, given ${call.args.length}`);
     }
 
     const locals = reduceFromArgs(cb(def.args), cb(call.args));
@@ -444,10 +447,14 @@ export function reduceFromAST(opts, convert, expressions) {
     ctx.right = tokens[i + 1];
     ctx.current = ctx.ast[ctx.ast.length - 1];
 
-    // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
-    if (useFX) reduceFromFX(cb, ctx, convert, expressions);
-    if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
-    if (useUnits) reduceFromUnits(cb, ctx, convert, expressions);
+    try {
+      // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
+      if (useFX) reduceFromFX(cb, ctx, convert, expressions);
+      if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
+      if (useUnits) reduceFromUnits(cb, ctx, convert, expressions);
+    } catch (e) {
+      throw new ParseError(e.message, ctx, expressions);
+    }
 
     ctx.ast.push(ctx.cur);
   }
