@@ -416,11 +416,15 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
 // FIXME: split into phases, let maths to be reusable...
 export function reduceFromAST(opts, convert, expressions) {
-  const cb = (ast, config) => reduceFromAST({ ast, ...config }, convert, Object.assign({}, expressions));
-
   const { ast: tokens, ...options } = opts;
 
   const fixedTokens = [];
+
+  const use = options.use || [];
+  const useDefs = use.includes('definitions');
+  const useLogic = use.includes('matchers');
+  const useFX = use.includes('effects');
+  const useUnits = use.includes('units');
 
   const ctx = {
     stack: [],
@@ -428,13 +432,9 @@ export function reduceFromAST(opts, convert, expressions) {
     isSymbol: null,
     lastUnit: null,
     lastOp: ['expr', '+', 'plus'],
-  }
+  };
 
-  const use = options.use || [];
-  const useDefs = use.includes('definitions');
-  const useLogic = use.includes('matchers');
-  const useFX = use.includes('effects');
-  const useUnits = use.includes('units');
+  const cb = (ast, config) => reduceFromAST({ ast, use, ...config }, convert, Object.assign({}, expressions));
 
   for (let i = 0; i < tokens.length; i += 1) {
     // shared context
@@ -443,8 +443,8 @@ export function reduceFromAST(opts, convert, expressions) {
     ctx.right = tokens[i + 1];
     ctx.current = fixedTokens[fixedTokens.length - 1];
 
-    // if (options.matchers) reduceFromLogic(cb, ctx, convert, expressions);
-    // if (options.effects) reduceFromFX(cb, ctx, convert, expressions);
+    // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
+    // if (useFX) reduceFromFX(cb, ctx, convert, expressions);
     if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
     if (useUnits) reduceFromUnits(cb, ctx, convert, expressions);
 
