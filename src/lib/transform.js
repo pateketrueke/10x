@@ -140,11 +140,14 @@ export function fromSymbols(text, units, leftToken, rightToken) {
 
   // return definitions as units
   if (
-    isChar(text)
-
+    isChar(text) && (
     // make sure we're validating right after...
-    && ('(='.includes(rightToken) || isOp(rightToken) || isFx(rightToken) || isSep(rightToken, '()'))
-  ) {
+    '(='.includes(rightToken)
+    || hasNum(rightToken) || hasNum(leftToken)
+    || isOp(rightToken) || isOp(leftToken)
+    || isFx(rightToken) || isFx(leftToken)
+    || isSep(rightToken, '()')
+  )) {
     return ['unit', text];
   }
 
@@ -261,6 +264,8 @@ export function transform(input, units) {
     if (!' \n'.includes(prev)) older = prev;
   }
 
+  // console.log({chunks});
+
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
     const lastChunk = prev[prev.length - 1];
@@ -287,8 +292,6 @@ export function transform(input, units) {
   } catch (e) {
     _e = e;
   }
-
-  // console.log({body});
 
   return {
     ast: body,

@@ -15,7 +15,7 @@ export default class ParseError extends Error {
   }
 
   static build(e, code, lines = 2, source = null) {
-    const [[x1, y1], [x2, y2]] = (Array.isArray(e.ctx.cur) ? e.ctx.cur[0] : e.ctx.cur)._offset;
+    const [[x1, y1], [x2, y2]] = e.ctx.token || (Array.isArray(e.ctx.cur[0]) ? e.ctx.cur[0] : e.ctx.cur)._offset;
 
     e.stack = `${e.message}\n  at ${source || 'line '}${x1 + 1}:${y1 + 1}\n\n${code.split('\n').reduce((prev, cur, i) => {
 

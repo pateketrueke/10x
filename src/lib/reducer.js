@@ -182,7 +182,19 @@ export function reduceFromEffect(cb, def, args, value) {
 
 export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle unit expressions
-  if (ctx.cur[0] === 'unit' && hasOwnKeyword(expressions, ctx.cur[1])) {
+  if (ctx.cur[0] === 'unit') {
+    if (!hasOwnKeyword(expressions, ctx.cur[1])) {
+      if (!ctx.root || !hasOwnKeyword(expressions, ctx.root.cur[1])) {
+        let token = ctx.root ? ctx.root.tokens[0] : ctx;
+
+        // traverse most top-expression available...
+        while (ctx.root && Array.isArray(token[0])) token = ctx.root.root;
+
+        throw new Error(`Missing unit \`${ctx.cur[1]}\` for \`${token.cur[1]}#${token.cur[2].args.length}\` args`);
+      }
+      return;
+    }
+
     ctx.cur = expressions[ctx.cur[1]].slice(1, expressions[ctx.cur[1]].length - 1);
   }
 
@@ -198,7 +210,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
 
   // handle resolution by recursion
   if (Array.isArray(ctx.cur[0])) {
-    ctx.cur = calculateFromTokens(cb(ctx.cur));
+    ctx.cur = calculateFromTokens(cb(ctx.cur, null, ctx));
   }
 
   // convert into Date values
@@ -320,12 +332,14 @@ export function reduceFromFX(cb, ctx, convert, expressions) {
 
   // apply symbol-accessor op
   if (ctx.current && ctx.cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(ctx.current[0])) {
-    const args = fixArgs(cb(ctx.tokens[ctx.i + 1] || []), false)
+    const args = fixArgs(cb(ctx.tokens[ctx.i + 1] || [], null, ctx), false)
       .map(x => calculateFromTokens(x));
 
     console.log('SYM_FX',{args,ctx});
 
-    ctx.current = cb(fixArgs(ctx.left));
+    ctx.current = cb(fixArgs(ctx.left), null, ctx);
+
+    // FIXME: this should receive whole context instead...
     ctx.current = reduceFromEffect(cb, ctx.cur, args, ctx.current);
 
     ctx.stack[ctx.stack.length - 1] = ctx.current;
@@ -356,7 +370,7 @@ export function reduceFromFX(cb, ctx, convert, expressions) {
     }
 
     // FIXME: validate input or something?
-    const [lft, rgt, ...others] = args.map(x => calculateFromTokens(cb(x)));
+    const [lft, rgt, ...others] = args.map(x => calculateFromTokens(cb(x, null, ctx)));
     const result = evaluateComparison(ctx.cur[1], lft[1], rgt ? rgt[1] : undefined, others.map(x => x[1]));
 
     // also, how these values are rendered back?
@@ -400,13 +414,13 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
     });
 
     // FIXME: there is a side-effect, symbol/unit _ can appear twice...
-    const locals = reduceFromArgs(cb(def.args), cb(call.args));
+    const locals = reduceFromArgs(cb(def.args, null, ctx), cb(call.args, null, ctx));
 
     // replace all given units within the AST
     ctx.cur = reduceFromTokens(def.body, locals);
 
     if (ctx.cur[0][0] === 'fn') {
-      const fixedArgs = cb(call.args);
+      const fixedArgs = cb(call.args, null, ctx);
 
       if (ctx.cur.length > 1) {
         console.log('FNX', ctx.cur);
@@ -419,12 +433,12 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
       }
     }
 
-    ctx.cur = calculateFromTokens(cb(ctx.cur));
+    ctx.cur = calculateFromTokens(cb(ctx.cur, null, ctx));
   }
 }
 
 // FIXME: split into phases, let maths to be reusable...
-export function reduceFromAST(opts, convert, expressions) {
+export function reduceFromAST(opts, convert, expressions, parentContext) {
   const { ast: tokens, ...options } = opts;
 
   const use = options.use || [];
@@ -443,11 +457,13 @@ export function reduceFromAST(opts, convert, expressions) {
     lastOp: ['expr', '+', 'plus'],
   };
 
-  const cb = (ast, config) => reduceFromAST({ ast, use, ...config }, convert, Object.assign({}, expressions));
+  const cb = (ast, config, context) => reduceFromAST({ ast, use, ...config }, convert, Object.assign({}, expressions), context);
 
   for (let i = 0; i < tokens.length; i += 1) {
+    ctx.root = parentContext;
+
     // shared context
-    ctx.i =i;
+    ctx.i = i;
     ctx.cur = tokens[i];
     ctx.left = tokens[i - 1];
     ctx.right = tokens[i + 1];
