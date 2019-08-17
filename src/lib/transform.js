@@ -94,7 +94,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   // handle expressions
   if (
     isExpr(text)
-    && leftToken[0] === 'number'
+    && (leftToken && leftToken[0] === 'number')
     && (hasNum(rightToken) || hasKeyword(rightToken, units))
   ) {
     return ['expr', text];
@@ -151,8 +151,6 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   )) {
     return ['unit', text];
   }
-
-  // console.log({text,leftToken,rightToken});
 
   return [hasNum(text) ? 'number' : 'text', text];
 }
@@ -265,7 +263,7 @@ export function transform(input, units) {
     if (!' \n'.includes(prev)) older = prev;
   }
 
-  // console.log({chunks});
+  console.log({chunks});
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
