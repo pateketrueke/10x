@@ -185,12 +185,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   if (ctx.cur[0] === 'unit') {
     if (!hasOwnKeyword(expressions, ctx.cur[1])) {
       if (!ctx.root || !hasOwnKeyword(expressions, ctx.root.cur[1])) {
-        let token = ctx.root;
-
-        // traverse most top-expression available...
-        while (token && token.cur[0][0] !== 'def') token = token.root;
-
-        throw new ParseError(`Missing unit \`${ctx.cur[1]}\` for \`${token.cur[0][1]}#${token.cur[0][2].args.length}\` args`, token);
+        throw new ParseError(`Missing unit \`${ctx.cur[1]}\``, ctx);
       }
       return;
     }
@@ -410,7 +405,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
     call.args.forEach((arg, i) => {
       if (typeof arg === 'undefined') {
-        throw new ParseError(`Missing unit ${def.args[i][1]} for ${ctx.cur[1]}#${ctx.cur[2].args.length} args`, ctx);
+        throw new ParseError(`Missing unit \`${def.args[i][1]}\``, ctx);
       }
     });
 
