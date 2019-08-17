@@ -3,7 +3,7 @@ import {
 } from './parser';
 
 import {
-  fixArgs, fixInput,
+  fixArgs, fixApply, fixInput,
 } from './ast';
 
 export function buildTree(tokens) {
@@ -85,7 +85,7 @@ export function fixTree(ast) {
       prev._body = subTree.length > 2;
       prev[2] = {
         args: hasArray ? fixArgs(cur) : [],
-        body: fixCalls(fixTree(subTree.slice(hasArray ? 2 :1))),
+        body: fixCalls(subTree.slice(hasArray ? 2 : 1), cur),
       };
       continue;
     }
@@ -119,8 +119,9 @@ export function fixTree(ast) {
       }
 
       // otherwise, we just fix everything!
-      tokens.splice(i, i + tokens.length, ...fixCalls(fixTree(tokens.slice(i))));
+      tokens.splice(i, i + tokens.length, ...fixCalls(tokens.slice(i)));
       while (tokens.length === 1) tokens = tokens[0];
+      console.log('FX_NO_SYM');
       break;
     }
 
@@ -222,7 +223,7 @@ export function fixTree(ast) {
   return tokens;
 }
 
-export function fixCalls(tokens, skip) {
+export function fixCalls(tokens, def) {
   for (let i = 0; i < tokens.length; i += 1) {
     const cur = tokens[i];
     const left = tokens[i - 1];
@@ -269,13 +270,25 @@ export function fixCalls(tokens, skip) {
         // continue;
       }
 
-      // compose from previous calls
+      // compose from previous calls, e.g. `def=fn<|5` or `def(_)=fn<|5 _`
       if (left[0] === 'unit') {
-        console.log('DEFU');
-        // tokens.splice(i, 2, fixApply(cur[2], right, args));
-        // left._curry = cur.slice();
-        // left[0] = 'def';
-        // continue;
+        if (!Array.isArray(def) || !(def[0] === 'expr' && def[2] === 'equal')) {
+          throw new Error(`Expecting group or definition, given '${def}'`);
+        }
+
+        // FIXME: this looks like a pattern...
+        const offset = tokens.slice(i + 1).findIndex(x => (x[0] === 'expr' && isSep(x[1])) || x[0] === 'fx')
+        const subTree = (offset >= 0 ? tokens.splice(i, offset) : tokens.splice(i)).slice(1);
+        const fixedArgs = def[0] !== 'expr' ? def : [];
+
+        left._curry = cur;
+        left._body = false;
+        left[0] = 'def';
+        left[2] = {
+          args: fixApply(cur[2], subTree, fixedArgs),
+          body: [],
+        };
+        continue;
       }
     }
 
