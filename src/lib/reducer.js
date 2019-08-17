@@ -69,8 +69,13 @@ export function reduceFromTokens(tree, values) {
       cur[2].args = reduceFromTokens(cur[2].args, values);
     }
 
-    // return as soon one matches!
-    if (cur[0] === 'unit' && values[cur[1]]) {
+    if (
+      // return as soon one matches!
+      (cur[0] === 'unit' && values[cur[1]])
+
+      // however, we replace _ symbols
+      || (cur[0] === 'symbol' && cur[1] === '_')
+    ) {
       prev.push(values[cur[1]]);
       return prev;
     }
@@ -388,6 +393,13 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
       def.args.unshift(['unit', '_']);
     }
 
+    call.args.forEach((arg, i) => {
+      if (typeof arg === 'undefined') {
+        throw new Error(`Missing unit ${def.args[i][1]} for ${ctx.cur[1]}#${ctx.cur[2].args.length} args`);
+      }
+    });
+
+    // FIXME: there is a side-effect, symbol/unit _ can appear twice...
     const locals = reduceFromArgs(cb(def.args), cb(call.args));
 
     // replace all given units within the AST
