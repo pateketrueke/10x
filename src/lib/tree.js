@@ -4,6 +4,7 @@ import {
 } from './parser';
 
 import {
+  ParseError,
   fixCut, fixArgs, fixApply, fixInput,
 } from './ast';
 
@@ -275,7 +276,7 @@ export function fixCalls(tokens, def) {
       // compose from previous calls, e.g. `def=fn<|5` or `def(_)=fn<|5 _`
       if (left[0] === 'unit') {
         if (!Array.isArray(def[0]) && !(def[0] === 'expr' && def[2] === 'equal')) {
-          throw new Error(`Expecting group or definition, given '${def}'`);
+          throw new ParseError(`Expecting group or definition, given '${def}'`, left, def, right);
         }
 
         // FIXME: this looks like a pattern...

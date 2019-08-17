@@ -8,6 +8,7 @@ import {
 } from './solver';
 
 import {
+  ParseError,
   toValue, toNumber,
   fixArgs, fixTokens,
 } from './ast';
@@ -380,7 +381,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
     // FIXME: improve error objects and such...
     if (def.args.length && def.args.length !== call.args.length) {
-      throw new Error(`Expecting ${ctx.cur[1]}#${def.args.length} args, given ${call.args.length}`);
+      throw new ParseError(`Expecting ${ctx.cur[1]}#${def.args.length} args, given ${call.args.length}`, def, ctx.cur, call);
     }
 
     const locals = reduceFromArgs(cb(def.args), cb(call.args));

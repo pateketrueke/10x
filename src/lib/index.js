@@ -1,7 +1,11 @@
 import { isInt, parseBuffer } from './parser';
 import { transform } from './transform';
 import { fixTree } from './tree';
-import { fixArgs } from './ast';
+
+import {
+  fixArgs,
+  ParseError,
+} from './ast';
 
 import {
   toFraction, toNumber, toValue, toToken, toList,
@@ -58,8 +62,9 @@ export default class Solvente {
     }
   }
 
-  resolve(sample) {
-    this.input = parseBuffer(sample, this.units);
+  resolve(source) {
+    this.source = source;
+    this.input = parseBuffer(source, this.units);
 
     try {
       const tokens = transform(this.input, this.units);
@@ -147,7 +152,12 @@ export default class Solvente {
     };
   }
 
-  eval(tokens, opts) {
+  eval(tokens, source, opts) {
+    if (typeof source === 'object') {
+      opts = source;
+      source = opts.source || '';
+    }
+
     const results = [];
 
     try {
@@ -159,7 +169,7 @@ export default class Solvente {
         }, convertFrom, this.expressions)));
       });
     } catch (e) {
-      this.error = e;
+      this.error = ParseError.build(e, source || this.source);
       return [];
     }
 

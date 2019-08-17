@@ -2,6 +2,19 @@ import {
   isSep, hasTagName, hasPercent,
 } from './parser';
 
+export class ParseError extends Error {
+  constructor(message, leftToken, actualToken, rightToken) {
+    super(message);
+    this.message = message;
+    this.expressions = { leftToken, actualToken, rightToken };
+  }
+
+  static build(e, code) {
+    console.log({ e, code, context: this.expressions });
+    return e;
+  }
+}
+
 export function highestCommonFactor(a, b) {
   return b !== 0 ? highestCommonFactor(b, a % b) : a;
 }
