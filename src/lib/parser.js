@@ -93,6 +93,19 @@ export const hasDatetime = x => {
   if (x && RE_MONTHS.test(x)) return 'MONTHS';
 };
 
+export function getRanking(tokens, length, min) {
+  const max = tokens.length;
+  const set = [];
+
+  while (length-- > 0) {
+    if (!tokens[length]) break;
+
+    set.push(tokens[length].reduce((prev, cur) => prev + cur.score, 0));
+  }
+
+  return set.reduce((prev, cur) => prev + cur, 0) >= min;
+}
+
 export function parseBuffer(text, units) {
   let inBlock = false;
   let inFormat = false;
@@ -111,6 +124,9 @@ export function parseBuffer(text, units) {
     const last = (buffer[buffer.length - 1] || {}).cur;
     const next = chars[i + 1];
     const cur = chars[i];
+
+    // rank tokens as negative first
+    let score = -1;
 
     // increase line/column
     if (last === '\n') {
@@ -134,8 +150,10 @@ export function parseBuffer(text, units) {
       }
 
       if (inFormat) {
-        if (buffer.length) tokens[++offset] = [{ cur, row, col }];
-        else buffer.push({ cur, row, col });
+        score++;
+
+        if (buffer.length) tokens[++offset] = [{ cur, row, col, score }];
+        else buffer.push({ cur, row, col, score });
 
         inFormat = [i, cur];
         continue;
@@ -144,8 +162,9 @@ export function parseBuffer(text, units) {
 
     // disable formatting (avoid escapes)
     if (inFormat && inFormat[0] !== i - 1 && inFormat[1] === cur && last !== '\\' && cur !== next) {
+      score++;
       inFormat = false;
-      buffer.push({ cur, row, col });
+      buffer.push({ cur, row, col, score });
       continue;
     }
 
@@ -165,7 +184,8 @@ export function parseBuffer(text, units) {
       } else if (cur === '*' && next === '/') {
         // disable multiline-style comments
         if (inBlock === 'multiline') {
-          buffer.push({ cur: cur + next, row, col: col + 1 });
+          score++;
+          buffer.push({ cur: cur + next, row, col: col + 1, score });
           chars.splice(i, 1);
           inBlock = false;
           continue;
@@ -174,53 +194,64 @@ export function parseBuffer(text, units) {
     }
 
     // FIXME: clean combinations...
-    if (
-      inBlock || inFormat || typeof last === 'undefined'
 
-      // non-keywords
-      || (last !== ' ' && isAny(cur))
-      || (last === '-' && isNum(cur))
-      || (last === '_' && isChar(cur))
-      || (isMoney(last) && hasNum(cur))
-      || (hasNum(last) && '%:'.includes(cur))
-      || (last === '.' && cur === '-' && isNum(next))
-      || (buffer[0].cur === ':' && cur === '-' && isNum(next))
-      || (hasNum(last) && cur === ',' && isNum(next) && !open)
-      || (last === ',' && isNum(cur) && isNum(oldChar) && !open)
-      || (last === '[' && cur === ']') || (last === '{' && cur === '}')
-      || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
-      || (isChar(last) && isAny(cur, ':') && !(':-'.includes(next) || isNum(next) || isChar(next)))
+    // if (// non-keywords
+    //   (last !== ' ' && isAny(cur))
+    //   || (last === '-' && isNum(cur))
+    //   || (last === '_' && isChar(cur))
+    //   || (isMoney(last) && hasNum(cur))
+    //   || (hasNum(last) && '%:'.includes(cur))
+    //   || (last === '.' && cur === '-' && isNum(next))
+    //   || (buffer[0] && buffer[0].cur === ':' && cur === '-' && isNum(next))
+    //   || (hasNum(last) && cur === ',' && isNum(next) && !open)
+    //   || (last === ',' && isNum(cur) && isNum(oldChar) && !open)
+    //   || (last === '[' && cur === ']') || (last === '{' && cur === '}')
+    //   || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
+    //   || (isChar(last) && isAny(cur, ':') && !(':-'.includes(next) || isNum(next) || isChar(next)))
+    // ) { score += 2; }
 
-      // keep some separators between numbers
-      || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
+    // if (
+    //   // keep some logical operators together
+    //   ('!='.includes(last) && cur === '~')
+    //   || ('+-'.includes(last) && cur === last)
+    //   || ('.|&'.includes(last) && last === cur)
+    //   || ('!<>='.includes(last) && cur === '=')
+    //   || ('-|~'.includes(last) && cur === '>') || (last === '<' && '|-'.includes(cur))
+    //   || (last === ':' && (cur === ':' || hasNum(cur) || (isChar(cur) && !isUpper(cur))))
+    // ) { score += 2; }
 
-      // handle checkboxes
-      || (' x'.includes(last) && cur === ']')
-      || (last === '[' && !hasNum(cur) && next === ']')
+    // if (
+    //   // keep chars and numbers together
+    //   ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
+    //   || (hasNum(last) && cur === '.' && next === '.')
+    // ) { score += 2; }
 
-      // handle numbers, including negatives between ops; notice all N-N are splitted
-      || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
+    // if (
+    //   // keep some separators between numbers
+    //   (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
+    // ) { score += 2; }
 
-      // keep some logical operators together
-      || ('!='.includes(last) && cur === '~')
-      || ('+-'.includes(last) && cur === last)
-      || ('.|&'.includes(last) && last === cur)
-      || ('!<>='.includes(last) && cur === '=')
-      || ('-|~'.includes(last) && cur === '>') || (last === '<' && '|-'.includes(cur))
-      || (last === ':' && (cur === ':' || hasNum(cur) || (isChar(cur) && !isUpper(cur))))
+    // if (
+    //   // handle checkboxes
+    //   (' x'.includes(last) && cur === ']')
+    //   || (last === '[' && !hasNum(cur) && next === ']')
 
-      // keep chars and numbers together
-      || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
-      || (hasNum(last) && cur === '.' && next === '.')
-    ) {
-      buffer.push({ cur, row, col });
+    //   // handle numbers, including negatives between ops; notice all N-N are splitted
+    //   || (((last === '-' && cur === '.' && isNum(next)) || (last === '-' && isNum(cur))) && next !== last)
+    // ) { score += 2; }
+
+    // FIXME append only highly-ranked tokens!
+    // this means not only adding the current one... but checking boundaries also!
+
+    if (inBlock || inFormat || typeof last === 'undefined' || !getRanking(tokens, 5, 3)) {
+      buffer.push({ cur, row, col, score });
 
       // store for open/close checks
       if (last !== ' ') {
         oldChar = last;
       }
     } else {
-      tokens[++offset] = [{ cur, row, col }];
+      tokens[++offset] = [{ cur, row, col, score }];
     }
   }
 
@@ -267,6 +298,7 @@ export function parseBuffer(text, units) {
 
     prev.push({
       content: value,
+      complexity: cur[0].score + cur[cur.length - 1].score,
       begin: value === '\n' ? [cur[0].row, cur[0].col] : [cur[0].row, cur[0].col],
       end: value === '\n' ? [cur[0].row, cur[0].col + 1] : [cur[cur.length - 1].row, cur[cur.length - 1].col + 1],
     });

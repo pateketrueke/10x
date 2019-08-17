@@ -177,11 +177,38 @@ export function tokenize(input, units) {
 }
 
 export function transform(input, units) {
+  // score all tokens first
   const tokens = input.slice();
+  console.log({input});
+  // const tokens = input.map((token, i) => {
+  //   let key = i;
+  //   let nextToken;
+
+  //   do { nextToken = (tokens[++key] || {}).content; } while (nextToken === ' ');
+
+  //   if (cur === '(') depth++;
+  //   if (cur === ')') depth--;
+
+  //   if (cur === ')' && depth <= 0) {
+  //     inMaths = nextToken === '=';
+  //     depth = 0;
+  //   }
+
+  //   if (prev === ';') {
+  //     inMaths = mayNumber = false;
+  //   } else if (
+  //     (isChar(cur) && nextToken === '(')
+  //     || (mayNumber && cur === '=' && (isChar(nextToken) || hasNum(nextToken)))
+  //   ) inMaths = stack._fixed = true;
+
+  //   return token;
+  // });
+
   const chunks = [];
 
   let mayNumber = false;
   let inMaths = false;
+  let hasOps = false;
   let older = null;
   let depth = 0;
   let inc = 0;
@@ -191,79 +218,68 @@ export function transform(input, units) {
     const prev = (tokens[i - 1] || {}).content;
     const cur = tokens[i].content;
 
-    let key = i;
-    let nextToken;
+    // // detect possible expressions
+    // if (!inMaths) {
+    //   if (mayNumber && (isOp(cur) || isFx(cur) || hasNum(cur))) {
+    //     hasOps = true;
+    //   } else {
+    //     hasOps = false;
+    //     mayNumber = false;
+    //   }
 
-    do { nextToken = (tokens[++key] || {}).content; } while (nextToken === ' ');
+    //   if (
+    //     ((hasNum(cur) || isChar(cur)) && (!nextToken
+    //       || isOp(nextToken)
+    //       || isExpr(nextToken)
+    //       || isSep(nextToken, '()')
+    //       // || isFx(nextToken)
+    //       // || hasNum(nextToken)
+    //       // || hasKeyword(nextToken, units)
+    //     ))
+    //     || ((isSep(cur, '()') || isOp(cur)) && (!nextToken
+    //       || hasNum(nextToken)
+    //       // isOp(nextToken)
+    //       // || isExpr(nextToken)
+    //       // ||
+    //       // isFx(nextToken)
+    //       // || hasNum(nextToken)
+    //       // || hasKeyword(nextToken, units)
+    //     ))
+    //   ) mayNumber = true; // stack._fixed = true;
 
-    if (cur === '(') depth++;
-    if (cur === ')') depth--;
 
-    if (cur === ')' && depth <= 0) {
-      inMaths = nextToken === '=';
-      depth = 0;
-    }
+    //   // FIXME: bad detection strategy... wee need somthing more solid... like, statistics?
+    //   // e.g. each token has a score, and then the segments with more score are cut ...
+    //   console.log({stack,hasOps,mayNumber});
 
-    if (prev === ';') {
-      inMaths = mayNumber = false;
-    } else if (
-      (isChar(cur) && nextToken === '(')
-      || (mayNumber && cur === '=' && (isChar(nextToken) || hasNum(nextToken)))
-    ) inMaths = stack._fixed = true;
+    //   // break also on new lines!
+    //   if (isSep(cur, '\n') || (mayNumber && (
+    //     // brute-force strategy for matching near ops/tokens
+    //     !(!nextToken || isOp(nextToken) || isFx(nextToken) || hasNum(nextToken) || hasKeyword(nextToken, units))
+    //     && !(!prev || isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
+    //     // && !(!older || isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
+    //   ))) {
+    //     if (stack.length && hasOps) {
+    //       chunks[++inc] = [tokens[i]];
+    //       mayNumber = false;
+    //       hasOps = false;
 
-    // detect possible expressions
-    if (!inMaths) {
-      if (
-        ((hasNum(cur) || isChar(cur)) && (!nextToken
-          || isOp(nextToken)
-          || isExpr(nextToken)
-          || isSep(nextToken, '()')
-          // || isFx(nextToken)
-          // || hasNum(nextToken)
-          // || hasKeyword(nextToken, units)
-        ))
-        || ((isSep(cur, '()') || isOp(cur)) && (!nextToken
-          || hasNum(nextToken)
-          // isOp(nextToken)
-          // || isExpr(nextToken)
-          // ||
-          // isFx(nextToken)
-          // || hasNum(nextToken)
-          // || hasKeyword(nextToken, units)
-        ))
-      ) mayNumber = stack._fixed = true;
+    //       // ensure we break apart from new-lines
+    //       if (tokens[i].content === '\n') {
+    //         inc++;
+    //       }
+    //       continue;
+    //     }
+    //   }
+    // }
 
-      // break also on new lines!
-      if (isSep(cur, '\n') || (mayNumber && (
-        // brute-force strategy for matching near ops/tokens
-        !(!nextToken || isOp(nextToken) || isFx(nextToken) || hasNum(nextToken) || hasKeyword(nextToken, units))
-        && !(!prev || isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
-        // && !(!older || isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
-      ))) {
-        if (stack.length) {
-          if (hasNum(stack[0].content)) {
-            stack._fixed = true;
-          }
+    // stack.push(tokens[i]);
 
-          chunks[++inc] = [tokens[i]];
-          mayNumber = false;
-
-          // ensure we break apart from new-lines
-          if (tokens[i].content === '\n') {
-            inc++;
-          }
-          continue;
-        }
-      }
-    }
-
-    stack.push(tokens[i]);
-
-    // flag for further checks
-    if (!' \n'.includes(prev)) older = prev;
+    // // flag for further checks
+    // if (!' \n'.includes(prev)) older = prev;
   }
 
-  console.log({chunks});
+  // console.log({chunks});
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {

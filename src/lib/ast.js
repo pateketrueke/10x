@@ -121,6 +121,7 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
     const newToken = token.slice();
 
     newToken._offset = token._offset;
+    newToken._score = token._score;
 
     return newToken;
   }
@@ -128,6 +129,7 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
   const value = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
   value._offset = [token.begin, token.end];
+  value._score = token.complexity;
 
   return value;
 }
