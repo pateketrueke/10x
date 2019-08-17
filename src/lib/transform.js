@@ -177,33 +177,7 @@ export function tokenize(input, units) {
 }
 
 export function transform(input, units) {
-  // score all tokens first
   const tokens = input.slice();
-  console.log({input});
-  // const tokens = input.map((token, i) => {
-  //   let key = i;
-  //   let nextToken;
-
-  //   do { nextToken = (tokens[++key] || {}).content; } while (nextToken === ' ');
-
-  //   if (cur === '(') depth++;
-  //   if (cur === ')') depth--;
-
-  //   if (cur === ')' && depth <= 0) {
-  //     inMaths = nextToken === '=';
-  //     depth = 0;
-  //   }
-
-  //   if (prev === ';') {
-  //     inMaths = mayNumber = false;
-  //   } else if (
-  //     (isChar(cur) && nextToken === '(')
-  //     || (mayNumber && cur === '=' && (isChar(nextToken) || hasNum(nextToken)))
-  //   ) inMaths = stack._fixed = true;
-
-  //   return token;
-  // });
-
   const chunks = [];
 
   let mayNumber = false;
@@ -213,70 +187,27 @@ export function transform(input, units) {
   let depth = 0;
   let inc = 0;
 
+  // split tokens based on their complexity
   for (let i = 0; i < tokens.length; i += 1) {
     const stack = chunks[inc] || (chunks[inc] = []);
-    const prev = (tokens[i - 1] || {}).content;
-    const cur = tokens[i].content;
+    const prev = (tokens[i - 1] || {}).complexity;
+    const cur = tokens[i].complexity;
 
-    // // detect possible expressions
-    // if (!inMaths) {
-    //   if (mayNumber && (isOp(cur) || isFx(cur) || hasNum(cur))) {
-    //     hasOps = true;
-    //   } else {
-    //     hasOps = false;
-    //     mayNumber = false;
-    //   }
+    if (cur > 10) {
+      stack._fixed = true;
+    } else {
+      delete stack._fixed;
 
-    //   if (
-    //     ((hasNum(cur) || isChar(cur)) && (!nextToken
-    //       || isOp(nextToken)
-    //       || isExpr(nextToken)
-    //       || isSep(nextToken, '()')
-    //       // || isFx(nextToken)
-    //       // || hasNum(nextToken)
-    //       // || hasKeyword(nextToken, units)
-    //     ))
-    //     || ((isSep(cur, '()') || isOp(cur)) && (!nextToken
-    //       || hasNum(nextToken)
-    //       // isOp(nextToken)
-    //       // || isExpr(nextToken)
-    //       // ||
-    //       // isFx(nextToken)
-    //       // || hasNum(nextToken)
-    //       // || hasKeyword(nextToken, units)
-    //     ))
-    //   ) mayNumber = true; // stack._fixed = true;
+      chunks[++inc] = [tokens[i]];
 
+      // ensure we break apart from new-lines
+      if (tokens[i].content === '\n') {
+        inc++;
+      }
+      continue;
+    }
 
-    //   // FIXME: bad detection strategy... wee need somthing more solid... like, statistics?
-    //   // e.g. each token has a score, and then the segments with more score are cut ...
-    //   console.log({stack,hasOps,mayNumber});
-
-    //   // break also on new lines!
-    //   if (isSep(cur, '\n') || (mayNumber && (
-    //     // brute-force strategy for matching near ops/tokens
-    //     !(!nextToken || isOp(nextToken) || isFx(nextToken) || hasNum(nextToken) || hasKeyword(nextToken, units))
-    //     && !(!prev || isOp(prev) || isSep(prev) || isFx(prev) || hasNum(prev) || hasKeyword(prev, units))
-    //     // && !(!older || isOp(older) || isSep(older) || isFx(older) || hasNum(older) || hasKeyword(older, units))
-    //   ))) {
-    //     if (stack.length && hasOps) {
-    //       chunks[++inc] = [tokens[i]];
-    //       mayNumber = false;
-    //       hasOps = false;
-
-    //       // ensure we break apart from new-lines
-    //       if (tokens[i].content === '\n') {
-    //         inc++;
-    //       }
-    //       continue;
-    //     }
-    //   }
-    // }
-
-    // stack.push(tokens[i]);
-
-    // // flag for further checks
-    // if (!' \n'.includes(prev)) older = prev;
+    stack.push(tokens[i]);
   }
 
   // console.log({chunks});
