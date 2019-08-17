@@ -63,7 +63,8 @@ export default class Solvente {
     }
   }
 
-  resolve(source) {
+  resolve(source, filepath) {
+    this.filepath = filepath;
     this.source = source;
     this.input = parseBuffer(source, this.units);
 
@@ -170,7 +171,7 @@ export default class Solvente {
         }, convertFrom, this.expressions)));
       });
     } catch (e) {
-      this.error = ParseError.build(e, source || this.source, this.expressions);
+      this.error = ParseError.build(e, source || this.source, this.expressions, 2, this.filepath);
       return [];
     }
 

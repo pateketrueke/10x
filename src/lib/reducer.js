@@ -190,7 +190,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
       return;
     }
 
-    ctx.cur = expressions[ctx.cur[1]].slice(1, expressions[ctx.cur[1]].length - 1);
+    ctx.cur = expressions[ctx.cur[1]].body;
   }
 
   // handle N-unit expressions
@@ -388,7 +388,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
     const call = ctx.cur[2];
 
     // skip undefined calls
-    if (!call) {
+    if (!(call && def)) {
       console.log('NODEF',ctx.cur)
       return;
     }

@@ -83,8 +83,7 @@ export function fixTree(ast) {
       const hasArray = Array.isArray(cur[0]);
 
       // update token definition
-      prev._body = subTree.length > 2;
-      // console.log(fixCalls(subTree.slice(hasArray ? 2 : 1)));
+      prev._body = subTree.length > 1;
       prev[2] = {
         args: hasArray ? fixArgs(cur, true) : [],
         body: fixTree(fixCalls(subTree.slice(hasArray ? 2 : 1), cur)),

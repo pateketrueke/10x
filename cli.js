@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 global.console.log = (...args) => {
   args.forEach(value => {
     process.stderr.write(require('util').inspect(value, { colors: true, depth: 10 }) + '\n');
@@ -16,13 +18,25 @@ if (sharedFile && require('fs').existsSync(sharedFile)) {
   Object.assign(sharedExpressions, JSON.parse(require('fs').readFileSync(sharedFile)));
 }
 
-const argv = process.argv.slice(Math.max(2, process.argv.indexOf('--') + 1));
+const argv = process.argv.slice(2);
+const cut = argv.indexOf('--');
+
+const args = cut >= 0 ? argv.slice(cut + 1) : [];
+const file = argv.slice(Math.max(0, cut), 1)[0];
 
 const calc = new Solvente({
   expressions: sharedExpressions,
 });
 
-calc.resolve(argv.join(' '));
+let code = '';
+
+if (file && fs.existsSync(file)) {
+  code += fs.readFileSync(file).toString();
+}
+
+code += args.join(' ');
+
+calc.resolve(code, file);
 
 const fixedResults = calc.eval();
 const fixedError = calc.error && calc.error.stack;

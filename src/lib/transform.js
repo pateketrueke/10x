@@ -142,11 +142,12 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   if (
     isChar(text) && (
     // make sure we're validating right after...
-    '(='.includes(rightToken)
+    !rightToken || isOp(leftToken)
+    || '(='.includes(rightToken)
+    || isSep(rightToken, '()')
     || hasNum(rightToken) || hasNum(leftToken)
     || isOp(rightToken) || isOp(leftToken)
     || isFx(rightToken) || isFx(leftToken)
-    || isSep(rightToken, '()')
   )) {
     return ['unit', text];
   }
