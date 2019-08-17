@@ -187,8 +187,6 @@ export function transform(input, units) {
   // split tokens based on their complexity
   for (let i = 0; i < tokens.length; i += 1) {
     const stack = chunks[inc] || (chunks[inc] = []);
-    const prev = (tokens[i - 1] || {}).content;
-    const next = (tokens[i + 1] || {}).content;
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
@@ -196,17 +194,25 @@ export function transform(input, units) {
     if (cur === '(') depth++;
     if (cur === ')') depth--;
 
+    let key = 0;
+    let nextToken;
+
+    do { nextToken = (tokens[++key] || {}).content; } while (isAny(nextToken, ' \n'));
+
+    // console.log({cur,nextToken});
+
     // flag possible ops
-    if ((isOp(cur) || isFx(cur)) && isChar(next)) hasOps = true;
-    if (isChar(cur) && (isOp(next) || isFx(next))) hasOps = true;
-    if (depth && (isChar(cur) || hasNum(cur)) && (!next || isOp(next) || isFx(next))) hasOps = true;
+    if (
+      ((isOp(cur) || isFx(cur)) && isChar(nextToken))
+      || (isChar(cur) && (isOp(nextToken) || isFx(nextToken)))
+      || (depth && (isChar(cur) || hasNum(cur)) && (!nextToken || isOp(nextToken) || isFx(nextToken)))
+      || (hasNum(cur) && (!nextToken || isOp(nextToken) || isFx(nextToken) || hasNum(nextToken) || isExpr(nextToken) || hasKeyword(nextToken, units)))
+    ) hasOps = true;
 
     // add whenever we are in maths, or has enough complexity
-    if (hasOps || tokens[i].complexity > 10) {
+    if (hasOps || (tokens[i].complexity > 35)) {
       stack._fixed = true;
     } else {
-      delete stack._fixed;
-
       hasOps = false;
       chunks[++inc] = [tokens[i]];
 

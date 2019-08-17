@@ -57,6 +57,8 @@ if (returnAsJSON) {
     process.stderr.write(fixedError);
   }
 
+  process.stdout.write(`${require('util').inspect(calc.input, { colors, depth: 10 })}\n`);
+  process.stdout.write(`${require('util').inspect(calc.tokens, { colors, depth: 10 })}\n`);
   process.stdout.write(`${require('util').inspect(fixedResults, { colors, depth: 10 })}\n`);
 }
 
