@@ -79,7 +79,7 @@ export const hasKeyword = (x, units) => {
   const key = x.replace(RE_NO_ALPHA, '');
 
   // skip further detection on white-space
-  if (key.includes(' ')) return false;
+  if (isAny(key, ' ')) return false;
 
   const test = key && (hasOwnKeyword(units, key) || hasOwnKeyword(units, key.toLowerCase()));
 
@@ -129,8 +129,8 @@ export function parseBuffer(text, units) {
     if (isSep(cur)) score += 1;
     if (isFmt(cur)) score += 1;
 
-    if (' \n;,'.includes(cur)) score -= 15;
-    if (' \n;,'.includes(last)) score /= 2.5;
+    if (isAny(cur, ' \n;,')) score -= 15;
+    if (isAny(last, ' \n;,')) score /= 2.5;
 
     if (isNum(last) || isNum(next)) score += 15;
 

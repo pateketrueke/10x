@@ -20,7 +20,7 @@ export function fromMarkdown(text) {
   }
 
   // handle checkboxes
-  if (text[0] === '[' && ' x'.includes(text[1]) && text[2] === ']') {
+  if (['[x]', '[ ]'].includes(text)) {
     return ['check', text, text.includes('x')];
   }
 
@@ -180,28 +180,38 @@ export function transform(input, units) {
   const tokens = input.slice();
   const chunks = [];
 
-  let mayNumber = false;
-  let inMaths = false;
   let hasOps = false;
-  let older = null;
   let depth = 0;
   let inc = 0;
 
   // split tokens based on their complexity
   for (let i = 0; i < tokens.length; i += 1) {
     const stack = chunks[inc] || (chunks[inc] = []);
-    const prev = (tokens[i - 1] || {}).complexity;
-    const cur = tokens[i].complexity;
+    const prev = (tokens[i - 1] || {}).content;
+    const next = (tokens[i + 1] || {}).content;
+    const cur = tokens[i].content;
+    const t = tokens[i].complexity;
 
-    if (cur > 10) {
+    // flag for depth-checking
+    if (cur === '(') depth++;
+    if (cur === ')') depth--;
+
+    // flag possible ops
+    if ((isOp(cur) || isFx(cur)) && isChar(next)) hasOps = true;
+    if (isChar(cur) && (isOp(next) || isFx(next))) hasOps = true;
+    if (depth && (isChar(cur) || hasNum(cur)) && (!next || isOp(next) || isFx(next))) hasOps = true;
+
+    // add whenever we are in maths, or has enough complexity
+    if (hasOps || tokens[i].complexity > 10) {
       stack._fixed = true;
     } else {
       delete stack._fixed;
 
+      hasOps = false;
       chunks[++inc] = [tokens[i]];
 
-      // ensure we break apart from new-lines
-      if (tokens[i].content === '\n') {
+      // ensure we break apart from white-space
+      if (isAny(tokens[i].content, ' \n')) {
         inc++;
       }
       continue;
@@ -238,6 +248,8 @@ export function transform(input, units) {
   } catch (e) {
     _e = e;
   }
+
+  // console.log({fixedBody});
 
   return {
     ast: body,
