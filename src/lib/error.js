@@ -14,10 +14,10 @@ export default class ParseError extends Error {
   }
 
   static build(e, src, expr, lines = 2, filepath = null) {
-    let token;
+    let token = e.ctx.cur;
 
-    if (e.ctx.cur[0][0] === 'def') {
-      token = expr[e.ctx.cur[0][1]];
+    if (Array.isArray(token[0])) {
+      token = token[0];
     }
 
     const [[x1, y1], [x2, y2]] = token._offset;

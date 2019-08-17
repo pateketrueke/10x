@@ -458,6 +458,7 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
     lastOp: ['expr', '+', 'plus'],
   };
 
+  // FIXME: build an stack... of errors
   const cb = (ast, config, context) => reduceFromAST({ ast, use, ...config }, convert, Object.assign({}, expressions), context);
 
   for (let i = 0; i < tokens.length; i += 1) {
