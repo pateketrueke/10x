@@ -84,10 +84,10 @@ export function fixTree(ast) {
 
       // update token definition
       prev._body = subTree.length > 2;
-      // console.log({prev,cur});
+      // console.log(fixCalls(subTree.slice(hasArray ? 2 : 1)));
       prev[2] = {
         args: hasArray ? fixArgs(cur, true) : [],
-        body: fixCalls(subTree.slice(hasArray ? 2 : 1), cur),
+        body: fixTree(fixCalls(subTree.slice(hasArray ? 2 : 1), cur)),
       };
       continue;
     }
@@ -102,7 +102,7 @@ export function fixTree(ast) {
 
         tokens.splice(i, 0, ['fn', '$', {
           args: fixArgs(tokens.splice(i, offset), true),
-          body: fixTree(tokens.splice(i, endPos).slice(1)),
+          body: fixTree(fixCalls(tokens.splice(i, endPos).slice(1))),
         }]);
         break;
       }

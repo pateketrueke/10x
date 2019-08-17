@@ -64,8 +64,7 @@ export function reduceFromTokens(tree, values) {
 
     // replace token within unit-calls
     if (cur[0] === 'def' && cur[2]) {
-      console.log('DEF_RE_TOKEN?', { cur, values });
-      // cur[2] = [reduceFromTokens(cur[2][0], values)];
+      cur[2].args = reduceFromTokens(cur[2].args, values);
     }
 
     // return as soon one matches!
@@ -339,9 +338,12 @@ export function reduceFromAST(tokens, convert, expressions) {
       //   console.log('DEF_CURRY');
       //   // call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
       // }
+      // console.log({def,locals});
 
       // replace all given units within the AST
       cur = reduceFromTokens(def.body, locals);
+
+      console.log({cur});
 
       if (cur[0][0] === 'fn') {
         const fixedArgs = cb(call.args);
