@@ -138,8 +138,8 @@ export function reduceFromEffect(value, args, def, cb) {
         return (...context) => {
           Object.assign(fixedArgs, reduceFromArgs(input, context));
 
-          const peek = cb(reduceFromTokens(b[0], fixedArgs));
-          const subTree = cb(reduceFromTokens(b.slice(1), fixedArgs));
+          const peek = reduceFromTokens(b[0], fixedArgs);
+          const subTree = reduceFromTokens(b.slice(1), fixedArgs);
 
           // return the last value from additional expressions
           if (subTree.length) return subTree.pop();
@@ -173,269 +173,273 @@ export function reduceFromEffect(value, args, def, cb) {
   return [typeof fixedResult, fixedResult];
 }
 
-export function reduceFromAST(tokens, convert, expressions) {
-  const cb = x => reduceFromAST(x, convert, Object.assign({}, expressions));
+export function reduceFromUnits(ctx, tokens, convert, expressions) {
+  // handle unit expressions
+  if (ctx.cur[0] === 'unit' && hasOwnKeyword(expressions, ctx.cur[1])) {
+    ctx.cur = expressions[ctx.cur[1]].slice(1, expressions[ctx.cur[1]].length - 1);
+  }
+
+  // handle N-unit expressions
+  if (ctx.cur[0] === 'number' && hasOwnKeyword(expressions, ctx.cur[2])) {
+    const old = expressions[ctx.cur[2]];
+    const val = parseFloat(ctx.cur[1]);
+    const next = old.slice(1, old.length - 1);
+
+    // we return a new expression from 3x to [3, *, x]
+    ctx.cur = [['number', val], ['expr', '*', 'mul']].concat(next);
+  }
+
+  // handle resolution by recursion
+  if (Array.isArray(ctx.cur[0])) {
+    ctx.cur = calculateFromTokens(cb(ctx.cur));
+  }
+
+  // convert into Date values
+  if (ctx.cur[2] === 'datetime') {
+    ctx.isDate = true;
+    ctx.cur[1] = reduceFromValue(ctx.cur);
+  } else {
+    const left = tokens[i - 1] || [];
+    const right = tokens[i + 1] || [];
+
+    // append last-operator between consecutive unit-expressions
+    if (left[0] === 'number' && ctx.cur[0] === 'number') {
+      // FIXME: this is good, but not for all contexts...
+      // fixedTokens.push(lastOp);
+    }
+
+    // handle converting between expressions
+    if (ctx.cur[0] === 'expr' && left[0] === 'number' && isExpr(ctx.cur[1])) {
+      const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
+
+      if (fixedUnit && !['datetime', 'fr'].includes(fixedUnit) && left[2] && left[2] !== 'datetime') {
+        left[1] = convert(parseFloat(toNumber(left[1])), left[2], fixedUnit);
+        left[2] = fixedUnit;
+      } else if (isTime(left[2])) {
+        left[1] = convert(parseFloat(toNumber(left[1])), left[2], 's');
+        left[2] = 's';
+      }
+    }
+
+    if (ctx.cur[0] === 'number') {
+      // convert time-expressions into seconds
+      if (ctx.isDate && isTime(ctx.cur[2])) {
+        ctx.cur[1] = convert(parseFloat(toNumber(ctx.cur[1])), ctx.cur[2], 's');
+        ctx.cur[2] = 's';
+      }
+
+      // convert between units
+      if (ctx.lastUnit && ctx.cur[2] && ctx.lastUnit !== ctx.cur[2]) {
+        ctx.cur[1] = convert(parseFloat(toNumber(ctx.cur[1])), ctx.cur[2], ctx.lastUnit);
+        ctx.cur[2] = ctx.lastUnit;
+      }
+
+      // save initial unit
+      if (ctx.cur[2] && !ctx.lastUnit) ctx.lastUnit = ctx.cur[2];
+    }
+
+    // save last used operator
+    if (ctx.cur[1] === '+' || ctx.cur[1] === '-') lastOp = ctx.cur;
+
+    // flag the expression for dates
+    if (isTime(ctx.cur[2])) ctx.isDate = true;
+  }
+}
+
+// export function reduceFromLogic(ctx, tokens, convert, expressions) {
+//   // collect all tokens after symbols
+//   if (isSymbol || (!value && cur[0] === 'symbol'))  {
+//     isSymbol = true;
+//     fixedStack.push(cur);
+
+//     if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && isSep(cur[1])))) {
+//       const branches = fixTokens(fixedStack, false);
+
+//       console.log({branches});
+
+//       // handle if-then-else logic
+//       if (branches[':if'] || branches[':unless']) {
+//         const ifBranch = branches[':if'] || branches[':unless'];
+//         const orBranch = branches[':else'] || branches[':otherwise'];
+
+//         let not = branches[':unless'] && !branches[':if'];
+//         let test = (branches[':if'] || branches[':unless']).shift();
+
+//         // handle negative variations
+//         if (test[0] === 'expr' && test[2] === 'not') {
+//           not = true;
+//           test = ifBranch.shift();
+//           test = [].concat.apply([test[0]], test.slice(1));
+//         }
+
+//         const retval = calculateFromTokens(cb(test));
+
+//         // evaluate respective branches
+//         if (not ? !retval[1] : retval[1]) {
+//           fixedTokens.push(calculateFromTokens(cb(ifBranch)));
+//         } else if (orBranch) {
+//           fixedTokens.push(calculateFromTokens(cb(orBranch)));
+//         }
+//       }
+
+//       isSymbol = false;
+//     }
+//     continue;
+//   }
+// }
+
+// export function reduceFromFX(ctx, tokens, convert, expressions) {
+//   // partial calls
+//   if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
+//     console.log('FX_PIPE_DEF');
+//     // const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
+//     // const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
+
+//     // // inject argument!
+//     // if (placeholder >= 0) {
+//     //   rightToken[2][0][placeholder] = left;
+//     // } else {
+//     //   if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
+//     //   if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
+//     // }
+
+//     // const result = cb([rightToken]);
+//     // const subTree = result.concat(tokens.slice(i + 2));
+
+//     // fixedTokens.pop();
+//     // fixedTokens.push(cb(subTree)[0]);
+//     // break;
+//   }
+
+//   // apply symbol-accessor op
+//   if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
+//     const args = fixArgs(cb(tokens[i + 1] || []), false)
+//       .map(x => calculateFromTokens(x));
+
+//     value = cb(fixArgs(left));
+//     value = reduceFromEffect(value, args, cur, cb);
+
+//     fixedTokens[fixedTokens.length - 1] = value;
+//     continue;
+//   }
+
+//   // handle logical expressions
+//   if (cur[0] === 'fx') {
+//     const [op, ...body] = tokens.slice(i);
+//     const args = [];
+
+//     let buffer = [];
+//     let offset = -1;
+
+//     // split on consecutive values
+//     for (let i = 0; i < body.length; i += 1) {
+//       if (['string', 'symbol', 'number', 'object', 'boolean', 'function', 'undefined'].includes(body[i][0])) offset++;
+//       if (offset >= 0) {
+//         buffer = args[offset] || (args[offset] = []);
+//         buffer.push(body[i]);
+//       }
+//     }
+
+//     // skip from non-arguments
+//     if (!args.length) {
+//       fixedTokens.push(cur);
+//       break;
+//     }
+
+//     // FIXME: validate input or something?
+//     const [lft, rgt, ...others] = args.map(x => calculateFromTokens(cb(x)));
+//     const result = evaluateComparison(cur[1], lft[1], rgt ? rgt[1] : undefined, others.map(x => x[1]));
+
+//     // also, how these values are rendered back?
+//     fixedTokens.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
+//     break;
+//   }
+// }
+
+// export function reduceFromDefs(ctx, tokens, convert, expressions) {
+//   // handle var/call definitions
+//   if (cur[0] === 'def') {
+//     // define var/call
+//     if (cur._body) {
+//       expressions[cur[1]] = cur[2];
+//       continue;
+//     }
+
+//     // side-effects will operate on previous values
+//     const def = expressions[cur[1]];
+//     const call = cur[2];
+
+//     // skip undefined calls
+//     if (!call) {
+//       console.log('NODEF',{cur})
+//       continue;
+//     }
+
+//     // compute valid sub-expressions from arguments
+//     // console.log(cb(def.args));
+//     // console.log(cb(call.args));
+
+//     // FIXME: improve error objects and such...
+//     if (def.args.length && def.args.length !== call.args.length) {
+//       throw new Error(`Expecting ${cur[1]}#${def.args.length} args, given ${call.args.length}`);
+//     }
+
+//     const locals = reduceFromArgs(cb(def.args), cb(call.args));
+
+//     // // prepend the  _ symbol to already curried functions
+//     // if (call[1][0] === 'def' && call[1]._curry) {
+//     //   console.log('DEF_CURRY');
+//     //   // call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
+//     // }
+//     // console.log({def,locals});
+
+//     // replace all given units within the AST
+//     cur = reduceFromTokens(def.body, locals);
+
+//     if (cur[0][0] === 'fn') {
+//       const fixedArgs = cb(call.args);
+
+//       if (cur.length > 1) {
+//         console.log('FNX', cur);
+//       }
+
+//       // apply lambda-calls as we have arguments
+//       while (cur[0][0] === 'fn' && fixedArgs.length) {
+//         Object.assign(locals, reduceFromArgs(cur[0][2].args, fixedArgs));
+//         cur = reduceFromTokens(cur[0][2].body, locals);
+//       }
+//     }
+
+//     cur = calculateFromTokens(cb(cur));
+//   }
+// }
+
+// FIXME: split into phases, let maths to be reusable...
+export function reduceFromAST(opts, convert, expressions) {
+  const cb = (ast, config) => reduceFromAST({ ast, ...config }, convert, Object.assign({}, expressions));
+
+  const { ast: tokens, ...options } = opts;
 
   const fixedTokens = [];
-  const fixedStack = [];
 
-  let isDate;
-  let isSymbol;
-
-  let lastUnit;
-  let lastOp = ['expr', '+', 'plus'];
+  const ctx = {
+    stack: [],
+    isDate: null,
+    isSymbol: null,
+    lastUnit: null,
+    lastOp: ['expr', '+', 'plus'],
+  }
 
   for (let i = 0; i < tokens.length; i += 1) {
-    let value = fixedTokens[fixedTokens.length - 1];
+    // shared context
+    ctx.cur = tokens[i];
+    ctx.left = tokens[i - 1];
+    ctx.right = tokens[i + 1];
+    ctx.current = fixedTokens[fixedTokens.length - 1];
 
-    let cur = tokens[i];
-    let left = tokens[i - 1]
-    let right = tokens[i + 1];
+    if (options.units) reduceFromUnits(ctx, convert, expressions);
 
-    // collect all tokens after symbols
-    if (isSymbol || (!value && cur[0] === 'symbol'))  {
-      isSymbol = true;
-      fixedStack.push(cur);
-
-      if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && isSep(cur[1])))) {
-        const branches = fixTokens(fixedStack, false);
-
-        console.log({branches});
-
-        // handle if-then-else logic
-        if (branches[':if'] || branches[':unless']) {
-          const ifBranch = branches[':if'] || branches[':unless'];
-          const orBranch = branches[':else'] || branches[':otherwise'];
-
-          let not = branches[':unless'] && !branches[':if'];
-          let test = (branches[':if'] || branches[':unless']).shift();
-
-          // handle negative variations
-          if (test[0] === 'expr' && test[2] === 'not') {
-            not = true;
-            test = ifBranch.shift();
-            test = [].concat.apply([test[0]], test.slice(1));
-          }
-
-          const retval = calculateFromTokens(cb(test));
-
-          // evaluate respective branches
-          if (not ? !retval[1] : retval[1]) {
-            fixedTokens.push(calculateFromTokens(cb(ifBranch)));
-          } else if (orBranch) {
-            fixedTokens.push(calculateFromTokens(cb(orBranch)));
-          }
-        }
-
-        isSymbol = false;
-      }
-      continue;
-    }
-
-    // partial calls
-    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
-      console.log('FX_PIPE_DEF');
-      // const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
-      // const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
-
-      // // inject argument!
-      // if (placeholder >= 0) {
-      //   rightToken[2][0][placeholder] = left;
-      // } else {
-      //   if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
-      //   if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
-      // }
-
-      // const result = cb([rightToken]);
-      // const subTree = result.concat(tokens.slice(i + 2));
-
-      // fixedTokens.pop();
-      // fixedTokens.push(cb(subTree)[0]);
-      // break;
-    }
-
-    // apply symbol-accessor op
-    if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
-      const args = fixArgs(cb(tokens[i + 1] || []), false)
-        .map(x => calculateFromTokens(x));
-
-      value = cb(fixArgs(left));
-      value = reduceFromEffect(value, args, cur, cb);
-
-      fixedTokens[fixedTokens.length - 1] = value;
-      continue;
-    }
-
-    // just return from non-values or ops
-    if (['string', 'object', 'boolean', 'function', 'undefined'].includes(cur[0])) {
-      fixedTokens.push(cur);
-      continue;
-    }
-
-    // handle logical expressions
-    if (cur[0] === 'fx') {
-      const [op, ...body] = tokens.slice(i);
-      const args = [];
-
-      let buffer = [];
-      let offset = -1;
-
-      // split on consecutive values
-      for (let i = 0; i < body.length; i += 1) {
-        if (['string', 'symbol', 'number', 'object', 'boolean', 'function', 'undefined'].includes(body[i][0])) offset++;
-        if (offset >= 0) {
-          buffer = args[offset] || (args[offset] = []);
-          buffer.push(body[i]);
-        }
-      }
-
-      // skip from non-arguments
-      if (!args.length) {
-        fixedTokens.push(cur);
-        break;
-      }
-
-      // FIXME: validate input or something?
-      const [lft, rgt, ...others] = args.map(x => calculateFromTokens(cb(x)));
-      const result = evaluateComparison(cur[1], lft[1], rgt ? rgt[1] : undefined, others.map(x => x[1]));
-
-      // also, how these values are rendered back?
-      fixedTokens.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
-      break;
-    }
-
-    // handle var/call definitions
-    if (cur[0] === 'def') {
-      // define var/call
-      if (cur._body) {
-        expressions[cur[1]] = cur[2];
-        continue;
-      }
-
-      // side-effects will operate on previous values
-      const def = expressions[cur[1]];
-      const call = cur[2];
-
-      // skip undefined calls
-      if (!call) {
-        console.log('NODEF',{cur})
-        continue;
-      }
-
-      // compute valid sub-expressions from arguments
-      // console.log(cb(def.args));
-      // console.log(cb(call.args));
-
-      // FIXME: improve error objects and such...
-      if (def.args.length && def.args.length !== call.args.length) {
-        throw new Error(`Expecting ${cur[1]}#${def.args.length} args, given ${call.args.length}`);
-      }
-
-      const locals = reduceFromArgs(cb(def.args), cb(call.args));
-
-      // // prepend the  _ symbol to already curried functions
-      // if (call[1][0] === 'def' && call[1]._curry) {
-      //   console.log('DEF_CURRY');
-      //   // call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
-      // }
-      // console.log({def,locals});
-
-      // replace all given units within the AST
-      cur = reduceFromTokens(def.body, locals);
-
-      console.log({cur});
-
-      if (cur[0][0] === 'fn') {
-        const fixedArgs = cb(call.args);
-
-        if (cur.length > 1) {
-          console.log('FNX', cur);
-        }
-
-        // apply lambda-calls as we have arguments
-        while (cur[0][0] === 'fn' && fixedArgs.length) {
-          Object.assign(locals, reduceFromArgs(cur[0][2].args, fixedArgs));
-          cur = reduceFromTokens(cur[0][2].body, locals);
-        }
-      }
-
-      cur = calculateFromTokens(cb(cur));
-    }
-
-    // handle unit expressions
-    if (cur[0] === 'unit' && hasOwnKeyword(expressions, cur[1])) {
-      cur = expressions[cur[1]].slice(1, expressions[cur[1]].length - 1);
-    }
-
-    // handle N-unit expressions
-    if (cur[0] === 'number' && hasOwnKeyword(expressions, cur[2])) {
-      const old = expressions[cur[2]];
-      const val = parseFloat(cur[1]);
-      const next = old.slice(1, old.length - 1);
-
-      // we return a new expression from 3x to [3, *, x]
-      cur = [['number', val], ['expr', '*', 'mul']].concat(next);
-    }
-
-    // handle resolution by recursion
-    if (Array.isArray(cur[0])) {
-      cur = calculateFromTokens(cb(cur));
-    }
-
-    // convert into Date values
-    if (cur[2] === 'datetime') {
-      isDate = true;
-      cur[1] = reduceFromValue(cur);
-    } else {
-      const left = tokens[i - 1] || [];
-      const right = tokens[i + 1] || [];
-
-      // append last-operator between consecutive unit-expressions
-      if (left[0] === 'number' && cur[0] === 'number') {
-        // distance between tokens should be short!
-        if ((cur._offset || 1) - (left._offset || 0) <= 2) {
-          fixedTokens.push(lastOp);
-        }
-      }
-
-      // handle converting between expressions
-      if (cur[0] === 'expr' && left[0] === 'number' && isExpr(cur[1])) {
-        const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
-
-        if (fixedUnit && !['datetime', 'fr'].includes(fixedUnit) && left[2] && left[2] !== 'datetime') {
-          left[1] = convert(parseFloat(toNumber(left[1])), left[2], fixedUnit);
-          left[2] = fixedUnit;
-        } else if (isTime(left[2])) {
-          left[1] = convert(parseFloat(toNumber(left[1])), left[2], 's');
-          left[2] = 's';
-        }
-      }
-
-      if (cur[0] === 'number') {
-        // convert time-expressions into seconds
-        if (isDate && isTime(cur[2])) {
-          cur[1] = convert(parseFloat(toNumber(cur[1])), cur[2], 's');
-          cur[2] = 's';
-        }
-
-        // convert between units
-        if (lastUnit && cur[2] && lastUnit !== cur[2]) {
-          cur[1] = convert(parseFloat(toNumber(cur[1])), cur[2], lastUnit);
-          cur[2] = lastUnit;
-        }
-
-        // save initial unit
-        if (cur[2] && !lastUnit) lastUnit = cur[2];
-      }
-
-      // save last used operator
-      if (cur[1] === '+' || cur[1] === '-') lastOp = cur;
-
-      // flag the expression for dates
-      if (isTime(cur[2])) isDate = true;
-    }
-
-    fixedTokens.push(cur);
+    fixedTokens.push(ctx.cur);
   }
 
   return fixedTokens;
