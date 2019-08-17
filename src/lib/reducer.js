@@ -65,9 +65,10 @@ export function reduceFromTokens(tree, values) {
     }
 
     // replace token within unit-calls
-    // if (item[0] === 'def' && item[2]) {
-    //   item[2] = [reduceFromTokens(item[2][0], values)];
-    // }
+    if (item[0] === 'def' && item[2]) {
+      console.log('DEF_RE_TOKEN?');
+      // item[2] = [reduceFromTokens(item[2][0], values)];
+    }
 
     // return as soon one matches!
     if (item[0] === 'unit' && values[item[1]]) {
@@ -235,25 +236,26 @@ export function reduceFromAST(tokens, convert, expressions) {
     }
 
     // partial calls
-    // if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
-    //   const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
-    //   const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
+    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right && right[0] === 'def') {
+      console.log('FX_PIPE_DEF');
+      // const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
+      // const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
 
-    //   // inject argument!
-    //   if (placeholder >= 0) {
-    //     rightToken[2][0][placeholder] = left;
-    //   } else {
-    //     if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
-    //     if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
-    //   }
+      // // inject argument!
+      // if (placeholder >= 0) {
+      //   rightToken[2][0][placeholder] = left;
+      // } else {
+      //   if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
+      //   if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
+      // }
 
-    //   const result = cb([rightToken]);
-    //   const subTree = result.concat(tokens.slice(i + 2));
+      // const result = cb([rightToken]);
+      // const subTree = result.concat(tokens.slice(i + 2));
 
-    //   fixedTokens.pop();
-    //   fixedTokens.push(cb(subTree)[0]);
-    //   break;
-    // }
+      // fixedTokens.pop();
+      // fixedTokens.push(cb(subTree)[0]);
+      // break;
+    }
 
     // apply symbol-accessor op
     if (value && cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(value[0])) {
@@ -333,7 +335,8 @@ export function reduceFromAST(tokens, convert, expressions) {
 
       // // prepend the  _ symbol to already curried functions
       // if (call[1][0] === 'def' && call[1]._curry) {
-      //   call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
+      //   console.log('DEF_CURRY');
+      //   // call.splice(1, 0, ...(args[0] || [['unit', '_']]), call[1]._curry);
       // }
 
       // replace all given units within the AST

@@ -52,28 +52,29 @@ export function fixTree(ast) {
 
   for (let i = 0; i < tokens.length; i += 1) {
     let cur = Array.isArray(tokens[i][0])
-      ? fixTree(fixCalls(tokens[i]))
+      ? fixTree(tokens[i])
       : tokens[i];
 
     const prev = tokens[i - 1];
     const next = tokens[i + 1];
 
     // skip and merge empty leafs
-    // if (cur.length === 0) {
-    //   if (prev && prev[0] === 'def') {
-    //     tokens.splice(i, 1);
-    //     prev[2] = [cur];
-    //   }
-    //   continue;
-    // }
+    if (cur.length === 0) {
+      console.log('EMPTY');
+      if (prev && prev[0] === 'def') {
+        console.log('DEFEMPTY');
+        // tokens.splice(i, 1);
+        // prev[2] = [cur];
+      }
+      continue;
+    }
 
-    // look for partial-applications
-    // if (next && next[0] === 'expr' && next[2] === 'equal' && cur[0] === 'unit') {
-    //   cur[2] = fixTree(tokens.splice(i + 1)).concat([['expr', ';', 'k']]);
-    //   cur[0] = 'def';
-    //   break;
-    // }
-
+    // look for partial-applications, e.g. `u=...;`
+    if (next && next[0] === 'expr' && next[2] === 'equal' && cur[0] === 'unit') {
+      console.log('REDEF?');
+      // cur[2] = fixTree(tokens.splice(i + 1)).concat([['expr', ';', 'k']]);
+      // cur[0] = 'def';
+    }
 
     if (prev && prev[0] === 'def') {
       const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' && isSep(x[1]));
@@ -109,15 +110,16 @@ export function fixTree(ast) {
       const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' || x[0] === 'fx');
 
       // make sure we're extending valid combinations...
-      // if (prev && prev[0] !== 'expr' && offset > 0) {
-      //   if (prev[0] === 'def' && !prev[2]) {
-      //     tokens.splice(i + 1, 0, ...fixCalls(tokens.splice(i + 1, i + offset - 1)));
-      //     continue;
-      //   }
-      // }
+      if (prev && prev[0] !== 'expr' && offset > 0) {
+        if (prev[0] === 'def' && !prev[2]) {
+          console.log('NODEFX!');
+          // tokens.splice(i + 1, 0, ...fixCalls(tokens.splice(i + 1, i + offset - 1)));
+          // continue;
+        }
+      }
 
       // otherwise, we just fix everything!
-      tokens.splice(i, i + tokens.length, ...fixCalls(tokens.slice(i)));
+      tokens.splice(i, i + tokens.length, ...fixCalls(fixTree(tokens.slice(i))));
       while (tokens.length === 1) tokens = tokens[0];
       break;
     }
@@ -159,11 +161,15 @@ export function fixTree(ast) {
         continue;
       }
 
+
+      // FIXME: WAT???? (this makes no obvious sense...)
       // keep side-effects without modification
-    //   if (Array.isArray(subTree[0])) {
+      if (Array.isArray(subTree[0])) {
     //     cur[2] = fixTokens(subTree);
     //     prev[2] = ['object', cur];
-    //   } else if (!prev[2]) {
+        console.log('SUBARR');
+      } else if (!prev[2]) {
+        console.log('NOPREV');
     //     // skip :symbol continuations
     //     if (next && next[0] === 'symbol' && !['unit', 'symbol'].includes(cur[0])) {
     //       tokens.splice(i, 0, cur, subTree);
@@ -199,7 +205,7 @@ export function fixTree(ast) {
     //         prev[2] = ['object', prev[2][0]];
     //       }
     //     }
-    //   }
+      }
     //   continue;
     }
 
@@ -216,79 +222,74 @@ export function fixTree(ast) {
   return tokens;
 }
 
-export function fixCalls(def, skip) {
-  const tokens = def.filter(x => !hasTagName(x[0]));
+export function fixCalls(tokens, skip) {
+  for (let i = 0; i < tokens.length; i += 1) {
+    const cur = tokens[i];
+    const left = tokens[i - 1];
+    const right = tokens[i + 1];
+
+    // group unit-calls and arguments
+    if (cur[0] === 'def' && !cur[2] && right && Array.isArray(right[0])) {
+      console.log('DEFRIGHT');
+      // tokens.splice(i + 1, 1);
+      // cur[2] = [right];
+      // continue;
+    }
+
+    // append all given tokens to previous unit-definitions
+    if (left && left[0] === 'def' && cur[0] !== 'fx') {
+      if (left[2] && cur[0] !== 'expr') {
+        console.log('DEF_FX_NO_EXPR');
+        // const cut = tokens.slice(i).findIndex(x => ['fx', 'expr'].includes(x[0]));
+        // const subTree = cut > 0 ? tokens.splice(i, cut) : tokens.splice(i);
+
+        // left[2][0] = left[2][0].concat(fixInput(subTree, true));
+        // continue;
+      }
+    }
+
+    // handle units with single arguments
+    if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
+      if (right && right[0] !== 'expr') {
+        console.log('SINGLE_FX_U');
+        // cur[0] = 'def';
+        // cur[2] = [[right]];
+        // tokens.splice(i + 1, 1);
+        // continue;
+      }
+    }
+
+    // handle partial-application calls
+    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
+      if (Array.isArray(left[0]) && right[0] === 'def' && tokens[i - 2]) {
+        console.log('DEDEF');
+        // tokens[i - 2][0] = 'def';
+        // tokens[i - 2][2] = [left];
+        // tokens.splice(i - 3, 3, cur, tokens[i - 2]);
+        // continue;
+      }
+
+      // compose from previous calls
+      if (left[0] === 'unit') {
+        console.log('DEFU');
+        // tokens.splice(i, 2, fixApply(cur[2], right, args));
+        // left._curry = cur.slice();
+        // left[0] = 'def';
+        // continue;
+      }
+    }
+
+    // unit-calls without arguments receives _
+    if (left
+      && left[0] === 'fx'
+      && cur[0] === 'unit'
+      && (!right || (right[0] === 'expr' && isSep(right[1])))
+    ) {
+      // cur[2] = [[['symbol', '_']]];
+      // cur[0] = 'def';
+      console.log('DEF_SYM_FX');
+    }
+  }
 
   return tokens;
-
-  // let args = [];
-
-  // // eat arguments from input, usually an array
-  // if (Array.isArray(tokens[0][0])) {
-  //   args = tokens.shift();
-  // }
-
-  // for (let i = 0; i < tokens.length; i += 1) {
-  //   const cur = tokens[i];
-  //   const left = tokens[i - 1];
-  //   const right = tokens[i + 1];
-
-  //   // group unit-calls and arguments
-  //   // if (cur[0] === 'def' && !cur[2] && right && Array.isArray(right[0])) {
-  //   //   tokens.splice(i + 1, 1);
-  //   //   cur[2] = [right];
-  //   //   continue;
-  //   // }
-
-  //   // append all given tokens to previous unit-definitions
-  //   // if (left && left[0] === 'def' && cur[0] !== 'fx') {
-  //   //   if (left[2] && cur[0] !== 'expr') {
-  //   //     const cut = tokens.slice(i).findIndex(x => ['fx', 'expr'].includes(x[0]));
-  //   //     const subTree = cut > 0 ? tokens.splice(i, cut) : tokens.splice(i);
-
-  //   //     left[2][0] = left[2][0].concat(fixInput(subTree, true));
-  //   //     continue;
-  //   //   }
-  //   // }
-
-  //   // handle units with single arguments
-  //   // if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
-  //   //   if (right && right[0] !== 'expr') {
-  //   //     cur[0] = 'def';
-  //   //     cur[2] = [[right]];
-  //   //     tokens.splice(i + 1, 1);
-  //   //     continue;
-  //   //   }
-  //   // }
-
-  //   // // handle partial-application calls
-  //   // if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
-  //   //   if (Array.isArray(left[0]) && right[0] === 'def' && tokens[i - 2]) {
-  //   //     tokens[i - 2][0] = 'def';
-  //   //     tokens[i - 2][2] = [left];
-  //   //     tokens.splice(i - 3, 3, cur, tokens[i - 2]);
-  //   //     continue;
-  //   //   }
-
-  //   //   // compose from previous calls
-  //   //   if (left[0] === 'unit') {
-  //   //     tokens.splice(i, 2, fixApply(cur[2], right, args));
-  //   //     left._curry = cur.slice();
-  //   //     left[0] = 'def';
-  //   //     continue;
-  //   //   }
-  //   // }
-
-  //   // // unit-calls without arguments receives _
-  //   // if (left
-  //   //   && left[0] === 'fx'
-  //   //   && cur[0] === 'unit'
-  //   //   && (!right || (right[0] === 'expr' && isSep(right[1])))
-  //   // ) {
-  //   //   cur[2] = [[['symbol', '_']]];
-  //   //   cur[0] = 'def';
-  //   // }
-  // }
-
-  // return [].concat(args.length ? [args] : []).concat(tokens);
 }
