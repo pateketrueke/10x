@@ -97,10 +97,10 @@ export function fixTree(ast) {
         const cut = tokens.slice(offset).findIndex(x => x[0] === 'expr' && isSep(x[1]));
         const endPos = cut >= 0 ? cut : tokens.length - offset;
 
-        const args = tokens.splice(i, offset);
-        const subTree = tokens.splice(i, endPos).slice(1);
-
-        tokens.splice(i, 0, ['fn', '$', [args, fixTree(subTree)]]);
+        tokens.splice(i, 0, ['fn', '$', {
+          args: tokens.splice(i, offset),
+          body: fixTree(tokens.splice(i, endPos).slice(1)),
+        }]);
         break;
       }
     }

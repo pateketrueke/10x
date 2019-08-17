@@ -342,10 +342,14 @@ export function reduceFromAST(tokens, convert, expressions) {
       if (cur[0][0] === 'fn') {
         const fixedArgs = cb(call.args);
 
+        if (cur.length > 1) {
+          console.log('FNX', cur);
+        }
+
         // apply lambda-calls as we have arguments
         while (cur[0][0] === 'fn' && fixedArgs.length) {
-          Object.assign(locals, reduceFromArgs(cur[0][2][0], fixedArgs));
-          cur = reduceFromTokens(cur[0][2][1], locals);
+          Object.assign(locals, reduceFromArgs(cur[0][2].args, fixedArgs));
+          cur = reduceFromTokens(cur[0][2].body, locals);
         }
       }
 
