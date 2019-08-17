@@ -156,7 +156,7 @@ export default class Solvente {
       });
     } catch (e) {
       this.error = e;
-      return null;
+      return [];
     }
 
     return results.map(x => this.value(calculateFromTokens(x)));

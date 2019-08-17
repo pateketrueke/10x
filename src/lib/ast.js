@@ -209,6 +209,11 @@ export function fixArgs(values, flatten) {
 
   // FIXME: also, a pattern...
   if (flatten === true) {
+    values = fixArgs(values.map(x => {
+      while (x.length === 1) x = x[0];
+      return x;
+    }));
+
     return values.map(x => {
       while (x.length === 1) x = x[0];
       return x;

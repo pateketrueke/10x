@@ -289,7 +289,8 @@ export function fixCalls(tokens, def) {
           args: fixArgs(fixApply(cur[2], subTree, fixedArgs), true),
           body: [],
         };
-        console.log({left});
+
+        // console.log({def,left});
         continue;
       }
     }

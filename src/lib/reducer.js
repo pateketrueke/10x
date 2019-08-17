@@ -327,6 +327,11 @@ export function reduceFromAST(tokens, convert, expressions) {
       // console.log(cb(def.args));
       // console.log(cb(call.args));
 
+      // FIXME: improve error objects and such...
+      if (def.args.length && def.args.length !== call.args.length) {
+        throw new Error(`Expecting ${cur[1]}#${def.args.length} args, given ${call.args.length}`);
+      }
+
       const locals = reduceFromArgs(cb(def.args), cb(call.args));
 
       // // prepend the  _ symbol to already curried functions
