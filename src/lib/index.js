@@ -147,12 +147,16 @@ export default class Solvente {
     };
   }
 
-  eval(tokens) {
+  eval(tokens, opts) {
     const results = [];
 
     try {
       (tokens || this.tree).forEach(ast => {
-        results.push(...toList(reduceFromAST({ ast }, convertFrom, this.expressions)));
+        results.push(...toList(reduceFromAST({
+          units: true,
+          ...opts,
+          ast,
+        }, convertFrom, this.expressions)));
       });
     } catch (e) {
       this.error = e;

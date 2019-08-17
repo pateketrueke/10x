@@ -173,7 +173,7 @@ export function reduceFromEffect(value, args, def, cb) {
   return [typeof fixedResult, fixedResult];
 }
 
-export function reduceFromUnits(ctx, tokens, convert, expressions) {
+export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle unit expressions
   if (ctx.cur[0] === 'unit' && hasOwnKeyword(expressions, ctx.cur[1])) {
     ctx.cur = expressions[ctx.cur[1]].slice(1, expressions[ctx.cur[1]].length - 1);
@@ -199,8 +199,8 @@ export function reduceFromUnits(ctx, tokens, convert, expressions) {
     ctx.isDate = true;
     ctx.cur[1] = reduceFromValue(ctx.cur);
   } else {
-    const left = tokens[i - 1] || [];
-    const right = tokens[i + 1] || [];
+    const left = ctx.left || [];
+    const right = ctx.right || [];
 
     // append last-operator between consecutive unit-expressions
     if (left[0] === 'number' && ctx.cur[0] === 'number') {
@@ -239,7 +239,7 @@ export function reduceFromUnits(ctx, tokens, convert, expressions) {
     }
 
     // save last used operator
-    if (ctx.cur[1] === '+' || ctx.cur[1] === '-') lastOp = ctx.cur;
+    if (ctx.cur[1] === '+' || ctx.cur[1] === '-') ctx.lastOp = ctx.cur;
 
     // flag the expression for dates
     if (isTime(ctx.cur[2])) ctx.isDate = true;
@@ -437,7 +437,7 @@ export function reduceFromAST(opts, convert, expressions) {
     ctx.right = tokens[i + 1];
     ctx.current = fixedTokens[fixedTokens.length - 1];
 
-    if (options.units) reduceFromUnits(ctx, convert, expressions);
+    if (options.units) reduceFromUnits(cb, ctx, convert, expressions);
 
     fixedTokens.push(ctx.cur);
   }
