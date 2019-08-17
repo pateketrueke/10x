@@ -394,8 +394,8 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
     }
 
     // FIXME: improve error objects and such...
-    if (def.args.length && def.args.length !== call.args.length) {
-      throw new ParseError(`Expecting ${ctx.cur[1]}#${def.args.length} args, given ${call.args.length}`, ctx);
+    if (def.args.length && def.args.length !== call.args.length && def.body[0][0] !== 'fn') {
+      throw new ParseError(`Expecting \`${ctx.cur[1]}#${def.args.length}\` args, given ${call.args.length}`, ctx);
     }
 
     // prepend _ symbol for currying
@@ -411,12 +411,15 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
     // FIXME: there is a side-effect, symbol/unit _ can appear twice...
     const locals = reduceFromArgs(cb(def.args, null, ctx), cb(call.args, null, ctx));
+    const token = ctx.cur;
 
     // replace all given units within the AST
     ctx.cur = reduceFromTokens(def.body, locals);
 
+    // FIXME: validate arity while recursing...
     if (ctx.cur[0][0] === 'fn') {
       const fixedArgs = cb(call.args, null, ctx);
+      const fixedLength = fixedArgs.length;
 
       if (ctx.cur.length > 1) {
         console.log('FNX', ctx.cur);
@@ -426,6 +429,10 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
       while (ctx.cur[0][0] === 'fn' && fixedArgs.length) {
         Object.assign(locals, reduceFromArgs(ctx.cur[0][2].args, fixedArgs));
         ctx.cur = reduceFromTokens(ctx.cur[0][2].body, locals);
+      }
+
+      if (fixedArgs.length) {
+        throw new ParseError(`Expecting \`${token[1]}#${fixedLength - fixedArgs.length}\` args, given ${fixedLength}`, ctx);
       }
     }
 
