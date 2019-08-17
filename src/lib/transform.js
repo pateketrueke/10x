@@ -214,6 +214,27 @@ export function transform(input, units) {
       || (hasNum(cur) && (!nextToken || isOp(nextToken) || isFx(nextToken) || hasNum(nextToken) || isExpr(nextToken) || hasKeyword(nextToken, units)))
     ) hasOps = true;
 
+
+    // check the rhythm of complexity...
+    if (hasOps && stack.length > 3) {
+      const max = stack.length;
+      const set = [];
+
+      // consume last 5 tokens at most, hopefully
+      // they don't have enough white-space for this...
+      for (let k = 1; k < 5; k += 1) {
+        if (!stack[max - k]) break;
+
+        // skip white-space and accumulate!
+        if (!isAny(stack[max - k].content, ' \n')) {
+          set.push(stack[max - k].complexity);
+        }
+      }
+
+      // turn-off operations if complexity goes down...
+      if (set.reduce((prev, cur) => prev + cur, 0) < 45) hasOps = false;
+    }
+
     // add whenever we are in maths, or has enough complexity
     if (hasOps || (tokens[i].complexity > 35)) {
       stack._fixed = true;
