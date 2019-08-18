@@ -204,9 +204,9 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   }
 
   // handle resolution by recursion
-  if (Array.isArray(ctx.cur[0])) {
-    ctx.cur = calculateFromTokens(cb(ctx.cur, null, ctx));
-  }
+  // if (Array.isArray(ctx.cur[0])) {
+  //   ctx.cur = calculateFromTokens(cb(ctx.cur, null, ctx));
+  // }
 
   // convert into Date values
   if (ctx.cur[2] === 'datetime') {
@@ -442,7 +442,14 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
 // FIXME: split into phases, let maths to be reusable...
 export function reduceFromAST(opts, convert, expressions, parentContext) {
-  const { ast: tokens, ...options } = opts;
+  const { ast, ...options } = opts;
+
+  // FIXME: some utils?
+  let tokens = ast;
+
+  while (tokens.length === 1) {
+    tokens = tokens[0];
+  }
 
   const use = options.use || [];
   const useDefs = use.includes('definitions');

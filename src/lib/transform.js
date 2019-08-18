@@ -240,8 +240,6 @@ export function transform(input, units) {
     }
   }
 
-  // console.log({chunks});
-
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
     const lastChunk = prev[prev.length - 1];
