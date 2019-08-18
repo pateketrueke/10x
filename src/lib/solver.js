@@ -186,27 +186,27 @@ export function operateExpression(ops, expr) {
 }
 
 // FIXME: cleanup?
-export function calculateFromTokens(expr, re) {
-  if (Array.isArray(expr[0]) && !re) {
-    expr = expr.filter(x => x[0] !== 'def');
+export function calculateFromTokens(expr) {
+  // if (Array.isArray(expr[0]) && re !== false) {
+  //   expr = expr.filter(x => x[0] !== 'def');
 
-    return toList(expr).map(x => {
-      if (Array.isArray(x[0])) {
-        return x.map(y => {
-          if (Array.isArray(y[0])) {
-            const z = calculateFromTokens(y);
+  //   return toList(expr).map(x => {
+  //     if (Array.isArray(x[0])) {
+  //       return x.map(y => {
+  //         if (Array.isArray(y[0])) {
+  //           const z = calculateFromTokens(y);
 
-            if (Array.isArray(z[0])) {
-              return z.map(u => calculateFromTokens(u, true));
-            }
-            return z;
-          }
-          return y;
-        });
-      }
-      return x;
-    });
-  }
+  //           if (Array.isArray(z[0])) {
+  //             return z.map(u => calculateFromTokens(u, false));
+  //           }
+  //           return z;
+  //         }
+  //         return y;
+  //       });
+  //     }
+  //     return x;
+  //   });
+  // }
 
   expr = operateExpression(['for', '*', '/'], expr);
   expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in', 'to'], expr);
