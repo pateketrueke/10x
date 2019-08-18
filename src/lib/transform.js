@@ -218,7 +218,7 @@ export function transform(input, units) {
     if (cur === ')') depth--;
 
     if (inMaths) {
-      if (subTree.length && !subTree._fixed) {
+      if (t < 3 && subTree.length && !subTree._fixed) {
         chunks[++inc] = [tokens[i]];
         chunks[inc]._fixed = true;
         continue;

@@ -133,6 +133,9 @@ export function parseBuffer(text, units) {
     // but operators are more!
     if (isOp(cur) || isFx(cur)) score += 3;
 
+    // numbers before unit-expressions
+    if (isNum(last) && isChar(cur)) score += 2;
+
     // any word or printable-character...
     if (isChar(cur) || isAlpha(cur) || isMoney(cur)) score += 1;
 
