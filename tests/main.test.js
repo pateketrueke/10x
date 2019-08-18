@@ -17,13 +17,17 @@ const value = (expr, opts, no) => {
 const toTree = (expr, opts) => calc(expr, opts, true).tree;
 
 describe('DSL', () => {
-  describe('Basic math operations', () => {
+  describe.only('Basic math operations', () => {
     it('should handle common errors', () => {
       expect(()=> value('1ml - 1cm')).to.throw(/Cannot convert incompatible measures of volume and length/);
     });
 
-    it('should handle most basic units', () => {
+    it.only('should handle most basic units', () => {
       // expect(value('1cm')).to.eql(['1 cm']);
+      console.log(new Solvente().eval([
+        [['def', 'x'], ['expr', '+', 'plus'], ['number', '2']],
+        [['number', '1'], ['expr', '+', 'plus'], ['number', '2']],
+      ]));
     });
 
     it('should handle most basic operators', () => {

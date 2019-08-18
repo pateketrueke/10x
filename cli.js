@@ -10,6 +10,7 @@ const Solvente = require('./dist/solvente.js');
 
 const returnRawJSON = process.argv.slice(2).indexOf('--raw') !== -1;
 const returnAsJSON = process.argv.slice(2).indexOf('--json') !== -1;
+const showDebugInfo = process.argv.slice(2).indexOf('--debug') !== -1;
 const hasNoColors = process.argv.slice(2).indexOf('--no-colors') !== -1;
 const sharedFileOffset = process.argv.slice(2).indexOf('--shared');
 const sharedFilePath = sharedFileOffset >= 0 && process.argv.slice(2)[sharedFileOffset + 1];
@@ -57,8 +58,12 @@ if (returnAsJSON) {
     process.stderr.write(fixedError);
   }
 
-  process.stdout.write(`${require('util').inspect(calc.input, { colors, depth: 10 })}\n`);
-  process.stdout.write(`${require('util').inspect(calc.tokens, { colors, depth: 10 })}\n`);
+  if (showDebugInfo) {
+    process.stdout.write(`${require('util').inspect(calc.tree, { colors, depth: 10 })}\n`);
+    process.stdout.write(`${require('util').inspect(calc.input, { colors, depth: 10 })}\n`);
+    process.stdout.write(`${require('util').inspect(calc.tokens, { colors, depth: 10 })}\n`);
+  }
+
   process.stdout.write(`${require('util').inspect(fixedResults, { colors, depth: 10 })}\n`);
 }
 
