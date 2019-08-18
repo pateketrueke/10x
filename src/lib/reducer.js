@@ -480,11 +480,6 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
     ctx.right = tokens[i + 1];
     ctx.current = ctx.ast[ctx.ast.length - 1];
 
-    if (Array.isArray(ctx.cur[0])) {
-      ctx.ast.push(cb(ctx.cur, null, ctx));
-      continue;
-    }
-
     // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
     if (useFX) reduceFromFX(cb, ctx, convert, expressions);
     if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
