@@ -127,7 +127,10 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     return ['number', text, 'datetime'];
   }
 
-  const fixedUnit = hasKeyword(text, units);
+  const fixedUnit = hasKeyword(text, units, true);
+
+  // FIXME: seems like unita are not being evaluated...
+  // console.log({text,fixedUnit});
 
   // extract well-known units
   if (fixedUnit) {
@@ -216,6 +219,9 @@ export function transform(input, units) {
     // flag for depth-checking
     if (cur === '(') depth++;
     if (cur === ')') depth--;
+
+    // FIXME: there should be also a rhythm, so tokens should be added
+    // only if they have enough complexity and fits into the ryhthm...
 
     if (inMaths) {
       if (!isOp(cur) && subTree.length && !subTree._fixed) {

@@ -73,13 +73,17 @@ export const hasPercent = x => {
   return typeof x === 'string' && x.charAt(x.length - 1) === '%';
 };
 
-export const hasKeyword = (x, units) => {
+export const hasKeyword = (x, units, fallback) => {
   if (!x) return false;
 
   const key = x.replace(RE_NO_ALPHA, '');
 
   // skip further detection on white-space
   if (isAny(key, ' ')) return false;
+
+  if (fallback) {
+    return key;
+  }
 
   const test = key && (hasOwnKeyword(units, key) || hasOwnKeyword(units, key.toLowerCase()));
 

@@ -193,14 +193,9 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
     ctx.cur = expressions[ctx.cur[1]].body;
   }
 
-  // handle N-unit expressions
+  // handle N-unit, return a new expression from 3x to [3, *, x]
   if (ctx.cur[0] === 'number' && hasOwnKeyword(expressions, ctx.cur[2])) {
-    const old = expressions[ctx.cur[2]];
-    const val = parseFloat(ctx.cur[1]);
-    const next = old.slice(1, old.length - 1);
-
-    // we return a new expression from 3x to [3, *, x]
-    ctx.cur = [['number', val], ['expr', '*', 'mul']].concat(next);
+    ctx.cur = [['number', parseFloat(ctx.cur[1])], ['expr', '*', 'mul']].concat(expressions[ctx.cur[2]].body);
   }
 
   // handle resolution by recursion
@@ -375,6 +370,7 @@ export function reduceFromFX(cb, ctx, convert, expressions) {
 
 export function reduceFromDefs(cb, ctx, convert, expressions) {
   // handle var/call definitions
+
   if (ctx.cur[0] === 'def') {
     // define var/call
     if (ctx.cur._body) {
@@ -485,7 +481,10 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
     if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
     if (useUnits) reduceFromUnits(cb, ctx, convert, expressions);
 
-    ctx.ast.push(ctx.cur);
+    // skip some definitions from reduced AST
+    if (!['def'].includes(ctx.cur[0])) {
+      ctx.ast.push(ctx.cur);
+    }
   }
 
   return ctx.ast;
