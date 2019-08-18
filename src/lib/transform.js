@@ -210,7 +210,7 @@ export function transform(input, units) {
         inMaths = false;
       }
     } else {
-      inMaths = depth > 0;
+      inMaths = depth > 0 || cur === '(';
     }
 
     // flag for depth-checking
@@ -222,23 +222,15 @@ export function transform(input, units) {
         chunks[++inc] = [tokens[i]];
         chunks[inc]._fixed = true;
         continue;
-      }
-    } else if (!depth) {
-      if (subTree._fixed) {
-        chunks[++inc] = [tokens[i]];
       } else {
-        subTree.push(tokens[i]);
+        subTree._fixed = true;
       }
-      continue;
     }
 
-    // still complex? keep adding tokens...
-    if (complexity >= complexity - oldComplexity) {
-      subTree.push(tokens[i]);
-    } else {
-      chunks[++inc] = [tokens[i]];
-    }
+    subTree.push(tokens[i]);
   }
+
+  // console.log({chunks});
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
