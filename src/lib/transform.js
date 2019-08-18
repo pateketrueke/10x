@@ -182,7 +182,7 @@ export function transform(input, units) {
 
   let oldComplexity = 0.0;
   let complexity = 0.0;
-  let hasOps = false;
+  let inMaths = false;
   let depth = 0;
   let inc = 0;
 
@@ -197,15 +197,27 @@ export function transform(input, units) {
       continue;
     }
 
+    let key = i;
+    let nextToken;
+
+    do { nextToken = tokens[++key]; } while (nextToken && isAny(nextToken.content, ' \n'));
+
+    // split based on complexity
+    if (t >= 3) {
+      inMaths = true;
+
+      if (!depth && isChar(nextToken)) {
+        inMaths = false;
+      }
+    } else {
+      inMaths = depth > 0;
+    }
+
     // flag for depth-checking
     if (cur === '(') depth++;
     if (cur === ')') depth--;
 
-    // split based on complexity
-    if (t >= 3) {
-      oldComplexity = complexity;
-      complexity += t / 2;
-
+    if (inMaths) {
       if (subTree.length && !subTree._fixed) {
         chunks[++inc] = [tokens[i]];
         chunks[inc]._fixed = true;

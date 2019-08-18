@@ -114,11 +114,20 @@ export function parseBuffer(text, units) {
 
     // rank tokens
     let score = 0;
+    let key = i;
+    let peek;
+
+    do { peek = chars[++key]; } while (isAny(peek, ' \n'));
 
     if (isNum(cur)) score += 5;
     if (isOp(cur) || isFx(cur)) score += 3;
     if (isChar(cur) || isAlpha(cur) || isMoney(cur)) score += 1;
-    if (isJoin(cur) || isSep(cur, '()') || isFmt(cur)) score += 1;
+    if (isJoin(cur) || isSep(cur, '()') || isFmt(cur)) score += 2.5;
+
+    // bonus points
+    if (open && cur === ',' && (isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
+    if (cur === '(' && (peek === '(' || isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
+    if (cur === ')' && (oldChar === ')' || isFx(oldChar) || isChar(oldChar) || hasNum(oldChar))) score += 1.5;
 
     // increase line/column
     if (last === '\n') {
