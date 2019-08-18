@@ -218,18 +218,20 @@ export function transform(input, units) {
     if (cur === ')') depth--;
 
     if (inMaths) {
-      if (t < 3 && subTree.length && !subTree._fixed) {
+      if (!isOp(cur) && subTree.length && !subTree._fixed) {
+        // console.log({t,cur,nextToken});
         chunks[++inc] = [tokens[i]];
         chunks[inc]._fixed = true;
         continue;
       } else {
-        subTree._fixed = true;
+        subTree._fixed = t >= 3;
       }
     }
 
     subTree.push(tokens[i]);
   }
 
+  // FIXME: is not cutting good...
   // console.log({chunks});
 
   // merge non-fixed chunks
