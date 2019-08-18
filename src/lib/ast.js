@@ -193,11 +193,6 @@ export function fixStrings(tokens, split) {
       }
     } else {
       prev.push(cur);
-
-      // make sure we break!
-      if (split !== false && cur[1] === '\n') {
-        prev.push(['expr', null]);
-      }
     }
 
     return prev;

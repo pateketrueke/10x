@@ -112,20 +112,13 @@ export function parseBuffer(text, units) {
     const next = chars[i + 1];
     const cur = chars[i];
 
-    // rank tokens as negative first
-    let score = -1;
-    let key = i;
-    let t;
+    // rank tokens
+    let score = 0;
 
-    // get next non white-space token
-    do { t = chars[++key]; } while (t === ' ');
-
-    // quick-scores!
-    if (isNum(cur)) score += 50;
-    if (isOp(cur) || isFx(cur)) score += 15;
-    if (isChar(cur) || isAlpha(cur) || isMoney(cur)) score += 10;
-    if (isJoin(cur) || isSep(cur, '()') || isFmt(cur)) score += 20;
-    if ((isNum(last) || isNum(t)) && !(isSep(cur) || isAny(cur, ' \n'))) score += 25;
+    if (isNum(cur)) score += 5;
+    if (isOp(cur) || isFx(cur)) score += 3;
+    if (isChar(cur) || isAlpha(cur) || isMoney(cur)) score += 1;
+    if (isJoin(cur) || isSep(cur, '()') || isFmt(cur)) score += 1;
 
     // increase line/column
     if (last === '\n') {
@@ -185,6 +178,8 @@ export function parseBuffer(text, units) {
           inBlock = false;
           continue;
         }
+      } else if (last === '\n') {
+        inBlock = false;
       }
     }
 
@@ -236,7 +231,6 @@ export function parseBuffer(text, units) {
       }
     } else {
       tokens[++offset] = [{ cur, row, col, score }];
-      // score = -1;
     }
   }
 

@@ -33,7 +33,7 @@ export function fromMarkdown(text) {
   }
 
   // handle comments
-  if (text.charAt() === '/') {
+  if (text.substr(0, 2) === '//') {
     return ['comment', text];
   }
 
@@ -180,77 +180,55 @@ export function transform(input, units) {
   const tokens = input.slice();
   const chunks = [];
 
+  let oldComplexity = 0.0;
+  let complexity = 0.0;
   let hasOps = false;
   let depth = 0;
   let inc = 0;
 
   // split tokens based on their complexity
   for (let i = 0; i < tokens.length; i += 1) {
-    const stack = chunks[inc] || (chunks[inc] = []);
+    const subTree = chunks[inc] || (chunks[inc] = []);
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
+
+    if (t <= 0) {
+      subTree.push(tokens[i]);
+      continue;
+    }
 
     // flag for depth-checking
     if (cur === '(') depth++;
     if (cur === ')') depth--;
 
-    let key = 0;
-    let nextToken;
+    // split based on complexity
+    if (t >= 3) {
+      oldComplexity = complexity;
+      complexity += t / 2;
 
-    do { nextToken = (tokens[++key] || {}).content; } while (isAny(nextToken, ' \n'));
-
-    // flag possible ops
-    if (
-      // allow any operator, or side-effect followed by words, e.g. `+a`, `<-x`
-      ((isOp(cur) || isFx(cur)) && isChar(nextToken))
-
-      // allow most words folllwed by operators and side-effects, e.g. `a+`, `x->`
-      || (isChar(cur) && (isOp(nextToken) || isFx(nextToken)))
-
-      // within parenthesis, followed by any word, number; alone, or followed by an operator or side-effect, e.g. `(a`, `(1`
-      || (depth && (isChar(cur) || hasNum(cur)) && (!nextToken || isOp(nextToken) || isFx(nextToken)))
-
-      // any number alone, or followed by an operator, side-effect, expression, more numbers or units are allowed, e.g. `1+`, `1->`, `1 1`, `1 cm`, `1 from`
-      || (hasNum(cur) && (!nextToken || isOp(nextToken) || isFx(nextToken) || hasNum(nextToken) || isExpr(nextToken) || hasKeyword(nextToken, units)))
-    ) hasOps = true;
-
-
-    // check the rhythm of complexity...
-    if (hasOps && stack.length > 3) {
-      const max = stack.length;
-      const set = [];
-
-      // consume last 5 tokens at most, hopefully
-      // they don't have enough white-space for this...
-      for (let k = 1; k < 5; k += 1) {
-        if (!stack[max - k]) break;
-
-        // skip white-space and accumulate!
-        if (!isAny(stack[max - k].content, ' \n')) {
-          set.push(stack[max - k].complexity);
-        }
+      if (subTree.length && !subTree._fixed) {
+        chunks[++inc] = [tokens[i]];
+        chunks[inc]._fixed = true;
+        continue;
       }
-
-      // turn-off operations if complexity goes down...
-      if (set.reduce((prev, cur) => prev + cur, 0) < 45) hasOps = false;
-    }
-
-    // add whenever we are in maths, or has enough complexity
-    if (hasOps || (tokens[i].complexity > 35)) {
-      stack._fixed = true;
-    } else {
-      hasOps = false;
-      chunks[++inc] = [tokens[i]];
-
-      // ensure we break apart from white-space
-      if (isAny(tokens[i].content, ' \n')) {
-        inc++;
+    } else if (!depth) {
+      if (subTree._fixed) {
+        chunks[++inc] = [tokens[i]];
+      } else {
+        subTree.push(tokens[i]);
       }
       continue;
     }
 
-    stack.push(tokens[i]);
+    // still complex? keep adding tokens...
+    if (complexity >= complexity - oldComplexity) {
+      subTree.push(tokens[i]);
+    } else {
+      chunks[++inc] = [tokens[i]];
+    }
   }
+
+  // console.log({chunks});
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
