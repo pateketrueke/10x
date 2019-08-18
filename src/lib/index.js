@@ -175,6 +175,8 @@ export default class Solvente {
       return [];
     }
 
-    return results.map(x => this.value(calculateFromTokens(x)));
+    return results
+      .reduce((p, x) => p.concat(calculateFromTokens(x)), [])
+      .filter(x => x.length).map(x => x[0].map(y => this.value(y)));
   }
 }
