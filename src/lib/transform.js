@@ -192,11 +192,16 @@ export function transform(input, units) {
   // split tokens based on their complexity
   for (let i = 0; i < tokens.length; i += 1) {
     const subTree = chunks[inc] || (chunks[inc] = []);
+    const next = (tokens[i + 1] || {}).content;
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
-    if (t < 3) {
-      subTree.push(tokens[i]);
+    if (t < 3 && !(isChar(cur) && isAny(next, '(='))) {
+      if (isAny(cur, '\n;')) {
+        chunks[++inc] = [tokens[i]];
+      } else {
+        subTree.push(tokens[i]);
+      }
       continue;
     }
 
@@ -206,7 +211,7 @@ export function transform(input, units) {
     do { nextToken = tokens[++key]; } while (nextToken && isAny(nextToken.content, ' \n'));
 
     // split based on complexity
-    if (t >= 3) {
+    if (t >= 3 || (!nextToken || nextToken.complexity >= 3)) {
       inMaths = true;
 
       if (!depth && isChar(nextToken)) {
@@ -219,6 +224,8 @@ export function transform(input, units) {
     // flag for depth-checking
     if (cur === '(') depth++;
     if (cur === ')') depth--;
+
+    // console.log({t,cur});
 
     // FIXME: there should be also a rhythm, so tokens should be added
     // only if they have enough complexity and fits into the ryhthm...
