@@ -192,7 +192,7 @@ export function transform(input, units) {
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
-    if (t <= 0) {
+    if (t < 3) {
       subTree.push(tokens[i]);
       continue;
     }

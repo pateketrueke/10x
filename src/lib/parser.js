@@ -119,12 +119,24 @@ export function parseBuffer(text, units) {
 
     do { peek = chars[++key]; } while (isAny(peek, ' \n'));
 
-    if (isNum(cur)) score += 5;
-    if (isOp(cur) || isFx(cur)) score += 3;
-    if (isChar(cur) || isAlpha(cur) || isMoney(cur)) score += 1;
-    if (isJoin(cur) || isSep(cur, '()') || isFmt(cur)) score += 2.5;
+    if (!open) {
+      // ban ops/words outside parenthesis
+      if ((isOp(cur) || isJoin(cur)) && !isNum(peek)) score = -1;
+    }
 
-    // bonus points
+    // numbers have higher score
+    if (isNum(cur)) score += 5;
+
+    // separators are important
+    if (isSep(cur, '()')) score += 2.5;
+
+    // but operators are more!
+    if (isOp(cur) || isFx(cur)) score += 3;
+
+    // any word or printable-character...
+    if (isChar(cur) || isAlpha(cur) || isMoney(cur)) score += 1;
+
+    // bonus points: values or side-effects after expression-separators
     if (open && cur === ',' && (isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === '(' && (peek === '(' || isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === ')' && (oldChar === ')' || isFx(oldChar) || isChar(oldChar) || hasNum(oldChar))) score += 1.5;
