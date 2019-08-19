@@ -197,53 +197,47 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   if (ctx.cur[2] === 'datetime') {
     ctx.isDate = true;
     ctx.cur[1] = reduceFromValue(ctx.cur);
-  } else {
-    const left = ctx.left || [];
-    const right = ctx.right || [];
-
-    // append last-operator between consecutive unit-expressions
-    if (left[0] === 'number' && ctx.cur[0] === 'number') {
-      if (!ctx.root.isDef) {
-        ctx.ast.push(ctx.lastOp);
-      }
-    }
-
-    // handle converting between expressions
-    if (ctx.cur[0] === 'expr' && left[0] === 'number' && isExpr(ctx.cur[1])) {
-      const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
-
-      if (fixedUnit && !['datetime', 'fr'].includes(fixedUnit) && left[2] && left[2] !== 'datetime') {
-        left[1] = convert(parseFloat(toNumber(left[1])), left[2], fixedUnit);
-        left[2] = fixedUnit;
-      } else if (isTime(left[2])) {
-        left[1] = convert(parseFloat(toNumber(left[1])), left[2], 's');
-        left[2] = 's';
-      }
-    }
-
-    if (ctx.cur[0] === 'number') {
-      // convert time-expressions into seconds
-      if (ctx.isDate && isTime(ctx.cur[2])) {
-        ctx.cur[1] = convert(parseFloat(toNumber(ctx.cur[1])), ctx.cur[2], 's');
-        ctx.cur[2] = 's';
-      }
-
-      // convert between units
-      if (ctx.lastUnit && ctx.cur[2] && ctx.lastUnit !== ctx.cur[2]) {
-        ctx.cur[1] = convert(parseFloat(toNumber(ctx.cur[1])), ctx.cur[2], ctx.lastUnit);
-        ctx.cur[2] = ctx.lastUnit;
-      }
-
-      // save initial unit
-      if (ctx.cur[2] && !ctx.lastUnit) ctx.lastUnit = ctx.cur[2];
-    }
-
-    // save last used operator
-    if (ctx.cur[1] === '+' || ctx.cur[1] === '-') ctx.lastOp = ctx.cur;
-
-    // flag the expression for dates
-    if (isTime(ctx.cur[2])) ctx.isDate = true;
+    return;
   }
+
+  const left = ctx.left || [];
+  const right = ctx.right || [];
+
+  // handle converting between expressions
+  if (ctx.cur[0] === 'expr' && left[0] === 'number' && isExpr(ctx.cur[1])) {
+    const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
+
+    if (fixedUnit && !['datetime', 'fr'].includes(fixedUnit) && left[2] && left[2] !== 'datetime') {
+      left[1] = convert(parseFloat(toNumber(left[1])), left[2], fixedUnit);
+      left[2] = fixedUnit;
+    } else if (isTime(left[2])) {
+      left[1] = convert(parseFloat(toNumber(left[1])), left[2], 's');
+      left[2] = 's';
+    }
+  }
+
+  if (ctx.cur[0] === 'number') {
+    // convert time-expressions into seconds
+    if (ctx.isDate && isTime(ctx.cur[2])) {
+      ctx.cur[1] = convert(parseFloat(toNumber(ctx.cur[1])), ctx.cur[2], 's');
+      ctx.cur[2] = 's';
+    }
+
+    // convert between units
+    if (ctx.lastUnit && ctx.cur[2] && ctx.lastUnit !== ctx.cur[2]) {
+      ctx.cur[1] = convert(parseFloat(toNumber(ctx.cur[1])), ctx.cur[2], ctx.lastUnit);
+      ctx.cur[2] = ctx.lastUnit;
+    }
+
+    // save initial unit
+    if (ctx.cur[2] && !ctx.lastUnit) ctx.lastUnit = ctx.cur[2];
+  }
+
+  // save last used operator
+  if (ctx.cur[1] === '+' || ctx.cur[1] === '-') ctx.lastOp = ctx.cur;
+
+  // flag the expression for dates
+  if (isTime(ctx.cur[2])) ctx.isDate = true;
 }
 
 // export function reduceFromLogic(ctx, tokens, convert, expressions) {
@@ -474,9 +468,22 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
     ctx.right = tokens[i + 1];
     ctx.current = ctx.ast[ctx.ast.length - 1];
 
+
+    // append last-operator between consecutive unit-expressions
+    if (ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number') {
+      if (!ctx.root.isDef) {
+        ctx.ast.push(ctx.lastOp);
+      }
+    }
+
     // handle anonymous sub-expressions
     if (Array.isArray(tokens[i][0])) {
       const values = fixArgs(tokens[i]).map(x => calculateFromTokens(cb(x, null, ctx)));
+
+      // prepend multiplication if goes after units/numbers
+      if (ctx.left && ['unit', 'number'].includes(ctx.left[0])) {
+        ctx.ast.push(['expr', '*', 'mul']);
+      }
 
       // FIXME: return last value if void-op is given?
       ctx.ast.push(values);
