@@ -38,6 +38,11 @@ export function buildTree(tokens) {
         root = stack.pop();
       }
     } else {
+      if (!root) {
+        // FIXME: throw ParseError?
+        stack.push(t);
+        continue;
+      }
       root.push(t);
     }
   }

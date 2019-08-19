@@ -216,6 +216,7 @@ export function parseBuffer(text, units) {
       inBlock || inFormat || typeof last === 'undefined'
 
       // non-keywords
+      || (last === '\\')
       || (last !== ' ' && isAny(cur))
       || (last === '-' && isNum(cur))
       || (last === '_' && isChar(cur))

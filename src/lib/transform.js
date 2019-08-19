@@ -193,10 +193,20 @@ export function transform(input, units) {
   for (let i = 0; i < tokens.length; i += 1) {
     const subTree = chunks[inc] || (chunks[inc] = []);
     const next = (tokens[i + 1] || {}).content;
+    const old = (tokens[i - 1] || {}).content;
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
     if (t < 3 && !(isChar(cur) && isAny(next, '(='))) {
+      // disable maths as soon complexity fall down...
+      if (subTree._fixed && isChar(old) && isChar(cur) && !(hasNum(cur) || isExpr(cur))) {
+        const average = subTree.reduce((prev, cur) => prev + cur.complexity, 0);
+
+        if ((average / subTree.length) < 3) {
+          delete subTree._fixed;
+        }
+      }
+
       if (isAny(cur, '\n;')) {
         chunks[++inc] = [tokens[i]];
       } else {
@@ -214,7 +224,14 @@ export function transform(input, units) {
     if (t >= 3 || (!nextToken || nextToken.complexity >= 3)) {
       inMaths = true;
 
-      if (hasNum(cur)) {
+      if (hasNum(cur) && !subTree._fixed) {
+        // split if enough tokens...
+        if (subTree.length > 2) {
+          chunks[++inc] = [tokens[i]];
+          chunks[inc]._fixed = true;
+          continue;
+        }
+
         subTree._fixed = true;
       }
 
@@ -229,19 +246,29 @@ export function transform(input, units) {
     if (cur === '(') depth++;
     if (cur === ')') depth--;
 
-    // console.log({t,cur});
-
     // FIXME: there should be also a rhythm, so tokens should be added
     // only if they have enough complexity and fits into the ryhthm...
 
     if (inMaths) {
       if (!isOp(cur) && subTree.length && !subTree._fixed) {
-        // console.log({t,cur,nextToken});
         chunks[++inc] = [tokens[i]];
-        chunks[inc]._fixed = true;
+
+        const fixedChunk = tokens.slice(i, i + 5);
+        const fixedAverage = fixedChunk.reduce((prev, cur) => prev + cur.complexity, 0);
+
+        if (
+          // handle complexity
+          (fixedAverage / fixedChunk.length) >= 3
+
+          // handle regular definitions
+          || (isChar(cur) && '(='.includes(next))
+
+          // handle values within arguments
+          || (isSep(cur, '()') && (!nextToken || hasNum(nextToken.content) || isChar(nextToken.content)))
+        ) {
+          chunks[inc]._fixed = true;
+        }
         continue;
-      } else {
-        subTree._fixed = t >= 3;
       }
     }
 
