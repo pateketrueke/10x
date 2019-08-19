@@ -182,32 +182,16 @@ export function reduceFromEffect(cb, def, args, value) {
 
 export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle unit expressions
-  // if (ctx.cur[0] === 'unit') {
-  //   // if (!hasOwnKeyword(expressions, ctx.cur[1])) {
-  //   //   if (!ctx.root || !hasOwnKeyword(expressions, ctx.root.cur[1])) {
-  //   //     // FIXME: is not working on anonymous groups...
-  //   //     // throw new ParseError(`Missing unit \`${ctx.cur[1]}\``, ctx);
-  //   //   }
-  //   //   return;
-  //   // }
-
-  // FIXME: scoping issues... seems like it's accessing already defines units...
-  //   // console.log({t:ctx.cur,x:hasOwnKeyword(expressions, ctx.cur[1])});
-
-  //   console.log(ctx.cur[1], expressions[ctx.cur[1]]);
-  //   ctx.cur = expressions[ctx.cur[1]].body;
-  //   console.log(ctx.cur);
-  // }
+  if (ctx.cur[0] === 'unit') {
+    if (!ctx.root.isDef && !hasOwnKeyword(expressions, ctx.cur[1])) {
+      throw new ParseError(`Missing unit \`${ctx.cur[1]}\``, ctx);
+    }
+  }
 
   // handle N-unit, return a new expression from 3x to [3, *, x]
   if (ctx.cur[0] === 'number' && hasOwnKeyword(expressions, ctx.cur[2])) {
     ctx.cur = calculateFromTokens([['number', parseFloat(ctx.cur[1])], ['expr', '*', 'mul']].concat(cb(expressions[ctx.cur[2]].body, null, ctx)));
   }
-
-  // handle resolution by recursion
-  // if (Array.isArray(ctx.cur[0])) {
-  //   ctx.cur = calculateFromTokens(cb(ctx.cur, null, ctx));
-  // }
 
   // convert into Date values
   if (ctx.cur[2] === 'datetime') {
@@ -219,8 +203,9 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
 
     // append last-operator between consecutive unit-expressions
     if (left[0] === 'number' && ctx.cur[0] === 'number') {
-      // FIXME: this is good, but not for all contexts...
-      // fixedTokens.push(lastOp);
+      if (!ctx.root.isDef) {
+        ctx.ast.push(ctx.lastOp);
+      }
     }
 
     // handle converting between expressions
@@ -479,7 +464,8 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
   };
 
   for (let i = 0; i < tokens.length; i += 1) {
-    ctx.root = parentContext;
+    ctx.root = parentContext || {};
+    ctx.isDef = tokens[i][0] === 'def';
 
     // shared context
     ctx.i = i;
