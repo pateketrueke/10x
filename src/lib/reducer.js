@@ -182,9 +182,14 @@ export function reduceFromEffect(cb, def, args, value) {
 
 export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle unit expressions
-  if (ctx.cur[0] === 'unit') {
-    if (!ctx.root.isDef && !hasOwnKeyword(expressions, ctx.cur[1])) {
+  if (ctx.cur[0] === 'unit' && !ctx.root.isDef) {
+    if (!hasOwnKeyword(expressions, ctx.cur[1])) {
       throw new ParseError(`Missing unit \`${ctx.cur[1]}\``, ctx);
+    }
+
+    // resolve definition body
+    if (expressions[ctx.cur[1]]) {
+      ctx.cur = cb(expressions[ctx.cur[1]].body, null, ctx).reduce((prev, cur) => prev.concat(cur), []);
     }
   }
 
