@@ -175,7 +175,7 @@ export default class Solvente {
       return [];
     }
 
-    return results.reduce((prev, cur) => prev.concat(cur), []);
+    return results;
 
     // console.log({results});
 

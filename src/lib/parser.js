@@ -67,7 +67,7 @@ export const hasNum = x => RE_NUM.test(x);
 export const hasDays = x => RE_DAYS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
 export const hasTagName = x => TAG_TYPES.includes(x);
-export const hasOwnKeyword = (o, k) => Object.prototype.hasOwnProperty.call(o, k) && o[k];
+export const hasOwnKeyword = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
 export const hasPercent = x => {
   return typeof x === 'string' && x.charAt(x.length - 1) === '%';

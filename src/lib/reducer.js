@@ -182,20 +182,26 @@ export function reduceFromEffect(cb, def, args, value) {
 
 export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle unit expressions
-  if (ctx.cur[0] === 'unit') {
-    if (!hasOwnKeyword(expressions, ctx.cur[1])) {
-      if (!ctx.root || !hasOwnKeyword(expressions, ctx.root.cur[1])) {
-        throw new ParseError(`Missing unit \`${ctx.cur[1]}\``, ctx);
-      }
-      return;
-    }
+  // if (ctx.cur[0] === 'unit') {
+  //   // if (!hasOwnKeyword(expressions, ctx.cur[1])) {
+  //   //   if (!ctx.root || !hasOwnKeyword(expressions, ctx.root.cur[1])) {
+  //   //     // FIXME: is not working on anonymous groups...
+  //   //     // throw new ParseError(`Missing unit \`${ctx.cur[1]}\``, ctx);
+  //   //   }
+  //   //   return;
+  //   // }
 
-    ctx.cur = expressions[ctx.cur[1]].body;
-  }
+  // FIXME: scoping issues... seems like it's accessing already defines units...
+  //   // console.log({t:ctx.cur,x:hasOwnKeyword(expressions, ctx.cur[1])});
+
+  //   console.log(ctx.cur[1], expressions[ctx.cur[1]]);
+  //   ctx.cur = expressions[ctx.cur[1]].body;
+  //   console.log(ctx.cur);
+  // }
 
   // handle N-unit, return a new expression from 3x to [3, *, x]
   if (ctx.cur[0] === 'number' && hasOwnKeyword(expressions, ctx.cur[2])) {
-    ctx.cur = [['number', parseFloat(ctx.cur[1])], ['expr', '*', 'mul']].concat(expressions[ctx.cur[2]].body);
+    ctx.cur = calculateFromTokens([['number', parseFloat(ctx.cur[1])], ['expr', '*', 'mul']].concat(cb(expressions[ctx.cur[2]].body, null, ctx)));
   }
 
   // handle resolution by recursion
@@ -370,6 +376,7 @@ export function reduceFromFX(cb, ctx, convert, expressions) {
 
 export function reduceFromDefs(cb, ctx, convert, expressions) {
   // handle var/call definitions
+  // console.log({t:ctx.cur});
 
   if (ctx.cur[0] === 'def') {
     // define var/call
@@ -440,12 +447,14 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 export function reduceFromAST(opts, convert, expressions, parentContext) {
   const { ast, ...options } = opts;
 
+  // console.log('OK',{ast});
+
   // FIXME: some utils?
   let tokens = ast;
 
-  while (tokens.length === 1) {
-    tokens = tokens[0];
-  }
+  // while (tokens.length === 1) {
+  //   tokens = tokens[0];
+  // }
 
   const use = options.use || [];
   const useDefs = use.includes('definitions');
@@ -464,7 +473,10 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
   };
 
   // FIXME: build an stack... of errors
-  const cb = (ast, config, context) => reduceFromAST({ ast, use, ...config }, convert, Object.assign({}, expressions), context);
+  const cb = (ast, config, context) => {
+    // console.log('>>>', {ast});
+    return reduceFromAST({ ast, use, ...config }, convert, Object.assign({}, expressions), context);
+  };
 
   for (let i = 0; i < tokens.length; i += 1) {
     ctx.root = parentContext;
@@ -476,8 +488,17 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
     ctx.right = tokens[i + 1];
     ctx.current = ctx.ast[ctx.ast.length - 1];
 
+    // handle anonymous sub-expressions
+    if (Array.isArray(tokens[i][0])) {
+      const values = fixArgs(tokens[i]).map(x => calculateFromTokens(cb(x, null, ctx)));
+
+      // FIXME: return last value if void-op is given?
+      ctx.ast.push(values);
+      continue;
+    }
+
     // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
-    if (useFX) reduceFromFX(cb, ctx, convert, expressions);
+    // if (useFX) reduceFromFX(cb, ctx, convert, expressions);
     if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
     if (useUnits) reduceFromUnits(cb, ctx, convert, expressions);
 
