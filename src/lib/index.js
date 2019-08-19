@@ -175,12 +175,6 @@ export default class Solvente {
       return [];
     }
 
-    return results;
-
-    // console.log({results});
-
-    // return results
-    //   .reduce((p, x) => p.concat(calculateFromTokens(x)), [])
-    //   .filter(x => x.length).map(x => x[0].map(y => this.value(y)));
+    return results.filter(x => x.length).map(x => x.length === 1 ? x[0] : x);
   }
 }

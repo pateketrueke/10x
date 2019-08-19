@@ -214,6 +214,10 @@ export function transform(input, units) {
     if (t >= 3 || (!nextToken || nextToken.complexity >= 3)) {
       inMaths = true;
 
+      if (hasNum(cur)) {
+        subTree._fixed = true;
+      }
+
       if (!depth && isChar(nextToken)) {
         inMaths = false;
       }
@@ -273,6 +277,8 @@ export function transform(input, units) {
   } catch (e) {
     _e = e;
   }
+
+  // console.log({fixedTree});
 
   return {
     ast: body,
