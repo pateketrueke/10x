@@ -501,5 +501,15 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
     }
   }
 
+  // resolve all sub-trees recursively...
+  if (Array.isArray(ctx.ast[0]) && ctx.ast.length > 2 && !ctx.root.isDef) {
+    const fixedAST = ctx.ast.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
+
+    // luckily this keep the outer AST intact, but inner tokens solved!
+    calculateFromTokens(fixedAST);
+
+    return fixedAST;
+  }
+
   return ctx.ast;
 }
