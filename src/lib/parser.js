@@ -265,7 +265,7 @@ export function parseBuffer(text, units) {
       if (last !== ' ') oldChar = last;
 
       // split on newlines and some separators
-      if (isSep(cur, '\n') && cur !== '.') offset++;
+      // if (cur === '\n') offset++;
     } else {
       tokens[++offset] = [{ cur, row, col, score }];
     }

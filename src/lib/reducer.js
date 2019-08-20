@@ -189,13 +189,14 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
 
     // resolve definition body
     if (expressions[ctx.cur[1]]) {
-      ctx.cur = cb(expressions[ctx.cur[1]].body, null, ctx).reduce((prev, cur) => prev.concat(cur), []);
+      ctx.cur = fixArgs(cb(expressions[ctx.cur[1]].body, null, ctx)).reduce((p, c) => p.concat(c), []);
     }
   }
 
   // handle N-unit, return a new expression from 3x to [3, *, x]
   if (ctx.cur[0] === 'number' && ctx.cur[2]) {
     if (!hasOwnKeyword(expressions, ctx.cur[2])) {
+      // console.log({u:ctx.cur});
       throw new ParseError(`Missing definition for \`${ctx.cur[1]}\``, ctx);
     }
 
@@ -377,6 +378,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
     // side-effects will operate on previous values
     const def = expressions[ctx.cur[1]];
     const call = ctx.cur[2];
+    // console.log(42,{def,call});
 
     // skip undefined calls
     if (!(call && def)) {
@@ -485,18 +487,21 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
       }
     }
 
+    // FIXME: bad reoslution... a way, is identifying the kind of sub-group, and then resolve if its plain... o something?
+
     // handle anonymous sub-expressions
     if (Array.isArray(tokens[i][0])) {
-      const values = fixArgs(tokens[i]).map(x => calculateFromTokens(cb(x, null, ctx)));
+        const values = fixArgs(tokens[i]).map(x => x.length === 1 ? x[0] : x);
 
-      // prepend multiplication if goes after units/numbers
-      if (ctx.left && ['unit', 'number'].includes(ctx.left[0])) {
-        ctx.ast.push(['expr', '*', 'mul']);
-      }
+        // prepend multiplication if goes after units/numbers
+        if (ctx.left && ['unit', 'number'].includes(ctx.left[0])) {
+          ctx.ast.push(['expr', '*', 'mul']);
+        }
 
-      // FIXME: return last value if void-op is given?
-      ctx.ast.push(values);
-      continue;
+        // FIXME: return last value if void-op is given?
+        // console.log({values});
+        ctx.ast.push(cb(values, null, ctx));
+        continue;
     }
 
     // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
@@ -511,14 +516,14 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
   }
 
   // resolve all sub-trees recursively...
-  if (Array.isArray(ctx.ast[0]) && ctx.ast.length > 2 && !ctx.root.isDef) {
-    const fixedAST = ctx.ast.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
+  // if (Array.isArray(ctx.ast[0]) && ctx.ast.length > 2 && !ctx.root.isDef && !ctx._expr) {
+  //   const fixedAST = ctx.ast.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
 
-    // luckily this keep the outer AST intact, but inner tokens solved!
-    calculateFromTokens(fixedAST);
+  //   // luckily this keep the outer AST intact, but inner tokens solved!
+  //   calculateFromTokens(fixedAST);
 
-    return fixedAST;
-  }
+  //   return fixedAST;
+  // }
 
   return ctx.ast;
 }

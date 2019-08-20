@@ -20,6 +20,10 @@ export default class ParseError extends Error {
         token = token[0];
       }
 
+      if (!token._offset) {
+        return e;
+      }
+
       const [[x1, y1], [x2, y2]] = token._offset;
       const prefix = filepath ? `${filepath}:` : 'line ';
 

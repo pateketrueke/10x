@@ -188,7 +188,7 @@ export function transform(input, units) {
     const t = tokens[i].complexity;
 
     // FIXME: any better strategy?
-    if (isSep(cur, '\n')) hasOps = false;
+    if (isAny(cur, '\n;')) hasOps = false;
     else if (t >= 3) hasOps = true;
 
     if (hasOps && !subTree._fixed) {
@@ -199,6 +199,7 @@ export function transform(input, units) {
         subTree.push(tokens[i]);
         subTree._fixed = true;
       }
+      continue;
     }
 
     if (!hasOps && subTree.length) {

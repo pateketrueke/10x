@@ -28,8 +28,10 @@ export function buildTree(tokens) {
         const leaf = [];
 
         // flag tokens for further detection...
-        if (t[1] === '{') root._object = true;
-        if (t[1] === '[') root._array = true;
+        if (p && p[0] === 'def') root._function = true;
+        else if (t[1] === '{') root._object = true;
+        else if (t[1] === '[') root._array = true;
+        else root._group = true;
 
         root.push(leaf);
         stack.push(root);
@@ -83,7 +85,7 @@ export function fixTree(ast) {
     }
 
     if (prev && prev[0] === 'def') {
-      const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' && isSep(x[1]));
+      const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' && x[1] === ';');
       const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
       const hasArray = Array.isArray(cur[0]);
 
@@ -91,7 +93,7 @@ export function fixTree(ast) {
       prev._body = subTree.length > 1;
       prev[2] = {
         args: hasArray ? fixArgs(cur, true) : [],
-        body: fixTree(fixCalls(subTree.slice(hasArray ? 2 : 1), cur)),
+        body: fixTree(fixCalls(subTree.slice(1))),
       };
       continue;
     }
@@ -277,31 +279,31 @@ export function fixCalls(tokens, def) {
       }
 
       // compose from previous calls, e.g. `def=fn<|5` or `def(_)=fn<|5 _`
-      if (left[0] === 'unit') {
-        if (!Array.isArray(def[0]) && !(def[0] === 'expr' && def[2] === 'equal')) {
-          throw new Error(`Expecting group or definition, given '${def}'`);
-        }
+      // if (left[0] === 'unit') {
+      //   if (!Array.isArray(def[0]) && !(def[0] === 'expr' && def[2] === 'equal')) {
+      //     throw new Error(`Expecting group or definition, given '${def}'`);
+      //   }
 
-        // FIXME: this looks like a pattern...
-        const subTree = fixCut(tokens, 1, i).slice(1);
-        const fixedArgs = def[0] !== 'expr' ? def : [];
+      //   // FIXME: this looks like a pattern...
+      //   const subTree = fixCut(tokens, 1, i).slice(1);
+      //   const fixedArgs = def[0] !== 'expr' ? def : [];
 
-        // prepend _ symbol for currying
-        if (!fixedArgs.length) {
-          fixedArgs.unshift(['unit', '_']);
-        }
+      //   // prepend _ symbol for currying
+      //   if (!fixedArgs.length) {
+      //     fixedArgs.unshift(['unit', '_']);
+      //   }
 
-        left._curry = cur;
-        left._body = false;
-        left[0] = 'def';
-        left[2] = {
-          args: fixArgs(fixApply(cur[2], subTree, fixedArgs), true),
-          body: [],
-        };
+      //   left._curry = cur;
+      //   left._body = false;
+      //   left[0] = 'def';
+      //   left[2] = {
+      //     args: fixArgs(fixApply(cur[2], subTree, fixedArgs), true),
+      //     body: [],
+      //   };
 
-        // console.log({def,left});
-        continue;
-      }
+      //   // console.log({def,left});
+      //   continue;
+      // }
     }
 
     // unit-calls without arguments receives _
