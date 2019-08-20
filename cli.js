@@ -6,7 +6,7 @@ global.console.log = (...args) => {
   });
 };
 
-const Solvente = require('./dist/lib.js');
+const Solv = require('./dist/lib.js');
 
 const returnRawJSON = process.argv.slice(2).indexOf('--raw') !== -1;
 const returnAsJSON = process.argv.slice(2).indexOf('--json') !== -1;
@@ -28,7 +28,7 @@ const cut = argv.indexOf('--');
 const args = cut >= 0 ? argv.slice(cut + 1) : [];
 const file = argv.slice(Math.max(0, cut), 1)[0];
 
-const calc = new Solvente({
+const calc = new Solv({
   expressions: sharedExpressions,
 });
 
@@ -59,9 +59,7 @@ if (returnAsJSON) {
   }
 
   if (showDebugInfo) {
-    process.stdout.write(`${require('util').inspect(calc.tree, { colors, depth: 10 })}\n`);
-    process.stdout.write(`${require('util').inspect(calc.input, { colors, depth: 10 })}\n`);
-    process.stdout.write(`${require('util').inspect(calc.tokens, { colors, depth: 10 })}\n`);
+    process.stdout.write(`${require('util').inspect(calc, { colors, depth: 10 })}\n`);
   }
 
   process.stdout.write(`${require('util').inspect(fixedResults, { colors, depth: 10 })}\n`);

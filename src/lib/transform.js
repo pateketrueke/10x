@@ -1,7 +1,6 @@
 import {
   isOp, isFx, isAny, isInt, isSep, isNum, hasNum, isAlpha, isChar, isExpr,
   hasKeyword, hasOwnKeyword, hasDatetime, hasMonths, hasDays,
-  getOp,
 } from './parser';
 
 import {
@@ -26,10 +25,9 @@ export function fromMarkdown(text) {
 
   // handle headings
   if (text.charAt() === '#') {
-    const matches = text.match(/^(#+)(.*)$/);
-    const level = Math.min(matches[1].length, 6);
+    const matches = text.match(/^#{1,6}/);
 
-    return ['heading', text, level];
+    return ['heading', text, matches[0].length];
   }
 
   // handle comments
@@ -109,7 +107,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
       || (isOp(text[0], ';,') && !isInt(text[1]))
     )
   ) {
-    return [(text.length === 1 && !'<>'.includes(text)) ? 'expr' : 'fx', text, getOp(text)];
+    return [(text.length === 1 && !'<>'.includes(text)) ? 'expr' : 'fx', text, isOp(text)];
   }
 
   // handle separators
@@ -128,9 +126,6 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   }
 
   const fixedUnit = hasKeyword(text, units, true);
-
-  // FIXME: seems like unita are not being evaluated...
-  // console.log({text,fixedUnit});
 
   // extract well-known units
   if (fixedUnit) {
@@ -246,9 +241,6 @@ export function transform(input, units) {
     if (cur === '(') depth++;
     if (cur === ')') depth--;
 
-    // FIXME: there should be also a rhythm, so tokens should be added
-    // only if they have enough complexity and fits into the ryhthm...
-
     if (inMaths) {
       if (!isOp(cur) && subTree.length && !subTree._fixed) {
         chunks[++inc] = [tokens[i]];
@@ -274,9 +266,6 @@ export function transform(input, units) {
 
     subTree.push(tokens[i]);
   }
-
-  // FIXME: is not cutting good...
-  // console.log({chunks});
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
@@ -304,8 +293,6 @@ export function transform(input, units) {
   } catch (e) {
     _e = e;
   }
-
-  // console.log({fixedTree});
 
   return {
     ast: body,

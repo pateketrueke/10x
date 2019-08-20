@@ -1,5 +1,5 @@
 import {
-  isSep, hasTagName, hasPercent,
+  isSep, isAny, hasTagName, hasPercent,
 } from './parser';
 
 export function highestCommonFactor(a, b) {
@@ -182,10 +182,10 @@ export function fixStrings(tokens, split) {
     if (
       prev.length
       && prev[prev.length - 1][0] === 'text'
-      && cur[0] === 'text' && (split === false || cur[1] !== '\n')
+      && !isAny(prev[prev.length - 1][1], ' \n')
+      && cur[0] === 'text' && (split === false || !isAny(cur[1], ' '))
     ) {
       if (!cur._offset) {
-        // console.log({cur});
         prev.push(cur);
       } else {
         prev[prev.length - 1][1] += cur[1];
@@ -221,8 +221,6 @@ export function fixArgs(values, flatten) {
   for (let i = 0; i < values.length; i += 1) {
     const last = stack[offset] || (stack[offset] = []);
     const cur = values[i];
-
-    // console.log({cur});
 
     last.push(cur);
 

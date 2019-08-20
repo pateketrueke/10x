@@ -20,7 +20,7 @@ import {
   DEFAULT_TYPES, DEFAULT_MAPPINGS, DEFAULT_EXPRESSIONS, DEFAULT_INFLECTIONS,
 } from './convert';
 
-export default class Solvente {
+export default class Solv {
   constructor(opts = {}) {
     Object.defineProperty(this, 'expressions', {
       value: {
@@ -70,24 +70,13 @@ export default class Solvente {
 
     try {
       const tokens = transform(this.input, this.units);
-      const fixedAST = JSON.parse(JSON.stringify(tokens.ast));
 
+      this.tree = tokens.tree;
       this.error = tokens.error;
-      this.tokens = fixedAST;
+      this.tokens = JSON.parse(JSON.stringify(tokens.ast));
 
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
-
-      // mutates on AST manipulation!!!
-      this.tree = tokens.tree.reduce((prev, cur) => {
-        const subTree = fixTree(cur);
-
-        if (subTree.length) {
-          prev.push(subTree);
-        }
-
-        return prev;
-      }, []);
     } catch (e) {
       this.error = e;
     }
@@ -160,11 +149,20 @@ export default class Solvente {
       source = opts.source || '';
     }
 
-    const results = [];
+    const output = [];
+    const subTree = (tokens || this.tree).reduce((prev, cur) => {
+      const subTree = fixTree(cur);
+
+      if (subTree.length) {
+        prev.push(subTree);
+      }
+
+      return prev;
+    }, [])
 
     try {
-      (tokens || this.tree).forEach(ast => {
-        results.push(...toList(reduceFromAST({
+      subTree.forEach(ast => {
+        output.push(...toList(reduceFromAST({
           use: ['definitions', 'matchers', 'effects', 'units'],
           ...opts,
           ast,
@@ -175,6 +173,6 @@ export default class Solvente {
       return [];
     }
 
-    return results.filter(x => x.length).map(x => x.length === 1 ? x[0] : x);
+    return output.filter(x => x.length).map(x => x.length === 1 ? x[0] : x);
   }
 }

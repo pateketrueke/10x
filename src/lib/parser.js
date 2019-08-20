@@ -45,23 +45,21 @@ const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\w*\b
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
 export const isFx = y => y && y.length >= 2 && '-+=~:<!|&>'.includes(y[0]);
-export const isOp = (a, b = '') => `${b}-+=~<!|&>*/`.includes(a);
 export const isSep = (a, b = '') => `${b}{[]}|;:,.`.includes(a);
 export const isChar = a => /^[a-zA-Z]+/.test(a);
 
+export const isOp = a => OP_TYPES[a];
 export const isFmt = x => /^["`_*~]$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
 export const isAny = (x, a = '') => a.includes(x) || /^[^\s\w\d_*~$€£¢%({[~<!>\]})"`|:;_,.+=*/-]$/.test(x);
 export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
-export const isExpr = x => /^(?:from|and|f?or|to|of|a[ts]|i[ns])$/i.test(x);
+export const isExpr = x => /^(?:from|to|of|a[ts]|i[ns])$/i.test(x);
 export const isTime = x => TIME_UNITS.includes(x);
 export const isMoney = x => CURRENCY_MAPPINGS[x];
 export const isAlpha = x => ALPHA_MAPPINGS[x];
 export const isUpper = x => /^[A-Z]+/.test(x);
 export const isJoin = x => '_.'.includes(x);
-
-export const getOp = x => OP_TYPES[x];
 
 export const hasNum = x => RE_NUM.test(x);
 export const hasDays = x => RE_DAYS.test(x);
@@ -193,7 +191,7 @@ export function parseBuffer(text, units) {
 
         if (
           // enable headings/blockquotes, skip everything
-          ('#>'.includes(cur) && col === 1)
+          ('#>'.includes(cur) && !col)
 
           // enable comments, skip everything
           || (last === '/' && '/*'.includes(cur))
@@ -280,11 +278,14 @@ export function parseBuffer(text, units) {
     }
 
     if (
-      // handle fractions,
+      // handle fractions
       (isInt(olderValue) && lastValue === '/' && isInt(value))
 
-      // handle checkboxes,
+      // handle checkboxes
       || (olderValue === '[' && ' x'.includes(lastValue) && value === ']')
+
+      // concatenate unknown words
+      || ((isChar(olderValue) && !isExpr(olderValue)) && isAny(lastValue, ' '))
 
       // skip numbers within groups or parenthesis
       || (!isChar(oldestValue) && '{[(<'.includes(olderValue) && hasNum(lastValue) && '>)]}'.includes(value))
