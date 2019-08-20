@@ -184,6 +184,12 @@ export function parseBuffer(text, units) {
     }
 
     if (!inFormat) {
+      // disable formatting and blocks on newlines...
+      if (inBlock && inBlock !== 'multiline' && last === '\n') {
+        inBlock = false;
+        inFormat = false;
+      }
+
       if (!inBlock) {
         // flag to allow numbers with commas as separators
         if (cur === '(' && isChar(oldChar)) open++;
@@ -195,7 +201,7 @@ export function parseBuffer(text, units) {
 
           // enable comments, skip everything
           || (last === '/' && '/*'.includes(cur))
-        ) inBlock = cur === '*' ? 'multiline' : 'block';
+        ) inBlock = cur === '*' ? 'multiline' : true;
       } else if (cur === '*' && next === '/') {
         // disable multiline-style comments
         if (inBlock === 'multiline') {
@@ -204,8 +210,6 @@ export function parseBuffer(text, units) {
           inBlock = false;
           continue;
         }
-      } else if (last === '\n') {
-        inBlock = false;
       }
     }
 
@@ -252,10 +256,11 @@ export function parseBuffer(text, units) {
     ) {
       buffer.push({ cur, row, col, score });
 
+      // split on newlines!
+      if (cur === '\n') offset++;
+
       // store for open/close checks
-      if (last !== ' ') {
-        oldChar = last;
-      }
+      if (last !== ' ') oldChar = last;
     } else {
       tokens[++offset] = [{ cur, row, col, score }];
     }

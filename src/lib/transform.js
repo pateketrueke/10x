@@ -42,13 +42,12 @@ export function fromMarkdown(text) {
 
   // handle more formats...
   const begin = text.substr(0, 2);
-  const end = text.substr(text.length - 2, 2);
 
   // bold words are made by double marks, sadly *this won't* work!
-  if (begin === '**' && end === '**' || begin === '__' && end === '__') return ['b', text];
+  if (begin === '**' || begin === '__') return ['b', text];
 
-  if (begin[0] === '~' && end[1] === '~') return ['del', text];
-  if (begin[0] === '_' && end[1] === '_') return ['em', text];
+  if (begin[0] === '~') return ['del', text];
+  if (begin[0] === '_') return ['em', text];
 
   return ['text', text];
 }
@@ -216,10 +215,10 @@ export function transform(input, units) {
     if (cur === ')') depth--;
 
     // split on new non-fixed-numbers and separators
-    if ((hasNum(cur) && !subTree._fixed) || (isSep(cur) && (depth || !hasNum(nextToken)))) {
+    if (cur === '\n' || (hasNum(cur) && !subTree._fixed) || (isSep(cur) && (depth || hasNum(nextToken)))) {
       chunks[++inc] = [tokens[i]];
 
-      if (!isSep(cur)) {
+      if (!isSep(cur, '\n')) {
         chunks[inc]._fixed = true;
       }
       continue;
