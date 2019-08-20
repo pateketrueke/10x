@@ -132,16 +132,17 @@ export function parseBuffer(text, units) {
     // separators are important
     if (isSep(cur, '()')) score += 2.5;
 
-    // but operators are more!
-    if (isOp(cur) || isFx(cur)) score += 3;
-
     // numbers before unit-expressions
     if (isNum(last) && isChar(cur)) score += 2;
+
+    // handle operators, no formatting!
+    if ((isOp(cur) || isFx(cur)) && cur !== next) score += 3;
 
     // any word or printable-character...
     if (isChar(cur) || isAlpha(cur) || isMoney(cur)) score += 1;
 
     // bonus points: values or side-effects after expression-separators
+    if (isNum(cur) && next === '.') score += 1;
     if (open && cur === ',' && (isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === '(' && (peek === '(' || isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === ')' && (oldChar === ')' || isFx(oldChar) || isChar(oldChar) || hasNum(oldChar))) score += 1.5;
@@ -257,7 +258,7 @@ export function parseBuffer(text, units) {
       buffer.push({ cur, row, col, score });
 
       // split on newlines!
-      if (cur === '\n') offset++;
+      if (isSep(cur, '\n')) offset++;
 
       // store for open/close checks
       if (last !== ' ') oldChar = last;
@@ -268,10 +269,23 @@ export function parseBuffer(text, units) {
 
   // re-assign tokens on the fly!
   return tokens.reduce((prev, cur, i) => {
-    const oldestValue = (prev[prev.length - 3] || {}).content;
-    const olderValue = (prev[prev.length - 2] || {}).content;
-    const lastValue = (prev[prev.length - 1] || {}).content;
+    // split from smaller chunks, keep their complexity as is...
+    if (cur.length <= 3) {
+      cur.forEach(x => {
+        prev.push({
+          content: x.cur,
+          begin: [x.row, x.col],
+          end: [x.row, x.col + x.cur.length],
+          complexity: isSep(x.cur) ? 1.5 : x.score,
+        });
+      });
+      return prev;
+    }
+
     const value = cur.map(t => t.cur).join('');
+    const lastValue = (prev[prev.length - 1] || {}).content;
+    const olderValue = (prev[prev.length - 2] || {}).content;
+    const oldestValue = (prev[prev.length - 3] || {}).content;
 
     // keep long-format dates, e.g. `Jun 10, 1987`
     if (hasMonths(oldestValue) && olderValue === ',' && isNum(value)) {

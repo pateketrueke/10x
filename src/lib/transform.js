@@ -215,7 +215,11 @@ export function transform(input, units) {
     if (cur === ')') depth--;
 
     // split on new non-fixed-numbers and separators
-    if (cur === '\n' || (hasNum(cur) && !subTree._fixed) || (isSep(cur) && (depth || hasNum(nextToken)))) {
+    if (
+      cur === '\n'
+      || (hasNum(cur) && !subTree._fixed)
+      || (isSep(cur) && (depth || !nextToken || !hasNum(nextToken.content)))
+    ) {
       chunks[++inc] = [tokens[i]];
 
       if (!isSep(cur, '\n')) {

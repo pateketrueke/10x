@@ -182,6 +182,7 @@ export function fixStrings(tokens, split) {
     if (
       prev.length
       && cur[0] === 'text'
+      && prev[prev.length - 1][1] !== '\n'
       && prev[prev.length - 1][0] === 'text'
       && (split === false || !isAny(cur[1], ' '))
     ) {
