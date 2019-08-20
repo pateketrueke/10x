@@ -178,9 +178,6 @@ export function transform(input, units) {
   const tokens = input.slice();
   const chunks = [];
 
-  let oldComplexity = 0.0;
-  let complexity = 0.0;
-  let inMaths = false;
   let depth = 0;
   let inc = 0;
 
@@ -192,12 +189,12 @@ export function transform(input, units) {
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
-    // console.log({t,old,cur,next});
     let key = i;
     let nextToken;
 
     do { nextToken = tokens[++key]; } while (nextToken && isAny(nextToken.content, ' \n'));
 
+    // handle tokens with lower-complexity
     if (t < 3 && subTree.length > 2) {
       const average = subTree.reduce((prev, cur) => prev + cur.complexity, 0);
 
@@ -214,8 +211,12 @@ export function transform(input, units) {
       }
     }
 
+    // toggle depth
+    if (cur === '(') depth++;
+    if (cur === ')') depth--;
+
     // split on new non-fixed-numbers and separators
-    if ((hasNum(cur) && !subTree._fixed) || isSep(cur)) {
+    if ((hasNum(cur) && !subTree._fixed) || (isSep(cur) && (depth || !hasNum(nextToken)))) {
       chunks[++inc] = [tokens[i]];
 
       if (!isSep(cur)) {
