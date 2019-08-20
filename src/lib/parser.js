@@ -336,8 +336,8 @@ export function parseBuffer(text, units) {
       if (old) {
         if (
           (hasNum(old.cur) && hasNum(c.cur))
-          || ((isChar(old.cur) || hasNum(old.cur)) && isChar(c.cur))
           || (hasNum(old.cur) && c.cur === '.' && hasNum(cur[j + 1].cur))
+          || ((isChar(old.cur) || hasNum(old.cur)) && (isChar(c.cur) || hasNum(c.cur)))
         ) {
           old.cur += c.cur;
           return p;

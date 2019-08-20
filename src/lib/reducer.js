@@ -184,7 +184,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle unit expressions
   if (ctx.cur[0] === 'unit' && !ctx.root.isDef) {
     if (!hasOwnKeyword(expressions, ctx.cur[1])) {
-      throw new ParseError(`Missing unit \`${ctx.cur[1]}\``, ctx);
+      throw new ParseError(`Missing definition for \`${ctx.cur[1]}\``, ctx);
     }
 
     // resolve definition body
@@ -194,8 +194,12 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   }
 
   // handle N-unit, return a new expression from 3x to [3, *, x]
-  if (ctx.cur[0] === 'number' && hasOwnKeyword(expressions, ctx.cur[2])) {
-    ctx.cur = calculateFromTokens([['number', parseFloat(ctx.cur[1])], ['expr', '*', 'mul']].concat(cb(expressions[ctx.cur[2]].body, null, ctx)));
+  if (ctx.cur[0] === 'number' && ctx.cur[2]) {
+    if (!hasOwnKeyword(expressions, ctx.cur[2])) {
+      throw new ParseError(`Missing definition for \`${ctx.cur[1]}\``, ctx);
+    }
+
+    ctx.cur = [['number', parseFloat(ctx.cur[1])], ['expr', '*', 'mul']].concat(cb(expressions[ctx.cur[2]].body, null, ctx));
   }
 
   // convert into Date values
@@ -392,7 +396,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 
     call.args.forEach((arg, i) => {
       if (typeof arg === 'undefined') {
-        throw new ParseError(`Missing unit \`${def.args[i][1]}\``, ctx);
+        throw new ParseError(`Missing definition for \`${def.args[i][1]}\``, ctx);
       }
     });
 
