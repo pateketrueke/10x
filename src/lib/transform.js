@@ -30,11 +30,6 @@ export function fromMarkdown(text) {
     return ['heading', text, matches[0].length];
   }
 
-  // handle comments
-  if (text.substr(0, 2) === '//') {
-    return ['comment', text];
-  }
-
   // handle blockquotes
   if (text.charAt() === '>') {
     return ['blockquote', text];
@@ -61,6 +56,11 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   // handle white-space
   if (text === '...' || text === ' ' || text === '\n') {
     return ['text', text];
+  }
+
+  // handle comments
+  if (text.substr(0, 2) === '//') {
+    return ['comment', text];
   }
 
   // handle placeholders

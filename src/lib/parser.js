@@ -193,30 +193,39 @@ export function parseBuffer(text, units) {
     }
 
     if (!inFormat) {
+      if (
+        (!col && '#>'.includes(cur))
+        || (cur === '/' && '/*'.includes(next))
+      ) inBlock = next === '*' ? 'multiline' : 'block';
+      if (inBlock && inBlock === 'block' && cur === '\n') inBlock = false;
+
       // disable formatting and blocks on newlines...
-      if (inBlock && inBlock !== 'multiline' && last === '\n') {
-        inBlock = false;
-        inFormat = false;
-      }
+      // if (inBlock && inBlock !== 'multiline' && last === '\n') {
+      //   offset++;
+      //   inBlock = false;
+      //   inFormat = false;
+      // }
 
-      if (!inBlock) {
-        if (
-          // enable headings/blockquotes, skip everything
-          ('#>'.includes(cur) && !col)
+      // if (!inBlock) {
+      //   if (
+      //     // enable headings/blockquotes, skip everything
+      //     ('#>'.includes(cur) && !col)
 
-          // enable comments, skip everything
-          || (last === '/' && '/*'.includes(cur))
-        ) inBlock = cur === '*' ? 'multiline' : true;
-      } else if (cur === '*' && next === '/') {
-        // disable multiline-style comments
-        if (inBlock === 'multiline') {
-          buffer.push({ cur: cur + next, row, col: col + 1, score });
-          chars.splice(i, 1);
-          inBlock = false;
-          continue;
-        }
-      }
+      //     // enable comments, skip everything
+      //     || (cur === '/' && '/*'.includes(next))
+      //   ) inBlock = next === '*' ? 'multiline' : true;
+      // } else if (cur === '*' && next === '/') {
+      //   // disable multiline-style comments
+      //   if (inBlock === 'multiline') {
+      //     buffer.push({ cur: cur + next, row, col: col + 1, score });
+      //     chars.splice(i, 1);
+      //     inBlock = false;
+      //     continue;
+      //   }
+      // }
     }
+
+    // console.log({inBlock,inFormat,cur});
 
     // FIXME: clean combinations...
     if (
@@ -316,11 +325,24 @@ export function parseBuffer(text, units) {
       return prev;
     }
 
-    const offset = cur.findIndex(x => x.score >= 3);
+    const cut = cur.findIndex(x => x.cur === ' ' || x.cur === '\n');
+    const offset = cut === -1 ? cur.findIndex(x => x.score >= 3) : -1;
     const subTree = offset === -1 ? cur.splice(0, cur.length) : cur.splice(0, offset);
 
     // process non-scored tokens first
     if (subTree.length) {
+      // split from white-space at the beginning
+      if (cut === 0 && subTree.length > 1) {
+        const pop = subTree.shift();
+
+        prev.push({
+          content: pop.cur,
+          complexity: pop.score,
+          begin: [pop.row, pop.col],
+          end: [pop.row, pop.col + pop.cur.length],
+        });
+      }
+
       prev.push({
         content: subTree.map(t => t.cur).join(''),
         complexity: subTree.reduce((prev, cur) => prev + cur.score, 0) / subTree.length,
@@ -332,6 +354,7 @@ export function parseBuffer(text, units) {
     // keep common tokens together
     const fixedTree = cur.reduce((p, c, j) => {
       const old = p[p.length - 1];
+
 
       if (old) {
         if (
