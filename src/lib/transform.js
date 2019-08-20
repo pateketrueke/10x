@@ -178,55 +178,34 @@ export function transform(input, units) {
   const chunks = [];
   const scores = [];
 
-  let oldChar = '';
-  let depth = 0;
+  let hasOps = false;
   let inc = 0;
 
   // split tokens based on their complexity
   for (let i = 0; i < tokens.length; i += 1) {
-    if (oldChar === '\n') {
-      inc++;
-    }
-
     const subTree = chunks[inc] || (chunks[inc] = []);
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
-    // split if previous token contains spaces, but no numbers
-    if (
-      t >= 3
-      && tokens[i - 1]
-      && tokens[i - 1].content !== ' '
-      && tokens[i - 1].content.includes(' ')
-      && !hasNum(tokens[i - 1].content)
-    ) {
-      chunks[++inc] = [tokens[i]];
-      chunks[inc]._fixed = true;
-      delete subTree._fixed;
-      continue;
-    }
+    // FIXME: any better strategy?
+    if (isSep(cur, '\n')) hasOps = false;
+    else if (t >= 3) hasOps = true;
 
-    let key = 0;
-    let nextToken;
-
-    do { nextToken = (tokens[++key] || {}).content; } while (isAny(nextToken, ' \n'));
-
-    // check for average complexity between tokens
-    if (scores.length > 2) {
-      const avg = scores.reduce((prev, cur) => prev + cur, 0) / scores.length;
-
-      // this array contains expressions
-      if (!subTree._fixed && (
-        avg >= 3 || ((isOp(cur) || isSep(cur, '()')) && (hasNum(nextToken) || isChar(nextToken)))
-      )) {
+    if (hasOps && !subTree._fixed) {
+      if (subTree.length) {
+        chunks[++inc] = [tokens[i]];
+        chunks[inc]._fixed = true;
+      } else {
+        subTree.push(tokens[i]);
         subTree._fixed = true;
       }
     }
 
-    subTree.push(tokens[i]);
-
-    if (t) scores.push(t);
-    if (cur !== ' ') oldChar = cur;
+    if (!hasOps && subTree.length) {
+      chunks[++inc] = [tokens[i]];
+    } else {
+      subTree.push(tokens[i]);
+    }
   }
 
   // merge non-fixed chunks

@@ -264,8 +264,8 @@ export function parseBuffer(text, units) {
       // store for open/close checks
       if (last !== ' ') oldChar = last;
 
-      // split on newlines!
-      if (cur === '\n') offset++;
+      // split on newlines and some separators
+      if (isSep(cur, '\n') && cur !== '.') offset++;
     } else {
       tokens[++offset] = [{ cur, row, col, score }];
     }
@@ -277,6 +277,7 @@ export function parseBuffer(text, units) {
     const lastValue = (prev[prev.length - 1] || {}).content;
     const olderValue = (prev[prev.length - 2] || {}).content;
     const oldestValue = (prev[prev.length - 3] || {}).content;
+
 
     // keep long-format dates, e.g. `Jun 10, 1987`
     if (hasMonths(oldestValue) && olderValue === ',' && isNum(value)) {
@@ -315,12 +316,10 @@ export function parseBuffer(text, units) {
       return prev;
     }
 
-
-    // FIXME: un this case, similar to fixArgs() we should split until the first scored token...
-    // then, join all previous... and map the following then, but the last ones...
     const offset = cur.findIndex(x => x.score >= 3);
     const subTree = offset === -1 ? cur.splice(0, cur.length) : cur.splice(0, offset);
 
+    // process non-scored tokens first
     if (subTree.length) {
       prev.push({
         content: subTree.map(t => t.cur).join(''),
@@ -330,14 +329,32 @@ export function parseBuffer(text, units) {
       });
     }
 
-    cur.forEach(x => {
-      prev.push({
-        complexity: x.score,
-        content: x.cur,
-        begin: [x.row, x.col],
-        end: [x.row, x.col + x.cur.length],
-      });
-    });
+    // keep common tokens together
+    const fixedTree = cur.reduce((p, c, j) => {
+      const old = p[p.length - 1];
+
+      if (old) {
+        if (
+          (hasNum(old.cur) && hasNum(c.cur))
+          || ((isChar(old.cur) || hasNum(old.cur)) && isChar(c.cur))
+          || (hasNum(old.cur) && c.cur === '.' && hasNum(cur[j + 1].cur))
+        ) {
+          old.cur += c.cur;
+          return p;
+        }
+      }
+
+      p.push(c);
+      return p;
+    }, []);
+
+    // append normalized tokens
+    prev.push(...fixedTree.map(x => ({
+      complexity: x.score,
+      content: x.cur,
+      begin: [x.row, x.col],
+      end: [x.row, x.col + x.cur.length],
+    })));
 
     return prev;
   }, []);
