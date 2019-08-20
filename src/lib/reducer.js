@@ -485,11 +485,7 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
 
 
     // append last-operator between consecutive unit-expressions
-    if (ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number') {
-      if (!ctx.root.isDef) {
-        ctx.ast.push(ctx.lastOp);
-      }
-    }
+    if (ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number' && !ctx.root.isDef) ctx.ast.push(ctx.lastOp);
 
     // FIXME: bad reoslution... a way, is identifying the kind of sub-group, and then resolve if its plain... o something?
 
@@ -503,7 +499,7 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
         }
 
         // FIXME: return last value if void-op is given?
-        ctx.ast.push(cb(values, null, ctx).reduce((p, c) => p.concat(c), []));
+        ctx.ast.push(cb(values, null, ctx));
         continue;
     }
 
