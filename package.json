@@ -1,8 +1,8 @@
 {
-  "name": "solvente",
+  "name": "solv-lang",
   "version": "0.0.0",
   "bin": {
-    "calc": "cli"
+    "solv": "cli"
   },
   "scripts": {
     "build": "rollup -c",

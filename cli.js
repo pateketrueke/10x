@@ -6,7 +6,7 @@ global.console.log = (...args) => {
   });
 };
 
-const Solvente = require('./dist/solvente.js');
+const Solvente = require('./dist/lib.js');
 
 const returnRawJSON = process.argv.slice(2).indexOf('--raw') !== -1;
 const returnAsJSON = process.argv.slice(2).indexOf('--json') !== -1;
