@@ -192,76 +192,36 @@ export function transform(input, units) {
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
-    if (t < 3 && !(isChar(cur) && isAny(next, '(='))) {
-      // disable maths as soon complexity fall down...
-      if (subTree._fixed && isChar(old) && isChar(cur) && !(hasNum(cur) || isExpr(cur))) {
-        const average = subTree.reduce((prev, cur) => prev + cur.complexity, 0);
-
-        if ((average / subTree.length) < 3) {
-          delete subTree._fixed;
-        }
-      }
-
-      if (isAny(cur, '\n;')) {
-        chunks[++inc] = [tokens[i]];
-      } else {
-        subTree.push(tokens[i]);
-      }
-      continue;
-    }
-
+    // console.log({t,old,cur,next});
     let key = i;
     let nextToken;
 
     do { nextToken = tokens[++key]; } while (nextToken && isAny(nextToken.content, ' \n'));
 
-    // split based on complexity
-    if (t >= 3 || (!nextToken || nextToken.complexity >= 3)) {
-      inMaths = true;
+    if (t < 3 && subTree.length > 2) {
+      const average = subTree.reduce((prev, cur) => prev + cur.complexity, 0);
 
-      if (hasNum(cur) && !subTree._fixed) {
-        // split if enough tokens...
-        if (subTree.length > 2) {
+      // complexity is enough to evaluate?
+      if ((average / subTree.length) >= 3) {
+        // split from previous tokens
+        if (subTree.length && !subTree._fixed) {
           chunks[++inc] = [tokens[i]];
           chunks[inc]._fixed = true;
-          continue;
-        }
-
-        subTree._fixed = true;
-      }
-
-      if (!depth && isChar(nextToken)) {
-        inMaths = false;
-      }
-    } else {
-      inMaths = depth > 0 || cur === '(';
-    }
-
-    // flag for depth-checking
-    if (cur === '(') depth++;
-    if (cur === ')') depth--;
-
-    if (inMaths) {
-      if (!isOp(cur) && subTree.length && !subTree._fixed) {
-        chunks[++inc] = [tokens[i]];
-
-        const fixedChunk = tokens.slice(i, i + 5);
-        const fixedAverage = fixedChunk.reduce((prev, cur) => prev + cur.complexity, 0);
-
-        if (
-          // handle complexity
-          (fixedAverage / fixedChunk.length) >= 3
-
-          // handle regular definitions
-          || (isChar(cur) && '(='.includes(next))
-
-          // handle values within arguments
-          || (isSep(cur, '()') && (!nextToken || hasNum(nextToken.content) || isChar(nextToken.content)))
-        ) {
-          chunks[inc]._fixed = true;
+        } else {
+          subTree.push(tokens[i]);
         }
         continue;
       }
+    }
+
+    // split on new non-fixed-numbers and separators
+    if ((hasNum(cur) && !subTree._fixed) || isSep(cur)) {
+      chunks[++inc] = [tokens[i]];
+
+      if (!isSep(cur)) {
+        chunks[inc]._fixed = true;
+      }
+      continue;
     }
 
     subTree.push(tokens[i]);
