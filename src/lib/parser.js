@@ -142,13 +142,21 @@ export function parseBuffer(text, units) {
     if (isChar(cur) || isAlpha(cur) || isMoney(cur)) score += 1;
 
     // bonus points: values or side-effects after expression-separators
-    if (isNum(cur) && next === '.') score += 1;
+    if (open && isChar(cur)) score += 2.5;
+    if (open && isSep(cur, '()')) score += 1.5;
+    if (isJoin(cur) && isNum(next)) score += 1.5;
+    if (isNum(cur) && next === '.') score += 1.5;
+    if (isChar(cur) && isAny(next, '(=')) score += 2;
     if (open && cur === ',' && (isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === '(' && (peek === '(' || isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === ')' && (oldChar === ')' || isFx(oldChar) || isChar(oldChar) || hasNum(oldChar))) score += 1.5;
 
+    // flag to allow numbers with commas as separators
+    if (cur === '(') open++;
+    if (cur === ')') open--;
+
     // increase line/column
-    if (last === '\n') {
+    if (chars[i - 1] === '\n') {
       col = 0;
       row++;
     } else {
@@ -192,10 +200,6 @@ export function parseBuffer(text, units) {
       }
 
       if (!inBlock) {
-        // flag to allow numbers with commas as separators
-        if (cur === '(' && isChar(oldChar)) open++;
-        else if (cur === ')' && open) open--;
-
         if (
           // enable headings/blockquotes, skip everything
           ('#>'.includes(cur) && !col)
@@ -257,11 +261,11 @@ export function parseBuffer(text, units) {
     ) {
       buffer.push({ cur, row, col, score });
 
-      // split on newlines!
-      if (isSep(cur, '\n')) offset++;
-
       // store for open/close checks
       if (last !== ' ') oldChar = last;
+
+      // split on newlines!
+      if (cur === '\n') offset++;
     } else {
       tokens[++offset] = [{ cur, row, col, score }];
     }
@@ -269,19 +273,6 @@ export function parseBuffer(text, units) {
 
   // re-assign tokens on the fly!
   return tokens.reduce((prev, cur, i) => {
-    // split from smaller chunks, keep their complexity as is...
-    if (cur.length <= 3) {
-      cur.forEach(x => {
-        prev.push({
-          content: x.cur,
-          begin: [x.row, x.col],
-          end: [x.row, x.col + x.cur.length],
-          complexity: isSep(x.cur) ? 1.5 : x.score,
-        });
-      });
-      return prev;
-    }
-
     const value = cur.map(t => t.cur).join('');
     const lastValue = (prev[prev.length - 1] || {}).content;
     const olderValue = (prev[prev.length - 2] || {}).content;
@@ -324,11 +315,28 @@ export function parseBuffer(text, units) {
       return prev;
     }
 
-    prev.push({
-      content: value,
-      complexity: cur.reduce((prev, cur) => prev + cur.score, 0) / cur.length,
-      begin: value === '\n' ? [cur[0].row, cur[0].col] : [cur[0].row, cur[0].col],
-      end: value === '\n' ? [cur[0].row, cur[0].col + 1] : [cur[cur.length - 1].row, cur[cur.length - 1].col + 1],
+
+    // FIXME: un this case, similar to fixArgs() we should split until the first scored token...
+    // then, join all previous... and map the following then, but the last ones...
+    const offset = cur.findIndex(x => x.score >= 3);
+    const subTree = offset === -1 ? cur.splice(0, cur.length) : cur.splice(0, offset);
+
+    if (subTree.length) {
+      prev.push({
+        content: subTree.map(t => t.cur).join(''),
+        complexity: subTree.reduce((prev, cur) => prev + cur.score, 0) / subTree.length,
+        begin: value === '\n' ? [subTree[0].row, subTree[0].col] : [subTree[0].row, subTree[0].col],
+        end: value === '\n' ? [subTree[0].row, subTree[0].col + 1] : [subTree[subTree.length - 1].row, subTree[subTree.length - 1].col + 1],
+      });
+    }
+
+    cur.forEach(x => {
+      prev.push({
+        complexity: x.score,
+        content: x.cur,
+        begin: [x.row, x.col],
+        end: [x.row, x.col + x.cur.length],
+      });
     });
 
     return prev;

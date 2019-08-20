@@ -176,59 +176,57 @@ export function tokenize(input, units) {
 export function transform(input, units) {
   const tokens = input.slice();
   const chunks = [];
+  const scores = [];
 
+  let oldChar = '';
   let depth = 0;
   let inc = 0;
 
   // split tokens based on their complexity
   for (let i = 0; i < tokens.length; i += 1) {
+    if (oldChar === '\n') {
+      inc++;
+    }
+
     const subTree = chunks[inc] || (chunks[inc] = []);
-    const next = (tokens[i + 1] || {}).content;
-    const old = (tokens[i - 1] || {}).content;
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
-    let key = i;
-    let nextToken;
-
-    do { nextToken = tokens[++key]; } while (nextToken && isAny(nextToken.content, ' \n'));
-
-    // handle tokens with lower-complexity
-    if (t < 3 && subTree.length > 2) {
-      const average = subTree.reduce((prev, cur) => prev + cur.complexity, 0);
-
-      // complexity is enough to evaluate?
-      if ((average / subTree.length) >= 3) {
-        // split from previous tokens
-        if (subTree.length && !subTree._fixed) {
-          chunks[++inc] = [tokens[i]];
-          chunks[inc]._fixed = true;
-        } else {
-          subTree.push(tokens[i]);
-        }
-        continue;
-      }
-    }
-
-    // toggle depth
-    if (cur === '(') depth++;
-    if (cur === ')') depth--;
-
-    // split on new non-fixed-numbers and separators
+    // split if previous token contains spaces, but no numbers
     if (
-      cur === '\n'
-      || (hasNum(cur) && !subTree._fixed)
-      || (isSep(cur) && (depth || !nextToken || !hasNum(nextToken.content)))
+      t >= 3
+      && tokens[i - 1]
+      && tokens[i - 1].content !== ' '
+      && tokens[i - 1].content.includes(' ')
+      && !hasNum(tokens[i - 1].content)
     ) {
       chunks[++inc] = [tokens[i]];
-
-      if (!isSep(cur, '\n')) {
-        chunks[inc]._fixed = true;
-      }
+      chunks[inc]._fixed = true;
+      delete subTree._fixed;
       continue;
     }
 
+    let key = 0;
+    let nextToken;
+
+    do { nextToken = (tokens[++key] || {}).content; } while (isAny(nextToken, ' \n'));
+
+    // check for average complexity between tokens
+    if (scores.length > 2) {
+      const avg = scores.reduce((prev, cur) => prev + cur, 0) / scores.length;
+
+      // this array contains expressions
+      if (!subTree._fixed && (
+        avg >= 3 || ((isOp(cur) || isSep(cur, '()')) && (hasNum(nextToken) || isChar(nextToken)))
+      )) {
+        subTree._fixed = true;
+      }
+    }
+
     subTree.push(tokens[i]);
+
+    if (t) scores.push(t);
+    if (cur !== ' ') oldChar = cur;
   }
 
   // merge non-fixed chunks
