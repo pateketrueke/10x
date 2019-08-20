@@ -299,7 +299,7 @@ export function parseBuffer(text, units) {
       || ((isChar(olderValue) && !isExpr(olderValue)) && isAny(lastValue, ' '))
 
       // skip numbers within groups or parenthesis
-      || (!isChar(oldestValue) && '{[(<'.includes(olderValue) && hasNum(lastValue) && '>)]}'.includes(value))
+      || (!isChar(oldestValue) && '{[(<'.includes(olderValue) && isInt(lastValue) && '>)]}'.includes(value))
 
       // keep well-known dates, e.g `Jun 10`, `Jun, 1987` or `Jun 10, 1987`
       || (hasMonths(olderValue) && ' ,'.includes(lastValue) && isNum(value))

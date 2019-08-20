@@ -200,7 +200,11 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
       throw new ParseError(`Missing definition for \`${ctx.cur[1]}\``, ctx);
     }
 
-    ctx.cur = [['number', parseFloat(ctx.cur[1])], ['expr', '*', 'mul']].concat(cb(expressions[ctx.cur[2]].body, null, ctx));
+    // FIXME: it should map lists of values instead?
+    const base = parseFloat(ctx.cur[1]);
+    const subTree = fixArgs(cb(expressions[ctx.cur[2]].body, null, ctx)).reduce((p, c) => p.concat(c), []);
+
+    ctx.cur = subTree.map(x => calculateFromTokens(cb([['number', base], ['expr', '*', 'mul']].concat([x]), null, ctx)));
   }
 
   // convert into Date values
@@ -499,8 +503,7 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
         }
 
         // FIXME: return last value if void-op is given?
-        // console.log({values});
-        ctx.ast.push(cb(values, null, ctx));
+        ctx.ast.push(cb(values, null, ctx).reduce((p, c) => p.concat(c), []));
         continue;
     }
 
