@@ -2,7 +2,7 @@ const fs = require('fs');
 
 global.console.log = (...args) => {
   args.forEach(value => {
-    process.stderr.write(require('util').inspect(value, { colors: true, depth: 10 }) + '\n');
+    process.stderr.write(require('util').inspect(value, { colors: true, depth: 10, maxArrayLength: Infinity }) + '\n');
   });
 };
 
@@ -59,10 +59,10 @@ if (returnAsJSON) {
   }
 
   if (showDebugInfo) {
-    process.stdout.write(`${require('util').inspect(calc, { colors, depth: 10 })}\n`);
+    console.log(calc);
   }
 
-  process.stdout.write(`${require('util').inspect(fixedResults, { colors, depth: 10 })}\n`);
+  console.log(fixedResults);
 }
 
 if (sharedFile) require('fs').writeFileSync(sharedFile, JSON.stringify(calc.expressions));
