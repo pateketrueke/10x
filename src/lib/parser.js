@@ -266,6 +266,16 @@ export function parseBuffer(text, units) {
     const olderValue = (prev[prev.length - 2] || {}).content;
     const oldestValue = (prev[prev.length - 3] || {}).content;
 
+    // keep strings and other expressions high-ranked
+    if (/^(\/\/|:)|^".*?"$/.test(value)) {
+      prev.push({
+        complexity: 3,
+        content: value,
+        begin: [cur[0].row, cur[0].col],
+        end: [cur[0].row, cur[0].col + value.length],
+      });
+      return prev;
+    }
 
     // keep long-format dates, e.g. `Jun 10, 1987`
     if (hasMonths(oldestValue) && olderValue === ',' && isNum(value)) {
@@ -325,10 +335,10 @@ export function parseBuffer(text, units) {
       return p;
     }, []);
 
-    // high-rank strings and symbols, possibly other tokens later...
+    // keep lower-ranked tokens together...
     if (fixedTokens.length > 1 && fixedTokens[0].score < 3) {
       prev.push({
-        complexity: '":'.includes(fixedTokens[0].cur) ? 3 : 0,
+        complexity: fixedTokens.reduce((p, c) => p + c.score) / fixedTokens.length,
         content: fixedTokens.map(t => t.cur).join(''),
         begin: [fixedTokens[0].row, fixedTokens[0].col],
         end: [fixedTokens[fixedTokens.length - 1].row, fixedTokens[fixedTokens.length - 1].col + 1],

@@ -23,11 +23,6 @@ export function fromMarkdown(text) {
     return ['check', text, text.includes('x')];
   }
 
-  // handle comments
-  if (text.substr(0, 2) === '//') {
-    return ['comment', text];
-  }
-
   // handle headings
   if (text.charAt() === '#') {
     const matches = text.match(/^#{1,6}/);
@@ -53,6 +48,11 @@ export function fromMarkdown(text) {
 }
 
 export function fromSymbols(text, units, leftToken, rightToken) {
+  // handle comments
+  if (text.substr(0, 2) === '//') {
+    return ['comment', text];
+  }
+
   // handle mixed objects
   if (text === '[]' || text === '{}') {
     return ['object', text === '[]' ? [] : {}];
