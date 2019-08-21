@@ -184,7 +184,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle unit expressions
   if (ctx.cur[0] === 'unit') {
     if (!hasOwnKeyword(expressions, ctx.cur[1])) {
-      throw new ParseError(`Missing definition for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+      throw new ParseError(`Missing definition of ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
     }
 
     // resolve definition body
@@ -196,11 +196,11 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle N-unit, return a new expression from 3x to [3, *, x]
   if (ctx.cur[0] === 'number' && ctx.cur[2]) {
     if (!hasOwnKeyword(expressions, ctx.cur[2])) {
-      throw new ParseError(`Missing definition for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+      throw new ParseError(`Missing definition of ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
     }
 
     if (expressions[ctx.cur[2]].args.length) {
-      throw new ParseError(`Invalid usage for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+      throw new ParseError(`Invalid usage of ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
     }
 
     const base = parseFloat(ctx.cur[1]);
@@ -387,7 +387,7 @@ export function reduceFromDefs(cb, ctx, expressions) {
 
     // warn on undefined calls
     if (!(def && call)) {
-      throw new ParseError(`Missing ${def ? 'arguments' : 'definition'} for \`${ctx.cur[1]}\``, ctx);
+      throw new ParseError(`Missing ${def ? 'arguments' : 'definition'} to call \`${ctx.cur[1]}\``, ctx);
     }
 
     // FIXME: improve error objects and such...
@@ -479,7 +479,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
         }
 
         // FIXME: return last value if void-op is given?
-        ctx.ast.push(cb(values, null, ctx));
+        ctx.ast.push(cb(values, null, ctx).reduce((p, c) => p.concat(c), []));
         continue;
     }
 
