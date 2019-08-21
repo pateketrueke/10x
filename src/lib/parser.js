@@ -18,6 +18,7 @@ const OP_TYPES = {
   '~>': 'void',
   '->': 'func',
   '<-': 'bind',
+  '=>': 'arrow',
   '|>': 'rpipe',
   '<|': 'lpipe',
   '<': 'lt',
@@ -45,7 +46,7 @@ const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\w*\b
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
 export const isFx = y => y && y.length >= 2 && '-+=~:<!|&>'.includes(y[0]);
-export const isSep = (a, b = '') => `${b}{[]}|;:,.`.includes(a);
+export const isSep = (a, b = '') => `${b}{[]}|;,.`.includes(a);
 export const isChar = a => /^[a-zA-Z]+/.test(a);
 
 export const isOp = a => OP_TYPES[a];
@@ -199,34 +200,7 @@ export function parseBuffer(text, units) {
         || (cur === '/' && '/*'.includes(next))
       ) inBlock = next === '*' ? 'multiline' : 'block';
       if (inBlock && inBlock === 'block' && cur === '\n') inBlock = false;
-
-      // disable formatting and blocks on newlines...
-      // if (inBlock && inBlock !== 'multiline' && last === '\n') {
-      //   offset++;
-      //   inBlock = false;
-      //   inFormat = false;
-      // }
-
-      // if (!inBlock) {
-      //   if (
-      //     // enable headings/blockquotes, skip everything
-      //     ('#>'.includes(cur) && !col)
-
-      //     // enable comments, skip everything
-      //     || (cur === '/' && '/*'.includes(next))
-      //   ) inBlock = next === '*' ? 'multiline' : true;
-      // } else if (cur === '*' && next === '/') {
-      //   // disable multiline-style comments
-      //   if (inBlock === 'multiline') {
-      //     buffer.push({ cur: cur + next, row, col: col + 1, score });
-      //     chars.splice(i, 1);
-      //     inBlock = false;
-      //     continue;
-      //   }
-      // }
     }
-
-    // console.log({inBlock,inFormat,cur});
 
     // FIXME: clean combinations...
     if (
@@ -269,17 +243,21 @@ export function parseBuffer(text, units) {
       || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
       || (hasNum(last) && cur === '.' && next === '.')
     ) {
-      buffer.push({ cur, row, col, score });
+      // split on white-space at the beginning
+      if (isAny(last, ' \n') && buffer.length === 1) {
+        tokens[++offset] = [{ cur, row, col, score }];
+      } else {
+        buffer.push({ cur, row, col, score });
+      }
 
       // store for open/close checks
       if (last !== ' ') oldChar = last;
-
-      // split on newlines and some separators
-      // if (cur === '\n') offset++;
     } else {
       tokens[++offset] = [{ cur, row, col, score }];
     }
   }
+
+  // console.log({tokens});
 
   // re-assign tokens on the fly!
   return tokens.reduce((prev, cur, i) => {
@@ -326,57 +304,15 @@ export function parseBuffer(text, units) {
       return prev;
     }
 
-    if (cur[0].score < 3 && !isAny(cur[0].cur, ' \n')) {
-      let fix = 0;
-
-      switch (cur[0].cur) {
-        case ':': fix += 2; break;
-        case '"': fix += 2.5; break;
-      }
-
-      prev.push({
-        content: cur.map(t => t.cur).join(''),
-        complexity: (cur.reduce((p, c) => p + c.score, 0) / cur.length) + fix,
-        begin: value === '\n' ? [cur[0].row, cur[0].col] : [cur[0].row, cur[0].col],
-        end: value === '\n' ? [cur[0].row, cur[0].col + 1] : [cur[cur.length - 1].row, cur[cur.length - 1].col + 1],
-      });
-      return prev;
-    }
-
-    const cut = cur.findIndex(x => x.cur === ' ' || x.cur === '\n');
-    const offset = cut === -1 ? cur.findIndex(x => x.score >= 3) : -1;
-    const subTree = offset === -1 ? cur.splice(0, cur.length) : cur.splice(0, offset);
-
-    // process non-scored tokens first
-    if (subTree.length) {
-      // split from white-space at the beginning
-      if (cut === 0 && subTree.length > 1) {
-        const pop = subTree.shift();
-
-        prev.push({
-          content: pop.cur,
-          complexity: pop.score,
-          begin: [pop.row, pop.col],
-          end: [pop.row, pop.col + pop.cur.length],
-        });
-      }
-
-      prev.push({
-        content: subTree.map(t => t.cur).join(''),
-        complexity: subTree.reduce((prev, cur) => prev + cur.score, 0) / subTree.length,
-        begin: value === '\n' ? [subTree[0].row, subTree[0].col] : [subTree[0].row, subTree[0].col],
-        end: value === '\n' ? [subTree[0].row, subTree[0].col + 1] : [subTree[subTree.length - 1].row, subTree[subTree.length - 1].col + 1],
-      });
-    }
-
     // keep common tokens together
-    const fixedTree = cur.reduce((p, c, j) => {
+    const fixedTokens = cur.reduce((p, c, j) => {
       const old = p[p.length - 1];
-
 
       if (old) {
         if (
-          (hasNum(old.cur) && hasNum(c.cur))
+          isOp(old.cur + c.cur)
+          || (old.cur === c.cur)
+          || (hasNum(old.cur) && hasNum(c.cur))
           || (hasNum(old.cur) && c.cur === '.' && hasNum(cur[j + 1].cur))
           || ((isChar(old.cur) || hasNum(old.cur)) && (isChar(c.cur) || hasNum(c.cur)))
         ) {
@@ -389,13 +325,24 @@ export function parseBuffer(text, units) {
       return p;
     }, []);
 
-    // append normalized tokens
-    prev.push(...fixedTree.map(x => ({
-      complexity: x.score,
-      content: x.cur,
-      begin: [x.row, x.col],
-      end: [x.row, x.col + x.cur.length],
-    })));
+    // high-rank strings and symbols, possibly other tokens later...
+    if (fixedTokens.length > 1 && fixedTokens[0].score < 3) {
+      prev.push({
+        complexity: '":'.includes(fixedTokens[0].cur) ? 3 : 0,
+        content: fixedTokens.map(t => t.cur).join(''),
+        begin: [fixedTokens[0].row, fixedTokens[0].col],
+        end: [fixedTokens[fixedTokens.length - 1].row, fixedTokens[fixedTokens.length - 1].col + 1],
+      });
+    } else {
+      fixedTokens.forEach(t => {
+        prev.push({
+          content: t.cur,
+          complexity: t.score,
+          begin: [t.row, t.col],
+          end: [t.row, t.col + t.cur.length],
+        });
+      });
+    }
 
     return prev;
   }, []);
