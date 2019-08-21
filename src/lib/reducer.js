@@ -438,24 +438,7 @@ export function reduceFromDefs(cb, ctx, convert, expressions) {
 }
 
 // FIXME: split into phases, let maths to be reusable...
-export function reduceFromAST(opts, convert, expressions, parentContext) {
-  const { ast, ...options } = opts;
-
-  // console.log('OK',{ast});
-
-  // FIXME: some utils?
-  let tokens = ast;
-
-  // while (tokens.length === 1) {
-  //   tokens = tokens[0];
-  // }
-
-  const use = options.use || [];
-  const useDefs = use.includes('definitions');
-  const useLogic = use.includes('matchers');
-  const useFX = use.includes('effects');
-  const useUnits = use.includes('units');
-
+export function reduceFromAST(tokens, convert, expressions, parentContext) {
   const ctx = {
     tokens,
     ast: [],
@@ -467,10 +450,7 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
   };
 
   // FIXME: build an stack... of errors
-  const cb = (ast, config, context) => {
-    // console.log('>>>', {ast});
-    return reduceFromAST({ ast, use, ...config }, convert, Object.assign({}, expressions), context);
-  };
+  const cb = (t, context) => reduceFromAST(t, convert, Object.assign({}, expressions), context);
 
   for (let i = 0; i < tokens.length; i += 1) {
     ctx.root = parentContext || {};
@@ -505,8 +485,8 @@ export function reduceFromAST(opts, convert, expressions, parentContext) {
 
     // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
     // if (useFX) reduceFromFX(cb, ctx, convert, expressions);
-    if (useDefs) reduceFromDefs(cb, ctx, convert, expressions);
-    if (useUnits) reduceFromUnits(cb, ctx, convert, expressions);
+    reduceFromDefs(cb, ctx, convert, expressions);
+    reduceFromUnits(cb, ctx, convert, expressions);
 
     // skip some definitions from reduced AST
     if (!['def'].includes(ctx.cur[0])) {

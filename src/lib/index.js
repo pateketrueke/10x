@@ -143,12 +143,7 @@ export default class Solv {
     };
   }
 
-  eval(tokens, source, opts) {
-    if (typeof source === 'object') {
-      opts = source;
-      source = opts.source || '';
-    }
-
+  eval(tokens, source) {
     const output = [];
     const subTree = (tokens || this.tree).reduce((prev, cur) => {
       const subTree = fixTree(cur);
@@ -162,11 +157,7 @@ export default class Solv {
 
     try {
       subTree.forEach(ast => {
-        output.push(...toList(reduceFromAST({
-          use: ['definitions', 'matchers', 'effects', 'units'],
-          ...opts,
-          ast,
-        }, convertFrom, this.expressions)));
+        output.push(...toList(reduceFromAST(ast, convertFrom, this.expressions)));
       });
     } catch (e) {
       this.error = ParseError.build(e, source || this.source, this.expressions, 2, this.filepath);
