@@ -213,7 +213,7 @@ export function transform(input, units) {
     if (cur._fixed) {
       prev.push(['expr', null], ...tokenize(cur, units));
     } else {
-      prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
+      prev.push(['expr', null], ...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
     }
 
     return prev;
