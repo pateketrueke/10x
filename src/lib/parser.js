@@ -326,7 +326,7 @@ export function parseBuffer(text, units) {
       return prev;
     }
 
-    if (cur[0].score < 3) {
+    if (cur[0].score < 3 && !isAny(cur[0].cur, ' \n')) {
       let fix = 0;
 
       switch (cur[0].cur) {

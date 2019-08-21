@@ -453,8 +453,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
   const env = Object.assign({}, expressions);
 
   // resolve from nested AST expressions
-  const cb = (t, context) =>
-    reduceFromAST(t, convert, env, context);
+  const cb = (t, context) => reduceFromAST(t, convert, env, context);
 
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
@@ -472,17 +471,17 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
     if (ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number' && !ctx.isDef) ctx.ast.push(ctx.lastOp);
 
     // handle anonymous sub-expressions
-    if (Array.isArray(tokens[i][0])) {
-        const values = fixArgs(tokens[i]).map(x => x.length === 1 ? x[0] : x);
+    if (Array.isArray(tokens[i][0]) && !Array.isArray(tokens[i][0][0])) {
+      const values = fixArgs(tokens[i]).map(x => x.length === 1 ? x[0] : x);
 
-        // prepend multiplication if goes after units/numbers
-        if (ctx.left && ['unit', 'number'].includes(ctx.left[0])) {
-          ctx.ast.push(['expr', '*', 'mul']);
-        }
+      // prepend multiplication if goes after units/numbers
+      if (ctx.left && ['unit', 'number'].includes(ctx.left[0])) {
+        ctx.ast.push(['expr', '*', 'mul']);
+      }
 
-        // FIXME: return last value if void-op is given?
-        ctx.ast.push(cb(values, null, ctx).reduce((p, c) => p.concat(c), []));
-        continue;
+      // FIXME: return last value if void-op is given?
+      ctx.ast.push(cb(values, null, ctx).reduce((p, c) => p.concat(c), []));
+      continue;
     }
 
     reduceFromLogic(cb, ctx, expressions);
