@@ -47,12 +47,23 @@ calc.resolve(code, file);
 if (returnAsTEXT) {
   const buffer = [];
 
+  function puts(text, speed) {
+    return text.split(/(?=[\x00-\x7F])/)
+      .reduce((prev, cur) => prev.then(() => {
+        process.stdout.write(cur);
+        return new Promise(ok => setTimeout(ok, Math.floor(speed / text.length)));
+      }), Promise.resolve());
+  }
+
   function push(chunk) {
     buffer.push(() => new Promise(ok => {
+      if (chunk === ' ') {
+        return ok(process.stdout.write(chunk));
+      }
+
       setTimeout(() => {
-        process.stdout.write(chunk);
-        ok();
-      }, (Math.random() * 60) + 1);
+        puts(chunk, (Math.random() * 120) + 60).then(ok);
+      }, (Math.random() * 10) + 1);
     }));
   }
 
