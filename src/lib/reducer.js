@@ -439,7 +439,9 @@ export function reduceFromDefs(cb, ctx, expressions) {
 }
 
 // FIXME: split into phases, let maths to be reusable...
-export function reduceFromAST(tokens, convert, expressions, parentContext) {
+export function reduceFromAST(ast, convert, expressions, parentContext) {
+  const tokens = ast.filter(x => !hasTagName(x));
+
   const ctx = {
     tokens,
     ast: [],

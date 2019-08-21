@@ -257,8 +257,6 @@ export function parseBuffer(text, units) {
     }
   }
 
-  // console.log({tokens});
-
   // re-assign tokens on the fly!
   return tokens.reduce((prev, cur, i) => {
     const value = cur.map(t => t.cur).join('');
@@ -299,7 +297,7 @@ export function parseBuffer(text, units) {
       || (olderValue === '[' && ' x'.includes(lastValue) && value === ']')
 
       // concatenate unknown words
-      || ((isChar(olderValue) && !isExpr(olderValue)) && isAny(lastValue, ' '))
+      || (cur.length > 1 && isChar(olderValue) && !isExpr(olderValue) && isAny(lastValue, ' '))
 
       // skip numbers within groups or parenthesis
       || (!isChar(oldestValue) && '{[(<'.includes(olderValue) && isInt(lastValue) && '>)]}'.includes(value))

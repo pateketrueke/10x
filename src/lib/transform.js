@@ -211,7 +211,7 @@ export function transform(input, units) {
     const lastChunk = prev[prev.length - 1];
 
     if (cur._fixed) {
-      prev.push(...tokenize(cur, units), ['expr', null]);
+      prev.push(['expr', null], ...tokenize(cur, units));
     } else {
       prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
     }
@@ -219,16 +219,12 @@ export function transform(input, units) {
     return prev;
   }, []));
 
-  // copy all tokens to protect them!
-  const fixedBody = fixArgs(body.map(x => toToken(x)), null);
-
   // handle errors during tree-building
   let fixedTree;
   let _e;
 
   try {
-    // FIXME: last newline is missing on final tree...
-    fixedTree = fixedBody.map(x => buildTree(x)).filter(x => x.length);
+    fixedTree = fixArgs(body, null).map(x => buildTree(x)).filter(x => x.length);
   } catch (e) {
     _e = e;
   }
