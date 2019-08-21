@@ -182,9 +182,9 @@ export function reduceFromEffect(cb, def, args, value) {
 
 export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle unit expressions
-  if (ctx.cur[0] === 'unit' && !ctx.root.isDef) {
+  if (ctx.cur[0] === 'unit') {
     if (!hasOwnKeyword(expressions, ctx.cur[1])) {
-      throw new ParseError(`Missing definition for \`${ctx.cur[1]}\``, ctx);
+      throw new ParseError(`Missing definition for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
     }
 
     // resolve definition body
@@ -196,11 +196,13 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   // handle N-unit, return a new expression from 3x to [3, *, x]
   if (ctx.cur[0] === 'number' && ctx.cur[2]) {
     if (!hasOwnKeyword(expressions, ctx.cur[2])) {
-      // console.log({u:ctx.cur});
-      throw new ParseError(`Missing definition for \`${ctx.cur[1]}\``, ctx);
+      throw new ParseError(`Missing definition for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
     }
 
-    // FIXME: it should map lists of values instead?
+    if (expressions[ctx.cur[2]].args.length) {
+      throw new ParseError(`Invalid usage for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+    }
+
     const base = parseFloat(ctx.cur[1]);
     const subTree = fixArgs(cb(expressions[ctx.cur[2]].body, null, ctx)).reduce((p, c) => p.concat(c), []);
 
@@ -382,12 +384,10 @@ export function reduceFromDefs(cb, ctx, expressions) {
     // side-effects will operate on previous values
     const def = expressions[ctx.cur[1]];
     const call = ctx.cur[2];
-    // console.log(42,{def,call});
 
-    // skip undefined calls
-    if (!(call && def)) {
-      console.log('NODEF',ctx.cur)
-      return;
+    // warn on undefined calls
+    if (!(def && call)) {
+      throw new ParseError(`Missing ${def ? 'arguments' : 'definition'} for \`${ctx.cur[1]}\``, ctx);
     }
 
     // FIXME: improve error objects and such...
@@ -397,18 +397,16 @@ export function reduceFromDefs(cb, ctx, expressions) {
 
     // prepend _ symbol for currying
     if (!def.args.length) {
+      if (call.args) {
+        throw new ParseError(`Unexpected arguments for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+      }
+
       def.args.unshift(['unit', '_']);
     }
 
-    call.args.forEach((arg, i) => {
-      if (typeof arg === 'undefined') {
-        throw new ParseError(`Missing definition for \`${def.args[i][1]}\``, ctx);
-      }
-    });
-
     // FIXME: there is a side-effect, symbol/unit _ can appear twice...
-    const locals = reduceFromArgs(cb(def.args, null, ctx), cb(call.args, null, ctx));
-    const token = ctx.cur;
+    const locals = reduceFromArgs(def.args, cb(call.args, null, ctx));
+    const definition = ctx.cur[1];
 
     // replace all given units within the AST
     ctx.cur = reduceFromTokens(def.body, locals);
@@ -429,7 +427,7 @@ export function reduceFromDefs(cb, ctx, expressions) {
       }
 
       if (fixedArgs.length) {
-        throw new ParseError(`Expecting \`${token[1]}.#${fixedLength - fixedArgs.length}\` args, given #${fixedLength}`, ctx);
+        throw new ParseError(`Expecting \`${definition}.#${fixedLength - fixedArgs.length}\` args, given #${fixedLength}`, ctx);
       }
     }
 
@@ -469,7 +467,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
     ctx.current = ctx.ast[ctx.ast.length - 1];
 
     // append last-operator between consecutive unit-expressions
-    if (ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number' && !ctx.root.isDef) ctx.ast.push(ctx.lastOp);
+    if (ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number' && !ctx.isDef) ctx.ast.push(ctx.lastOp);
 
     // handle anonymous sub-expressions
     if (Array.isArray(tokens[i][0])) {

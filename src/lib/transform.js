@@ -179,6 +179,7 @@ export function transform(input, units) {
   const scores = [];
 
   let hasOps = false;
+  let depth = 0;
   let inc = 0;
 
   // split tokens based on their complexity
@@ -188,8 +189,12 @@ export function transform(input, units) {
     const t = tokens[i].complexity;
 
     // FIXME: any better strategy?
-    if (isAny(cur, '\n;')) hasOps = false;
+    if (!depth && isAny(cur, '\n;')) hasOps = false;
     else if (t >= 3) hasOps = true;
+
+    // allow separators inside blocks
+    if (cur === '(') depth++;
+    if (cur === ')') depth--;
 
     if (hasOps && !subTree._fixed) {
       if (subTree.length) {

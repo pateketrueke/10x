@@ -66,14 +66,9 @@ export function fixTree(ast) {
     const prev = tokens[i - 1];
     const next = tokens[i + 1];
 
-    // skip and merge empty leafs
+    // skip empty leafs
     if (cur.length === 0) {
-      console.log('EMPTY');
-      if (prev && prev[0] === 'def') {
-        console.log('DEFEMPTY');
-        // tokens.splice(i, 1);
-        // prev[2] = [cur];
-      }
+      tokens.splice(i, 1);
       continue;
     }
 
@@ -93,7 +88,7 @@ export function fixTree(ast) {
       prev._body = subTree.length > 1;
       prev[2] = {
         args: hasArray ? fixArgs(cur, true) : [],
-        body: fixTree(fixCalls(subTree.slice(1))),
+        body: fixTree(fixCalls(subTree.slice(hasArray ? 2 : 1))),
       };
       continue;
     }
