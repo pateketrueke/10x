@@ -208,7 +208,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
     const base = parseFloat(ctx.cur[1]);
     const subTree = fixArgs(cb(expressions[ctx.cur[2]].body, null, ctx)).reduce((p, c) => p.concat(c), []);
 
-    ctx.cur = subTree.map(x => calculateFromTokens(cb([['number', base], ['expr', '*', 'mul']].concat([x]), null, ctx)));
+    ctx.cur = calculateFromTokens(subTree.map(x => calculateFromTokens(cb([['number', base], ['expr', '*', 'mul']].concat([x]), null, ctx))));
   }
 
   // convert into Date values
@@ -216,11 +216,6 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
     ctx.isDate = true;
     ctx.cur[1] = reduceFromValue(ctx.cur);
     return;
-  }
-
-  // FIXME: handle nested results everywhere!
-  if (Array.isArray(ctx.cur[0])) {
-    ctx.cur = calculateFromTokens(ctx.cur);
   }
 
   const left = ctx.left || [];
@@ -463,7 +458,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
     ctx.root = parentContext || {};
-    ctx.isDef = tokens[i][0] === 'def';
+    ctx.isDef = tokens[i][0] === 'def' || ctx.root.isDef;
 
     // shared context
     ctx.i = i;
@@ -485,7 +480,10 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
       }
 
       // FIXME: return last value if void-op is given?
-      ctx.ast.push(cb(values, null, ctx).reduce((p, c) => p.concat(c), []));
+      // also, see if this whole shit is a pattern...
+      const fixedValues = values.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
+
+      ctx.ast.push(fixedValues.length === 1 ? fixedValues[0] : fixedValues.reduce((p, c) => p.concat(cb([c], null, ctx)), []));
       continue;
     }
 
