@@ -156,10 +156,6 @@ export function tokenize(input, units) {
 
     lastToken = toToken(cur, fromSymbols, units, lastToken, nextToken && nextToken.content);
 
-    if (!lastToken) {
-      throw new ParseError(`Unexpected token \`${cur}\``);
-    }
-
     prev.push(lastToken);
     return prev;
   }, []);
@@ -191,7 +187,11 @@ export function transform(input, units) {
     if (hasOps && !subTree._fixed) {
       if (subTree.length) {
         chunks[++inc] = [tokens[i]];
-        chunks[inc]._fixed = true;
+
+        // just don't add separators!
+        if (t >= 3 && !isSep(cur)) {
+          chunks[inc]._fixed = true;
+        }
       } else {
         subTree.push(tokens[i]);
         subTree._fixed = true;
@@ -205,6 +205,8 @@ export function transform(input, units) {
       subTree.push(tokens[i]);
     }
   }
+
+  // console.log({chunks});
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {

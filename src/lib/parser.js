@@ -308,6 +308,7 @@ export function parseBuffer(text, units) {
       // keep hours-like values together, e.g. `200 am`, '4 pm' or `16:20:00 pm`
       || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || RE_HOURS.test(olderValue + lastValue + value))
     ) {
+      prev[prev.length - 2].complexity = hasNum(value) ? 3 : 0;
       prev[prev.length - 2].content += lastValue + value;
       prev[prev.length - 2].end[1] = cur[cur.length - 1].col + 1;
       prev.pop();
@@ -338,7 +339,7 @@ export function parseBuffer(text, units) {
     // keep lower-ranked tokens together...
     if (fixedTokens.length > 1 && fixedTokens[0].score < 3) {
       prev.push({
-        complexity: fixedTokens.reduce((p, c) => p + c.score) / fixedTokens.length,
+        complexity: 0, // fixedTokens.reduce((p, c) => p + c.score) / fixedTokens.length,
         content: fixedTokens.map(t => t.cur).join(''),
         begin: [fixedTokens[0].row, fixedTokens[0].col],
         end: [fixedTokens[fixedTokens.length - 1].row, fixedTokens[fixedTokens.length - 1].col + 1],

@@ -218,6 +218,11 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
     return;
   }
 
+  // FIXME: handle nested results everywhere!
+  if (Array.isArray(ctx.cur[0])) {
+    ctx.cur = calculateFromTokens(ctx.cur);
+  }
+
   const left = ctx.left || [];
   const right = ctx.right || [];
 

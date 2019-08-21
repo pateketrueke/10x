@@ -78,7 +78,7 @@ export default class Solv {
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
     } catch (e) {
-      this.error = e;
+      this.error = ParseError.build(e, source, 2, filepath);
     }
 
     return this;
@@ -160,7 +160,7 @@ export default class Solv {
         output.push(...toList(reduceFromAST(ast, convertFrom, this.expressions)));
       });
     } catch (e) {
-      this.error = ParseError.build(e, source || this.source, this.expressions, 2, this.filepath);
+      this.error = ParseError.build(e, source || this.source, 2, this.filepath);
       return [];
     }
 

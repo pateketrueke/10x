@@ -2,6 +2,8 @@ import {
   isSep, isAny, isChar, hasTagName, hasPercent,
 } from './parser';
 
+import ParseError from './error';
+
 export function highestCommonFactor(a, b) {
   return b !== 0 ? highestCommonFactor(b, a % b) : a;
 }
@@ -116,20 +118,21 @@ export function toList(tokens, nums) {
   return normalized;
 }
 
-export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
-  if (Array.isArray(token)) {
-    const newToken = token.slice();
+export function toToken(cur, fromCallback, arg1, arg2, arg3, arg4) {
+  if (Array.isArray(cur)) {
+    const newToken = cur.slice();
 
-    newToken._offset = token._offset;
-    newToken._score = token._score;
+    newToken._offset = cur._offset;
+    newToken._score = cur._score;
 
     return newToken;
   }
 
-  const value = fromCallback(token.content, arg1, arg2, arg3, arg4);
+  const value = fromCallback(cur.content, arg1, arg2, arg3, arg4);
 
-  value._offset = [token.begin, token.end];
-  value._score = token.complexity;
+  if (!value) {
+    throw new ParseError(`Unexpected token \`${cur.content}\``, cur);
+  }
 
   return value;
 }
