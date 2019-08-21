@@ -254,49 +254,49 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   if (isTime(ctx.cur[2])) ctx.isDate = true;
 }
 
-// export function reduceFromLogic(ctx, tokens, convert, expressions) {
-//   // collect all tokens after symbols
-//   if (isSymbol || (!value && cur[0] === 'symbol'))  {
-//     isSymbol = true;
-//     fixedStack.push(cur);
+export function reduceFromLogic(ctx, tokens, expressions) {
+  // // collect all tokens after symbols
+  // if (isSymbol || (!value && cur[0] === 'symbol'))  {
+  //   isSymbol = true;
+  //   fixedStack.push(cur);
 
-//     if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && isSep(cur[1])))) {
-//       const branches = fixTokens(fixedStack, false);
+  //   if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && isSep(cur[1])))) {
+  //     const branches = fixTokens(fixedStack, false);
 
-//       console.log({branches});
+  //     console.log({branches});
 
-//       // handle if-then-else logic
-//       if (branches[':if'] || branches[':unless']) {
-//         const ifBranch = branches[':if'] || branches[':unless'];
-//         const orBranch = branches[':else'] || branches[':otherwise'];
+  //     // handle if-then-else logic
+  //     if (branches[':if'] || branches[':unless']) {
+  //       const ifBranch = branches[':if'] || branches[':unless'];
+  //       const orBranch = branches[':else'] || branches[':otherwise'];
 
-//         let not = branches[':unless'] && !branches[':if'];
-//         let test = (branches[':if'] || branches[':unless']).shift();
+  //       let not = branches[':unless'] && !branches[':if'];
+  //       let test = (branches[':if'] || branches[':unless']).shift();
 
-//         // handle negative variations
-//         if (test[0] === 'expr' && test[2] === 'not') {
-//           not = true;
-//           test = ifBranch.shift();
-//           test = [].concat.apply([test[0]], test.slice(1));
-//         }
+  //       // handle negative variations
+  //       if (test[0] === 'expr' && test[2] === 'not') {
+  //         not = true;
+  //         test = ifBranch.shift();
+  //         test = [].concat.apply([test[0]], test.slice(1));
+  //       }
 
-//         const retval = calculateFromTokens(cb(test));
+  //       const retval = calculateFromTokens(cb(test));
 
-//         // evaluate respective branches
-//         if (not ? !retval[1] : retval[1]) {
-//           fixedTokens.push(calculateFromTokens(cb(ifBranch)));
-//         } else if (orBranch) {
-//           fixedTokens.push(calculateFromTokens(cb(orBranch)));
-//         }
-//       }
+  //       // evaluate respective branches
+  //       if (not ? !retval[1] : retval[1]) {
+  //         fixedTokens.push(calculateFromTokens(cb(ifBranch)));
+  //       } else if (orBranch) {
+  //         fixedTokens.push(calculateFromTokens(cb(orBranch)));
+  //       }
+  //     }
 
-//       isSymbol = false;
-//     }
-//     continue;
-//   }
-// }
+  //     isSymbol = false;
+  //   }
+  //   continue;
+  // }
+}
 
-export function reduceFromFX(cb, ctx, convert, expressions) {
+export function reduceFromFX(cb, ctx, expressions) {
   // partial calls
   if (ctx.left && ctx.cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(ctx.cur[2]) && ctx.right && ctx.right[0] === 'def') {
     console.log('FX_PIPE_DEF');
@@ -367,7 +367,7 @@ export function reduceFromFX(cb, ctx, convert, expressions) {
   }
 }
 
-export function reduceFromDefs(cb, ctx, convert, expressions) {
+export function reduceFromDefs(cb, ctx, expressions) {
   // handle var/call definitions
   // console.log({t:ctx.cur});
 
@@ -449,9 +449,14 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
     lastOp: ['expr', '+', 'plus'],
   };
 
-  // FIXME: build an stack... of errors
-  const cb = (t, context) => reduceFromAST(t, convert, Object.assign({}, expressions), context);
+  // create inner scope from given expressions
+  const env = Object.assign({}, expressions);
 
+  // resolve from nested AST expressions
+  const cb = (t, context) =>
+    reduceFromAST(t, convert, env, context);
+
+  // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
     ctx.root = parentContext || {};
     ctx.isDef = tokens[i][0] === 'def';
@@ -463,11 +468,8 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
     ctx.right = tokens[i + 1];
     ctx.current = ctx.ast[ctx.ast.length - 1];
 
-
     // append last-operator between consecutive unit-expressions
     if (ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number' && !ctx.root.isDef) ctx.ast.push(ctx.lastOp);
-
-    // FIXME: bad reoslution... a way, is identifying the kind of sub-group, and then resolve if its plain... o something?
 
     // handle anonymous sub-expressions
     if (Array.isArray(tokens[i][0])) {
@@ -483,26 +485,16 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
         continue;
     }
 
-    // if (useLogic) reduceFromLogic(cb, ctx, convert, expressions);
-    // if (useFX) reduceFromFX(cb, ctx, convert, expressions);
-    reduceFromDefs(cb, ctx, convert, expressions);
+    reduceFromLogic(cb, ctx, expressions);
+    reduceFromFX(cb, ctx, expressions);
+    reduceFromDefs(cb, ctx, expressions);
     reduceFromUnits(cb, ctx, convert, expressions);
 
-    // skip some definitions from reduced AST
-    if (!['def'].includes(ctx.cur[0])) {
+    // skip definitions only
+    if (ctx.cur[0] !== 'def') {
       ctx.ast.push(ctx.cur);
     }
   }
-
-  // resolve all sub-trees recursively...
-  // if (Array.isArray(ctx.ast[0]) && ctx.ast.length > 2 && !ctx.root.isDef && !ctx._expr) {
-  //   const fixedAST = ctx.ast.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
-
-  //   // luckily this keep the outer AST intact, but inner tokens solved!
-  //   calculateFromTokens(fixedAST);
-
-  //   return fixedAST;
-  // }
 
   return ctx.ast;
 }

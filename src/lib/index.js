@@ -164,6 +164,6 @@ export default class Solv {
       return [];
     }
 
-    return output.filter(x => x.length).map(x => x.length === 1 ? x[0] : x);
+    return output.map(x => x.length === 1 ? x[0] : x).filter(x => x.length);
   }
 }
