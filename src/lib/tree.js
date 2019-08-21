@@ -28,10 +28,8 @@ export function buildTree(tokens) {
         const leaf = [];
 
         // flag tokens for further detection...
-        if (p && p[0] === 'def') root._function = true;
-        else if (t[1] === '{') root._object = true;
-        else if (t[1] === '[') root._array = true;
-        else root._group = true;
+        if (t[1] === '{') root._object = true;
+        if (t[1] === '[') root._array = true;
 
         root.push(leaf);
         stack.push(root);
@@ -233,6 +231,7 @@ export function fixCalls(tokens, def) {
     const right = tokens[i + 1];
 
     // group unit-calls and arguments
+    // console.log(cur[0], {right});
     if (cur[0] === 'def' && !cur[2] && right && Array.isArray(right[0])) {
       console.log('DEFRIGHT');
       // tokens.splice(i + 1, 1);

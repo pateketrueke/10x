@@ -146,6 +146,7 @@ export function parseBuffer(text, units) {
     if (open && isSep(cur, '()')) score += 1.5;
     if (isJoin(cur) && isNum(next)) score += 1.5;
     if (isNum(cur) && next === '.') score += 1.5;
+    if (cur === '(' && peek === ')') score += 1.5;
     if (isChar(cur) && isAny(next, '(=')) score += 2;
     if (open && cur === ',' && (isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === '(' && (peek === '(' || isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
@@ -322,6 +323,23 @@ export function parseBuffer(text, units) {
       prev[prev.length - 2].content += lastValue + value;
       prev[prev.length - 2].end[1] = cur[cur.length - 1].col + 1;
       prev.pop();
+      return prev;
+    }
+
+    if (cur[0].score < 3) {
+      let fix = 0;
+
+      switch (cur[0].cur) {
+        case ':': fix += 2; break;
+        case '"': fix += 2.5; break;
+      }
+
+      prev.push({
+        content: cur.map(t => t.cur).join(''),
+        complexity: (cur.reduce((p, c) => p + c.score, 0) / cur.length) + fix,
+        begin: value === '\n' ? [cur[0].row, cur[0].col] : [cur[0].row, cur[0].col],
+        end: value === '\n' ? [cur[0].row, cur[0].col + 1] : [cur[cur.length - 1].row, cur[cur.length - 1].col + 1],
+      });
       return prev;
     }
 

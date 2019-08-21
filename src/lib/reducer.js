@@ -118,66 +118,68 @@ export function reduceFromInput(token) {
 }
 
 export function reduceFromEffect(cb, def, args, value) {
-  const fixedValue = value[0][0] !== 'object'
-    ? value.map(x => reduceFromInput(x))
-    : reduceFromInput(value[0]);
+  console.log({def,args,value});
+  return [];
+  // const fixedValue = value[0][0] !== 'object'
+  //   ? value.map(x => reduceFromInput(x))
+  //   : reduceFromInput(value[0]);
 
-  let fixedResult;
+  // let fixedResult;
 
-  // FIXME: apply ranges, e.g. n-m, -n, n..-m, etc. (strings, arrays only)
-  if (def[1].substr(0, 2) === '::') {
-    // FIXME: what to do?
-  } else {
-    fixedResult = fixedValue[def[1].substr(1)];
-  }
+  // // FIXME: apply ranges, e.g. n-m, -n, n..-m, etc. (strings, arrays only)
+  // if (def[1].substr(0, 2) === '::') {
+  //   // FIXME: what to do?
+  // } else {
+  //   fixedResult = fixedValue[def[1].substr(1)];
+  // }
 
-  // handle lambda-calls as side-effects
-  if (!args.length && def[2][0][0] === 'fn') {
-    const input = def[2][0][2][0];
-    const body = def[2][0][2].slice(1);
-    const fixedArgs = {};
+  // // handle lambda-calls as side-effects
+  // if (!args.length && def[2][0][0] === 'fn') {
+  //   const input = def[2][0][2][0];
+  //   const body = def[2][0][2].slice(1);
+  //   const fixedArgs = {};
 
-    args = fixArgs(def[2]).map(x => {
-      const t = Array.isArray(x[0]) ? x[0] : x;
-      const b = fixArgs(body[0].length === 1 ? body[0] : body);
+  //   args = fixArgs(def[2]).map(x => {
+  //     const t = Array.isArray(x[0]) ? x[0] : x;
+  //     const b = fixArgs(body[0].length === 1 ? body[0] : body);
 
-      if (t[0] === 'fn') {
-        return (...context) => {
-          Object.assign(fixedArgs, reduceFromArgs(input, context));
+  //     if (t[0] === 'fn') {
+  //       return (...context) => {
+  //         Object.assign(fixedArgs, reduceFromArgs(input, context));
 
-          const peek = reduceFromTokens(b[0], fixedArgs);
-          const subTree = reduceFromTokens(b.slice(1), fixedArgs);
+  //         const peek = reduceFromTokens(b[0], fixedArgs);
+  //         const subTree = reduceFromTokens(b.slice(1), fixedArgs);
 
-          // return the last value from additional expressions
-          if (subTree.length) return subTree.pop();
+  //         // return the last value from additional expressions
+  //         if (subTree.length) return subTree.pop();
 
-          // otherwise, we evaluate and return
-          return calculateFromTokens(peek);
-        };
-      }
+  //         // otherwise, we evaluate and return
+  //         return calculateFromTokens(peek);
+  //       };
+  //     }
 
-      return t;
-    });
-  }
+  //     return t;
+  //   });
+  // }
 
-  // apply side-effects!
-  if (typeof fixedResult === 'function') {
-    fixedResult = fixedResult.apply(fixedValue, args.map(x => {
-      // FIXME: use classes/symbols to properly identify tokens?
-      if (typeof x !== 'function') return [x];
-      return x;
-    }));
-  }
+  // // apply side-effects!
+  // if (typeof fixedResult === 'function') {
+  //   fixedResult = fixedResult.apply(fixedValue, args.map(x => {
+  //     // FIXME: use classes/symbols to properly identify tokens?
+  //     if (typeof x !== 'function') return [x];
+  //     return x;
+  //   }));
+  // }
 
-  fixedResult = typeof fixedResult === 'string' ? `"${fixedResult}"` : fixedResult;
+  // fixedResult = typeof fixedResult === 'string' ? `"${fixedResult}"` : fixedResult;
 
-  // flatten back nested values from side-effects...
-  if (fixedResult[0] === 'object' && Array.isArray(fixedResult[1])) {
-    fixedResult[1] = fixedResult[1].map(x => x.length === 1 ? x[0] : x);
-  }
+  // // flatten back nested values from side-effects...
+  // if (fixedResult[0] === 'object' && Array.isArray(fixedResult[1])) {
+  //   fixedResult[1] = fixedResult[1].map(x => x.length === 1 ? x[0] : x);
+  // }
 
-  // recast previous token with the new value
-  return [typeof fixedResult, fixedResult];
+  // // recast previous token with the new value
+  // return [typeof fixedResult, fixedResult];
 }
 
 export function reduceFromUnits(cb, ctx, convert, expressions) {
@@ -489,7 +491,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
     reduceFromUnits(cb, ctx, convert, expressions);
 
     // skip definitions only
-    if (ctx.cur[0] !== 'def') {
+    if (!ctx.isDef) {
       ctx.ast.push(ctx.cur);
     }
   }
