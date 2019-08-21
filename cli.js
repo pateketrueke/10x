@@ -43,7 +43,19 @@ code += args.join(' ');
 
 calc.resolve(code, file);
 
+// FIXME: since all evaluation can be async...
 if (returnAsTEXT) {
+  const buffer = [];
+
+  function push(chunk) {
+    buffer.push(() => new Promise(ok => {
+      setTimeout(() => {
+        process.stdout.write(chunk);
+        ok();
+      }, (Math.random() * 60) + 1);
+    }));
+  }
+
   calc.tree.forEach(subTree => {
     const results = calc.eval([subTree]);
 
@@ -54,29 +66,31 @@ if (returnAsTEXT) {
         node.forEach(t => {
           if (Array.isArray(t[0])) {
             t.forEach(s => {
-              process.stdout.write(s[1]);
+              push(s[1]);
             });
           } else {
-            process.stdout.write(t[1]);
+            push(t[1]);
           }
         });
 
         if (isOpen) {
-          process.stdout.write(')');
+          push(')');
           isOpen = false;
         }
       } else if (node[0] === 'def') {
-        process.stdout.write(node[1] + '(');
+        push(node[1] + '(');
         isOpen = true;
       } else {
-        process.stdout.write(node[1]);
+        push(node[1]);
       }
     });
 
     if (results.length) {
-      console.log(results);
+      push('\n//=> ' + JSON.stringify(results));
     }
   });
+
+  buffer.reduce((prev, cur) => prev.then(() => cur()), Promise.resolve());
 } else {
   const fixedResults = calc.eval();
   const fixedError = calc.error && calc.error.stack;

@@ -210,10 +210,14 @@ export function transform(input, units) {
   const body = fixStrings(chunks.reduce((prev, cur) => {
     const lastChunk = prev[prev.length - 1];
 
+    if (prev.length) {
+      prev.push(['expr', null]);
+    }
+
     if (cur._fixed) {
-      prev.push(['expr', null], ...tokenize(cur, units));
+      prev.push(...tokenize(cur, units));
     } else {
-      prev.push(['expr', null], ...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
+      prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
     }
 
     return prev;
