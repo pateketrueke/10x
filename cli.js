@@ -10,6 +10,7 @@ const Solv = require('./dist/lib.js');
 
 const returnRawJSON = process.argv.slice(2).indexOf('--raw') !== -1;
 const returnAsJSON = process.argv.slice(2).indexOf('--json') !== -1;
+const returnAsTEXT = process.argv.slice(2).indexOf('--text') !== -1;
 const showDebugInfo = process.argv.slice(2).indexOf('--debug') !== -1;
 const hasNoColors = process.argv.slice(2).indexOf('--no-colors') !== -1;
 const sharedFileOffset = process.argv.slice(2).indexOf('--shared');
@@ -42,27 +43,63 @@ code += args.join(' ');
 
 calc.resolve(code, file);
 
-const fixedResults = calc.eval();
-const fixedError = calc.error && calc.error.stack;
+if (returnAsTEXT) {
+  calc.tree.forEach(subTree => {
+    const results = calc.eval([subTree]);
 
-if (returnAsJSON) {
-  process.stdout.write(JSON.stringify({
-    error: returnRawJSON ? JSON.stringify(fixedError) : fixedError,
-    tree: returnRawJSON ? JSON.stringify(calc.tree) : calc.tree,
-    input: calc.input.map(x => returnRawJSON ? JSON.stringify(x) : x),
-    tokens: calc.tokens.map(x => returnRawJSON ? JSON.stringify(x) : x),
-    results: fixedResults.map(x => returnRawJSON ? JSON.stringify(x) : x),
-  }));
+    let isOpen = false;
+
+    subTree.forEach(node => {
+      if (Array.isArray(node[0])) {
+        node.forEach(t => {
+          if (Array.isArray(t[0])) {
+            t.forEach(s => {
+              process.stdout.write(s[1]);
+            });
+          } else {
+            process.stdout.write(t[1]);
+          }
+        });
+
+        if (isOpen) {
+          process.stdout.write(')');
+          isOpen = false;
+        }
+      } else if (node[0] === 'def') {
+        process.stdout.write(node[1] + '(');
+        isOpen = true;
+      } else {
+        process.stdout.write(node[1]);
+      }
+    });
+
+    if (results.length) {
+      console.log(results);
+    }
+  });
 } else {
-  if (fixedError) {
-    process.stderr.write(fixedError);
-  }
+  const fixedResults = calc.eval();
+  const fixedError = calc.error && calc.error.stack;
 
-  if (showDebugInfo) {
-    console.log(calc);
-  }
+  if (returnAsJSON) {
+    process.stdout.write(JSON.stringify({
+      error: returnRawJSON ? JSON.stringify(fixedError) : fixedError,
+      tree: returnRawJSON ? JSON.stringify(calc.tree) : calc.tree,
+      input: calc.input.map(x => returnRawJSON ? JSON.stringify(x) : x),
+      tokens: calc.tokens.map(x => returnRawJSON ? JSON.stringify(x) : x),
+      results: fixedResults.map(x => returnRawJSON ? JSON.stringify(x) : x),
+    }));
+  } else {
+    if (fixedError) {
+      process.stderr.write(fixedError);
+    }
 
-  console.log(fixedResults);
+    if (showDebugInfo) {
+      console.log(calc);
+    }
+
+    console.log(fixedResults);
+  }
 }
 
 if (sharedFile) require('fs').writeFileSync(sharedFile, JSON.stringify(calc.expressions));
