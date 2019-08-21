@@ -135,21 +135,9 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     return ['unit', text].concat(fixedUnit !== text ? fixedUnit : []);
   }
 
-  // return definitions as units
-  if (
-    isChar(text) && (
-    // make sure we're validating right after...
-    !rightToken || isOp(leftToken)
-    || '(='.includes(rightToken)
-    || isSep(rightToken, '()')
-    || hasNum(rightToken) || hasNum(leftToken)
-    || isOp(rightToken) || isOp(leftToken)
-    || isFx(rightToken) || isFx(leftToken)
-  )) {
-    return ['unit', text];
+  if (hasNum(text)) {
+    return ['number', text];
   }
-
-  return [hasNum(text) ? 'number' : 'text', text];
 }
 
 export function tokenize(input, units) {
@@ -167,6 +155,10 @@ export function tokenize(input, units) {
     do { nextToken = input[++key]; } while (nextToken && nextToken.content === ' ');
 
     lastToken = toToken(cur, fromSymbols, units, lastToken, nextToken && nextToken.content);
+
+    if (!lastToken) {
+      throw new ParseError(`Unexpected token \`${cur}\``);
+    }
 
     prev.push(lastToken);
     return prev;
