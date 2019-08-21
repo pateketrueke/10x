@@ -7,7 +7,7 @@ import {
 } from './ast';
 
 import {
-  toFraction, toNumber, toValue, toToken, toList,
+  toFraction, toNumber, toValue, toList,
 } from './ast';
 
 import ParseError from './error';

@@ -122,8 +122,8 @@ export function toToken(cur, fromCallback, arg1, arg2, arg3, arg4) {
   if (Array.isArray(cur)) {
     const newToken = cur.slice();
 
-    newToken._offset = cur._offset;
     newToken._score = cur._score;
+    newToken._offset = cur._offset;
 
     return newToken;
   }
@@ -133,6 +133,9 @@ export function toToken(cur, fromCallback, arg1, arg2, arg3, arg4) {
   if (!value) {
     throw new ParseError(`Unexpected token \`${cur.content}\``, cur);
   }
+
+  value._score = cur.complexity;
+  value._offset = [cur.begin, cur.end];
 
   return value;
 }

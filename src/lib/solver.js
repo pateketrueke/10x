@@ -3,7 +3,7 @@ import {
 } from './parser';
 
 import {
-  toList, toToken, toValue, toNumber, toFraction,
+  toList, toValue, toNumber, toFraction,
 } from './ast';
 
 export function calculateFromMS(diff) {

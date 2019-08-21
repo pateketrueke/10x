@@ -221,7 +221,6 @@ export function transform(input, units) {
 
   // copy all tokens to protect them!
   const fixedBody = fixArgs(body.map(x => toToken(x)), null);
-  console.log({fixedBody});
 
   // handle errors during tree-building
   let fixedTree;

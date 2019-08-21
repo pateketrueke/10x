@@ -381,7 +381,6 @@ export function reduceFromDefs(cb, ctx, expressions) {
     // define var/call
     if (ctx.cur._body) {
       expressions[ctx.cur[1]] = ctx.cur[2];
-      expressions[ctx.cur[1]]._offset = ctx.cur._offset;
       return;
     }
 
