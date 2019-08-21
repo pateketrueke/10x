@@ -206,8 +206,6 @@ export function transform(input, units) {
     }
   }
 
-  // console.log({chunks});
-
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
     const lastChunk = prev[prev.length - 1];
@@ -223,6 +221,7 @@ export function transform(input, units) {
 
   // copy all tokens to protect them!
   const fixedBody = fixArgs(body.map(x => toToken(x)), null);
+  console.log({fixedBody});
 
   // handle errors during tree-building
   let fixedTree;

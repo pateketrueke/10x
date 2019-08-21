@@ -469,10 +469,16 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
     ctx.current = ctx.ast[ctx.ast.length - 1];
 
     // flag well-known definitions, as they are open...
-    if (ctx.right && ctx.right[0] === 'expr' && ctx.right[2] === 'equal') ctx.isDef = true;
+    if (
+      ctx.root.isDef ||
+      ctx.cur[0] === 'def' ||
+      (ctx.right && ctx.right[0] === 'expr' && ctx.right[2] === 'equal')
+    ) ctx.isDef = true;
 
     // append last-operator between consecutive unit-expressions
-    if (ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number') ctx.ast.push(ctx.lastOp);
+    if (!ctx.isDef && ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number') {
+      ctx.ast.push(ctx.lastOp);
+    }
 
     // handle anonymous sub-expressions
     if (Array.isArray(tokens[i][0]) && !Array.isArray(tokens[i][0][0])) {

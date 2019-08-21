@@ -148,7 +148,7 @@ export function parseBuffer(text, units) {
     if (isJoin(cur) && isNum(next)) score += 1.5;
     if (isNum(cur) && next === '.') score += 1.5;
     if (cur === '(' && peek === ')') score += 1.5;
-    if (isChar(cur) && isAny(next, '(=')) score += 2;
+
     if (open && cur === ',' && (isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === '(' && (peek === '(' || isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === ')' && (oldChar === ')' || isFx(oldChar) || isChar(oldChar) || hasNum(oldChar))) score += 1.5;
@@ -265,6 +265,11 @@ export function parseBuffer(text, units) {
     const lastValue = (prev[prev.length - 1] || {}).content;
     const olderValue = (prev[prev.length - 2] || {}).content;
     const oldestValue = (prev[prev.length - 3] || {}).content;
+
+    // high-rank definition calls
+    if (isChar(lastValue) && value === '(') {
+      prev[prev.length - 1].complexity += 2;
+    }
 
     // keep strings and other expressions high-ranked
     if (/^(\/\/|:)|^".*?"$/.test(value)) {
