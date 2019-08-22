@@ -181,7 +181,7 @@ export function transform(tokens, units) {
     else if (t >= 3) hasOps = true;
 
     if (subTree._fixed && cur === ' ') {
-      hasOps = isOp(next) || isFx(next) || hasNum(next);
+      hasOps = depth > 0 || isOp(next) || isFx(next) || hasNum(next);
     }
 
     // allow separators inside blocks
@@ -209,8 +209,6 @@ export function transform(tokens, units) {
       subTree.push(tokens[i]);
     }
   }
-
-  // console.log({chunks});
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {

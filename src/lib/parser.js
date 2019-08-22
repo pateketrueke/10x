@@ -345,7 +345,7 @@ export function parseBuffer(text, units) {
     // keep lower-ranked tokens together...
     if (fixedTokens.length > 1 && fixedTokens[0].score < 3) {
       prev.push({
-        complexity: 0, // fixedTokens.reduce((p, c) => p + c.score) / fixedTokens.length,
+        complexity: 0,
         content: fixedTokens.map(t => t.cur).join(''),
         begin: [fixedTokens[0].row, fixedTokens[0].col],
         end: [fixedTokens[fixedTokens.length - 1].row, fixedTokens[fixedTokens.length - 1].col + 1],
