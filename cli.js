@@ -9,13 +9,27 @@ global.console.log = (...args) => {
 const chalk = require('chalk');
 const Solv = require('./dist/lib.js');
 
-const returnAsMarkdown = process.argv.slice(2).indexOf('--md') !== -1;
-const returnRawJSON = process.argv.slice(2).indexOf('--raw') !== -1;
-const returnAsJSON = process.argv.slice(2).indexOf('--json') !== -1;
-const showDebugInfo = process.argv.slice(2).indexOf('--debug') !== -1;
-const hasNoColors = process.argv.slice(2).indexOf('--no-colors') !== -1;
-const sharedFileOffset = process.argv.slice(2).indexOf('--shared');
-const sharedFilePath = sharedFileOffset >= 0 && process.argv.slice(2)[sharedFileOffset + 1];
+const argv = require('wargs')(process.argv.slice(2), {
+  boolean: 'mrjdC',
+  alias: {
+    m: 'md',
+    r: 'raw',
+    j: 'json',
+    d: 'debug',
+    C: 'no-colors',
+    s: 'shared',
+    p: 'playback',
+  },
+});
+
+const returnAsMarkdown = argv.flags.md;
+const returnRawJSON = argv.flags.raw;
+const returnAsJSON = argv.flags.json;
+const showDebugInfo = argv.flags.debug;
+const hasNoColors = !argv.flags.colors;
+const playBack = argv.flags.playback;
+
+const sharedFilePath = argv.flags.shared;
 const sharedFile = sharedFilePath && require('path').resolve(sharedFilePath);
 const sharedExpressions = {};
 
@@ -24,11 +38,9 @@ if (sharedFile && require('fs').existsSync(sharedFile)) {
 }
 
 const colors = !hasNoColors;
-const argv = process.argv.slice(2);
-const cut = argv.indexOf('--');
 
-const args = cut >= 0 ? argv.slice(cut + 1) : [];
-const file = argv.slice(Math.max(0, cut), 1)[0];
+const args = argv.raw;
+const file = argv._.shift();
 
 const calc = new Solv({
   expressions: sharedExpressions,
@@ -93,7 +105,7 @@ if (returnAsMarkdown) {
   }
 
   // FIXME: enable options...
-  const ANIMATION_SPEED = 260;
+  const ANIMATION_SPEED = playBack === true ? 260 : playBack || 0;
 
   function push(type, chunk) {
     buffer.push(() => new Promise(ok => {
@@ -146,7 +158,7 @@ if (returnAsMarkdown) {
 
     if (isOut && tmp.length) {
       tmp.forEach(x => {
-        push(null, `${chalk.gray('//=>')} ${require('util').inspect(x, { colors: true, depth: 10 })}\n`);
+        push(null, `${chalk.gray('//=>')} ${require('util').inspect(x, { colors, depth: 10 })}\n`);
       });
 
       tmp = [];
