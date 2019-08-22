@@ -65,6 +65,11 @@ if (returnAsMarkdown) {
   const buffer = [];
 
   function puts(type, chunk, speed) {
+    if (typeof chunk === 'boolean' || chunk === null) {
+      process.stdout.write(chalk.yellow(`:${chunk}`));
+      return;
+    }
+
     return chunk.split(/(?=[\x00-\x7F])/)
       .reduce((prev, cur) => prev.then(() => {
         switch (type) {
@@ -126,7 +131,9 @@ if (returnAsMarkdown) {
       }
 
       setTimeout(() => {
-        puts(type, chunk, (Math.random() * ANIMATION_SPEED) + (ANIMATION_SPEED / 2)).then(ok);
+        Promise.resolve()
+          .then(() => puts(type, chunk, (Math.random() * ANIMATION_SPEED) + (ANIMATION_SPEED / 2)))
+          .then(ok);
       }, (Math.random() * (ANIMATION_SPEED / 10)) + 1);
     }));
   }
@@ -166,7 +173,7 @@ if (returnAsMarkdown) {
       } else {
         push(node[0], node[1]);
 
-        if (node[1].includes('\n') && tmp.length) {
+        if (typeof node[1] === 'string' && node[1].includes('\n') && tmp.length) {
           tmp.forEach(x => {
             push(null, `${chalk.gray('//=>')} ${format(x)}\n`);
           });
