@@ -401,7 +401,8 @@ export function reduceFromDefs(cb, ctx, expressions) {
     // prepend _ symbol for currying
     if (!def.args.length) {
       if (call.args) {
-        throw new ParseError(`Unexpected arguments for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+        // FIXME: don't throw on lambda calls...
+        // throw new ParseError(`Unexpected arguments for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
       }
 
       def.args.unshift(['unit', '_']);
