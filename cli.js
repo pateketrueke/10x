@@ -65,7 +65,7 @@ if (returnAsMarkdown) {
   const buffer = [];
 
   function puts(type, chunk, speed) {
-    if (typeof chunk === 'boolean' || chunk === null) {
+    if (typeof chunk !== 'string') {
       process.stdout.write(chalk.yellow(`:${chunk}`));
       return;
     }

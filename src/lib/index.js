@@ -160,6 +160,8 @@ export default class Solv {
       return [];
     }
 
-    return output.map(x => calculateFromTokens(x)).filter(x => x).map(x => x.length === 1 ? x[0] : x).filter(x => x.length);
+    return output.map(x => calculateFromTokens(x))
+      .map(x => Array.isArray(x) && x.length === 1 ? x[0] : x)
+      .filter(x => Array.isArray(x) ? x.length : typeof x !== 'undefined');
   }
 }
