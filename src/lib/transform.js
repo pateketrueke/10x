@@ -59,7 +59,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   }
 
   // handle white-space
-  if (isAny(text, ' \n;:,.') || text === '...') {
+  if (isAny(text, ' \n:.') || text === '...') {
     return ['text', text];
   }
 

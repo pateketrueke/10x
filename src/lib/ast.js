@@ -218,10 +218,11 @@ export function fixArgs(values, flatten) {
       return x;
     }));
 
-    return values.map(x => {
-      while (x.length === 1) x = x[0];
-      return x;
-    });
+    return values.reduce((p, c) => {
+      while (c.length === 1) c = c[0];
+      p.push(c);
+      return p;
+    }, stack);
   }
 
   // break values into single arguments
