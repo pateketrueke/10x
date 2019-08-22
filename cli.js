@@ -56,6 +56,10 @@ code += args.join(' ');
 
 calc.resolve(code, file);
 
+function format(values) {
+  return values.map(x => calc.value(x).format).join(chalk.gray(', '));
+}
+
 // FIXME: since all evaluation can be async...
 if (returnAsMarkdown) {
   const buffer = [];
@@ -130,6 +134,11 @@ if (returnAsMarkdown) {
   calc.tree.forEach(subTree => {
     const results = calc.eval([subTree]);
 
+    if (calc.error && calc.error.stack) {
+      process.stderr.write(calc.error.stack);
+      process.exit(1);
+    }
+
     if (results.length) {
       tmp.push(results);
     }
@@ -164,7 +173,7 @@ if (returnAsMarkdown) {
 
         if (node[1].includes('\n') && tmp.length) {
           tmp.forEach(x => {
-            push(null, `${chalk.gray('//=>')} ${require('util').inspect(x, { colors, depth: 10 })}\n`);
+            push(null, `${chalk.gray('//=>')} ${format(x)}\n`);
           });
 
           tmp = [];
@@ -188,15 +197,18 @@ if (returnAsMarkdown) {
       results: fixedResults.map(x => returnRawJSON ? JSON.stringify(x) : x),
     }));
   } else {
-    if (fixedError) {
-      process.stderr.write(fixedError);
-    }
-
     if (showDebugInfo) {
       console.log(calc);
     }
 
-    console.log(fixedResults);
+    fixedResults.forEach(x => {
+      process.stderr.write(`${chalk.gray('//=>')} ${format(x)}\n`);
+    });
+
+    if (fixedError) {
+      process.stderr.write(fixedError);
+      process.exit(1);
+    }
   }
 }
 
