@@ -1,10 +1,10 @@
 import {
   hasTagName,
-  isSep, isChar, isAlpha,
+  isOp, isSep, isChar, isAlpha,
 } from './parser';
 
 import {
-  fixCut, fixArgs, fixApply, fixInput,
+  fixCut, fixArgs, fixApply, fixInput, fixTokens,
 } from './ast';
 
 export function buildTree(tokens) {
@@ -84,6 +84,7 @@ export function fixTree(ast) {
 
       // update token definition
       prev._body = subTree.length > 1;
+      prev._args = hasArray;
       prev[2] = {
         args: hasArray ? fixArgs(cur, true) : [],
         body: fixTree(fixCalls(subTree.slice(hasArray ? 2 : 1))),

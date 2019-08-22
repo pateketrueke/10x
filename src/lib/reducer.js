@@ -477,7 +477,7 @@ export function reduceFromAST(ast, convert, expressions, parentContext) {
     ) ctx.isDef = true;
 
     // append last-operator between consecutive unit-expressions
-    if (ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number') {
+    if (!ctx.isDef && ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number') {
       ctx.ast.push(ctx.lastOp);
     }
 

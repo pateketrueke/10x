@@ -185,7 +185,7 @@ export function transform(input, units) {
     if (cur === ')') depth--;
 
     if (hasOps && !subTree._fixed) {
-      if (subTree.length) {
+      if (subTree.length && cur !== '=') {
         chunks[++inc] = [tokens[i]];
 
         // just don't add separators!
