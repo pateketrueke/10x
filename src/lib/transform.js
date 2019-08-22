@@ -176,10 +176,16 @@ export function transform(tokens, units) {
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
-    // FIXME: any better strategy?
+    // disable on white-space, if we're not inside parenthesis
     if (!depth && isAny(cur, ' \n;')) hasOps = false;
     else if (t >= 3) hasOps = true;
 
+    // enable definitions and side-effects
+    if (!hasOps && !subTree._fixed) {
+      hasOps = isChar(cur) && (isFx(next) || isOp(next));
+    }
+
+    // break on white-space, make sure!
     if (subTree._fixed && cur === ' ') {
       hasOps = depth > 0 || isOp(next) || isFx(next) || hasNum(next);
     }
