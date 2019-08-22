@@ -146,10 +146,10 @@ if (returnAsMarkdown) {
       tmp.push(results);
     }
 
-    let isOpen = false;
-
     subTree.forEach(node => {
       if (Array.isArray(node[0])) {
+        push('open', '(');
+
         node.forEach(t => {
           if (Array.isArray(t[0])) {
             t.forEach(s => {
@@ -160,17 +160,9 @@ if (returnAsMarkdown) {
           }
         });
 
-        if (isOpen) {
-          isOpen = false;
-          push('close', ')');
-        }
+        push('close', ')');
       } else if (node[0] === 'def') {
         push(node[0], node[1]);
-
-        if (node._args) {
-          isOpen = true;
-          push('open', '(');
-        }
       } else {
         push(node[0], node[1]);
 

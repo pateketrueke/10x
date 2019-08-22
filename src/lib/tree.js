@@ -51,7 +51,7 @@ export function buildTree(tokens) {
 }
 
 export function fixTree(ast) {
-  let tokens = ast.filter(x => !hasTagName(x[0]));
+  let tokens = ast.filter(x => x && !hasTagName(x[0]));
 
   let arr = ast._array;
   let obj = ast._object;
