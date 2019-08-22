@@ -54,6 +54,10 @@ code += args.join(' ');
 
 calc.resolve(code, file);
 
+if (showDebugInfo) {
+  console.log(calc);
+}
+
 function format(values) {
   return values.map(x => calc.value(x).format).join(chalk.gray(', '));
 }
@@ -197,10 +201,6 @@ if (!returnAsJSON) {
       results: fixedResults.map(x => returnRawJSON ? JSON.stringify(x) : x),
     }));
   } else {
-    if (showDebugInfo) {
-      console.log(calc);
-    }
-
     fixedResults.forEach(x => {
       process.stderr.write(`${chalk.gray('//=>')} ${format(x)}\n`);
     });
