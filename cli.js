@@ -93,11 +93,11 @@ if (returnAsMarkdown) {
   }
 
   // FIXME: enable options...
-  const ANIMATION_SPEED = 0;
+  const ANIMATION_SPEED = 260;
 
   function push(type, chunk) {
     buffer.push(() => new Promise(ok => {
-      if (chunk === ' ') {
+      if (!type) {
         return ok(puts(type, chunk, 0));
       }
 
@@ -106,6 +106,9 @@ if (returnAsMarkdown) {
       }, (Math.random() * (ANIMATION_SPEED / 10)) + 1);
     }));
   }
+
+  let isOut = false;
+  let tmp = [];
 
   calc.tree.forEach(subTree => {
     const results = calc.eval([subTree]);
@@ -133,11 +136,21 @@ if (returnAsMarkdown) {
         isOpen = true;
       } else {
         push(node[0], node[1]);
+        isOut = node[1].includes('\n');
       }
     });
 
     if (results.length) {
-      push(null, `${chalk.gray('\n//=>')} ${require('util').inspect(results, { colors: true })}`);
+      tmp.push(results);
+    }
+
+    if (isOut && tmp.length) {
+      tmp.forEach(x => {
+        push(null, `${chalk.gray('//=>')} ${require('util').inspect(x, { colors: true, depth: 10 })}\n`);
+      });
+
+      tmp = [];
+      isOut = false;
     }
   });
 
