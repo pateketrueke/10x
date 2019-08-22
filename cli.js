@@ -76,10 +76,6 @@ if (returnAsMarkdown) {
           case 'unit':
             process.stdout.write(chalk.redBright(cur));
             break;
-          case 'expr':
-          case 'fx':
-            process.stdout.write(chalk.magentaBright(cur));
-            break;
           case 'number':
             process.stdout.write(chalk.blueBright(cur));
             break;
@@ -100,6 +96,8 @@ if (returnAsMarkdown) {
           case 'b':
             process.stdout.write(chalk.bold.white(cur));
             break;
+          case 'expr':
+          case 'fx':
           default:
             process.stdout.write(chalk.white(cur));
             break;
@@ -132,6 +130,10 @@ if (returnAsMarkdown) {
   calc.tree.forEach(subTree => {
     const results = calc.eval([subTree]);
 
+    if (results.length) {
+      tmp.push(results);
+    }
+
     let isOpen = false;
 
     subTree.forEach(node => {
@@ -159,22 +161,17 @@ if (returnAsMarkdown) {
         }
       } else {
         push(node[0], node[1]);
-        isOut = node[1].includes('\n');
+
+        if (node[1].includes('\n') && tmp.length) {
+          tmp.forEach(x => {
+            push(null, `${chalk.gray('//=>')} ${require('util').inspect(x, { colors, depth: 10 })}\n`);
+          });
+
+          tmp = [];
+          isOut = false;
+        }
       }
     });
-
-    if (results.length) {
-      tmp.push(results);
-    }
-
-    if (isOut && tmp.length) {
-      tmp.forEach(x => {
-        push(null, `${chalk.gray('//=>')} ${require('util').inspect(x, { colors, depth: 10 })}\n`);
-      });
-
-      tmp = [];
-      isOut = false;
-    }
   });
 
   buffer.reduce((prev, cur) => prev.then(() => cur()), Promise.resolve());
