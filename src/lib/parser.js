@@ -46,13 +46,13 @@ const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\w*\b
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
 export const isFx = y => y && y.length >= 2 && '-+=~:<!|&>'.includes(y[0]);
-export const isSep = (a, b = '') => `${b}{[]}|;,.`.includes(a);
+export const isSep = (a, b = '') => `${b}{[]}|;,`.includes(a);
 export const isChar = a => /^[a-zA-Z]+/.test(a);
 
 export const isOp = a => OP_TYPES[a];
 export const isFmt = x => /^["`_*~]$/.test(x);
 export const isNth = x => /^\d+(?:t[hy]|[rn]d)$/.test(x);
-export const isAny = (x, a = '') => a ? a.includes(x) : /^[^\s\w\d_*~$€£¢%({[~<!>\]})"`|:;_,.+=*/-]$/.test(x);
+export const isAny = (x, a = '') => a ? a.includes(x) : /^[^\s\w\d_*~$€£¢%({[~<!>\]})"`|:;_,+=*/-]$/.test(x);
 export const isInt = x => typeof x === 'number' || /^-?(?!0)\d+(\.\d+)?$/.test(x);
 export const isNum = x => /^-?[$€£¢]?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const isExpr = x => /^(?:from|to|of|a[ts]|i[ns])$/i.test(x);
@@ -217,12 +217,10 @@ export function parseBuffer(text, units) {
       || (buffer[0].cur === ':' && cur === '-' && isNum(next))
       || (hasNum(last) && cur === ',' && isNum(next) && !open)
       || (last === ',' && isNum(cur) && isNum(oldChar) && !open)
+      || (isChar(last) && isAny(cur)) || (isAny(last) && isChar(cur))
       || (last === '[' && cur === ']') || (last === '{' && cur === '}')
-      || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
-      || (isChar(last) && isAny(cur, ':') && !(':-'.includes(next) || isNum(next) || isChar(next)))
-
-      // keep some separators between numbers
       || (isJoin(last) && isNum(cur)) || (isNum(last) && isJoin(cur) && isNum(next))
+      || ((isChar(last) || hasNum(last)) && cur === '_' && (isChar(next) || hasNum(next)))
 
       // handle checkboxes
       || (' x'.includes(last) && cur === ']')
@@ -240,8 +238,7 @@ export function parseBuffer(text, units) {
       || (last === ':' && (cur === ':' || hasNum(cur) || (isChar(cur) && !isUpper(cur))))
 
       // keep chars and numbers together
-      || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
-      || (hasNum(last) && cur === '.' && next === '.')
+      || (hasNum(last) && cur === '.' && next === '.') || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
     ) {
       // split on white-space at the beginning
       if (isAny(last, ' \n') && buffer.length === 1) {
@@ -272,8 +269,8 @@ export function parseBuffer(text, units) {
     // keep strings and other expressions high-ranked
     if (/^(\/\/|:)|^".*?"$/.test(value)) {
       prev.push({
-        complexity: 3,
         content: value,
+        complexity: 3,
         begin: [cur[0].row, cur[0].col],
         end: [cur[0].row, cur[0].col + value.length],
       });
@@ -345,8 +342,8 @@ export function parseBuffer(text, units) {
     // keep lower-ranked tokens together...
     if (fixedTokens.length > 1 && fixedTokens[0].score < 3) {
       prev.push({
-        complexity: 0,
         content: fixedTokens.map(t => t.cur).join(''),
+        complexity: 0,
         begin: [fixedTokens[0].row, fixedTokens[0].col],
         end: [fixedTokens[fixedTokens.length - 1].row, fixedTokens[fixedTokens.length - 1].col + 1],
       });

@@ -165,7 +165,6 @@ export function transform(tokens, units) {
   const chunks = [];
   const scores = [];
 
-  let hasOps = false;
   let depth = 0;
   let inc = 0;
 
@@ -176,44 +175,28 @@ export function transform(tokens, units) {
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
-    // disable on white-space, if we're not inside parenthesis
-    if (!depth && isAny(cur, ' \n;')) hasOps = false;
-    else if (t >= 3) hasOps = true;
+    // current token has enough complexity
+    if (t >= 3) {
+      // increase depth if we're into a definition, or inside parenthesis
+      if (cur === '(' || (isChar(cur) && '(='.includes(next))) depth++;
+      else if (');'.includes(cur)) depth--;
 
-    // enable definitions and side-effects
-    if (!hasOps && !subTree._fixed) {
-      hasOps = isChar(cur) && (isFx(next) || isOp(next));
-    }
-
-    // break on white-space, make sure!
-    if (subTree._fixed && cur === ' ') {
-      hasOps = depth > 0 || isOp(next) || isFx(next) || hasNum(next);
-    }
-
-    // allow separators inside blocks
-    if (cur === '(') depth++;
-    if (cur === ')') depth--;
-
-    if (hasOps && !subTree._fixed) {
-      if (subTree.length && cur !== '=') {
+      // check if we can split...
+      if (subTree.length && !subTree._fixed) {
         chunks[++inc] = [tokens[i]];
-
-        // just don't add separators!
-        if (t >= 3 && !isSep(cur)) {
-          chunks[inc]._fixed = true;
-        }
-      } else {
-        subTree.push(tokens[i]);
-        subTree._fixed = true;
+        chunks[inc]._fixed = true;
+        continue;
       }
+    }
+
+    // break on white-space, or delimiters
+    if (!depth && isAny(cur, ' \n;')) {
+      chunks[++inc] = [tokens[i]];
       continue;
     }
 
-    if (!hasOps && subTree.length) {
-      chunks[++inc] = [tokens[i]];
-    } else {
-      subTree.push(tokens[i]);
-    }
+    // otherwise, push into current tree
+    subTree.push(tokens[i]);
   }
 
   // merge non-fixed chunks
