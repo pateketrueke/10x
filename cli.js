@@ -10,9 +10,8 @@ const chalk = require('chalk');
 const Solv = require('./dist/lib.js');
 
 const argv = require('wargs')(process.argv.slice(2), {
-  boolean: 'mrjdC',
+  boolean: 'rjdC',
   alias: {
-    m: 'md',
     r: 'raw',
     j: 'json',
     d: 'debug',
@@ -22,7 +21,6 @@ const argv = require('wargs')(process.argv.slice(2), {
   },
 });
 
-const returnAsMarkdown = argv.flags.md;
 const returnRawJSON = argv.flags.raw;
 const returnAsJSON = argv.flags.json;
 const showDebugInfo = argv.flags.debug;
@@ -61,7 +59,7 @@ function format(values) {
 }
 
 // FIXME: since all evaluation can be async...
-if (returnAsMarkdown) {
+if (!returnAsJSON) {
   const buffer = [];
 
   function puts(type, chunk, speed) {
