@@ -161,8 +161,7 @@ export function tokenize(input, units) {
   }, []);
 }
 
-export function transform(input, units) {
-  const tokens = input.slice();
+export function transform(tokens, units) {
   const chunks = [];
   const scores = [];
 
@@ -178,11 +177,11 @@ export function transform(input, units) {
     const t = tokens[i].complexity;
 
     // FIXME: any better strategy?
-    if (!depth && isAny(cur, '\n;')) hasOps = false;
+    if (!depth && isAny(cur, ' \n;')) hasOps = false;
     else if (t >= 3) hasOps = true;
 
     if (subTree._fixed && cur === ' ') {
-      hasOps = !next.includes(' ');
+      hasOps = isOp(next) || isFx(next) || hasNum(next);
     }
 
     // allow separators inside blocks
@@ -211,11 +210,13 @@ export function transform(input, units) {
     }
   }
 
+  // console.log({chunks});
+
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
     const lastChunk = prev[prev.length - 1];
 
-    if (prev.length) {
+    if (prev.length > 1) {
       prev.push(['expr', null]);
     }
 

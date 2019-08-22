@@ -496,8 +496,8 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
       continue;
     }
 
-    reduceFromLogic(cb, ctx, expressions);
-    reduceFromFX(cb, ctx, expressions);
+    // reduceFromLogic(cb, ctx, expressions);
+    // reduceFromFX(cb, ctx, expressions);
     reduceFromDefs(cb, ctx, expressions);
     reduceFromUnits(cb, ctx, convert, expressions);
 
