@@ -77,8 +77,11 @@ if (returnAsMarkdown) {
           case 'symbol':
             process.stdout.write(chalk.yellow(cur));
             break;
+          case 'string':
+            process.stdout.write(chalk.greenBright(cur));
+            break;
           case 'unit':
-            process.stdout.write(chalk.redBright(cur));
+            process.stdout.write(chalk.magentaBright(cur));
             break;
           case 'number':
             process.stdout.write(chalk.blueBright(cur));
@@ -135,7 +138,7 @@ if (returnAsMarkdown) {
     const results = calc.eval([subTree]);
 
     if (calc.error && calc.error.stack) {
-      process.stderr.write(calc.error.stack);
+      process.stderr.write(chalk.red(calc.error.stack));
       process.exit(1);
     }
 
@@ -206,7 +209,7 @@ if (returnAsMarkdown) {
     });
 
     if (fixedError) {
-      process.stderr.write(fixedError);
+      process.stderr.write(chalk.red(fixedError));
       process.exit(1);
     }
   }
