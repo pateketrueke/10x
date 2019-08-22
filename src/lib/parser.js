@@ -289,33 +289,36 @@ export function parseBuffer(text, units) {
       return prev;
     }
 
-    if (
-      // handle fractions
-      (isInt(olderValue) && lastValue === '/' && isInt(value))
+    // skip formatting!
+    if (!(isFmt(cur[0].cur) && isFmt(cur[cur.length - 1].cur))) {
+      if (
+        // handle fractions
+        (isInt(olderValue) && lastValue === '/' && isInt(value))
 
-      // handle checkboxes
-      || (olderValue === '[' && ' x'.includes(lastValue) && value === ']')
+        // handle checkboxes
+        || (olderValue === '[' && ' x'.includes(lastValue) && value === ']')
 
-      // concatenate unknown words
-      || (cur.length > 1 && isChar(olderValue) && !isExpr(olderValue) && isAny(lastValue, ' '))
+        // keep well-known dates, e.g `Jun 10`, `Jun, 1987` or `Jun 10, 1987`
+        || (hasMonths(olderValue) && ' ,'.includes(lastValue) && isNum(value))
 
-      // skip numbers within groups or parenthesis
-      || (!isChar(oldestValue) && '{[(<'.includes(olderValue) && isInt(lastValue) && '>)]}'.includes(value))
+        // concatenate unknown words
+        || (cur.length > 1 && isChar(olderValue) && !isExpr(olderValue) && isAny(lastValue, ' '))
 
-      // keep well-known dates, e.g `Jun 10`, `Jun, 1987` or `Jun 10, 1987`
-      || (hasMonths(olderValue) && ' ,'.includes(lastValue) && isNum(value))
+        // skip numbers within groups or parenthesis
+        || (!isChar(oldestValue) && '{[(<'.includes(olderValue) && isInt(lastValue) && '>)]}'.includes(value))
 
-      // keep numbers and units together, e.g `5 days` or `$15,000 MXN`; also handle mixed-units
-      || (hasNum(olderValue) && ' /-'.includes(lastValue) && hasKeyword(olderValue + lastValue + value, units))
+        // keep numbers and units together, e.g `5 days` or `$15,000 MXN`; also handle mixed-units
+        || (hasNum(olderValue) && ' /-'.includes(lastValue) && hasKeyword(olderValue + lastValue + value, units))
 
-      // keep hours-like values together, e.g. `200 am`, '4 pm' or `16:20:00 pm`
-      || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || RE_HOURS.test(olderValue + lastValue + value))
-    ) {
-      prev[prev.length - 2].complexity = hasNum(value) ? 3 : 0;
-      prev[prev.length - 2].content += lastValue + value;
-      prev[prev.length - 2].end[1] = cur[cur.length - 1].col + 1;
-      prev.pop();
-      return prev;
+        // keep hours-like values together, e.g. `200 am`, '4 pm' or `16:20:00 pm`
+        || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || RE_HOURS.test(olderValue + lastValue + value))
+      ) {
+        prev[prev.length - 2].complexity = hasNum(value) ? 3 : 0;
+        prev[prev.length - 2].content += lastValue + value;
+        prev[prev.length - 2].end[1] = cur[cur.length - 1].col + 1;
+        prev.pop();
+        return prev;
+      }
     }
 
     // keep common tokens together
