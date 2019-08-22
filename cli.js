@@ -71,19 +71,26 @@ if (returnAsMarkdown) {
             process.stdout.write(chalk.gray(cur));
             break;
           case 'symbol':
-          case 'close':
-          case 'open':
-          case 'fx':
-            process.stdout.write(chalk.red(cur));
+            process.stdout.write(chalk.yellow(cur));
+            break;
+          case 'unit':
+            process.stdout.write(chalk.redBright(cur));
+            break;
           case 'expr':
+          case 'fx':
             process.stdout.write(chalk.magentaBright(cur));
             break;
           case 'number':
             process.stdout.write(chalk.blueBright(cur));
             break;
+          case 'def':
+            process.stdout.write(chalk.blue(cur));
+            break;
           case 'heading':
             process.stdout.write(chalk.bold.underline.whiteBright(cur));
             break;
+          case 'close':
+          case 'open':
           case 'code':
             process.stdout.write(chalk.dim(cur));
             break;
@@ -140,12 +147,16 @@ if (returnAsMarkdown) {
         });
 
         if (isOpen) {
-          push('def', ')');
           isOpen = false;
+          push('close', ')');
         }
       } else if (node[0] === 'def') {
-        push(node[0], node[1] + '(');
-        isOpen = true;
+        push(node[0], node[1]);
+
+        if (node._args) {
+          isOpen = true;
+          push('open', '(');
+        }
       } else {
         push(node[0], node[1]);
         isOut = node[1].includes('\n');
