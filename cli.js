@@ -6,11 +6,12 @@ global.console.log = (...args) => {
   });
 };
 
+const chalk = require('chalk');
 const Solv = require('./dist/lib.js');
 
+const returnAsMarkdown = process.argv.slice(2).indexOf('--md') !== -1;
 const returnRawJSON = process.argv.slice(2).indexOf('--raw') !== -1;
 const returnAsJSON = process.argv.slice(2).indexOf('--json') !== -1;
-const returnAsTEXT = process.argv.slice(2).indexOf('--text') !== -1;
 const showDebugInfo = process.argv.slice(2).indexOf('--debug') !== -1;
 const hasNoColors = process.argv.slice(2).indexOf('--no-colors') !== -1;
 const sharedFileOffset = process.argv.slice(2).indexOf('--shared');
@@ -44,26 +45,65 @@ code += args.join(' ');
 calc.resolve(code, file);
 
 // FIXME: since all evaluation can be async...
-if (returnAsTEXT) {
+if (returnAsMarkdown) {
   const buffer = [];
 
-  function puts(text, speed) {
-    return text.split(/(?=[\x00-\x7F])/)
+  function puts(type, chunk, speed) {
+    return chunk.split(/(?=[\x00-\x7F])/)
       .reduce((prev, cur) => prev.then(() => {
-        process.stdout.write(cur);
-        return new Promise(ok => setTimeout(ok, Math.floor(speed / text.length)));
+        switch (type) {
+          case null:
+            process.stdout.write(cur);
+            break;
+          case 'comment':
+            process.stdout.write(chalk.gray(cur));
+            break;
+          case 'symbol':
+          case 'close':
+          case 'open':
+          case 'fx':
+            process.stdout.write(chalk.red(cur));
+          case 'expr':
+            process.stdout.write(chalk.magentaBright(cur));
+            break;
+          case 'number':
+            process.stdout.write(chalk.blueBright(cur));
+            break;
+          case 'heading':
+            process.stdout.write(chalk.bold.underline.whiteBright(cur));
+            break;
+          case 'code':
+            process.stdout.write(chalk.dim(cur));
+            break;
+          case 'em':
+            process.stdout.write(chalk.italic.white(cur));
+            break;
+          case 'b':
+            process.stdout.write(chalk.bold.white(cur));
+            break;
+          default:
+            process.stdout.write(chalk.white(cur));
+            break;
+        }
+
+        if (speed > 0) {
+          return new Promise(ok => setTimeout(ok, Math.floor(speed / chunk.length)));
+        }
       }), Promise.resolve());
   }
 
-  function push(chunk) {
+  // FIXME: enable options...
+  const ANIMATION_SPEED = 0;
+
+  function push(type, chunk) {
     buffer.push(() => new Promise(ok => {
       if (chunk === ' ') {
-        return ok(process.stdout.write(chunk));
+        return ok(puts(type, chunk, 0));
       }
 
       setTimeout(() => {
-        puts(chunk, (Math.random() * 120) + 60).then(ok);
-      }, (Math.random() * 10) + 1);
+        puts(type, chunk, (Math.random() * ANIMATION_SPEED) + (ANIMATION_SPEED / 2)).then(ok);
+      }, (Math.random() * (ANIMATION_SPEED / 10)) + 1);
     }));
   }
 
@@ -77,27 +117,27 @@ if (returnAsTEXT) {
         node.forEach(t => {
           if (Array.isArray(t[0])) {
             t.forEach(s => {
-              push(s[1]);
+              push(s[0], s[1]);
             });
           } else {
-            push(t[1]);
+            push(t[0], t[1]);
           }
         });
 
         if (isOpen) {
-          push(')');
+          push('def', ')');
           isOpen = false;
         }
       } else if (node[0] === 'def') {
-        push(node[1] + '(');
+        push(node[0], node[1] + '(');
         isOpen = true;
       } else {
-        push(node[1]);
+        push(node[0], node[1]);
       }
     });
 
     if (results.length) {
-      push('\n//=> ' + JSON.stringify(results));
+      push(null, `${chalk.gray('\n//=>')} ${require('util').inspect(results, { colors: true })}`);
     }
   });
 

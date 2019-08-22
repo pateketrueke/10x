@@ -60,7 +60,7 @@ export const isTime = x => TIME_UNITS.includes(x);
 export const isMoney = x => CURRENCY_MAPPINGS[x];
 export const isAlpha = x => ALPHA_MAPPINGS[x];
 export const isUpper = x => /^[A-Z]+/.test(x);
-export const isJoin = x => '_.'.includes(x);
+export const isJoin = x => '_,.'.includes(x);
 
 export const hasNum = x => RE_NUM.test(x);
 export const hasDays = x => RE_DAYS.test(x);
