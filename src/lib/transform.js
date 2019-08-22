@@ -173,12 +173,17 @@ export function transform(input, units) {
   // split tokens based on their complexity
   for (let i = 0; i < tokens.length; i += 1) {
     const subTree = chunks[inc] || (chunks[inc] = []);
+    const next = (tokens[i + 1] || {}).content;
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
     // FIXME: any better strategy?
     if (!depth && isAny(cur, '\n;')) hasOps = false;
     else if (t >= 3) hasOps = true;
+
+    if (subTree._fixed && cur === ' ') {
+      hasOps = !next.includes(' ');
+    }
 
     // allow separators inside blocks
     if (cur === '(') depth++;
