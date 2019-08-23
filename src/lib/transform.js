@@ -243,7 +243,15 @@ export function transform(tokens, units) {
     }
 
     if (cur._fixed) {
-      prev.push(...tokenize(cur, units));
+      const fixedScores = cur.filter(x => x.complexity);
+      const fixedAverage = fixedScores.reduce((p, c) => p + c.complexity, 0);
+
+      // discard all fixed-trees without enough complexity...
+      if ((fixedAverage / fixedScores.length < 3) && cur[1].complexity < 3) {
+        prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
+      } else {
+        prev.push(...tokenize(cur, units));
+      }
     } else {
       prev.push(...fixStrings(cur.map(x => toToken(x, fromMarkdown))));
     }

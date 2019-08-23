@@ -142,11 +142,12 @@ export function parseBuffer(text, units) {
     if (isChar(cur) || isAlpha(cur) || isMoney(cur)) score += 1;
 
     // bonus points: values or side-effects after expression-separators
-    if (open && isChar(cur)) score += 2.5;
+    if (isFx(last + cur)) score += 1.5;
     if (open && isSep(cur, '()')) score += 1.5;
     if (isJoin(cur) && isNum(next)) score += 1.5;
     if (isNum(cur) && last === '.') score += 1.5;
     if (cur === '(' && peek === ')') score += 1.5;
+    if (isChar(last) && '(='.includes(cur)) score += 1.5;
 
     if (open && cur === ',' && (isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
     if (cur === '(' && (peek === '(' || isFx(peek) || isChar(peek) || hasNum(peek))) score += 1.5;
@@ -259,11 +260,6 @@ export function parseBuffer(text, units) {
     const lastValue = (prev[prev.length - 1] || {}).content;
     const olderValue = (prev[prev.length - 2] || {}).content;
     const oldestValue = (prev[prev.length - 3] || {}).content;
-
-    // high-rank definition calls
-    if (isChar(lastValue) && value === '(') {
-      prev[prev.length - 1].complexity += 2;
-    }
 
     // keep strings and other expressions high-ranked
     if (value.length >= 2 && !(isChar(value) && hasNum(value))) {
