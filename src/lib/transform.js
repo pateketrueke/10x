@@ -200,7 +200,16 @@ export function transform(tokens, units) {
 
       // check regular tokens
       if (t > 0) {
+        if (t >= 3 && !(isSep(cur) || subTree._fixed)) {
+          chunks[++inc] = [tokens[i]];
+          chunks[inc]._fixed = true;
+          continue;
+        }
+
         subTree.push(tokens[i]);
+
+        // split on terminators only!
+        if (isSep(cur) && next === '\n') inc++;
         continue;
       }
 

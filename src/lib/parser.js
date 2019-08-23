@@ -233,14 +233,14 @@ export function parseBuffer(text, units) {
       || ('+-'.includes(last) && cur === last)
       || ('.|&'.includes(last) && last === cur)
       || ('!<>='.includes(last) && cur === '=')
+      || (last === ':' && (cur === ':' || hasNum(cur) || isChar(cur)))
       || ('-|~'.includes(last) && cur === '>') || (last === '<' && '|-'.includes(cur))
-      // || (last === ':' && (cur === ':' || hasNum(cur) || (isChar(cur) && !isUpper(cur))))
 
       // keep chars and numbers together
       || (hasNum(last) && cur === '.' && next === '.') || ((isNum(last) || isChar(last)) && (isNum(cur) || isChar(cur)))
     ) {
       // split on white-space at the beginning
-      if (last === '\n' && buffer.length === 1) {
+      if (' \n'.includes(last) && buffer.length === 1) {
         tokens[++offset] = [{ cur, row, col, score }];
       } else {
         buffer.push({ cur, row, col, score });
@@ -252,8 +252,6 @@ export function parseBuffer(text, units) {
       tokens[++offset] = [{ cur, row, col, score }];
     }
   }
-
-  // console.log({tokens})
 
   // re-assign tokens on the fly!
   return tokens.reduce((prev, cur, i) => {
@@ -268,11 +266,20 @@ export function parseBuffer(text, units) {
     }
 
     // keep strings and other expressions high-ranked
-    if (/^(\/\/|:[a-zA-Z_.-]+)|^".*?"$/.test(value)) {
-      // console.log({value});
+    if (value.length >= 2 && !(isChar(value) && hasNum(value))) {
+      let fixedScore = cur.reduce((p, c) => p + c.score, 0) / cur.length;
+
+      if (
+        value.charAt() === ':'
+        || value.indexOf('//') === 0
+        || (value[0] === '"' && cur[cur.length - 1].cur === '"')
+      ) {
+        fixedScore += 2.5;
+      }
+
       prev.push({
         content: value,
-        complexity: 3,
+        complexity: fixedScore,
         begin: [cur[0].row, cur[0].col],
         end: [cur[0].row, cur[0].col + value.length],
       });
@@ -288,36 +295,33 @@ export function parseBuffer(text, units) {
       return prev;
     }
 
-    // skip formatting!
-    if (!(isFmt(cur[0].cur) && isFmt(cur[cur.length - 1].cur))) {
-      if (
-        // handle fractions
-        (isInt(olderValue) && lastValue === '/' && isInt(value))
+    if (
+      // handle fractions
+      (isInt(olderValue) && lastValue === '/' && isInt(value))
 
-        // handle checkboxes
-        || (olderValue === '[' && ' x'.includes(lastValue) && value === ']')
+      // handle checkboxes
+      || (olderValue === '[' && ' x'.includes(lastValue) && value === ']')
 
-        // keep well-known dates, e.g `Jun 10`, `Jun, 1987` or `Jun 10, 1987`
-        || (hasMonths(olderValue) && ' ,'.includes(lastValue) && isNum(value))
+      // keep well-known dates, e.g `Jun 10`, `Jun, 1987` or `Jun 10, 1987`
+      || (hasMonths(olderValue) && ' ,'.includes(lastValue) && isNum(value))
 
-        // concatenate unknown words
-        || (cur.length > 1 && isChar(olderValue) && !isExpr(olderValue) && isAny(lastValue, ' '))
+      // concatenate unknown words
+      || (cur.length > 1 && isChar(olderValue) && !isExpr(olderValue) && isAny(lastValue, ' '))
 
-        // skip numbers within groups or parenthesis
-        || (!isChar(oldestValue) && '{[(<'.includes(olderValue) && isInt(lastValue) && '>)]}'.includes(value))
+      // skip numbers within groups or parenthesis
+      || (!isChar(oldestValue) && '{[(<'.includes(olderValue) && isInt(lastValue) && '>)]}'.includes(value))
 
-        // keep numbers and units together, e.g `5 days` or `$15,000 MXN`; also handle mixed-units
-        || (hasNum(olderValue) && ' /-'.includes(lastValue) && hasKeyword(olderValue + lastValue + value, units))
+      // keep numbers and units together, e.g `5 days` or `$15,000 MXN`; also handle mixed-units
+      || (hasNum(olderValue) && ' /-'.includes(lastValue) && hasKeyword(olderValue + lastValue + value, units))
 
-        // keep hours-like values together, e.g. `200 am`, '4 pm' or `16:20:00 pm`
-        || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || RE_HOURS.test(olderValue + lastValue + value))
-      ) {
-        prev[prev.length - 2].complexity = hasNum(value) ? 3 : 0;
-        prev[prev.length - 2].content += lastValue + value;
-        prev[prev.length - 2].end[1] = cur[cur.length - 1].col + 1;
-        prev.pop();
-        return prev;
-      }
+      // keep hours-like values together, e.g. `200 am`, '4 pm' or `16:20:00 pm`
+      || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || RE_HOURS.test(olderValue + lastValue + value))
+    ) {
+      prev[prev.length - 2].complexity = hasNum(value) ? 3 : 0;
+      prev[prev.length - 2].content += lastValue + value;
+      prev[prev.length - 2].end[1] = cur[cur.length - 1].col + 1;
+      prev.pop();
+      return prev;
     }
 
     // keep common tokens together
