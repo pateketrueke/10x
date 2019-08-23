@@ -59,7 +59,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   }
 
   // handle white-space
-  if (isAny(text, ' \n:.') || text === '...') {
+  if (isAny(text, ' \n') || text === '...') {
     return ['text', text];
   }
 
@@ -217,6 +217,7 @@ export function transform(tokens, units) {
         chunks[inc]._fixed = true;
       } else {
         subTree.push(tokens[i]);
+        subTree._fixed = true;
       }
     }
   }
@@ -247,8 +248,6 @@ export function transform(tokens, units) {
   } catch (e) {
     _e = e;
   }
-
-  // console.log({fixedTree});
 
   return {
     ast: body,
