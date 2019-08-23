@@ -175,28 +175,50 @@ export function transform(tokens, units) {
     const cur = tokens[i].content;
     const t = tokens[i].complexity;
 
-    // current token has enough complexity
-    if (t >= 3) {
-      // increase depth if we're into a definition, or inside parenthesis
-      if (cur === '(' || (isChar(cur) && '(='.includes(next))) depth++;
-      else if (');'.includes(cur)) depth--;
+    let key = i;
+    let nextToken;
 
-      // check if we can split...
+    do { nextToken = (tokens[++key] || {}).content; } while (isAny(nextToken, ' \n'));
+
+    // increase depth if we're into a definition, or inside parenthesis
+    if (cur === '(' || (isChar(cur) && '(='.includes(next))) depth++;
+    else if (');'.includes(cur) && depth > 0) depth--;
+
+    // check for ranked tokens
+    if (!depth) {
+      // only allow math expressions
+      if (t >= 3 && ((isOp(cur) && hasNum(nextToken)) || (hasNum(cur) && isOp(nextToken)))) {
+        if (subTree.length && !subTree._fixed) {
+          chunks[++inc] = [tokens[i]];
+          chunks[inc]._fixed = true;
+        } else {
+          subTree.push(tokens[i]);
+          subTree._fixed = true;
+        }
+        continue;
+      }
+
+      // check regular tokens
+      if (t > 0) {
+        subTree.push(tokens[i]);
+        continue;
+      }
+
+      // otherwise, just keep adding tokens
+      if (subTree._fixed && !(hasNum(nextToken) || isOp(nextToken))) {
+        chunks[++inc] = [tokens[i]];
+      } else {
+        subTree.push(tokens[i]);
+      }
+    } else {
+      // within depth all is taken!
       if (subTree.length && !subTree._fixed) {
         chunks[++inc] = [tokens[i]];
         chunks[inc]._fixed = true;
-        continue;
+      } else {
+        subTree.push(tokens[i]);
       }
     }
-
-    // break on white-space, or delimiters
-    if (!depth && isAny(cur, ' \n;')) {
-      chunks[++inc] = [tokens[i]];
-      continue;
-    }
-
-    // otherwise, push into current tree
-    subTree.push(tokens[i]);
   }
 
   // merge non-fixed chunks
@@ -225,6 +247,8 @@ export function transform(tokens, units) {
   } catch (e) {
     _e = e;
   }
+
+  // console.log({fixedTree});
 
   return {
     ast: body,
