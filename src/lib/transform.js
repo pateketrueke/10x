@@ -219,6 +219,9 @@ export function transform(tokens, units) {
       } else {
         subTree.push(tokens[i]);
       }
+
+      // also split on new-lines!
+      if (cur === '\n') inc++;
     } else {
       // within depth all is taken!
       if (subTree.length && !subTree._fixed) {
