@@ -58,8 +58,12 @@ if (showDebugInfo) {
   console.log(calc);
 }
 
-function format(values) {
-  return values.map(x => calc.value(x).format).join(chalk.gray(', '));
+function format(result) {
+  if (Array.isArray(result[0])) {
+    return result.map(x => calc.value(x).format).join(chalk.gray(', '));
+  }
+
+  return calc.value(result).format;
 }
 
 // FIXME: since all evaluation can be async...
@@ -151,10 +155,6 @@ if (!returnAsJSON) {
       process.exit(1);
     }
 
-    if (results.length) {
-      tmp.push(results);
-    }
-
     subTree.forEach(node => {
       if (Array.isArray(node[0])) {
         push('open', '(');
@@ -174,17 +174,19 @@ if (!returnAsJSON) {
         push(node[0], node[1]);
       } else {
         push(node[0], node[1]);
-      }
 
-      if (typeof node[1] === 'string' && node[1].includes('\n') && tmp.length) {
-        tmp.forEach(x => {
-          push(null, `${chalk.gray('//=>')} ${format(x)}\n`);
-        });
-
-        tmp = [];
-        isOut = false;
+        if (typeof node[1] === 'string' && node[1].includes('\n') && tmp.length) {
+          tmp.forEach(x => {
+            push(null, `${chalk.gray('//=>')} ${format(x)}\n`);
+          });
+          tmp = [];
+        }
       }
     });
+
+    if (results.length) {
+      tmp.push(results);
+    }
   });
 
   buffer.reduce((prev, cur) => prev.then(() => cur()), Promise.resolve());
