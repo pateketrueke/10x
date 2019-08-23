@@ -174,15 +174,15 @@ if (!returnAsJSON) {
         push(node[0], node[1]);
       } else {
         push(node[0], node[1]);
+      }
 
-        if (typeof node[1] === 'string' && node[1].includes('\n') && tmp.length) {
-          tmp.forEach(x => {
-            push(null, `${chalk.gray('//=>')} ${format(x)}\n`);
-          });
+      if (typeof node[1] === 'string' && node[1].includes('\n') && tmp.length) {
+        tmp.forEach(x => {
+          push(null, `${chalk.gray('//=>')} ${format(x)}\n`);
+        });
 
-          tmp = [];
-          isOut = false;
-        }
+        tmp = [];
+        isOut = false;
       }
     });
   });
