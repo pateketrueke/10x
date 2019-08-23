@@ -82,6 +82,9 @@ if (!returnAsJSON) {
           case null:
             process.stdout.write(cur);
             break;
+          case 'blockquote':
+            process.stdout.write(chalk.bold.whiteBright(cur));
+            break;
           case 'comment':
             process.stdout.write(chalk.gray(cur));
             break;
@@ -103,9 +106,11 @@ if (!returnAsJSON) {
           case 'heading':
             process.stdout.write(chalk.bold.underline.whiteBright(cur));
             break;
+          case 'code':
+            process.stdout.write(chalk.bgBlackBright.black(cur));
+            break;
           case 'close':
           case 'open':
-          case 'code':
             process.stdout.write(chalk.dim(cur));
             break;
           case 'em':
@@ -192,7 +197,6 @@ if (!returnAsJSON) {
   buffer.reduce((prev, cur) => prev.then(() => cur()), Promise.resolve());
 } else {
   const fixedResults = calc.eval();
-  const fixedError = calc.error && calc.error.stack;
 
   if (returnAsJSON) {
     process.stdout.write(JSON.stringify({
@@ -206,12 +210,14 @@ if (!returnAsJSON) {
     fixedResults.forEach(x => {
       process.stderr.write(`${chalk.gray('//=>')} ${format(x)}\n`);
     });
-
-    if (fixedError) {
-      process.stderr.write(chalk.red(fixedError));
-      process.exit(1);
-    }
   }
+}
+
+const fixedError = calc.error && calc.error.stack;
+
+if (fixedError) {
+  process.stderr.write(chalk.red(fixedError));
+  process.exit(1);
 }
 
 if (sharedFile) require('fs').writeFileSync(sharedFile, JSON.stringify(calc.expressions));
