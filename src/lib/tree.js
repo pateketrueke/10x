@@ -1,7 +1,7 @@
 import {
   hasTagName,
-  isOp, isSep, isChar, isAlpha,
-} from './parser';
+  hasOp, hasSep, hasChar,
+} from './shared';
 
 import {
   fixCut, fixArgs, fixApply, fixInput, fixTokens,
@@ -20,7 +20,7 @@ export function buildTree(tokens) {
     const t = tokens[i];
 
     // flag var/call expressions (strict-mode)
-    if (p && p[0] === 'unit' && (isChar(p[1]) || isAlpha(p[1])) && ('(='.includes(t[1]))) p[0] = 'def';
+    if (p && p[0] === 'unit' && hasChar(p[1]) && ('(='.includes(t[1]))) p[0] = 'def';
 
     // handle nesting
     if (['open', 'close'].includes(t[0]) || ['begin', 'end'].includes(t[2])) {
@@ -97,7 +97,7 @@ export function fixTree(ast) {
       const offset = tokens.slice(i).findIndex(x => x[0] === 'fx' && x[2] === 'func');
 
       if (offset > 0) {
-        const cut = tokens.slice(offset).findIndex(x => x[0] === 'expr' && isSep(x[1]));
+        const cut = tokens.slice(offset).findIndex(x => x[0] === 'expr' && hasSep(x[1]));
         const endPos = cut >= 0 ? cut : tokens.length - offset;
 
         tokens.splice(i, 0, ['fn', '$', {
@@ -134,7 +134,7 @@ export function fixTree(ast) {
       const rightNext = tokens[i + 2];
 
       // collect all ops from tokens
-      if (next && next[0] === 'expr' && isOp(next[1])) {
+      if (next && next[0] === 'expr' && hasOp(next[1])) {
         const fixedTree = fixTokens(tokens.splice(i, i + tokens.length));
         const target = fixTokens([prev, fixedTree.shift()]);
 
@@ -305,7 +305,7 @@ export function fixCalls(tokens, def) {
     if (left
       && left[0] === 'fx'
       && cur[0] === 'unit'
-      && (!right || (right[0] === 'expr' && isSep(right[1])))
+      && (!right || (right[0] === 'expr' && hasSep(right[1])))
     ) {
       // cur[2] = [[['symbol', '_']]];
       // cur[0] = 'def';

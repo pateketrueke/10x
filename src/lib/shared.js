@@ -2,6 +2,8 @@ import {
   CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
 } from './convert';
 
+const TAG_TYPES = ['blockquote', 'comment', 'heading', 'check', 'em', 'b', 'code', 'text'];
+
 const OP_TYPES = {
   '!~': 'notlike',
   '!=': 'noteq',
@@ -46,10 +48,13 @@ export const hasOp = x => OP_TYPES[x];
 export const hasDays = x => RE_DAYS.test(x);
 export const hasHours = x => RE_HOURS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
+export const hasTagName = x => TAG_TYPES.includes(x);
+
 export const hasFmt = x => /^["`_*~]$/.test(x);
 export const hasSep = x => '{[()]}|;,.'.includes(x);
 export const hasNum = x => /^-?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
-export const hasChar = x => !!CURRENCY_MAPPINGS[x] || !!ALPHA_MAPPINGS[x] || /^[a-zA-Z_#']/.test(x);
+export const hasExpr = x => /^(?:from|and|to|o[rf]|a[ts]|i[ns])$/i.test(x);
+export const hasChar = x => CURRENCY_MAPPINGS[x] || ALPHA_MAPPINGS[x] || /^[a-zA-Z_#']/.test(x);
 
 export const hasOwnKeyword = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
@@ -68,4 +73,14 @@ export const hasKeyword = (x, units, fallback) => {
   const test = key && (hasOwnKeyword(units, key) || hasOwnKeyword(units, key.toLowerCase()));
 
   return test;
+};
+
+export const hasPercent = x => {
+  return typeof x === 'string' && x.charAt(x.length - 1) === '%';
+};
+
+export const hasDatetime = x => {
+  if (x && RE_DAYS.test(x)) return 'DAYS';
+  if (x && RE_HOURS.test(x)) return 'HOURS';
+  if (x && RE_MONTHS.test(x)) return 'MONTHS';
 };

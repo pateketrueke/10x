@@ -1,6 +1,6 @@
 import {
-  isSep, isAny, isChar, hasTagName, hasPercent,
-} from './parser';
+  hasSep, hasTagName, hasPercent,
+} from './shared';
 
 import ParseError from './error';
 
@@ -91,7 +91,7 @@ export function toList(tokens, nums) {
   for (let i = 0; i < tokens.length; i += 1) {
     if (!tokens[i]) continue;
 
-    if (tokens[i][0] === 'expr' && isSep(tokens[i][1])) {
+    if (tokens[i][0] === 'expr' && hasSep(tokens[i][1])) {
       normalized.push(chunks);
       chunks = [];
       continue;
@@ -118,26 +118,26 @@ export function toList(tokens, nums) {
   return normalized;
 }
 
-export function toToken(cur, fromCallback, arg1, arg2, arg3, arg4) {
-  if (Array.isArray(cur)) {
-    const newToken = cur.slice();
+export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
+  if (Array.isArray(token)) {
+    const fixedToken = token.slice();
 
-    newToken._score = cur._score;
-    newToken._offset = cur._offset;
+    fixedToken._score = token._score;
+    fixedToken._offset = token._offset;
 
-    return newToken;
+    return fixedToken;
   }
 
-  const value = fromCallback(cur.content, arg1, arg2, arg3, arg4);
+  const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
-  if (!value) {
-    throw new ParseError(`Unexpected token \`${cur.content}\``, cur);
+  if (!retval) {
+    throw new ParseError(`Unexpected token \`${token.content}\``, token);
   }
 
-  value._score = cur.complexity;
-  value._offset = [cur.begin, cur.end];
+  retval._score = token.complexity;
+  retval._offset = [token.begin, token.end]
 
-  return value;
+  return retval;
 }
 
 export function fixTokens(ast, flatten) {
@@ -190,7 +190,7 @@ export function fixStrings(tokens, split) {
       && cur[0] === 'text'
       && prev[prev.length - 1][1] !== '\n'
       && prev[prev.length - 1][0] === 'text'
-      && (split === false || !isAny(cur[1], ' '))
+      && (split === false || !cur[1].includes(' '))
     ) {
       if (!cur._offset) {
         prev.push(cur);
@@ -233,7 +233,7 @@ export function fixArgs(values, flatten) {
     last.push(cur);
 
     // normalize raw separators
-    if (cur[0] === 'expr' && (flatten === null ? cur[1] === null : isSep(cur[1]))) {
+    if (cur[0] === 'expr' && (flatten === null ? cur[1] === null : hasSep(cur[1]))) {
       last.pop();
       offset++;
     }
@@ -274,7 +274,7 @@ export function fixApply(kind, body, args) {
 }
 
 export function fixCut(ast, slice, offset) {
-  const pos = ast.slice(offset + slice).findIndex(x => (x[0] === 'expr' && isSep(x[1])) || x[0] === 'fx');
+  const pos = ast.slice(offset + slice).findIndex(x => (x[0] === 'expr' && hasSep(x[1])) || x[0] === 'fx');
   const subTree = pos >= 0 ? ast.splice(offset, pos) : ast.splice(offset);
 
   return subTree;
