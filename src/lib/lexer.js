@@ -8,6 +8,7 @@ export function getTokensFrom(text, units) {
 
   let oldScore = 0;
   let offset = 0;
+  let depth = 0;
   let row = 0;
   let col = -1;
 
@@ -139,8 +140,11 @@ export function getTokensFrom(text, units) {
     do { nextToken = ((tokens[++key] || [])[0] || {}).cur; } while (' \n'.includes(nextToken));
 
     if (
-      // numbers, separators & operators
-      (hasNum(value) || hasSep(value) || hasOp(value))
+      // numbers
+      hasNum(value)
+
+      // separators & operators
+      || ((hasSep(value) || hasOp(value)) && oldScore)
 
       // symbols
       || (
@@ -160,7 +164,17 @@ export function getTokensFrom(text, units) {
       // definitions
       || ('(='.includes(value) && oldScore)
       || (hasChar(value) && '(='.includes(nextToken))
+
+      // (inside parenthesis)
+      || (depth && (hasSep(value) || hasChar(value)))
+
+      // side-effects
+      || ('(' === value && hasOp(nextToken))
     ) fixedScore = 1;
+
+    // increase depth if we're into a definition, not inside any parenthesis!
+    if ('(='.includes(nextToken) && oldScore) depth++;
+    else if (');'.includes(value) && depth) depth--;
 
     prev.push({
       cur: value,
