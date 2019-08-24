@@ -204,16 +204,17 @@ export function transform(tokens, units) {
         begin: [x.row, x.col],
         end: [x.row, x.col + x.cur.length],
       })), units));
-    } else {
-      const last = cur[cur.length - 1];
-
-      prev.push(toToken({
-        complexity: 0,
-        content: cur.reduce((p, c) => p + c.cur, ''),
-        begin: [cur[0].row, cur[0].col],
-        end: [last.row, last.col + last.cur.length],
-      }, fromMarkdown));
+      return prev;
     }
+
+    const last = cur[cur.length - 1];
+
+    prev.push(toToken({
+      complexity: 0,
+      content: cur.reduce((p, c) => p + c.cur, ''),
+      begin: [cur[0].row, cur[0].col],
+      end: [last.row, last.col + last.cur.length],
+    }, fromMarkdown));
 
     return prev;
   }, []));

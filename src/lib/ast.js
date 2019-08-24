@@ -122,7 +122,6 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
   if (Array.isArray(token)) {
     const fixedToken = token.slice();
 
-    fixedToken._score = token._score;
     fixedToken._offset = token._offset;
 
     return fixedToken;
@@ -134,7 +133,6 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
     throw new ParseError(`Unexpected token \`${token.content}\``, token);
   }
 
-  retval._score = token.complexity;
   retval._offset = [token.begin, token.end]
 
   return retval;
