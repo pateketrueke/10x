@@ -47,7 +47,7 @@ export const hasDays = x => RE_DAYS.test(x);
 export const hasHours = x => RE_HOURS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
 export const hasFmt = x => /^["`_*~]$/.test(x);
-export const hasSep = x => '{[( )]}|;,.'.includes(x);
+export const hasSep = x => '{[()]}|;,.'.includes(x);
 export const hasNum = x => /^-?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const hasChar = x => !!CURRENCY_MAPPINGS[x] || !!ALPHA_MAPPINGS[x] || /^[a-zA-Z_#']/.test(x);
 

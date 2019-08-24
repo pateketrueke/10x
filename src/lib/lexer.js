@@ -6,7 +6,7 @@ export function getTokensFrom(text, units) {
   let inBlock = false;
   let inFormat = false;
 
-  let oldChar = '';
+  let oldScore = 0;
   let offset = 0;
   let row = 0;
   let col = -1;
@@ -103,7 +103,7 @@ export function getTokensFrom(text, units) {
   }
 
   // join all tokens!
-  return tokens.reduce((prev, x) => {
+  return tokens.reduce((prev, x, i) => {
     const oldestValue = (prev[prev.length - 3] || {}).cur;
     const olderValue = (prev[prev.length - 2] || {}).cur;
     const lastValue = (prev[prev.length - 1] || {}).cur;
@@ -132,22 +132,30 @@ export function getTokensFrom(text, units) {
       return prev;
     }
 
-    if (x.length > 1) {
-      let fixedScore = 0;
+    let key = i;
+    let nextToken;
+    let fixedScore = 0;
 
-      // FIXME: rank by... you know
+    do { nextToken = ((tokens[++key] || [])[0] || {}).cur; } while (' \n'.includes(nextToken));
 
-      prev.push({
-        cur: x.map(x => x.cur).join(''),
-        row: x[0].row,
-        col: x[0].col,
-        score: fixedScore,
-      });
-    } else {
-      prev.push({
-        ...x[0],
-        score: 0,
-      });
+    if (
+      // numbers, separators & operators
+      (hasNum(value) || hasSep(value) || hasOp(value))
+
+      // definitions
+      || ('(='.includes(value) && oldScore)
+      || (hasChar(value) && '(='.includes(nextToken))
+    ) fixedScore = 1;
+
+    prev.push({
+      cur: value,
+      row: x[0].row,
+      col: x[0].col,
+      score: fixedScore,
+    });
+
+    if (!' \n'.includes(value)) {
+      oldScore = fixedScore;
     }
 
     return prev;

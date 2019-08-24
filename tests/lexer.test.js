@@ -51,7 +51,7 @@ describe('Lexer', () => {
     it('should handle markdown-like tags', () => {
       expect(getTokensFrom('# foo\nbar').length).to.eql(2);
       expect(getTokensFrom('> foo\nbar').length).to.eql(2);
-      expect(getTokensFrom('~foo~ _123_ *bar* **bazz** __bu\nzz__ `bazzinga`').length).to.eql(12);
+      expect(getTokensFrom('~foo~ _123_ *bar* **bazz** __bu\nzz__ `bazzinga`').length).to.eql(13);
     });
 
     it('should handle checkboxes-like tags', () => {
@@ -77,6 +77,26 @@ describe('Lexer', () => {
     it('should handle hours', () => {
       expect(getTokensFrom('200 am', DEFAULT_MAPPINGS).length).to.eql(1);
       expect(getTokensFrom('16:20:00 pm', DEFAULT_MAPPINGS).length).to.eql(1);
+    });
+  });
+
+  describe('score tokens', () => {
+    const sumTokensFrom = x => getTokensFrom(x).reduce((p, c) => p + c.score, 0);
+
+    it('should not rank words', () => {
+      expect(sumTokensFrom('foo bar baz')).to.eql(0);
+    });
+
+    it('should rank numbers and separators', () => {
+      expect(sumTokensFrom('1, 2, 3')).to.eql(5);
+    });
+
+    it('should rank operators', () => {
+      expect(sumTokensFrom('(<= 1 2)')).to.eql(5);
+    });
+
+    it('should rank definitions', () => {
+      expect(sumTokensFrom('x = 1.2 ;')).to.eql(4);
     });
   });
 });
