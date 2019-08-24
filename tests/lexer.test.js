@@ -91,6 +91,15 @@ describe('Lexer', () => {
       expect(sumTokensFrom('1, 2, 3')).to.eql(5);
     });
 
+    it('should rank symbols and strings', () => {
+      expect(sumTokensFrom(':foo "bar baz"')).to.eql(2);
+    });
+
+    it('should rank comments', () => {
+      expect(sumTokensFrom('// foo bar\nbaz buzz')).to.eql(1);
+      expect(sumTokensFrom('/* foo bar\nbaz */ buzz')).to.eql(1);
+    });
+
     it('should rank operators', () => {
       expect(sumTokensFrom('(<= 1 2)')).to.eql(5);
     });

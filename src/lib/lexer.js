@@ -142,6 +142,21 @@ export function getTokensFrom(text, units) {
       // numbers, separators & operators
       (hasNum(value) || hasSep(value) || hasOp(value))
 
+      // symbols
+      || (
+        value.charAt() === ':'
+        && (hasChar(value.substr(1)) || hasNum(value.substr(1)))
+      )
+
+      // strings
+      || (value.charAt() === '"' && value.substr(value.length - 1) === '"')
+
+      // comments
+      || (
+        value.indexOf('//') === 0
+        || (value.indexOf('/*') === 0 && value.substr(value.length-2) === '*/')
+      )
+
       // definitions
       || ('(='.includes(value) && oldScore)
       || (hasChar(value) && '(='.includes(nextToken))
