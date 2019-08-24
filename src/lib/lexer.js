@@ -101,7 +101,6 @@ export function getTokensFrom(text, units) {
         (!col && '#>'.includes(cur))
         || (cur === '/' && '/*'.includes(next))
       ) inBlock = next === '*' ? 'multiline' : 'block';
-      if (inBlock && inBlock === 'block' && cur === '\n') inBlock = false;
     }
 
     // split on white-space at the beginning
@@ -113,24 +112,25 @@ export function getTokensFrom(text, units) {
     if (
       inBlock || inFormat || typeof last === 'undefined'
 
-      // allow escapes
-      || (last === '\\')
-
-      // identical tokens
-      || (last === cur)
+      // allow escapes and identical tokens
+      || (last === '\\') || (last === cur)
 
       // well-known operators
       || hasOp(last + cur)
 
       // keep numbers and words
-      || (hasNum(last) && hasNum(cur))
       || (hasNum(last) && cur === '.' && hasNum(next))
+      || ((hasNum(last) || '-.'.includes(last)) && hasNum(cur))
       || ((hasChar(last) || hasNum(last)) && (hasChar(cur) || hasNum(cur)))
     ) {
       buffer.push({ cur, row, col });
     } else {
       tokens[++offset] = [{ cur, row, col }];
     }
+
+    // turn-off comment blocks...
+    if (inBlock === 'block' && cur === '\n') inBlock = false;
+    if (inBlock === 'multiline' && last === '*' && cur === '/') inBlock = false;
   }
 
   // join all tokens!
