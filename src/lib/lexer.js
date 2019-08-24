@@ -134,8 +134,8 @@ export function getTokensFrom(text, units) {
     }
 
     let key = i;
+    let score = 0;
     let nextToken;
-    let fixedScore = 0;
 
     do { nextToken = ((tokens[++key] || [])[0] || {}).cur; } while (' \n'.includes(nextToken));
 
@@ -170,21 +170,22 @@ export function getTokensFrom(text, units) {
 
       // side-effects
       || ('(' === value && hasOp(nextToken))
-    ) fixedScore = 1;
+    ) score = 1;
 
     // increase depth if we're into a definition, not inside any parenthesis!
-    if ('(='.includes(nextToken) && oldScore) depth++;
+    if ('(='.includes(value) && oldScore) depth++;
     else if (');'.includes(value) && depth) depth--;
 
     prev.push({
+      depth,
+      score,
       cur: value,
       row: x[0].row,
       col: x[0].col,
-      score: fixedScore,
     });
 
     if (!' \n'.includes(value)) {
-      oldScore = fixedScore;
+      oldScore = score;
     }
 
     return prev;
