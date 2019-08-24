@@ -1,73 +1,6 @@
 import {
-  CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
-} from './convert';
-
-const OP_TYPES = {
-  '!~': 'notlike',
-  '!=': 'noteq',
-  '==': 'iseq',
-  '<=': 'lteq',
-  '>=': 'gteq',
-  '=~': 'like',
-  '++': 'inc',
-  '--': 'dec',
-  '&&': 'and',
-  '||': 'x-or',
-  '~>': 'void',
-  '->': 'func',
-  '<-': 'bind',
-  '=>': 'arrow',
-  '|>': 'rpipe',
-  '<|': 'lpipe',
-  '<': 'lt',
-  '>': 'gt',
-  '!': 'not',
-  '[': 'begin',
-  ']': 'end',
-  '{': 'begin',
-  '}': 'end',
-  '=': 'equal',
-  '+': 'plus',
-  '-': 'min',
-  '/': 'div',
-  '*': 'mul',
-  ',': 'or',
-  ';': 'k',
-};
-
-const RE_DAYS = /^(?:now|to(?:day|night|morrow)|yesterday|week(?:end)?)$/i;
-const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9]){,2}(?:\s*[ap]m)$/i;
-const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\w*\b/i;
-const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
-
-export const isInt = x => /^-?(?!0)\d+(\.\d+)?$/.test(x);
-
-export const hasOp = x => !!OP_TYPES[x];
-export const hasDays = x => RE_DAYS.test(x);
-export const hasMonths = x => RE_MONTHS.test(x);
-export const hasFmt = x => /^["`_*~]$/.test(x);
-export const hasSep = x => '{[( )]}|;,.'.includes(x);
-export const hasNum = x => /^-?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
-export const hasChar = x => !!CURRENCY_MAPPINGS[x] || !!ALPHA_MAPPINGS[x] || /^[a-zA-Z_#']/.test(x);
-
-export const hasOwnKeyword = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-
-export const hasKeyword = (x, units, fallback) => {
-  if (!x) return false;
-
-  const key = x.replace(RE_NO_ALPHA, '');
-
-  // skip further detection on white-space
-  if (key.includes(' ')) return false;
-
-  if (fallback) {
-    return key;
-  }
-
-  const test = key && (hasOwnKeyword(units, key) || hasOwnKeyword(units, key.toLowerCase()));
-
-  return test;
-};
+  isInt, hasMonths, hasHours, hasKeyword, hasFmt, hasOp, hasSep, hasChar, hasNum,
+} from './shared';
 
 export function getTokensFrom(text, units) {
   let inBlock = false;
@@ -98,7 +31,7 @@ export function getTokensFrom(text, units) {
     // keep formatting blocks together
     if (!inBlock && !inFormat && hasFmt(cur) && !hasOp(last)) {
       if (cur === '*')  {
-        inFormat = next === '*';
+        inFormat = next === '*' || hasChar(next);
       } else if (cur === '_') {
         inFormat = hasSep(last)
           && (next === '_' || hasChar(next) || hasNum(next));
@@ -160,9 +93,12 @@ export function getTokensFrom(text, units) {
       tokens[++offset] = [{ cur, row, col }];
     }
 
-    // turn-off comment blocks...
-    if (inBlock === 'block' && cur === '\n') inBlock = false;
-    if (inBlock === 'multiline' && last === '*' && cur === '/') inBlock = false;
+    // turn-off formatting/blocks...
+    if (
+      (!inBlock && cur === '\n')
+      || (inBlock === 'block' && cur === '\n')
+      || (inBlock === 'multiline' && last === '*' && cur === '/')
+    ) inBlock = inFormat = false;
   }
 
   // join all tokens!
@@ -188,7 +124,7 @@ export function getTokensFrom(text, units) {
       || (hasNum(olderValue) && ' /-'.includes(lastValue) && hasKeyword(olderValue + lastValue + value, units))
 
       // keep hours-like values together, e.g. `200 am`, '4 pm' or `16:20:00 pm`
-      || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || RE_HOURS.test(olderValue + lastValue + value))
+      || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || hasHours(olderValue + lastValue + value))
     ) {
       prev[prev.length - 2].cur += lastValue + value;
       prev.pop();

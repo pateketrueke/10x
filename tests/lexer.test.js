@@ -48,8 +48,10 @@ describe('Lexer', () => {
     });
 
     it('should handle markdown-like tags', () => {
+      expect(getTokensFrom('~> void').length).to.eql(3);
       expect(getTokensFrom('# foo\nbar').length).to.eql(2);
-      expect(getTokensFrom('~foo~ _bar_ **bazz** __buzz__ `bazzinga`').length).to.eql(9);
+      expect(getTokensFrom('> foo\nbar').length).to.eql(2);
+      expect(getTokensFrom('~foo~ _123_ *bar* **bazz** __bu\nzz__ `bazzinga`').length).to.eql(12);
     });
 
     it('should handle checkboxes-like tags', () => {
