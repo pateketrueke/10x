@@ -58,14 +58,6 @@ if (showDebugInfo) {
   console.log(calc);
 }
 
-function format(result) {
-  if (Array.isArray(result[0])) {
-    return result.map(x => calc.value(x).format).join(chalk.gray(', '));
-  }
-
-  return calc.value(result).format;
-}
-
 // FIXME: since all evaluation can be async...
 if (!returnAsJSON) {
   const buffer = [];
@@ -182,7 +174,7 @@ if (!returnAsJSON) {
 
         if (typeof node[1] === 'string' && node[1].includes('\n') && tmp.length) {
           tmp.forEach(x => {
-            push(null, `${chalk.gray('//=>')} ${format(x)}\n`);
+            push(null, `${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '))}\n`);
           });
           tmp = [];
         }
@@ -208,7 +200,7 @@ if (!returnAsJSON) {
     }));
   } else {
     fixedResults.forEach(x => {
-      process.stderr.write(`${chalk.gray('//=>')} ${format(x)}\n`);
+      process.stderr.write(`${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '))}\n`);
     });
   }
 }

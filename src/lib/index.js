@@ -81,6 +81,20 @@ export default class Solv {
     return this;
   }
 
+  format(result, separator) {
+    if (Array.isArray(result[0])) {
+      const fixedResult = result.map(x => this.value(x).format);
+
+      if (separator) {
+        return fixedResult.join(separator);
+      }
+
+      return fixedResult;
+    }
+
+    return this.value(result).format;
+  }
+
   value(token) {
     if (!token) {
       return null;
@@ -96,7 +110,7 @@ export default class Solv {
       && !(isInt(token[1]) || token[1] instanceof Date)
     ) {
       // remove trailing words from units
-      token[1] = token[1].replace(/[\sa-z/-]+$/ig, '');
+      token[1] = String(token[1]).replace(/[\sa-z/-]+$/ig, '');
     }
 
     let fixedValue = toValue(token[1]);

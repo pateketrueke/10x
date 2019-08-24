@@ -198,7 +198,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   }
 
   // handle N-unit, return a new expression from 3x to [3, *, x]
-  if (ctx.cur[0] === 'number' && ctx.cur[2]) {
+  if (ctx.cur[0] === 'number' && ctx.cur[2] && ctx.cur[2] !== 'x-fraction') {
     if (!hasOwnKeyword(expressions, ctx.cur[2])) {
       throw new ParseError(`Missing definition of ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
     }
