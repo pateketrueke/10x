@@ -182,7 +182,7 @@ export function reduceFromEffect(cb, def, args, value) {
   // return [typeof fixedResult, fixedResult];
 }
 
-export function reduceFromUnits(cb, ctx, convert, expressions) {
+export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   // handle unit expressions
   if (ctx.cur[0] === 'unit') {
     if (!ctx.root.isDef && !ctx.isDef) {
@@ -198,7 +198,11 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   }
 
   // handle N-unit, return a new expression from 3x to [3, *, x]
-  if (ctx.cur[0] === 'number' && ctx.cur[2] && ctx.cur[2] !== 'x-fraction') {
+  if (
+    ctx.cur[0] === 'number'
+    && !supportedUnits[ctx.cur[2]]
+    && ctx.cur[2] && ctx.cur[2] !== 'x-fraction'
+  ) {
     if (!hasOwnKeyword(expressions, ctx.cur[2])) {
       throw new ParseError(`Missing definition of ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
     }
@@ -440,7 +444,7 @@ export function reduceFromDefs(cb, ctx, expressions) {
 }
 
 // FIXME: split into phases, let maths to be reusable...
-export function reduceFromAST(tokens, convert, expressions, parentContext) {
+export function reduceFromAST(tokens, convert, expressions, parentContext, supportedUnits) {
   const ctx = {
     tokens,
     ast: [],
@@ -455,7 +459,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
   const env = Object.assign({}, expressions);
 
   // resolve from nested AST expressions
-  const cb = (t, context) => reduceFromAST(t, convert, env, context);
+  const cb = (t, context) => reduceFromAST(t, convert, env, context, supportedUnits);
 
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
@@ -475,32 +479,43 @@ export function reduceFromAST(tokens, convert, expressions, parentContext) {
       (ctx.right && ctx.right[0] === 'expr' && ctx.right[2] === 'equal')
     ) ctx.isDef = true;
 
-    // append last-operator between consecutive unit-expressions
+    // // append last-operator between consecutive unit-expressions
     if (!ctx.isDef && ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number') {
       ctx.ast.push(ctx.lastOp);
     }
 
-    // handle anonymous sub-expressions
-    if (Array.isArray(tokens[i][0]) && !Array.isArray(tokens[i][0][0])) {
-      const values = fixArgs(tokens[i]).map(x => x.length === 1 ? x[0] : x);
+    // // handle anonymous sub-expressions
+    if (Array.isArray(ctx.cur[0])) {
+      // const values = fixArgs(tokens[i]).map(x => x.length === 1 ? x[0] : x);
 
-      // prepend multiplication if goes after units/numbers
-      if (ctx.left && ['unit', 'number'].includes(ctx.left[0])) {
-        ctx.ast.push(['expr', '*', 'mul']);
-      }
+      // // FIXME: return last value if void-op is given?
+      // // also, see if this whole shit is a pattern...
+      // const fixedValues = values.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
+      // console.log(fixedValues)
 
-      // FIXME: return last value if void-op is given?
-      // also, see if this whole shit is a pattern...
-      const fixedValues = values.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
-
-      ctx.ast.push(fixedValues.length === 1 ? fixedValues[0] : fixedValues.reduce((p, c) => p.concat(cb([c], ctx)), []));
+      // ctx.ast.push(fixedValues.length === 1 ? fixedValues[0] : fixedValues.reduce((p, c) => p.concat(cb([c], ctx)), []));
       continue;
     }
+    // if (Array.isArray(tokens[i][0]) && !Array.isArray(tokens[i][0][0])) {
+    //   const values = fixArgs(tokens[i]).map(x => x.length === 1 ? x[0] : x);
 
-    reduceFromLogic(cb, ctx, expressions);
-    reduceFromFX(cb, ctx, expressions);
-    reduceFromDefs(cb, ctx, expressions);
-    reduceFromUnits(cb, ctx, convert, expressions);
+    //   // prepend multiplication if goes after units/numbers
+    //   // if (ctx.left && ['unit', 'number'].includes(ctx.left[0])) {
+    //   //   ctx.ast.push(['expr', '*', 'mul']);
+    //   // }
+
+    //   // FIXME: return last value if void-op is given?
+    //   // also, see if this whole shit is a pattern...
+    //   const fixedValues = values.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
+
+    //   ctx.ast.push(fixedValues.length === 1 ? fixedValues[0] : fixedValues.reduce((p, c) => p.concat(cb([c], ctx)), []));
+    //   continue;
+    // }
+
+    // reduceFromLogic(cb, ctx, expressions);
+    // reduceFromFX(cb, ctx, expressions);
+    // reduceFromDefs(cb, ctx, expressions);
+    reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
 
     // skip definitions only
     if (!['def', 'symbol'].includes(ctx.cur[0])) ctx.ast.push(ctx.cur);

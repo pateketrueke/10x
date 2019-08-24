@@ -168,7 +168,7 @@ export default class Solv {
 
     try {
       subTree.forEach(ast => {
-        output.push(...toList(reduceFromAST(ast, convertFrom, this.expressions)));
+        output.push(...toList(reduceFromAST(ast, convertFrom, this.expressions, null, this.units)));
       });
     } catch (e) {
       this.error = ParseError.build(e, source || this.source, 2, this.filepath);

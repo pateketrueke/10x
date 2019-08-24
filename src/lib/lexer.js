@@ -75,7 +75,7 @@ export function getTokensFrom(text, units) {
       inBlock || inFormat || typeof last === 'undefined'
 
       // allow escapes and identical tokens
-      || (last === '\\') || (last === cur)
+      || (last === '\\') || (last === cur && !hasSep(cur))
 
       // well-known operators
       || hasOp(last + cur)

@@ -105,13 +105,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   }
 
   // handle operators
-  if (
-    text.length <= 2
-    && (
-      hasSep(text)
-      || (hasOp(text[0]) && !isInt(text[1]))
-    )
-  ) {
+  if (hasOp(text)) {
     return [(text.length === 1 && !'<>'.includes(text)) ? 'expr' : 'fx', text, hasOp(text)];
   }
 
