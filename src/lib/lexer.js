@@ -80,7 +80,8 @@ export function getTokensFrom(text, units) {
       || hasOp(last + cur)
 
       // keep numbers and words
-      || (hasNum(last) && cur === '.' && hasNum(next))
+      || (last === ':' && (hasNum(cur) || hasChar(cur)))
+      || (hasNum(last) && ':.'.includes(cur) && hasNum(next))
       || ((hasNum(last) || '-.'.includes(last)) && hasNum(cur))
       || ((hasChar(last) || hasNum(last)) && (hasChar(cur) || hasNum(cur)))
       || (isInt(last) && cur === '/' && isInt(next)) || (last === '/' && isInt(buffer[0].cur))
@@ -124,7 +125,7 @@ export function getTokensFrom(text, units) {
       || (hasNum(olderValue) && ' /-'.includes(lastValue) && hasKeyword(olderValue + lastValue + value, units))
 
       // keep hours-like values together, e.g. `200 am`, '4 pm' or `16:20:00 pm`
-      || ((isInt(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || hasHours(olderValue + lastValue + value))
+      || ((hasNum(olderValue) && lastValue === ' ' && ['am', 'pm'].includes(value)) || hasHours(olderValue + lastValue + value))
     ) {
       prev[prev.length - 2].cur += lastValue + value;
       prev.pop();

@@ -40,6 +40,7 @@ describe('Lexer', () => {
 
     it('should handle operators', () => {
       expect(getTokensFrom('1<=2').length).to.eql(3);
+      expect(getTokensFrom('~> void').length).to.eql(3);
     });
 
     it('should handle comments', () => {
@@ -48,7 +49,6 @@ describe('Lexer', () => {
     });
 
     it('should handle markdown-like tags', () => {
-      expect(getTokensFrom('~> void').length).to.eql(3);
       expect(getTokensFrom('# foo\nbar').length).to.eql(2);
       expect(getTokensFrom('> foo\nbar').length).to.eql(2);
       expect(getTokensFrom('~foo~ _123_ *bar* **bazz** __bu\nzz__ `bazzinga`').length).to.eql(12);
@@ -72,6 +72,11 @@ describe('Lexer', () => {
       expect(getTokensFrom('Jun 10').length).to.eql(1);
       expect(getTokensFrom('Jun, 1987').length).to.eql(1);
       expect(getTokensFrom('Jun 10, 1987').length).to.eql(1);
+    });
+
+    it('should handle hours', () => {
+      expect(getTokensFrom('200 am', DEFAULT_MAPPINGS).length).to.eql(1);
+      expect(getTokensFrom('16:20:00 pm', DEFAULT_MAPPINGS).length).to.eql(1);
     });
   });
 });
