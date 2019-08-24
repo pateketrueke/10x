@@ -1,7 +1,7 @@
 import {
-  isFx, isSep, isTime, isExpr,
+  hasSep, hasTimeUnit, hasExpr,
   hasNum, hasMonths, hasTagName, hasOwnKeyword,
-} from './parser';
+} from './shared';
 
 import {
   evaluateComparison, calculateFromTokens,
@@ -224,13 +224,13 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   const right = ctx.right || [];
 
   // handle converting between expressions
-  if (ctx.cur[0] === 'expr' && left[0] === 'number' && isExpr(ctx.cur[1])) {
+  if (ctx.cur[0] === 'expr' && left[0] === 'number' && hasExpr(ctx.cur[1])) {
     const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
 
     if (fixedUnit && !['datetime', 'fr'].includes(fixedUnit) && left[2] && left[2] !== 'datetime') {
       left[1] = convert(parseFloat(toNumber(left[1])), left[2], fixedUnit);
       left[2] = fixedUnit;
-    } else if (isTime(left[2])) {
+    } else if (hasTimeUnit(left[2])) {
       left[1] = convert(parseFloat(toNumber(left[1])), left[2], 's');
       left[2] = 's';
     }
@@ -238,7 +238,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
 
   if (ctx.cur[0] === 'number') {
     // convert time-expressions into seconds
-    if (ctx.isDate && isTime(ctx.cur[2])) {
+    if (ctx.isDate && hasTimeUnit(ctx.cur[2])) {
       ctx.cur[1] = convert(parseFloat(toNumber(ctx.cur[1])), ctx.cur[2], 's');
       ctx.cur[2] = 's';
     }
@@ -257,7 +257,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions) {
   if (ctx.cur[1] === '+' || ctx.cur[1] === '-') ctx.lastOp = ctx.cur;
 
   // flag the expression for dates
-  if (isTime(ctx.cur[2])) ctx.isDate = true;
+  if (hasTimeUnit(ctx.cur[2])) ctx.isDate = true;
 }
 
 export function reduceFromLogic(ctx, tokens, expressions) {
@@ -266,7 +266,7 @@ export function reduceFromLogic(ctx, tokens, expressions) {
   //   isSymbol = true;
   //   fixedStack.push(cur);
 
-  //   if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && isSep(cur[1])))) {
+  //   if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && hasSep(cur[1])))) {
   //     const branches = fixTokens(fixedStack, false);
 
   //     console.log({branches});

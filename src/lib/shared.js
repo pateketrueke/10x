@@ -1,5 +1,5 @@
 import {
-  CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
+  TIME_UNITS, CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
 } from './convert';
 
 const TAG_TYPES = ['blockquote', 'comment', 'heading', 'check', 'em', 'b', 'code', 'text'];
@@ -49,6 +49,7 @@ export const hasDays = x => RE_DAYS.test(x);
 export const hasHours = x => RE_HOURS.test(x);
 export const hasMonths = x => RE_MONTHS.test(x);
 export const hasTagName = x => TAG_TYPES.includes(x);
+export const hasTimeUnit = x => TIME_UNITS.includes(x);
 
 export const hasFmt = x => /^["`_*~]$/.test(x);
 export const hasSep = x => '{[()]}|;,.'.includes(x);

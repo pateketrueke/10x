@@ -1,6 +1,6 @@
 import {
-  isInt, isTime, isExpr, hasPercent,
-} from './parser';
+  isInt, hasExpr, hasPercent,
+} from './shared';
 
 import {
   toList, toValue, toNumber, toFraction,
@@ -50,7 +50,7 @@ export function calculateFromDate(op, left, right) {
     const newMinutes = right.getMinutes();
     const newSeconds = right.getSeconds();
 
-    if (op !== 'at' && isExpr(op)) {
+    if (op !== 'at' && hasExpr(op)) {
       if (oldYear !== newYear) left.setFullYear(newYear);
       if (oldMonth !== newMonth) left.setMonth(newMonth);
     }
@@ -129,7 +129,7 @@ export function operateExpression(ops, expr) {
       if (
         prev[1] instanceof Date
         || next[1] instanceof Date
-        || (prev[2] === 's' && isExpr(cur[1]) && isInt(next[1]))
+        || (prev[2] === 's' && hasExpr(cur[1]) && isInt(next[1]))
       ) {
         result = calculateFromDate(cur[1], prev[1], next[1]);
 
@@ -144,7 +144,7 @@ export function operateExpression(ops, expr) {
           // carry units
           result = toNumber(prev[1]);
           prev[2] = prev[2] || next[1];
-        } else if (isExpr(cur[1])) {
+        } else if (hasExpr(cur[1])) {
           if (!(prev[2] && next[2])) {
             result = `${prev[1] / parseFloat(next[1]) * 100}%`;
           } else {

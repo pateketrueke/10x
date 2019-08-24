@@ -1,6 +1,7 @@
-import { isInt, parseBuffer } from './parser';
-import { transform } from './transform';
+import { getTokensFrom } from './lexer';
+import { transform } from './parser';
 import { fixTree } from './tree';
+import { isInt } from './shared';
 
 import {
   toFraction, toNumber, toValue, toList,
@@ -62,7 +63,7 @@ export default class Solv {
   resolve(source, filepath) {
     this.filepath = filepath;
     this.source = source;
-    this.input = parseBuffer(source, this.units);
+    this.input = getTokensFrom(source, this.units);
 
     try {
       const tokens = transform(this.input, this.units);
