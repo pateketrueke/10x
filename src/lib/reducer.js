@@ -504,7 +504,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
 
     // skip definitions only
-    if (Array.isArray(ctx.cur) || !['def', 'symbol'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
+    if (Array.isArray(ctx.cur) || ctx.cur.token[0] !== 'def') ctx.ast.push(ctx.cur);
   }
 
   return ctx.ast;

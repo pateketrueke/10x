@@ -147,32 +147,32 @@ if (!returnAsJSON) {
   calc.tree.forEach(subTree => {
     const results = calc.eval([subTree]);
 
-    if (calc.error && calc.error.stack) {
+    if (calc.error) {
       process.stderr.write(chalk.red(calc.error.stack));
       process.exit(1);
     }
 
     subTree.forEach(node => {
-      if (Array.isArray(node[0])) {
+      if (Array.isArray(node)) {
         push('open', '(');
 
         node.forEach(t => {
-          if (Array.isArray(t[0])) {
+          if (Array.isArray(t)) {
             t.forEach(s => {
-              push(s[0], s[1]);
+              push(s.token[0], s.token[1]);
             });
           } else {
-            push(t[0], t[1]);
+            push(t.token[0], t.token[1]);
           }
         });
 
         push('close', ')');
-      } else if (node[0] === 'def') {
-        push(node[0], node[1]);
+      } else if (node.token[0] === 'def') {
+        push(node.token[0], node.token[1]);
       } else {
-        push(node[0], node[1]);
+        push(node.token[0], node.token[1]);
 
-        if (typeof node[1] === 'string' && node[1].includes('\n') && tmp.length) {
+        if (typeof node.token[1] === 'string' && node.token[1].includes('\n') && tmp.length) {
           tmp.forEach(x => {
             push(null, `${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '))}\n`);
           });
@@ -192,7 +192,7 @@ if (!returnAsJSON) {
 
   if (returnAsJSON) {
     process.stdout.write(JSON.stringify({
-      error: returnRawJSON ? JSON.stringify(fixedError) : fixedError,
+      error: returnRawJSON ? JSON.stringify(calc.error) : calc.error,
       tree: returnRawJSON ? JSON.stringify(calc.tree) : calc.tree,
       input: calc.input.map(x => returnRawJSON ? JSON.stringify(x) : x),
       tokens: calc.tokens.map(x => returnRawJSON ? JSON.stringify(x) : x),
@@ -205,10 +205,8 @@ if (!returnAsJSON) {
   }
 }
 
-const fixedError = calc.error && calc.error.stack;
-
-if (fixedError) {
-  process.stderr.write(chalk.red(fixedError));
+if (calc.error && !returnAsJSON) {
+  process.stderr.write(chalk.red(calc.error.stack));
   process.exit(1);
 }
 

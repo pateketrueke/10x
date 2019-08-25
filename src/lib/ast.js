@@ -4,7 +4,7 @@ import {
 
 import ParseError from './error';
 
-export class TokenExpression {
+export class Expression {
   constructor(info, token) {
     if (!token) {
       token = info.token.slice();
@@ -98,20 +98,20 @@ export function toValue(value) {
 
 export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
   if (Array.isArray(token)) {
-    return new TokenExpression({ token });
+    return new Expression({ token });
   }
 
-  if (!(token instanceof TokenExpression)) {
+  if (!(token instanceof Expression)) {
     const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
     if (!retval) {
       throw new ParseError(`Unexpected token \`${token.content}\``, token);
     }
 
-    return new TokenExpression(token, retval);
+    return new Expression(token, retval);
   }
 
-  return new TokenExpression(token);
+  return new Expression(token);
 }
 
 export function fixTokens(ast, flatten) {
