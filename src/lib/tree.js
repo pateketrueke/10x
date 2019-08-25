@@ -153,7 +153,7 @@ export function fixTree(ast) {
     }
 
     // compose lambda-calls with multiple arguments...
-    if (cur.token[0] === 'unit' && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))) {
+    if (!Array.isArray(cur) && !Array.isArray(next) && cur.token[0] === 'unit' && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))) {
       const offset = tokens.slice(i).findIndex(x => x.token[0] === 'fx' && x.token[2] === 'func');
 
       if (offset > 0) {
