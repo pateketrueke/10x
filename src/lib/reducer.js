@@ -271,7 +271,7 @@ export function reduceFromLogic(ctx, tokens, expressions) {
 
 export function reduceFromFX(cb, ctx, expressions) {
   // partial calls
-  if (ctx.left && ctx.cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(ctx.cur[2]) && ctx.right && ctx.right[0] === 'def') {
+  if (ctx.cur.token[0] === 'fx' && ['lpipe', 'rpipe'].includes(ctx.cur.token[2]) && ctx.right.token[0] === 'def') {
     console.log('FX_PIPE_DEF');
     // const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
     // const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
@@ -293,51 +293,55 @@ export function reduceFromFX(cb, ctx, expressions) {
   }
 
   // apply symbol-accessor op
-  if (ctx.current && ctx.cur[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(ctx.current[0])) {
-    const args = fixArgs(cb(ctx.tokens[ctx.i + 1] || [], ctx), false)
-      .map(x => calculateFromTokens(x));
-
-    console.log('SYM_FX',{args,ctx});
-
-    ctx.current = cb(fixArgs(ctx.left), ctx);
-
-    // FIXME: this should receive whole context instead...
-    ctx.current = reduceFromEffect(cb, ctx.cur, args, ctx.current);
-
-    ctx.stack[ctx.stack.length - 1] = ctx.current;
-    return;
+  if (ctx.cur.token[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(ctx.left.token[0])) {
+    // console.log(ctx);
+    console.log('SYM_ATTRS');
   }
+  // if (ctx.current && ctx.cur.token[0] === 'symbol' && ) {
+    // const args = fixArgs(cb(ctx.tokens[ctx.i + 1] || [], ctx), false)
+    //   .map(x => calculateFromTokens(x));
+
+    // console.log('SYM_FX',{args,ctx});
+
+    // ctx.current = cb(fixArgs(ctx.left), ctx);
+
+    // // FIXME: this should receive whole context instead...
+    // ctx.current = reduceFromEffect(cb, ctx.cur, args, ctx.current);
+
+    // ctx.stack[ctx.stack.length - 1] = ctx.current;
+  //   return;
+  // }
 
   // handle logical expressions
-  if (ctx.cur[0] === 'fx') {
-    const [op, ...body] = ctx.tokens.slice(ctx.i);
-    const args = [];
+  // if (ctx.cur[0] === 'fx') {
+  //   const [op, ...body] = ctx.tokens.slice(ctx.i);
+  //   const args = [];
 
-    let buffer = [];
-    let offset = -1;
+  //   let buffer = [];
+  //   let offset = -1;
 
-    // split on consecutive values
-    for (let i = 0; i < body.length; i += 1) {
-      if (['string', 'symbol', 'number', 'object', 'boolean', 'function', 'undefined'].includes(body[i][0])) offset++;
-      if (offset >= 0) {
-        buffer = args[offset] || (args[offset] = []);
-        buffer.push(body[i]);
-      }
-    }
+  //   // split on consecutive values
+  //   for (let i = 0; i < body.length; i += 1) {
+  //     if (['string', 'symbol', 'number', 'object', 'boolean', 'function', 'undefined'].includes(body[i][0])) offset++;
+  //     if (offset >= 0) {
+  //       buffer = args[offset] || (args[offset] = []);
+  //       buffer.push(body[i]);
+  //     }
+  //   }
 
-    // skip from non-arguments
-    if (!args.length) {
-      ctx.stack.push(ctx.cur);
-      return;
-    }
+  //   // skip from non-arguments
+  //   if (!args.length) {
+  //     ctx.stack.push(ctx.cur);
+  //     return;
+  //   }
 
-    // FIXME: validate input or something?
-    const [lft, rgt, ...others] = args.map(x => calculateFromTokens(cb(x, ctx)));
-    const result = evaluateComparison(ctx.cur[1], lft[1], rgt ? rgt[1] : undefined, others.map(x => x[1]));
+  //   // FIXME: validate input or something?
+  //   const [lft, rgt, ...others] = args.map(x => calculateFromTokens(cb(x, ctx)));
+  //   const result = evaluateComparison(ctx.cur[1], lft[1], rgt ? rgt[1] : undefined, others.map(x => x[1]));
 
-    // also, how these values are rendered back?
-    ctx.stack.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
-  }
+  //   // also, how these values are rendered back?
+  //   ctx.stack.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
+  // }
 }
 
 export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
@@ -438,7 +442,6 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     ctx.cur = tokens[i];
     ctx.left = tokens[i - 1] || { token: [] };
     ctx.right = tokens[i + 1] || { token: [] };
-    ctx.current = ctx.ast[ctx.ast.length - 1];
 
     // handle anonymous sub-expressions
     if (Array.isArray(ctx.cur)) {
@@ -462,7 +465,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     }
 
     // reduceFromLogic(cb, ctx, expressions);
-    // reduceFromFX(cb, ctx, expressions);
+    reduceFromFX(cb, ctx, expressions);
     reduceFromDefs(cb, ctx, expressions, supportedUnits);
     reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
 
