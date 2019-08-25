@@ -75,9 +75,9 @@ export default class Solv {
     return this;
   }
 
-  format(result, separator) {
+  format(result, separator, formatter) {
     if (Array.isArray(result[0])) {
-      const fixedResult = result.map(x => this.value(x).format);
+      const fixedResult = result.map(x => this.value(x, formatter).format);
 
       if (separator) {
         return fixedResult.join(separator);
@@ -86,10 +86,10 @@ export default class Solv {
       return fixedResult;
     }
 
-    return this.value(result).format;
+    return this.value(result, formatter).format;
   }
 
-  value(token) {
+  value(token, formatter) {
     if (!token) {
       return null;
     }
@@ -139,12 +139,18 @@ export default class Solv {
       }
     }
 
+    let formattedValue = typeof fixedValue !== 'string'
+      ? JSON.stringify(fixedValue)
+      : fixedValue;
+
+    if (typeof formatter === 'function') {
+      formattedValue = formatter(formattedValue);
+    }
+
     return {
       val: token[1],
       type: token[0],
-      format: typeof fixedValue !== 'string'
-        ? JSON.stringify(fixedValue)
-        : fixedValue,
+      format: formattedValue,
     };
   }
 

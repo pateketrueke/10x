@@ -174,7 +174,7 @@ if (!returnAsJSON) {
 
         if (typeof node.token[1] === 'string' && node.token[1].includes('\n') && tmp.length) {
           tmp.forEach(x => {
-            push(null, `${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '))}\n`);
+            push(null, `${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
           });
           tmp = [];
         }
