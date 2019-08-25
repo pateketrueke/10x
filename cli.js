@@ -141,7 +141,19 @@ if (!returnAsJSON) {
     }));
   }
 
-  let isOut = false;
+  function render(subTree) {
+    subTree.forEach(t => {
+      if (Array.isArray(t)) {
+        t.forEach(s => {
+          push(s.token[0], s.token[1]);
+        });
+      } else {
+        push(t.token[0], t.token[1]);
+      }
+    });
+  }
+
+  let indent = '';
   let tmp = [];
 
   calc.tree.forEach(subTree => {
@@ -155,27 +167,26 @@ if (!returnAsJSON) {
     subTree.forEach(node => {
       if (Array.isArray(node)) {
         push('open', '(');
-
-        node.forEach(t => {
-          if (Array.isArray(t)) {
-            t.forEach(s => {
-              push(s.token[0], s.token[1]);
-            });
-          } else {
-            push(t.token[0], t.token[1]);
-          }
-        });
-
+        render(node);
         push('close', ')');
       } else if (node.token[0] === 'def') {
         push(node.token[0], node.token[1]);
       } else {
         push(node.token[0], node.token[1]);
 
-        if (typeof node.token[1] === 'string' && node.token[1].includes('\n') && tmp.length) {
+        if (node.token[0] === 'text' && node.begin[1] === 0) {
+          indent = (node.token[1].match(/^ +/) || [])[0] || indent || '';
+        }
+
+        if (node.token[1] === '\n' && tmp.length) {
+          push(null, '\x1b[1A');
+
           tmp.forEach(x => {
-            push(null, `${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
+            push(null, `${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
           });
+
+          push(null, '\n');
+          indent = '';
           tmp = [];
         }
       }
