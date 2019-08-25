@@ -166,9 +166,11 @@ export function normalize(subTree) {
   if (nonOps.length) {
     const avg = nonOps.reduce((prev, cur) => prev + cur.score, 0) / nonOps.length;
 
-    if (avg < 1) {
+    if (avg < 2) {
       delete subTree._fixed;
     }
+  } else {
+    delete subTree._fixed;
   }
 }
 
@@ -187,17 +189,29 @@ export function transform(tokens, units) {
 
     do { nextToken = (tokens[++key] || {}).cur; } while (' \n'.includes(nextToken));
 
-    if (token.score || token.depth) {
+    if (token.depth || token.score > 2) {
       // split on first high-ranked token
       if (subTree.length && !subTree._fixed) {
-        if (hasChar(subTree[0].cur) && hasSep(token.cur, '=')) {
+        if (';(='.includes(token.cur) && subTree.length === 1) {
           subTree._fixed = true;
           subTree.push(token)
           continue;
         }
 
+        // handle strings and symbols
         if ('":'.includes(token.cur.charAt())) {
+          if (subTree.length) {
+            const lastToken = subTree.filter(x => !' \n'.includes(x.cur)).pop();
+
+            if (lastToken && lastToken.score > 2) {
+              subTree._fixed = true;
+              subTree.push(token);
+              continue;
+            }
+          }
+
           chunks[++inc] = [token];
+          chunks[inc]._fixed = true;
           continue;
         }
 
@@ -217,10 +231,7 @@ export function transform(tokens, units) {
     subTree.push(token);
 
     // make sure we're always splitting on new-lines!
-    if (!token.depth && token.cur === '\n') {
-      if (subTree._fixed) normalize(subTree);
-      inc++;
-    }
+    if (!token.depth && token.cur === '\n') inc++;
   }
 
   // merge non-fixed chunks

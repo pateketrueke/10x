@@ -143,13 +143,16 @@ export function getTokensFrom(text, units) {
     let score = 0;
 
     if (
-      // numbers are higher ranked!
-      (hasNum(value) || (hasChar(value) && '(='.includes(nextChar)))
+      // numbers
+      hasNum(value)
+
+      // definitions
+      || (hasChar(value) && '(='.includes(nextChar))
 
       // separators and operators
       || (oldScore && (hasSep(value) || hasOp(value)))
 
-      // all symbols
+      // symbols
       || (
         value.charAt() === ':'
         && (hasChar(value.substr(1)) || hasNum(value.substr(1)))
@@ -157,7 +160,7 @@ export function getTokensFrom(text, units) {
 
       // strings
       || (value.charAt() === '"' && value.substr(value.length - 1) === '"')
-    ) score += 1;
+    ) score += 3;
 
     if (
       // comments
@@ -174,7 +177,7 @@ export function getTokensFrom(text, units) {
 
       // side-effects
       || ('(' === value && hasOp(nextChar))
-    ) score += 1;
+    ) score += 1.5;
 
     // always give score to parenthesis
     if ('({[]})'.includes(value)) score += 1;
