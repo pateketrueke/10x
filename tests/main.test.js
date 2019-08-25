@@ -61,10 +61,10 @@ describe('DSL', () => {
       expect(value('1 + 2')).to.eql(['3']);
       expect(value('(1 + 2)')).to.eql(['3']);
       expect(value('1 + (2 + 3)')).to.eql(['6']);
-      // expect(value('(1 + (2 + 3))')).to.eql(['6']);
-      // expect(calc('1 + (2 + (3 + 4))').eval()).to.eql([]);
-      // expect(value('1 + (2 + (3 + 4))')).to.eql(['10']);
-      // expect(value('1 + ( 2 + ( 3 - 4 ) - 2 )')).to.eql(['0']);
+      expect(value('(1 + (2 + 3))')).to.eql(['6']);
+      expect(value('1 + (2 + (3 + 4))')).to.eql(['10']);
+      expect(value('(1 + (2 + (3 + 4)))')).to.eql(['10']);
+      expect(value('1 + (2 + (3 - 4) - 2)')).to.eql(['0']);
     });
 
     it.skip('should validate nested sub-expressions', () => {

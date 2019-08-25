@@ -201,16 +201,20 @@ export function fixArgs(values, flatten) {
     const last = stack[offset] || (stack[offset] = []);
     const cur = values[i];
 
-    last.push(cur);
+    if (!Array.isArray(cur)) {
+      last.push(cur);
 
-    // normalize raw separators
-    if (
-      flatten === null
-      ? cur === null
-      : (cur.token[0] === 'expr' && ';,'.includes(cur.token[1]))
-    ) {
-      last.pop();
-      offset++;
+      // normalize raw separators
+      if (
+        flatten === null
+        ? cur === null
+        : (cur.token[0] === 'expr' && ';,'.includes(cur.token[1]))
+      ) {
+        last.pop();
+        offset++;
+      }
+    } else {
+      last.push(...cur);
     }
   }
 

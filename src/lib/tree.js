@@ -284,11 +284,7 @@ export function buildTree(tokens) {
   const inCalls = [];
 
   for (let i = 0; i < tokens.length; i += 1) {
-    const p = root && root[root.length - 1];
     const t = tokens[i];
-
-    // flag var/call expressions (strict-mode)
-    if (p && p.token[0] === 'unit' && hasChar(p.token[1]) && ('(='.includes(t.token[1]))) p.token[0] = 'def';
 
     // handle nesting
     if (['open', 'close'].includes(t.token[0]) || ['begin', 'end'].includes(t.token[2])) {
