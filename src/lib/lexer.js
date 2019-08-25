@@ -137,18 +137,17 @@ export function getTokensFrom(text, units) {
       return prev;
     }
 
-    let key = i;
-    let score = 0;
-    let nextToken;
+    const nextToken = tokens.slice(i).find(x => !' \n'.includes(x.cur));
+    const nextChar = ((tokens[i + 1] || [])[0] || {}).cur;
 
-    do { nextToken = ((tokens[++key] || [])[0] || {}).cur; } while (' \n'.includes(nextToken));
+    let score = 0;
 
     if (
       // numbers are higher ranked!
-      (hasNum(value) || (hasChar(value) && '(='.includes(nextToken)))
+      (hasNum(value) || (hasChar(value) && '(='.includes(nextChar)))
 
       // separators and operators
-      || (oldScore > 2 && (hasSep(value) || hasOp(value)))
+      || (oldScore && (hasSep(value) || hasOp(value)))
 
       // all symbols
       || (
@@ -158,14 +157,11 @@ export function getTokensFrom(text, units) {
 
       // strings
       || (value.charAt() === '"' && value.substr(value.length - 1) === '"')
-    ) score = 3;
+    ) score += 1;
 
     if (
-      // separators & operators
-      ((hasSep(value) || hasOp(value)) && oldScore)
-
       // comments
-      || (
+      (
         value.indexOf('//') === 0
         || (value.indexOf('/*') === 0 && value.substr(value.length-2) === '*/')
       )
@@ -177,8 +173,11 @@ export function getTokensFrom(text, units) {
       || ('(='.includes(value) && oldScore)
 
       // side-effects
-      || ('(' === value && hasOp(nextToken))
-    ) score = 1;
+      || ('(' === value && hasOp(nextChar))
+    ) score += 1;
+
+    // always give score to parenthesis
+    if ('({[]})'.includes(value)) score += 1;
 
     // increase depth if we're into a definition, not inside any parenthesis!
     if ('(='.includes(value) && oldScore) depth++;

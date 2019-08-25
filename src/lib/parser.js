@@ -160,6 +160,18 @@ export function tokenize(input, units) {
   }, []);
 }
 
+export function normalize(subTree) {
+  const nonOps = subTree.filter(x => !hasSep(x.cur) && !' \n'.includes(x.cur));
+
+  if (nonOps.length) {
+    const avg = nonOps.reduce((prev, cur) => prev + cur.score, 0) / nonOps.length;
+
+    if (avg < 1) {
+      delete subTree._fixed;
+    }
+  }
+}
+
 export function transform(tokens, units) {
   const chunks = [];
 
@@ -175,38 +187,39 @@ export function transform(tokens, units) {
 
     do { nextToken = (tokens[++key] || {}).cur; } while (' \n'.includes(nextToken));
 
-    if (token.score) {
+    if (token.score || token.depth) {
+      // split on first high-ranked token
       if (subTree.length && !subTree._fixed) {
-        chunks[++inc] = [token];
-
-        if (
-          (hasChar(token.cur) && '(='.includes(nextToken))
-          || (hasNum(token.cur)
-          && (hasOp(nextToken)
-            || hasSep(nextToken)
-            || hasNum(nextToken)
-            || hasExpr(nextToken)
-          ))
-        ) {
-          chunks[inc]._fixed = true;
-        } else if (token.score > 1) {
-          chunks[inc++]._fixed = true;
+        if (hasChar(subTree[0].cur) && hasSep(token.cur, '=')) {
+          subTree._fixed = true;
+          subTree.push(token)
+          continue;
         }
-      } else {
-        subTree.push(token);
-        subTree._fixed = true;
+
+        if ('":'.includes(token.cur.charAt())) {
+          chunks[++inc] = [token];
+          continue;
+        }
+
+        chunks[++inc] = [token];
+        chunks[inc]._fixed = true;
+        continue;
       }
     } else {
-      if (!' \n'.includes(token.cur) && subTree._fixed && subTree.length) {
+      // break on any non-white space
+      if (!' \n'.includes(token.cur) && subTree._fixed) {
         chunks[++inc] = [token];
-      } else {
-        subTree.push(token);
+        normalize(subTree);
+        continue;
       }
     }
 
+    subTree.push(token);
+
     // make sure we're always splitting on new-lines!
-    if (!token.depth) {
-      if ((tokens[i + 1] || {}).cur === '\n' || token.cur === '\n') inc++;
+    if (!token.depth && token.cur === '\n') {
+      if (subTree._fixed) normalize(subTree);
+      inc++;
     }
   }
 
