@@ -221,4 +221,7 @@ if (calc.error && !returnAsJSON) {
   process.exit(1);
 }
 
-if (sharedFile) require('fs').writeFileSync(sharedFile, JSON.stringify(calc.expressions));
+if (sharedFile) require('fs').writeFileSync(sharedFile, JSON.stringify(calc.expressions, (k, v) => {
+  if (['begin', 'end'].includes(k)) return undefined;
+  return v;
+}));
