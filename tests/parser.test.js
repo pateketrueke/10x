@@ -3,7 +3,7 @@ import { transform } from '../src/lib/parser';
 import { getTokensFrom } from '../src/lib/lexer';
 import { DEFAULT_MAPPINGS } from '../src/lib/convert';
 
-describe.only('Parser', () => {
+describe('Parser', () => {
   const tree = sample => transform(getTokensFrom(sample, DEFAULT_MAPPINGS), DEFAULT_MAPPINGS).tree;
 
   describe('tokenization', () => {

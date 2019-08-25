@@ -8,8 +8,8 @@ import {
 } from './solver';
 
 import {
-  toValue, toNumber,
   fixArgs, fixTokens,
+  toToken, toValue, toNumber,
 } from './ast';
 
 import ParseError from './error';
@@ -468,34 +468,33 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     // shared context
     ctx.i = i;
     ctx.cur = tokens[i];
-    ctx.left = tokens[i - 1];
-    ctx.right = tokens[i + 1];
+    ctx.left = tokens[i - 1] || { token: [] };
+    ctx.right = tokens[i + 1] || { token: [] };
     ctx.current = ctx.ast[ctx.ast.length - 1];
 
-    // flag well-known definitions, as they are open...
-    if (
-      ctx.root.isDef ||
-      ctx.cur[0] === 'def' ||
-      (ctx.right && ctx.right[0] === 'expr' && ctx.right[2] === 'equal')
-    ) ctx.isDef = true;
+    // handle anonymous sub-expressions
+    if (Array.isArray(ctx.cur)) {
+      const values = fixArgs(ctx.cur).map(x => x.length === 1 ? x[0] : x);
 
-    // // append last-operator between consecutive unit-expressions
-    if (!ctx.isDef && ctx.left && ctx.left[0] === 'number' && ctx.cur[0] === 'number') {
-      ctx.ast.push(ctx.lastOp);
-    }
+      // FIXME: return last value if void-op is given?
+      // also, see if this whole shit is a pattern...
+      const fixedValues = values.map(x => calculateFromTokens(cb(x, ctx)));
+      const fixedToken = fixedValues.length !== 1
+      ? fixedValues.reduce((p, c) => p.concat(cb([c], ctx)), [])
+      : fixedValues[0];
 
-    // // handle anonymous sub-expressions
-    if (Array.isArray(ctx.cur[0])) {
-      // const values = fixArgs(tokens[i]).map(x => x.length === 1 ? x[0] : x);
-
-      // // FIXME: return last value if void-op is given?
-      // // also, see if this whole shit is a pattern...
-      // const fixedValues = values.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
-      // console.log(fixedValues)
-
-      // ctx.ast.push(fixedValues.length === 1 ? fixedValues[0] : fixedValues.reduce((p, c) => p.concat(cb([c], ctx)), []));
+      ctx.ast.push(toToken(fixedToken));
       continue;
     }
+
+    // flag well-known definitions, as they are open...
+    if (ctx.root.isDef || ctx.cur.token[0] === 'def') ctx.isDef = true;
+
+    // append last-operator between consecutive unit-expressions
+    if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+      ctx.ast.push(toToken(ctx.lastOp));
+    }
+
     // if (Array.isArray(tokens[i][0]) && !Array.isArray(tokens[i][0][0])) {
     //   const values = fixArgs(tokens[i]).map(x => x.length === 1 ? x[0] : x);
 
@@ -515,10 +514,11 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     // reduceFromLogic(cb, ctx, expressions);
     // reduceFromFX(cb, ctx, expressions);
     // reduceFromDefs(cb, ctx, expressions);
-    reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
+    // console.log(ctx)
+    // reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
 
     // skip definitions only
-    if (!['def', 'symbol'].includes(ctx.cur[0])) ctx.ast.push(ctx.cur);
+    if (!['def', 'symbol'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
   }
 
   return ctx.ast;

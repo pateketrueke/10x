@@ -93,42 +93,11 @@ export function toValue(value) {
   return value;
 }
 
-export function toList(tokens, nums) {
-  const normalized = [];
-
-  let chunks = [];
-
-  for (let i = 0; i < tokens.length; i += 1) {
-    if (!tokens[i]) continue;
-
-    if (tokens[i][0] === 'expr' && hasSep(tokens[i][1])) {
-      normalized.push(chunks);
-      chunks = [];
-      continue;
-    }
-
-    if (nums !== false) {
-      const lastValue = chunks[chunks.length - 1] || [];
-
-      if (lastValue[0] === 'number' && tokens[i][0] === 'number') {
-        normalized.push(chunks);
-        chunks = [tokens[i]];
-        continue;
-      }
-    }
-
-    chunks.push(tokens[i]);
-  }
-
-  if (chunks.length) {
-    normalized.push(chunks);
-    chunks = [];
-  }
-
-  return normalized;
-}
-
 export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
+  if (Array.isArray(token)) {
+    return new TokenExpression({ token });
+  }
+
   if (!(token instanceof TokenExpression)) {
     const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
@@ -192,17 +161,13 @@ export function fixStrings(tokens, split) {
   return tokens.reduce((prev, cur) => {
     if (
       prev.length
-      && cur[0] === 'text'
-      && prev[prev.length - 1][1] !== '\n'
-      && prev[prev.length - 1][0] === 'text'
-      && (split === false || !cur[1].includes(' '))
+      && cur.token[0] === 'text'
+      && prev[prev.length - 1].token[1] !== '\n'
+      && prev[prev.length - 1].token[0] === 'text'
+      && (split === false || !cur.token[1].includes(' '))
     ) {
-      if (!cur._offset) {
-        prev.push(cur);
-      } else {
-        prev[prev.length - 1][1] += cur[1];
-        prev[prev.length - 1]._offset[1] = cur._offset[1];
-      }
+      prev[prev.length - 1].token[1] += cur.token[1];
+      prev[prev.length - 1].end = cur.end;
     } else {
       prev.push(cur);
     }
@@ -241,7 +206,7 @@ export function fixArgs(values, flatten) {
     if (
       flatten === null
       ? cur === null
-      : (cur.token[0] === 'expr' && hasSep(cur.token[1]))
+      : (cur.token[0] === 'expr' && ';,'.includes(cur.token[1]))
     ) {
       last.pop();
       offset++;

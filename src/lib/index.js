@@ -4,6 +4,7 @@ import { fixTree } from './tree';
 import { isInt } from './shared';
 
 import {
+  fixArgs,
   toFraction, toNumber, toValue, toList,
 } from './ast';
 
@@ -166,16 +167,18 @@ export default class Solv {
       return prev;
     }, [])
 
+    const cb = ast => reduceFromAST(ast, convertFrom, this.expressions, null, this.units);
+
     try {
       subTree.forEach(ast => {
-        output.push(...toList(reduceFromAST(ast, convertFrom, this.expressions, null, this.units)));
+        output.push(...fixArgs(cb(ast)));
       });
     } catch (e) {
       this.error = ParseError.build(e, source || this.source, 2, this.filepath);
       return [];
     }
 
-    return output.map(x => calculateFromTokens(x))
+    return output.map(x => calculateFromTokens(cb(x)))
       .map(x => Array.isArray(x) && x.length === 1 ? x[0] : x)
       .filter(x => Array.isArray(x) ? x.length : typeof x !== 'undefined');
   }
