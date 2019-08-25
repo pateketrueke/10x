@@ -101,6 +101,10 @@ export function getTokensFrom(text, units) {
       || (inBlock === 'block' && cur === '\n')
       || (inBlock === 'multiline' && last === '*' && cur === '/')
     ) inBlock = inFormat = false;
+
+    if (!inBlock && cur === '\n')  {
+      offset++;
+    }
   }
 
   // join all tokens!

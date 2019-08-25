@@ -131,14 +131,21 @@ export function fixTree(ast) {
       if (prev.token[0] === 'def') {
         const offset  = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[1] === ';');
         const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
-        const hasArray = Array.isArray(cur[0]);
+        const firstNode = subTree.shift();
+
+        if (Array.isArray(firstNode)) {
+          prev._args = true;
+          subTree.shift();
+        }
+
+        if (subTree.length > 0) {
+          prev._body = true;
+        }
 
         // update token definition
-        prev._body = subTree.length > 1;
-        prev._args = hasArray;
         prev.token[2] = {
-          args: hasArray ? fixArgs(cur, true) : [],
-          body: fixTree(fixCalls(subTree.slice(hasArray ? 2 : 1))),
+          args: prev._args ? fixArgs(cur, true) : [],
+          body: fixTree(fixCalls(subTree)),
         };
         continue;
       }

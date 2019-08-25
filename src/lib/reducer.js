@@ -386,7 +386,11 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
     // define var/call
     if (ctx.cur._body) {
       if (hasOwnKeyword(supportedUnits, ctx.cur.token[1])) {
-        throw new ParseError(`Cannot override already built-in unit \`${ctx.cur.token[1]}\``, ctx);
+        throw new ParseError(`Cannot override built-in unit \`${ctx.cur.token[1]}\``, ctx);
+      }
+
+      if (hasOwnKeyword(expressions, ctx.cur.token[1])) {
+        throw new ParseError(`Cannot redefine unit \`${ctx.cur.token[1]}\``, ctx);
       }
 
       expressions[ctx.cur.token[1]] = ctx.cur.token[2];
@@ -418,8 +422,9 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
     }
 
     // FIXME: there is a side-effect, symbol/unit _ can appear twice...
-    // const locals = reduceFromArgs(def.args, cb(call.args, ctx));
-    // const definition = ctx.cur.token[1];
+    const locals = reduceFromArgs(def.args, cb(call.args, ctx));
+    const definition = ctx.cur.token[1];
+    console.log({locals,definition});
 
     // // replace all given units within the AST
     // ctx.cur = reduceFromTokens(def.body, locals);

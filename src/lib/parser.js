@@ -163,7 +163,6 @@ export function tokenize(input, units) {
 export function transform(tokens, units) {
   const chunks = [];
 
-  let depth = 0;
   let inc = 0;
 
   // split tokens based on their complexity
@@ -205,9 +204,9 @@ export function transform(tokens, units) {
       }
     }
 
-    // split on new-lines
-    if (token.cur === '\n' && !token.depth) {
-      inc++;
+    // make sure we're always splitting on new-lines!
+    if (!token.depth) {
+      if ((tokens[i + 1] || {}).cur === '\n' || token.cur === '\n') inc++;
     }
   }
 
