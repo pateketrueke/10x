@@ -11,6 +11,9 @@ export class TokenExpression {
     }
 
     Object.assign(this, info, { token });
+
+    // not needed anymore
+    delete this.content;
   }
 }
 
@@ -101,9 +104,6 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
   if (!(token instanceof TokenExpression)) {
     const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
-    // not needed anymore
-    delete token.content;
-
     if (!retval) {
       throw new ParseError(`Unexpected token \`${token.content}\``, token);
     }
@@ -160,8 +160,9 @@ export function fixTokens(ast, flatten) {
 export function fixStrings(tokens, split) {
   return tokens.reduce((prev, cur) => {
     if (
-      prev.length
+      cur
       && cur.token[0] === 'text'
+      && prev[prev.length - 1]
       && prev[prev.length - 1].token[1] !== '\n'
       && prev[prev.length - 1].token[0] === 'text'
       && (split === false || !cur.token[1].includes(' '))

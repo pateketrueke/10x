@@ -57,23 +57,19 @@ export const hasNum = x => /^-?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const hasExpr = x => /^(?:from|and|to|o[rf]|a[ts]|i[ns])$/i.test(x);
 export const hasChar = x => CURRENCY_MAPPINGS[x] || ALPHA_MAPPINGS[x] || /^[a-zA-Z_#']/.test(x);
 
-export const hasOwnKeyword = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+export const hasOwnKeyword = (o, k) => o && k && Object.prototype.hasOwnProperty.call(o, k);
 
 export const hasKeyword = (x, units, fallback) => {
   if (!x) return false;
 
   const key = x.replace(RE_NO_ALPHA, '');
-
-  // skip further detection on white-space
-  if (key.includes(' ')) return false;
-
-  if (fallback) {
-    return key;
-  }
-
   const test = key && (hasOwnKeyword(units, key) || hasOwnKeyword(units, key.toLowerCase()));
 
-  return test;
+  if (units) {
+    return units[key] || units[key.toLowerCase()] || test;
+  }
+
+  return test || (fallback && key);
 };
 
 export const hasPercent = x => {

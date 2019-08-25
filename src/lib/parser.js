@@ -98,7 +98,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   // handle expressions
   if (
     hasExpr(text)
-    && (leftToken && leftToken[0] === 'number')
+    && (leftToken.token[0] === 'number')
     && (hasNum(rightToken) || hasKeyword(rightToken, units))
   ) {
     return ['expr', text];
@@ -117,6 +117,11 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   // handle all datetimes
   if (hasDatetime(text)) {
     return ['number', text, 'datetime'];
+  }
+
+  // handle definitions
+  if (hasChar(text) && rightToken === '=') {
+    return ['unit', text];
   }
 
   const fixedUnit = hasKeyword(text, units, true);
@@ -144,9 +149,13 @@ export function tokenize(input, units) {
 
     do { nextToken = input[++key]; } while (nextToken && nextToken.content === ' ');
 
-    lastToken = toToken(cur, fromSymbols, units, lastToken, nextToken && nextToken.content);
+    const fixedToken = toToken(cur, fromSymbols, units, lastToken, nextToken && nextToken.content);;
 
-    prev.push(lastToken);
+    if (fixedToken.token[0] !== 'text') {
+      lastToken = fixedToken;
+    }
+
+    prev.push(fixedToken);
     return prev;
   }, []);
 }
@@ -171,7 +180,11 @@ export function transform(tokens, units) {
         subTree._fixed = true;
       }
     } else {
-      subTree.push(token);
+      if (subTree._fixed && !(' \n'.includes(token.cur) || hasExpr(token.cur) || hasKeyword(token.cur, units))) {
+        chunks[++inc] = [token];
+      } else {
+        subTree.push(token);
+      }
     }
 
     // split on new-lines
@@ -182,12 +195,8 @@ export function transform(tokens, units) {
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
-    if (prev.length > 1) {
-      prev.push(null);
-    }
-
     if (cur._fixed) {
-      prev.push(...tokenize(cur.map(x => ({
+      prev.push(null, ...tokenize(cur.map(x => ({
         content: x.cur,
         begin: [x.row, x.col],
         end: [x.row, x.col + x.cur.length],
@@ -197,7 +206,7 @@ export function transform(tokens, units) {
 
     const last = cur[cur.length - 1];
 
-    prev.push(toToken({
+    prev.push(null, toToken({
       content: cur.reduce((p, c) => p + c.cur, ''),
       begin: [cur[0].row, cur[0].col],
       end: [last.row, last.col + last.cur.length],
@@ -211,13 +220,13 @@ export function transform(tokens, units) {
   let _e;
 
   try {
-    fixedTree = fixArgs(body, null).map(x => buildTree(x));
+    fixedTree = fixArgs(body, null).map(x => buildTree(x)).filter(x => x.length);
   } catch (e) {
     _e = e;
   }
 
   return {
-    ast: body,
+    ast: body.filter(x => x !== null),
     tree: fixedTree,
     error: _e || undefined,
   };

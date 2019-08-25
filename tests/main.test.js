@@ -22,7 +22,7 @@ describe('DSL', () => {
       expect(value('1+2, 3-4, 5/6, 7*8')).to.eql(['3', '-1', '0.83', '56']);
     });
 
-    it.skip('should handle common errors', () => {
+    it('should handle common errors', () => {
       expect(() => value('1ml - 1cm')).to.throw(/Cannot convert incompatible measures of volume and length/);
     });
 
@@ -41,16 +41,16 @@ describe('DSL', () => {
 
     it('should tokenize symbol-like values', () => {
       expect(calc('Foo :bar ::baz-buzz Bazzinga').tokens[1].token[0]).to.eql('symbol');
-      expect(calc('Foo :bar ::baz-buzz Bazzinga').tokens[3].token[0]).to.eql('symbol');
+      expect(calc('Foo :bar ::baz-buzz Bazzinga').tokens[3].token[0]).to.eql('text');
     });
 
     it('should skip empty sub-expressions', () => {
       expect(calc(';;;').eval()).to.eql([]);
     });
 
-    it.skip('should apply well-known inflections', () => {
-      // expect(value('2 weeks as day')).to.eql(['14 days']);
-      // expect(value('1d')).to.eql(['1 day']);
+    it('should apply well-known inflections', () => {
+      expect(value('2 weeks as day')).to.eql(['14 days']);
+      expect(value('1d')).to.eql(['1 day']);
     });
 
     it('should skip bad sequences from input', () => {

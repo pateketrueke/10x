@@ -184,84 +184,83 @@ export function reduceFromEffect(cb, def, args, value) {
 
 export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   // handle unit expressions
-  if (ctx.cur[0] === 'unit') {
-    if (!ctx.root.isDef && !ctx.isDef) {
-      if (!hasOwnKeyword(expressions, ctx.cur[1])) {
-        throw new ParseError(`Missing definition of ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+  if (ctx.cur.token[0] === 'unit') {
+    if (!ctx.root.isDef && !ctx.isDef && !supportedUnits[ctx.cur.token[1]]) {
+      if (!hasOwnKeyword(expressions, ctx.cur.token[1])) {
+        throw new ParseError(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
       }
 
       // resolve definition body
-      if (expressions[ctx.cur[1]]) {
-        ctx.cur = fixArgs(cb(expressions[ctx.cur[1]].body, ctx)).reduce((p, c) => p.concat(c), []);
+      if (expressions[ctx.cur.token[1]]) {
+        ctx.cur.token = fixArgs(cb(expressions[ctx.cur.token[1]].body, ctx)).reduce((p, c) => p.concat(c), []);
       }
     }
   }
 
   // handle N-unit, return a new expression from 3x to [3, *, x]
   if (
-    ctx.cur[0] === 'number'
-    && !supportedUnits[ctx.cur[2]]
-    && ctx.cur[2] && ctx.cur[2] !== 'x-fraction'
+    ctx.cur.token[0] === 'number'
+    && !supportedUnits[ctx.cur.token[2]]
+    && ctx.cur.token[2] && ctx.cur.token[2] !== 'x-fraction'
   ) {
-    if (!hasOwnKeyword(expressions, ctx.cur[2])) {
-      throw new ParseError(`Missing definition of ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+    if (!hasOwnKeyword(expressions, ctx.cur.token[2])) {
+      throw new ParseError(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
     }
 
-    if (expressions[ctx.cur[2]].args.length) {
-      throw new ParseError(`Invalid usage of ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+    if (expressions[ctx.cur.token[2]].args.length) {
+      throw new ParseError(`Invalid usage of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
     }
 
-    const base = parseFloat(ctx.cur[1]);
-    const subTree = fixArgs(cb(expressions[ctx.cur[2]].body, ctx)).reduce((p, c) => p.concat(c), []);
+    const base = parseFloat(ctx.cur.token[1]);
+    const subTree = fixArgs(cb(expressions[ctx.cur.token[2]].body, ctx)).reduce((p, c) => p.concat(c), []);
 
-    ctx.cur = calculateFromTokens(subTree.map(x => calculateFromTokens(cb([['number', base], ['expr', '*', 'mul']].concat([x]), ctx))));
+    ctx.cur.token = calculateFromTokens(subTree.map(x => calculateFromTokens(cb([['number', base], ['expr', '*', 'mul']].concat([x]), ctx))));
   }
 
   // convert into Date values
-  if (ctx.cur[2] === 'datetime') {
+  if (ctx.cur.token[2] === 'datetime') {
     ctx.isDate = true;
-    ctx.cur[1] = reduceFromValue(ctx.cur);
+    ctx.cur.token[1] = reduceFromValue(ctx.cur.token);
     return;
   }
 
-  const left = ctx.left || [];
-  const right = ctx.right || [];
-
   // handle converting between expressions
-  if (ctx.cur[0] === 'expr' && left[0] === 'number' && hasExpr(ctx.cur[1])) {
-    const fixedUnit = right[0] === 'unit' ? (right[2] || right[1]) : right[2];
+  if (ctx.cur.token[0] === 'expr' && ctx.left.token[0] === 'number' && hasExpr(ctx.cur.token[1])) {
+    const fixedUnit = ctx.right.token[0] === 'unit' ? (ctx.right.token[2] || ctx.right.token[1]) : ctx.right.token[2];
 
-    if (fixedUnit && !['datetime', 'fr'].includes(fixedUnit) && left[2] && left[2] !== 'datetime') {
-      left[1] = convert(parseFloat(toNumber(left[1])), left[2], fixedUnit);
-      left[2] = fixedUnit;
-    } else if (hasTimeUnit(left[2])) {
-      left[1] = convert(parseFloat(toNumber(left[1])), left[2], 's');
-      left[2] = 's';
+    if (fixedUnit && !['datetime', 'fr'].includes(fixedUnit) && ctx.left.token[2] && ctx.left.token[2] !== 'datetime') {
+      ctx.left.token[1] = convert(parseFloat(toNumber(ctx.left.token[1])), ctx.left.token[2], fixedUnit);
+      ctx.left.token[2] = fixedUnit;
+    } else if (hasTimeUnit(ctx.left.token[2])) {
+      ctx.left.token[1] = convert(parseFloat(toNumber(ctx.left.token[1])), ctx.left.token[2], 's');
+      ctx.left.token[2] = 's';
     }
   }
 
-  if (ctx.cur[0] === 'number') {
+  if (ctx.cur.token[0] === 'number') {
     // convert time-expressions into seconds
-    if (ctx.isDate && hasTimeUnit(ctx.cur[2])) {
-      ctx.cur[1] = convert(parseFloat(toNumber(ctx.cur[1])), ctx.cur[2], 's');
-      ctx.cur[2] = 's';
+    if (ctx.isDate && hasTimeUnit(ctx.cur.token[2])) {
+      ctx.cur.token[1] = convert(parseFloat(toNumber(ctx.cur.token[1])), ctx.cur.token[2], 's');
+      ctx.cur.token[2] = 's';
     }
 
     // convert between units
-    if (ctx.lastUnit && ctx.cur[2] && ctx.lastUnit !== ctx.cur[2]) {
-      ctx.cur[1] = convert(parseFloat(toNumber(ctx.cur[1])), ctx.cur[2], ctx.lastUnit);
-      ctx.cur[2] = ctx.lastUnit;
+    if (ctx.lastUnit && ctx.cur.token[2] && ctx.lastUnit !== ctx.cur.token[2]) {
+      ctx.cur.token[1] = convert(parseFloat(toNumber(ctx.cur.token[1])), ctx.cur.token[2], ctx.lastUnit);
+      ctx.cur.token[2] = ctx.lastUnit;
     }
 
     // save initial unit
-    if (ctx.cur[2] && !ctx.lastUnit) ctx.lastUnit = ctx.cur[2];
+    if (ctx.cur.token[2] && !ctx.lastUnit) ctx.lastUnit = ctx.cur.token[2];
   }
 
   // save last used operator
-  if (ctx.cur[1] === '+' || ctx.cur[1] === '-') ctx.lastOp = ctx.cur;
+  if (ctx.cur.token[1] === '+' || ctx.cur.token[1] === '-') {
+    ctx.lastOp = ctx.cur.token;
+  }
 
   // flag the expression for dates
-  if (hasTimeUnit(ctx.cur[2])) ctx.isDate = true;
+  if (hasTimeUnit(ctx.cur.token[2])) ctx.isDate = true;
 }
 
 export function reduceFromLogic(ctx, tokens, expressions) {
@@ -515,7 +514,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     // reduceFromFX(cb, ctx, expressions);
     // reduceFromDefs(cb, ctx, expressions);
     // console.log(ctx)
-    // reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
+    reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
 
     // skip definitions only
     if (!['def', 'symbol'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
