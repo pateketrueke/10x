@@ -68,7 +68,7 @@ if (!returnAsJSON) {
       return;
     }
 
-    return chunk.split(/(?=[\x00-\x7F])/)
+    return chunk.split(speed ? /(?=[\x00-\x7F])/ : /(?=\b)/)
       .reduce((prev, cur) => prev.then(() => {
         switch (type) {
           case null:
@@ -129,7 +129,7 @@ if (!returnAsJSON) {
 
   function push(type, chunk) {
     buffer.push(() => new Promise(ok => {
-      if (!type) {
+      if (!type || !playBack) {
         return ok(puts(type, chunk, 0));
       }
 

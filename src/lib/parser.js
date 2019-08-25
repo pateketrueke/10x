@@ -185,9 +185,9 @@ export function transform(tokens, units) {
     const token = tokens[i];
 
     let key = i;
-    let nextToken;
+    let nextScore;
 
-    do { nextToken = (tokens[++key] || {}).cur; } while (' \n'.includes(nextToken));
+    do { nextScore = (tokens[++key] || {}).score; } while (nextScore < 2);
 
     if (token.depth || token.score > 2) {
       // split on first high-ranked token
@@ -200,18 +200,11 @@ export function transform(tokens, units) {
 
         // handle strings and symbols
         if ('":'.includes(token.cur.charAt())) {
-          if (subTree.length) {
-            const lastToken = subTree.filter(x => !' \n'.includes(x.cur)).pop();
-
-            if (lastToken && lastToken.score > 2) {
-              subTree._fixed = true;
-              subTree.push(token);
-              continue;
-            }
-          }
-
           chunks[++inc] = [token];
           chunks[inc]._fixed = true;
+
+          // break on non-regular tokens!
+          if (nextScore < 2 || nextScore > 3) inc++;
           continue;
         }
 
