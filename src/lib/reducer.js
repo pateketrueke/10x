@@ -56,53 +56,12 @@ export function reduceFromValue(token) {
   return now;
 }
 
-export function reduceFromTokens(tree, values) {
-  return tree.reduce((prev, cur) => {
-    // iterate until we visit all tokens
-    if (Array.isArray(cur[0])) {
-      prev.push(reduceFromTokens(cur, values));
-      return prev;
-    }
-
-    // replace token within unit-calls
-    if (cur[0] === 'def' && cur[2]) {
-      cur[2].args = reduceFromTokens(cur[2].args, values);
-    }
-
-    if (
-      // return as soon one matches!
-      (cur[0] === 'unit' && values[cur[1]])
-
-      // however, we replace _ symbols
-      || (cur[0] === 'symbol' && cur[1] === '_')
-    ) {
-      prev.push(values[cur[1]]);
-      return prev;
-    }
-
-    prev.push(cur);
-
-    return prev;
-  }, []);
-}
-
 export function reduceFromArgs(keys, values) {
-  const props = keys.filter(x => x[0] === 'unit');
+  const props = keys.filter(x => x.token[0] === 'unit');
 
   // compute a map from given units and values
   return props.reduce((prev, cur, i) => {
-    let value = values.shift();
-
-    // unwrap from nested values
-    while (value.length === 1) value = value[0];
-
-    if (!Array.isArray(value)) {
-      value = [typeof value, typeof value === 'string' ? `"${value}"` : value];
-    } else if (typeof value[0] !== 'string') {
-      value = [typeof value, value];
-    }
-
-    prev[cur[1]] = value;
+    prev[cur.token[1]] = { body: [values.shift()] };
     return prev;
   }, {});
 }
@@ -189,11 +148,12 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
       if (!hasOwnKeyword(expressions, ctx.cur.token[1])) {
         throw new ParseError(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
       }
+    }
 
-      // resolve definition body
-      if (expressions[ctx.cur.token[1]]) {
-        ctx.cur.token = fixArgs(cb(expressions[ctx.cur.token[1]].body, ctx)).reduce((p, c) => p.concat(c), []);
-      }
+    // resolve definition body
+    if (hasOwnKeyword(expressions, ctx.cur.token[1])) {
+      ctx.cur = cb(expressions[ctx.cur.token[1]].body, ctx);
+      return;
     }
   }
 
@@ -398,58 +358,56 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
     }
 
     // side-effects will operate on previous values
-    const def = expressions[ctx.cur.token[1]];
+    const name = ctx.cur.token[1];
     const call = ctx.cur.token[2];
+    const def = expressions[name];
 
     // warn on undefined calls
     if (!(def && call)) {
-      throw new ParseError(`Missing ${def ? 'arguments' : 'definition'} to call \`${ctx.cur.token[1]}\``, ctx);
+      throw new ParseError(`Missing ${def ? 'arguments' : 'definition'} to call \`${name}\``, ctx);
     }
 
     // FIXME: improve error objects and such...
     if (def.args.length && def.args.length !== call.args.length && def.body[0][0] !== 'fn') {
-      throw new ParseError(`Expecting \`${ctx.cur.token[1]}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
+      throw new ParseError(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
     }
 
     // prepend _ symbol for currying
     if (!def.args.length) {
       if (call.args) {
         // FIXME: don't throw on lambda calls...
-        // throw new ParseError(`Unexpected arguments for ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
+        // throw new ParseError(`Unexpected arguments for ${ctx.cur.token[0]} \`${name}\``, ctx);
       }
 
-      def.args.unshift(['unit', '_']);
+      // def.args.unshift(toToken(['unit', '_']));
     }
 
     // FIXME: there is a side-effect, symbol/unit _ can appear twice...
-    const locals = reduceFromArgs(def.args, cb(call.args, ctx));
-    const definition = ctx.cur.token[1];
-    console.log({locals,definition});
+    const args = cb(call.args, ctx);
+    const locals = reduceFromArgs(def.args, args);
 
-    // // replace all given units within the AST
-    // ctx.cur = reduceFromTokens(def.body, locals);
+    ctx.cur = def.args.length ? cb(def.body, ctx, locals) : def.body;
 
     // FIXME: validate arity while recursing...
-    // if (ctx.cur[0][0] === 'fn') {
-    //   const fixedArgs = cb(call.args, ctx);
-    //   const fixedLength = fixedArgs.length;
+    if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
+      const fixedLength = args.length;
 
-    //   if (ctx.cur.length > 1) {
-    //     console.log('FNX', ctx.cur);
-    //   }
+      if (ctx.cur.length > 1) {
+        console.log('FNX', ctx.cur);
+      }
 
-    //   // apply lambda-calls as we have arguments
-    //   while (ctx.cur[0][0] === 'fn' && fixedArgs.length) {
-    //     Object.assign(locals, reduceFromArgs(ctx.cur[0][2].args, fixedArgs));
-    //     ctx.cur = reduceFromTokens(ctx.cur[0][2].body, locals);
-    //   }
+      // apply lambda-calls as we have arguments
+      while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
+        Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, args));
+        ctx.cur = cb(ctx.cur[0].token[2].body, ctx, locals);
+      }
 
-    //   if (fixedArgs.length) {
-    //     throw new ParseError(`Expecting \`${definition}.#${fixedLength - fixedArgs.length}\` args, given #${fixedLength}`, ctx);
-    //   }
-    // }
+      if (args.length) {
+        throw new ParseError(`Expecting \`${name}.#${fixedLength - args.length}\` args, given #${fixedLength}`, ctx);
+      }
+    }
 
-    // ctx.cur = calculateFromTokens(cb(ctx.cur, ctx));
+    ctx.cur = toToken(calculateFromTokens(ctx.cur.reduce((prev, cur) => prev.concat(cur), [])));
   }
 }
 
@@ -465,11 +423,11 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     lastOp: ['expr', '+', 'plus'],
   };
 
-  // create inner scope from given expressions
-  const env = Object.assign({}, expressions);
-
   // resolve from nested AST expressions
-  const cb = (t, context) => reduceFromAST(t, convert, env, context, supportedUnits);
+  const cb = (t, context, subExpressions) => {
+    const env = Object.assign({}, expressions, subExpressions);
+    return reduceFromAST(t, convert, env, context, supportedUnits);
+  };
 
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
