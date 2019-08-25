@@ -190,13 +190,15 @@ export function transform(tokens, units) {
           ))
         ) {
           chunks[inc]._fixed = true;
-        } else if (token.score > 1) inc++;
+        } else if (token.score > 1) {
+          chunks[inc++]._fixed = true;
+        }
       } else {
         subTree.push(token);
         subTree._fixed = true;
       }
     } else {
-      if (!' \n'.includes(token.cur) && subTree.length) {
+      if (!' \n'.includes(token.cur) && subTree._fixed && subTree.length) {
         chunks[++inc] = [token];
       } else {
         subTree.push(token);
@@ -208,8 +210,6 @@ export function transform(tokens, units) {
       inc++;
     }
   }
-
-  // console.log(chunks)
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
