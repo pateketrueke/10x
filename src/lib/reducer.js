@@ -214,7 +214,11 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
     const base = parseFloat(ctx.cur.token[1]);
     const subTree = fixArgs(cb(expressions[ctx.cur.token[2]].body, ctx)).reduce((p, c) => p.concat(c), []);
 
-    ctx.cur.token = calculateFromTokens(subTree.map(x => calculateFromTokens(cb([['number', base], ['expr', '*', 'mul']].concat([x]), ctx))));
+    ctx.cur = subTree.map(x => toToken(calculateFromTokens(cb([
+      toToken(['number', base]),
+      toToken(['expr', '*', 'mul']),
+    ].concat([x]), ctx))));
+    return;
   }
 
   // convert into Date values
@@ -378,67 +382,65 @@ export function reduceFromFX(cb, ctx, expressions) {
 
 export function reduceFromDefs(cb, ctx, expressions) {
   // handle var/call definitions
-  // console.log({t:ctx.cur});
-
-  if (ctx.cur[0] === 'def') {
+  if (ctx.cur.token[0] === 'def') {
     // define var/call
     if (ctx.cur._body) {
-      expressions[ctx.cur[1]] = ctx.cur[2];
+      expressions[ctx.cur.token[1]] = ctx.cur.token[2];
       return;
     }
 
     // side-effects will operate on previous values
-    const def = expressions[ctx.cur[1]];
-    const call = ctx.cur[2];
+    const def = expressions[ctx.cur.token[1]];
+    const call = ctx.cur.token[2];
 
     // warn on undefined calls
     if (!(def && call)) {
-      throw new ParseError(`Missing ${def ? 'arguments' : 'definition'} to call \`${ctx.cur[1]}\``, ctx);
+      throw new ParseError(`Missing ${def ? 'arguments' : 'definition'} to call \`${ctx.cur.token[1]}\``, ctx);
     }
 
     // FIXME: improve error objects and such...
     if (def.args.length && def.args.length !== call.args.length && def.body[0][0] !== 'fn') {
-      throw new ParseError(`Expecting \`${ctx.cur[1]}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
+      throw new ParseError(`Expecting \`${ctx.cur.token[1]}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
     }
 
     // prepend _ symbol for currying
     if (!def.args.length) {
       if (call.args) {
         // FIXME: don't throw on lambda calls...
-        // throw new ParseError(`Unexpected arguments for ${ctx.cur[0]} \`${ctx.cur[1]}\``, ctx);
+        // throw new ParseError(`Unexpected arguments for ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
       }
 
       def.args.unshift(['unit', '_']);
     }
 
     // FIXME: there is a side-effect, symbol/unit _ can appear twice...
-    const locals = reduceFromArgs(def.args, cb(call.args, ctx));
-    const definition = ctx.cur[1];
+    // const locals = reduceFromArgs(def.args, cb(call.args, ctx));
+    // const definition = ctx.cur.token[1];
 
-    // replace all given units within the AST
-    ctx.cur = reduceFromTokens(def.body, locals);
+    // // replace all given units within the AST
+    // ctx.cur = reduceFromTokens(def.body, locals);
 
     // FIXME: validate arity while recursing...
-    if (ctx.cur[0][0] === 'fn') {
-      const fixedArgs = cb(call.args, ctx);
-      const fixedLength = fixedArgs.length;
+    // if (ctx.cur[0][0] === 'fn') {
+    //   const fixedArgs = cb(call.args, ctx);
+    //   const fixedLength = fixedArgs.length;
 
-      if (ctx.cur.length > 1) {
-        console.log('FNX', ctx.cur);
-      }
+    //   if (ctx.cur.length > 1) {
+    //     console.log('FNX', ctx.cur);
+    //   }
 
-      // apply lambda-calls as we have arguments
-      while (ctx.cur[0][0] === 'fn' && fixedArgs.length) {
-        Object.assign(locals, reduceFromArgs(ctx.cur[0][2].args, fixedArgs));
-        ctx.cur = reduceFromTokens(ctx.cur[0][2].body, locals);
-      }
+    //   // apply lambda-calls as we have arguments
+    //   while (ctx.cur[0][0] === 'fn' && fixedArgs.length) {
+    //     Object.assign(locals, reduceFromArgs(ctx.cur[0][2].args, fixedArgs));
+    //     ctx.cur = reduceFromTokens(ctx.cur[0][2].body, locals);
+    //   }
 
-      if (fixedArgs.length) {
-        throw new ParseError(`Expecting \`${definition}.#${fixedLength - fixedArgs.length}\` args, given #${fixedLength}`, ctx);
-      }
-    }
+    //   if (fixedArgs.length) {
+    //     throw new ParseError(`Expecting \`${definition}.#${fixedLength - fixedArgs.length}\` args, given #${fixedLength}`, ctx);
+    //   }
+    // }
 
-    ctx.cur = calculateFromTokens(cb(ctx.cur, ctx));
+    // ctx.cur = calculateFromTokens(cb(ctx.cur, ctx));
   }
 }
 
@@ -473,16 +475,14 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
 
     // handle anonymous sub-expressions
     if (Array.isArray(ctx.cur)) {
-      const values = fixArgs(ctx.cur).map(x => x.length === 1 ? x[0] : x);
+      const values = fixArgs(ctx.cur).map(x => calculateFromTokens(cb(x, ctx)));
 
-      // FIXME: return last value if void-op is given?
-      // also, see if this whole shit is a pattern...
-      const fixedValues = values.map(x => calculateFromTokens(cb(x, ctx)));
-      const fixedToken = fixedValues.length !== 1
-      ? fixedValues.reduce((p, c) => p.concat(cb([c], ctx)), [])
-      : fixedValues[0];
+      // prepend multiplication if goes after units/numbers
+      if (!ctx.isDef && ['unit', 'number'].includes(ctx.left.token[0])) {
+        ctx.ast.push(toToken(['expr', '*', 'mul']));
+      }
 
-      ctx.ast.push(toToken(fixedToken));
+      ctx.ast.push(values.map(x => toToken(x)));
       continue;
     }
 
@@ -494,30 +494,13 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
       ctx.ast.push(toToken(ctx.lastOp));
     }
 
-    // if (Array.isArray(tokens[i][0]) && !Array.isArray(tokens[i][0][0])) {
-    //   const values = fixArgs(tokens[i]).map(x => x.length === 1 ? x[0] : x);
-
-    //   // prepend multiplication if goes after units/numbers
-    //   // if (ctx.left && ['unit', 'number'].includes(ctx.left[0])) {
-    //   //   ctx.ast.push(['expr', '*', 'mul']);
-    //   // }
-
-    //   // FIXME: return last value if void-op is given?
-    //   // also, see if this whole shit is a pattern...
-    //   const fixedValues = values.map(x => Array.isArray(x[0]) ? calculateFromTokens(x) : x);
-
-    //   ctx.ast.push(fixedValues.length === 1 ? fixedValues[0] : fixedValues.reduce((p, c) => p.concat(cb([c], ctx)), []));
-    //   continue;
-    // }
-
     // reduceFromLogic(cb, ctx, expressions);
     // reduceFromFX(cb, ctx, expressions);
-    // reduceFromDefs(cb, ctx, expressions);
-    // console.log(ctx)
+    reduceFromDefs(cb, ctx, expressions);
     reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
 
     // skip definitions only
-    if (!['def', 'symbol'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
+    if (Array.isArray(ctx.cur) || !['def', 'symbol'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
   }
 
   return ctx.ast;

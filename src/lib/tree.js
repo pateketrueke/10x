@@ -10,92 +10,92 @@ import {
 import ParseError from './error';
 
 export function fixCalls(tokens, def) {
-  for (let i = 0; i < tokens.length; i += 1) {
-    const cur = tokens[i];
-    const left = tokens[i - 1];
-    const right = tokens[i + 1];
+  // for (let i = 0; i < tokens.length; i += 1) {
+  //   const cur = tokens[i];
+  //   const left = tokens[i - 1];
+  //   const right = tokens[i + 1];
 
-    // group unit-calls and arguments
-    // console.log(cur[0], {right});
-    if (cur[0] === 'def' && !cur[2] && right && Array.isArray(right[0])) {
-      console.log('DEFRIGHT');
-      // tokens.splice(i + 1, 1);
-      // cur[2] = [right];
-      // continue;
-    }
+  //   // group unit-calls and arguments
+  //   // console.log(cur[0], {right});
+  //   if (cur[0] === 'def' && !cur[2] && right && Array.isArray(right[0])) {
+  //     console.log('DEFRIGHT');
+  //     // tokens.splice(i + 1, 1);
+  //     // cur[2] = [right];
+  //     // continue;
+  //   }
 
-    // append all given tokens to previous unit-definitions
-    if (left && left[0] === 'def' && cur[0] !== 'fx') {
-      if (left[2] && cur[0] !== 'expr') {
-        console.log('DEF_FX_NO_EXPR');
-        // const cut = tokens.slice(i).findIndex(x => ['fx', 'expr'].includes(x[0]));
-        // const subTree = cut > 0 ? tokens.splice(i, cut) : tokens.splice(i);
+  //   // append all given tokens to previous unit-definitions
+  //   if (left && left[0] === 'def' && cur[0] !== 'fx') {
+  //     if (left[2] && cur[0] !== 'expr') {
+  //       console.log('DEF_FX_NO_EXPR');
+  //       // const cut = tokens.slice(i).findIndex(x => ['fx', 'expr'].includes(x[0]));
+  //       // const subTree = cut > 0 ? tokens.splice(i, cut) : tokens.splice(i);
 
-        // left[2][0] = left[2][0].concat(fixInput(subTree, true));
-        // continue;
-      }
-    }
+  //       // left[2][0] = left[2][0].concat(fixInput(subTree, true));
+  //       // continue;
+  //     }
+  //   }
 
-    // handle units with single arguments
-    if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
-      if (right && right[0] !== 'expr') {
-        console.log('SINGLE_FX_U');
-        // cur[0] = 'def';
-        // cur[2] = [[right]];
-        // tokens.splice(i + 1, 1);
-        // continue;
-      }
-    }
+  //   // handle units with single arguments
+  //   if (left && left[0] === 'fx' && ['lpipe', 'rpipe'].includes(left[2]) && cur[0] === 'unit') {
+  //     if (right && right[0] !== 'expr') {
+  //       console.log('SINGLE_FX_U');
+  //       // cur[0] = 'def';
+  //       // cur[2] = [[right]];
+  //       // tokens.splice(i + 1, 1);
+  //       // continue;
+  //     }
+  //   }
 
-    // handle partial-application calls
-    if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
-      if (Array.isArray(left[0]) && right[0] === 'def' && tokens[i - 2]) {
-        console.log('DEDEF');
-        // tokens[i - 2][0] = 'def';
-        // tokens[i - 2][2] = [left];
-        // tokens.splice(i - 3, 3, cur, tokens[i - 2]);
-        // continue;
-      }
+  //   // handle partial-application calls
+  //   if (left && cur[0] === 'fx' && ['lpipe', 'rpipe'].includes(cur[2]) && right) {
+  //     if (Array.isArray(left[0]) && right[0] === 'def' && tokens[i - 2]) {
+  //       console.log('DEDEF');
+  //       // tokens[i - 2][0] = 'def';
+  //       // tokens[i - 2][2] = [left];
+  //       // tokens.splice(i - 3, 3, cur, tokens[i - 2]);
+  //       // continue;
+  //     }
 
-      // compose from previous calls, e.g. `def=fn<|5` or `def(_)=fn<|5 _`
-      // if (left[0] === 'unit') {
-      //   if (!Array.isArray(def[0]) && !(def[0] === 'expr' && def[2] === 'equal')) {
-      //     throw new Error(`Expecting group or definition, given '${def}'`);
-      //   }
+  //     // compose from previous calls, e.g. `def=fn<|5` or `def(_)=fn<|5 _`
+  //     // if (left[0] === 'unit') {
+  //     //   if (!Array.isArray(def[0]) && !(def[0] === 'expr' && def[2] === 'equal')) {
+  //     //     throw new Error(`Expecting group or definition, given '${def}'`);
+  //     //   }
 
-      //   // FIXME: this looks like a pattern...
-      //   const subTree = fixCut(tokens, 1, i).slice(1);
-      //   const fixedArgs = def[0] !== 'expr' ? def : [];
+  //     //   // FIXME: this looks like a pattern...
+  //     //   const subTree = fixCut(tokens, 1, i).slice(1);
+  //     //   const fixedArgs = def[0] !== 'expr' ? def : [];
 
-      //   // prepend _ symbol for currying
-      //   if (!fixedArgs.length) {
-      //     fixedArgs.unshift(['unit', '_']);
-      //   }
+  //     //   // prepend _ symbol for currying
+  //     //   if (!fixedArgs.length) {
+  //     //     fixedArgs.unshift(['unit', '_']);
+  //     //   }
 
-      //   left._curry = cur;
-      //   left._body = false;
-      //   left[0] = 'def';
-      //   left[2] = {
-      //     args: fixArgs(fixApply(cur[2], subTree, fixedArgs), true),
-      //     body: [],
-      //   };
+  //     //   left._curry = cur;
+  //     //   left._body = false;
+  //     //   left[0] = 'def';
+  //     //   left[2] = {
+  //     //     args: fixArgs(fixApply(cur[2], subTree, fixedArgs), true),
+  //     //     body: [],
+  //     //   };
 
-      //   // console.log({def,left});
-      //   continue;
-      // }
-    }
+  //     //   // console.log({def,left});
+  //     //   continue;
+  //     // }
+  //   }
 
-    // unit-calls without arguments receives _
-    if (left
-      && left[0] === 'fx'
-      && cur[0] === 'unit'
-      && (!right || (right[0] === 'expr' && hasSep(right[1])))
-    ) {
-      // cur[2] = [[['symbol', '_']]];
-      // cur[0] = 'def';
-      console.log('DEF_SYM_FX');
-    }
-  }
+  //   // unit-calls without arguments receives _
+  //   if (left
+  //     && left[0] === 'fx'
+  //     && cur[0] === 'unit'
+  //     && (!right || (right[0] === 'expr' && hasSep(right[1])))
+  //   ) {
+  //     // cur[2] = [[['symbol', '_']]];
+  //     // cur[0] = 'def';
+  //     console.log('DEF_SYM_FX');
+  //   }
+  // }
 
   return tokens;
 }
@@ -111,8 +111,8 @@ export function fixTree(ast) {
       ? fixTree(tokens[i])
       : tokens[i];
 
-    const prev = tokens[i - 1];
-    const next = tokens[i + 1];
+    const prev = tokens[i - 1] || { token: [] };
+    const next = tokens[i + 1] || { token: [] };
 
     // skip empty leafs
     if (cur.length === 0) {
@@ -127,20 +127,22 @@ export function fixTree(ast) {
     //   // cur[0] = 'def';
     // }
 
-    // if (prev && prev[0] === 'def') {
-    //   const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' && x[1] === ';');
-    //   const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
-    //   const hasArray = Array.isArray(cur[0]);
+    if (!Array.isArray(prev)) {
+      if (prev.token[0] === 'def') {
+        const offset  = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[1] === ';');
+        const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
+        const hasArray = Array.isArray(cur[0]);
 
-    //   // update token definition
-    //   prev._body = subTree.length > 1;
-    //   prev._args = hasArray;
-    //   prev[2] = {
-    //     args: hasArray ? fixArgs(cur, true) : [],
-    //     body: fixTree(fixCalls(subTree.slice(hasArray ? 2 : 1))),
-    //   };
-    //   continue;
-    // }
+        // update token definition
+        prev._body = subTree.length > 1;
+        prev._args = hasArray;
+        prev.token[2] = {
+          args: hasArray ? fixArgs(cur, true) : [],
+          body: fixTree(fixCalls(subTree.slice(hasArray ? 2 : 1))),
+        };
+        continue;
+      }
+    }
 
     // // compose lambda-calls with multiple arguments...
     // if (cur[0] === 'unit' && next && ((next[0] === 'expr' && next[1] === ',') || (next[0] === 'fx' && next[2] === 'func'))) {
@@ -281,13 +283,21 @@ export function buildTree(tokens) {
 
   const tree = root;
   const stack = [];
-  const inCalls = [];
+  const offsets = [];
 
   for (let i = 0; i < tokens.length; i += 1) {
     const t = tokens[i];
 
+    if (
+      t.token[0] === 'unit'
+      && tokens[i + 1] && '(='.includes(tokens[i + 1].token[1])
+    ) t.token[0] = 'def';
+
     // handle nesting
-    if (['open', 'close'].includes(t.token[0]) || ['begin', 'end'].includes(t.token[2])) {
+    if (
+      ['open', 'close'].includes(t.token[0])
+      || ['begin', 'end'].includes(t.token[2])
+    ) {
       if (t.token[0] === 'open' || t.token[2] === 'begin') {
         const leaf = [];
 
@@ -297,17 +307,34 @@ export function buildTree(tokens) {
 
         root.push(leaf);
         stack.push(root);
+        offsets.push(t);
         root = leaf;
       } else {
         root = stack.pop();
+        offsets.pop(t);
       }
     } else {
       if (!root) {
-        throw new ParseError('Unexpected end, missing `(`', tokens[i - 1]);
+        let pair;
+
+        switch (tokens[i - 1].token[1]) {
+          case '}': pair = '{'; break;
+          case ']': pair = '['; break;
+          default: pair = '('; break;
+        }
+
+        throw new ParseError(`Unexpected end, missing \`${pair}\``, tokens[i - 1]);
       }
 
       root.push(t);
     }
+  }
+
+  if (stack.length) {
+    const fixedOffset = offsets.pop();
+    const fixedToken = fixedOffset.token[1];
+
+    throw new ParseError(`Missing terminator for \`${fixedToken}\``, fixedOffset);
   }
 
   return tree;

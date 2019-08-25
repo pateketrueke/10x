@@ -178,7 +178,7 @@ export default class Solv {
       return [];
     }
 
-    return output.map(x => calculateFromTokens(cb(x)))
+    return output.map(x => calculateFromTokens(x))
       .map(x => Array.isArray(x) && x.length === 1 ? x[0] : x)
       .filter(x => Array.isArray(x) ? x.length : typeof x !== 'undefined');
   }

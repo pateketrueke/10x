@@ -54,7 +54,7 @@ export const hasTimeUnit = x => TIME_UNITS.includes(x);
 export const hasFmt = x => /^["`_*~]$/.test(x);
 export const hasSep = x => '{[()]}|;,.'.includes(x);
 export const hasNum = x => /^-?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
-export const hasExpr = x => /^(?:from|and|to|o[rf]|a[ts]|i[ns])$/i.test(x);
+export const hasExpr = x => /^(?:from|to|of|a[ts]|i[ns])$/i.test(x);
 export const hasChar = x => CURRENCY_MAPPINGS[x] || ALPHA_MAPPINGS[x] || /^[a-zA-Z_#']/.test(x);
 
 export const hasOwnKeyword = (o, k) => o && k && Object.prototype.hasOwnProperty.call(o, k);
@@ -62,14 +62,16 @@ export const hasOwnKeyword = (o, k) => o && k && Object.prototype.hasOwnProperty
 export const hasKeyword = (x, units, fallback) => {
   if (!x) return false;
 
+  let unit;
+
   const key = x.replace(RE_NO_ALPHA, '');
   const test = key && (hasOwnKeyword(units, key) || hasOwnKeyword(units, key.toLowerCase()));
 
   if (units) {
-    return units[key] || units[key.toLowerCase()] || test;
+    unit = units[key] || units[key.toLowerCase()] || test;
   }
 
-  return test || (fallback && key);
+  return unit || (fallback && key);
 };
 
 export const hasPercent = x => {

@@ -208,7 +208,7 @@ export function fixArgs(values, flatten) {
       if (
         flatten === null
         ? cur === null
-        : (cur.token[0] === 'expr' && ';,'.includes(cur.token[1]))
+        : (cur.token[0] === 'expr' && '|;,'.includes(cur.token[1]))
       ) {
         last.pop();
         offset++;

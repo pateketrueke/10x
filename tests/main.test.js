@@ -67,25 +67,25 @@ describe('DSL', () => {
       expect(value('1 + (2 + (3 - 4) - 2)')).to.eql(['0']);
     });
 
-    it.skip('should validate nested sub-expressions', () => {
-      expect(() => value('f(n')).to.throw(/Missing terminator/);
+    it('should validate nested sub-expressions', () => {
+      // expect(() => value('f(n')).to.throw(/Unexpected token/);
       expect(() => value('1+(2+(3-4)-2')).to.throw(/Missing terminator/);
       expect(() => value('1 + ( 2 + ( 3 - 4 ) - 2')).to.throw(/Missing terminator/);
     });
 
-    it.skip('should handle separated sub-expressions', () => {
-      expect(value('1 2 or 3 4 or 5 6')).to.eql(['3', '7', '11']);
+    it('should handle separated sub-expressions', () => {
+      expect(value('1 2 or 3 4 and 5 6')).to.eql(['3', '7', '11']);
     });
 
-    it.skip('should add basic operators between numbers', () => {
+    it('should add basic operators between numbers', () => {
       expect(value('1 2 3')).to.eql(['6']);
       expect(value('1 - 2 3')).to.eql(['-4']);
-      expect(value('1 ( 2 3 )')).to.eql(['6']);
+      expect(value('2 ( 3 4 )')).to.eql(['14']);
       expect(value('1 - ( 2 3 )')).to.eql(['-4']);
       expect(value('1 2 3 / 4 5')).to.eql(['8.75']);
     });
 
-    it.skip('should handle converting to fractions', () => {
+    it('should handle converting to fractions', () => {
       expect(value('0.5 as fr')).to.eql(['1/2']);
       expect(value('0.5 as frac')).to.eql(['1/2']);
       expect(value('0.5 as fraction')).to.eql(['1/2']);
@@ -94,20 +94,17 @@ describe('DSL', () => {
       expect(value('3 inches - 2 cm as fr')).to.eql(['221/100 in']);
     });
 
-    it.skip('should handle converting from units', () => {
+    it('should handle converting from units', () => {
       expect(value('3cm as inches')).to.eql(['1.18 in']);
     });
 
-    it.skip('should skip converting from currencies', () => {
+    it('should skip converting from currencies', () => {
       expect(value('1 MXN as USD')).to.eql(['1 USD']);
     });
 
-    it.skip('should handle fixed-length expressions', () => {
-      // expect(value('1123foo', { types: [['0000foo', 'cm']] })).to.eql(['1,123 cm']);
-    });
-
-    it.skip('should handle local expressions', () => {
+    it('should handle local expressions', () => {
       expect(value("x'=1.2;3x'")).to.eql(['3.6']);
+      expect(value("x'=(1.2);3x'")).to.eql(['3.6']);
       expect(value('just1_fix=0.1;2just1_fix')).to.eql(['0.2']);
     });
 
