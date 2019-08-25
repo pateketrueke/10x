@@ -140,13 +140,13 @@ export function getTokensFrom(text, units) {
     do { nextToken = ((tokens[++key] || [])[0] || {}).cur; } while (' \n'.includes(nextToken));
 
     if (
-      // numbers
-      hasNum(value)
+      // numbers are higher ranked!
+      (hasNum(value) || (hasChar(value) && '(='.includes(nextToken)))
 
-      // separators & operators
-      || ((hasSep(value) || hasOp(value)) && oldScore)
+      // separators and operators
+      || (oldScore > 2 && (hasSep(value) || hasOp(value)))
 
-      // symbols
+      // all symbols
       || (
         value.charAt() === ':'
         && (hasChar(value.substr(1)) || hasNum(value.substr(1)))
@@ -154,6 +154,11 @@ export function getTokensFrom(text, units) {
 
       // strings
       || (value.charAt() === '"' && value.substr(value.length - 1) === '"')
+    ) score = 3;
+
+    if (
+      // separators & operators
+      ((hasSep(value) || hasOp(value)) && oldScore)
 
       // comments
       || (
@@ -161,12 +166,11 @@ export function getTokensFrom(text, units) {
         || (value.indexOf('/*') === 0 && value.substr(value.length-2) === '*/')
       )
 
+      // (inside parenthesis)
+      || (depth && oldScore && (hasSep(value) || hasChar(value)))
+
       // definitions
       || ('(='.includes(value) && oldScore)
-      || (hasChar(value) && '(='.includes(nextToken))
-
-      // (inside parenthesis)
-      || (depth && (hasSep(value) || hasChar(value)))
 
       // side-effects
       || ('(' === value && hasOp(nextToken))

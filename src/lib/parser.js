@@ -171,16 +171,32 @@ export function transform(tokens, units) {
     const subTree = chunks[inc] || (chunks[inc] = []);
     const token = tokens[i];
 
+    let key = i;
+    let nextToken;
+
+    do { nextToken = (tokens[++key] || {}).cur; } while (' \n'.includes(nextToken));
+
     if (token.score) {
       if (subTree.length && !subTree._fixed) {
         chunks[++inc] = [token];
-        chunks[inc]._fixed = true;
+
+        if (
+          (hasChar(token.cur) && '(='.includes(nextToken))
+          || (hasNum(token.cur)
+          && (hasOp(nextToken)
+            || hasSep(nextToken)
+            || hasNum(nextToken)
+            || hasExpr(nextToken)
+          ))
+        ) {
+          chunks[inc]._fixed = true;
+        } else if (token.score > 1) inc++;
       } else {
         subTree.push(token);
         subTree._fixed = true;
       }
     } else {
-      if (subTree._fixed && !(' \n'.includes(token.cur) || hasExpr(token.cur) || hasKeyword(token.cur, units))) {
+      if (!' \n'.includes(token.cur) && subTree.length) {
         chunks[++inc] = [token];
       } else {
         subTree.push(token);
@@ -192,6 +208,8 @@ export function transform(tokens, units) {
       inc++;
     }
   }
+
+  // console.log(chunks)
 
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
