@@ -185,7 +185,7 @@ export function reduceFromEffect(cb, def, args, value) {
 export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   // handle unit expressions
   if (ctx.cur.token[0] === 'unit') {
-    if (!ctx.root.isDef && !ctx.isDef && !supportedUnits[ctx.cur.token[1]]) {
+    if (!ctx.root.isDef && !ctx.isDef && !hasOwnKeyword(supportedUnits, ctx.cur.token[1])) {
       if (!hasOwnKeyword(expressions, ctx.cur.token[1])) {
         throw new ParseError(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
       }
@@ -200,14 +200,14 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   // handle N-unit, return a new expression from 3x to [3, *, x]
   if (
     ctx.cur.token[0] === 'number'
-    && !supportedUnits[ctx.cur.token[2]]
-    && ctx.cur.token[2] && ctx.cur.token[2] !== 'x-fraction'
+    && !hasOwnKeyword(supportedUnits, ctx.cur.token[2])
+    && ctx.cur.token[2] && !['x-fraction', 'datetime'].includes(ctx.cur.token[2])
   ) {
     if (!hasOwnKeyword(expressions, ctx.cur.token[2])) {
       throw new ParseError(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
     }
 
-    if (expressions[ctx.cur.token[2]].args.length) {
+    if (expressions[ctx.cur.token[2]].args && expressions[ctx.cur.token[2]].args.length) {
       throw new ParseError(`Invalid usage of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
     }
 
@@ -380,11 +380,15 @@ export function reduceFromFX(cb, ctx, expressions) {
   }
 }
 
-export function reduceFromDefs(cb, ctx, expressions) {
+export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
   // handle var/call definitions
   if (ctx.cur.token[0] === 'def') {
     // define var/call
     if (ctx.cur._body) {
+      if (hasOwnKeyword(supportedUnits, ctx.cur.token[1])) {
+        throw new ParseError(`Cannot override already built-in unit \`${ctx.cur.token[1]}\``, ctx);
+      }
+
       expressions[ctx.cur.token[1]] = ctx.cur.token[2];
       return;
     }
@@ -496,7 +500,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
 
     // reduceFromLogic(cb, ctx, expressions);
     // reduceFromFX(cb, ctx, expressions);
-    reduceFromDefs(cb, ctx, expressions);
+    reduceFromDefs(cb, ctx, expressions, supportedUnits);
     reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
 
     // skip definitions only

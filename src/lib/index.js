@@ -5,7 +5,7 @@ import { isInt } from './shared';
 
 import {
   fixArgs,
-  toFraction, toNumber, toValue, toList,
+  toFraction, toNumber, toValue,
 } from './ast';
 
 import ParseError from './error';
@@ -52,13 +52,6 @@ export default class Solv {
     this.tokens = [];
     this.input = [];
     this.tree = [];
-
-    // extend units from custom expressions
-    if (typeof opts.expressions === 'object') {
-      Object.keys(opts.expressions).forEach(key => {
-        this.units[key] = key;
-      });
-    }
   }
 
   resolve(source, filepath) {

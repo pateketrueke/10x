@@ -1,3 +1,4 @@
+import tk from 'timekeeper';
 import { expect } from 'chai';
 import Solvente from '../src/lib';
 
@@ -16,14 +17,25 @@ const value = (expr, opts, no) => {
 
 const toTree = (expr, opts) => calc(expr, opts, true).tree;
 
+const time = new Date(550303200000);
+
 describe('DSL', () => {
   describe('Basic math operations', () => {
+    beforeEach(() => {
+      tk.freeze(time);
+    });
+
+    afterEach(() => {
+      tk.reset();
+    });
+
     it('should handle most basic operators', () => {
       expect(value('1+2, 3-4, 5/6, 7*8')).to.eql(['3', '-1', '0.83', '56']);
     });
 
     it('should handle common errors', () => {
       expect(() => value('1ml - 1cm')).to.throw(/Cannot convert incompatible measures of volume and length/);
+      expect(() => value('cm=1.2;')).to.throw(/Cannot override already built-in unit/);
     });
 
     it('should handle most basic units', () => {
@@ -68,7 +80,7 @@ describe('DSL', () => {
     });
 
     it('should validate nested sub-expressions', () => {
-      // expect(() => value('f(n')).to.throw(/Unexpected token/);
+      expect(() => value('f(n')).to.throw(/Missing terminator/);
       expect(() => value('1+(2+(3-4)-2')).to.throw(/Missing terminator/);
       expect(() => value('1 + ( 2 + ( 3 - 4 ) - 2')).to.throw(/Missing terminator/);
     });
@@ -108,8 +120,10 @@ describe('DSL', () => {
       expect(value('just1_fix=0.1;2just1_fix')).to.eql(['0.2']);
     });
 
-    it.skip('should handle external expressions', () => {
-      expect(value('2x', { expressions: { x: [['expr', '=', 'equal'], ['number', 1.5], ['expr', ';', 'k']] } })).to.eql(['3']);
+    it('should handle external expressions', () => {
+      expect(value('2x', { expressions: { x: {
+        body: [{ token: ['number', 1.5] }],
+      } } })).to.eql(['3']);
     });
 
     it.skip('should handle number suffixes', () => {
@@ -119,18 +133,14 @@ describe('DSL', () => {
       expect(value('Jun 10th')).to.eql(['Sun Jun 10 2012 00:00:00']);
     });
 
-    it.skip('should handle well-known dates', () => {
-      expect(value('900am')).to.eql(['Fri Mar 02 2012 09:00:00']);
-      expect(value('900 am')).to.eql(['Fri Mar 02 2012 09:00:00']);
-      expect(value('9:00 am')).to.eql(['Fri Mar 02 2012 09:00:00']);
-      expect(value('now')).to.eql(['Fri Mar 02 2012 11:38:49']);
-      expect(value('today')).to.eql(['Fri Mar 02 2012 00:00:00']);
-      expect(value('tomorrow')).to.eql(['Sat Mar 03 2012 11:38:49']);
-      expect(value('yesterday')).to.eql(['Thu Mar 01 2012 11:38:49']);
-    });
-
-    it.skip('should allow ISO dates', () => {
-      expect(value('1987-06-10T06:00:00.000Z')).to.eql(['Wed Jun 10 1987 06:00:00']);
+    it('should handle well-known dates', () => {
+      expect(value('900am')).to.eql(['Wed Jun 10 1987 09:00:00']);
+      expect(value('900 am')).to.eql(['Wed Jun 10 1987 09:00:00']);
+      expect(value('9:00 am')).to.eql(['Wed Jun 10 1987 09:00:00']);
+      // expect(value('now')).to.eql(['Wed Jun 10 1987 11:38:49']);
+      // expect(value('today')).to.eql(['Wed Jun 10 1987 00:00:00']);
+      // expect(value('tomorrow')).to.eql(['Thu Jun 11 1987 11:38:49']);
+      // expect(value('yesterday')).to.eql(['Tue Jun 09 1987 11:38:49']);
     });
   });
 
