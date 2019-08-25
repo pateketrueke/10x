@@ -4,6 +4,16 @@ import {
 
 import ParseError from './error';
 
+export class TokenExpression {
+  constructor(info, token) {
+    if (!token) {
+      token = info.token.slice();
+    }
+
+    Object.assign(this, info, { token });
+  }
+}
+
 export function highestCommonFactor(a, b) {
   return b !== 0 ? highestCommonFactor(b, a % b) : a;
 }
@@ -119,23 +129,20 @@ export function toList(tokens, nums) {
 }
 
 export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
-  if (Array.isArray(token)) {
-    const fixedToken = token.slice();
+  if (!(token instanceof TokenExpression)) {
+    const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
-    fixedToken._offset = token._offset;
+    // not needed anymore
+    delete token.content;
 
-    return fixedToken;
+    if (!retval) {
+      throw new ParseError(`Unexpected token \`${token.content}\``, token);
+    }
+
+    return new TokenExpression(token, retval);
   }
 
-  const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
-
-  if (!retval) {
-    throw new ParseError(`Unexpected token \`${token.content}\``, token);
-  }
-
-  retval._offset = [token.begin, token.end]
-
-  return retval;
+  return new TokenExpression(token);
 }
 
 export function fixTokens(ast, flatten) {
@@ -231,7 +238,11 @@ export function fixArgs(values, flatten) {
     last.push(cur);
 
     // normalize raw separators
-    if (cur[0] === 'expr' && (flatten === null ? cur[1] === null : hasSep(cur[1]))) {
+    if (
+      flatten === null
+      ? cur === null
+      : (cur.token[0] === 'expr' && hasSep(cur.token[1]))
+    ) {
       last.pop();
       offset++;
     }
@@ -239,7 +250,7 @@ export function fixArgs(values, flatten) {
 
   if (flatten === null) {
     return stack.reduce((prev, cur) => {
-      const firstValue = cur.findIndex(t => t[0] !== 'text');
+      const firstValue = cur.findIndex(x => x.token[0] !== 'text');
 
       // prepend non values
       if (firstValue > 0) {

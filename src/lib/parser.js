@@ -139,11 +139,6 @@ export function tokenize(input, units) {
   let lastToken;
 
   return input.reduce((prev, cur, i) => {
-    if (cur.content === ' ') {
-      prev.push(toToken(cur, fromMarkdown));
-      return prev;
-    }
-
     let key = i;
     let nextToken;
 
@@ -188,12 +183,11 @@ export function transform(tokens, units) {
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
     if (prev.length > 1) {
-      prev.push(['expr', null]);
+      prev.push(null);
     }
 
     if (cur._fixed) {
       prev.push(...tokenize(cur.map(x => ({
-        complexity: 1,
         content: x.cur,
         begin: [x.row, x.col],
         end: [x.row, x.col + x.cur.length],
@@ -204,7 +198,6 @@ export function transform(tokens, units) {
     const last = cur[cur.length - 1];
 
     prev.push(toToken({
-      complexity: 0,
       content: cur.reduce((p, c) => p + c.cur, ''),
       begin: [cur[0].row, cur[0].col],
       end: [last.row, last.col + last.cur.length],
@@ -218,7 +211,7 @@ export function transform(tokens, units) {
   let _e;
 
   try {
-    fixedTree = fixArgs(body, null).map(x => buildTree(x)).filter(x => x.length);
+    fixedTree = fixArgs(body, null).map(x => buildTree(x));
   } catch (e) {
     _e = e;
   }

@@ -20,16 +20,16 @@ export function buildTree(tokens) {
     const t = tokens[i];
 
     // flag var/call expressions (strict-mode)
-    if (p && p[0] === 'unit' && hasChar(p[1]) && ('(='.includes(t[1]))) p[0] = 'def';
+    if (p && p.token[0] === 'unit' && hasChar(p.token[1]) && ('(='.includes(t.token[1]))) p.token[0] = 'def';
 
     // handle nesting
-    if (['open', 'close'].includes(t[0]) || ['begin', 'end'].includes(t[2])) {
-      if (t[0] === 'open' || t[2] === 'begin') {
+    if (['open', 'close'].includes(t.token[0]) || ['begin', 'end'].includes(t.token[2])) {
+      if (t.token[0] === 'open' || t.token[2] === 'begin') {
         const leaf = [];
 
         // flag tokens for further detection...
-        if (t[1] === '{') root._object = true;
-        if (t[1] === '[') root._array = true;
+        if (t.token[1] === '{') root._object = true;
+        if (t.token[1] === '[') root._array = true;
 
         root.push(leaf);
         stack.push(root);
@@ -38,11 +38,6 @@ export function buildTree(tokens) {
         root = stack.pop();
       }
     } else {
-      if (!root) {
-        // FIXME: throw ParseError?
-        stack.push(t);
-        continue;
-      }
       root.push(t);
     }
   }
@@ -52,6 +47,7 @@ export function buildTree(tokens) {
 
 export function fixTree(ast) {
   let tokens = ast.filter(x => x && !hasTagName(x[0]));
+  return tokens;
 
   let arr = ast._array;
   let obj = ast._object;
