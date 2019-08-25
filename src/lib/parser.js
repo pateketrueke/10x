@@ -59,8 +59,8 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     return ['object', text === '[]' ? [] : {}];
   }
 
-  // handle white-space
-  if (' \n'.includes(text) || text === '...') {
+  // handle white-space and dots...
+  if (' \n'.includes(text)) {
     return ['text', text];
   }
 

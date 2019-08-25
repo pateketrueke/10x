@@ -16,10 +16,11 @@ export default class ParseError extends Error {
     if (e.ctx) {
       let offsets;
 
-      if (e.ctx.token) {
+      if (e.ctx.content) {
         offsets = [e.ctx.begin, e.ctx.end];
       } else if (e.ctx.cur) {
-        offsets = (Array.isArray(e.ctx.cur[0]) ? e.ctx.cur[0] : e.ctx.cur)._offset;
+        offsets = Array.isArray(e.ctx.cur[0]) ? e.ctx.cur[0] : e.ctx.cur;
+        offsets = [offsets.begin, offsets.end];
       }
 
       if (offsets) {
