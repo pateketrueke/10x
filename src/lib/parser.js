@@ -189,7 +189,7 @@ export function transform(tokens, units) {
 
     do { nextScore = (tokens[++key] || {}).score; } while (nextScore < 2);
 
-    if (token.depth || token.score > 2) {
+    if (token.depth || token.score) {
       // split on first high-ranked token
       if (subTree.length && !subTree._fixed) {
         if (';(='.includes(token.cur) && subTree.length === 1) {

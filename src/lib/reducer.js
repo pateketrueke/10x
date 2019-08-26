@@ -353,9 +353,9 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
         throw new ParseError(`Cannot override built-in unit \`${ctx.cur.token[1]}\``, ctx);
       }
 
-      if (hasOwnKeyword(expressions, ctx.cur.token[1])) {
-        throw new ParseError(`Cannot redefine unit \`${ctx.cur.token[1]}\``, ctx);
-      }
+      // if (hasOwnKeyword(expressions, ctx.cur.token[1])) {
+      //   throw new ParseError(`Cannot redefine unit \`${ctx.cur.token[1]}\``, ctx);
+      // }
 
       expressions[ctx.cur.token[1]] = ctx.cur.token[2];
       return;
