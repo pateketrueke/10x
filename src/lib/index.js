@@ -169,6 +169,7 @@ export default class Solv {
     const cb = ast => reduceFromAST(ast, convertFrom, this.expressions, null, this.units);
 
     try {
+      this.error = null;
       subTree.forEach(ast => {
         output.push(...fixArgs(cb(ast)));
       });
