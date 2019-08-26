@@ -127,6 +127,9 @@ if (!returnAsJSON) {
   // FIXME: enable options...
   const ANIMATION_SPEED = playBack === true ? 260 : playBack || 0;
 
+  let indent = '';
+  let values = [];
+
   function push(type, chunk) {
     buffer.push(() => new Promise(ok => {
       if (!type || !playBack) {
@@ -153,8 +156,13 @@ if (!returnAsJSON) {
     });
   }
 
-  let indent = '';
-  let tmp = [];
+  function flush(split) {
+    split = split ? '\n' : '';
+    values.forEach(x => {
+      push(null, `${split}${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
+      split = '';
+    });
+  }
 
   calc.tree.forEach(subTree => {
     const results = calc.eval([subTree]);
@@ -172,30 +180,31 @@ if (!returnAsJSON) {
       } else if (node.token[0] === 'def') {
         push(node.token[0], node.token[1]);
       } else {
-        push(node.token[0], node.token[1]);
+        if (typeof node.token[1] === 'string' && node.token[1].includes('\n') && values.length) {
+          push(node.token[0], node.token[1]);
+          push(null, '\x1b[1A');
+          flush(node.begin[1] !== 0);
+          if (node.token[1] === '\n') push(null, '\n');
+          indent = '';
+          values = [];
+        } else {
+          push(node.token[0], node.token[1]);
+        }
 
         if (node.token[0] === 'text' && node.begin[1] === 0) {
           indent = (node.token[1].match(/^ +/) || [])[0] || indent || '';
-        }
-
-        if (node.token[1] === '\n' && tmp.length) {
-          push(null, '\x1b[1A');
-
-          tmp.forEach(x => {
-            push(null, `${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
-          });
-
-          push(null, '\n');
-          indent = '';
-          tmp = [];
         }
       }
     });
 
     if (results.length) {
-      tmp.push(results);
+      values.push(results);
     }
   });
+
+  if (values.length) {
+    flush();
+  }
 
   buffer.reduce((prev, cur) => prev.then(() => cur()), Promise.resolve());
 } else {
