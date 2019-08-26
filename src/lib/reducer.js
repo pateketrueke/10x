@@ -455,20 +455,22 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
       continue;
     }
 
-    // flag well-known definitions, as they are open...
-    if (ctx.root.isDef || ctx.cur.token[0] === 'def') ctx.isDef = true;
+    if (!Array.isArray(ctx.left)) {
+      // flag well-known definitions, as they are open...
+      if (ctx.root.isDef || ctx.cur.token[0] === 'def') ctx.isDef = true;
 
-    // append last-operator between consecutive unit-expressions
-    if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
-      ctx.ast.push(toToken(ctx.lastOp));
+      // append last-operator between consecutive unit-expressions
+      if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+        ctx.ast.push(toToken(ctx.lastOp));
+      }
+
+      // reduceFromLogic(cb, ctx, expressions);
+      reduceFromFX(cb, ctx, expressions);
+      reduceFromDefs(cb, ctx, expressions, supportedUnits);
+      reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
     }
 
-    // reduceFromLogic(cb, ctx, expressions);
-    reduceFromFX(cb, ctx, expressions);
-    reduceFromDefs(cb, ctx, expressions, supportedUnits);
-    reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
-
-    // skip definitions only
+    // skip definitions only!
     if (Array.isArray(ctx.cur) || ctx.cur.token[0] !== 'def') ctx.ast.push(ctx.cur);
   }
 

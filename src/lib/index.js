@@ -170,7 +170,7 @@ export default class Solv {
 
     try {
       subTree.forEach(ast => {
-        output.push(fixArgs(cb(ast)).reduce((p, c) => p.concat(c), []));
+        output.push(...fixArgs(cb(ast)));
       });
     } catch (e) {
       this.error = ParseError.build(e, source || this.source, 2, this.filepath);
