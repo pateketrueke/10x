@@ -428,10 +428,8 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
   };
 
   // resolve from nested AST expressions
-  const cb = (t, context, subExpressions) => {
-    const env = Object.assign({}, expressions, subExpressions);
-    return reduceFromAST(t, convert, env, context, supportedUnits);
-  };
+  const cb = (t, context, subExpressions) =>
+    reduceFromAST(t, convert, Object.assign({}, expressions, subExpressions), context, supportedUnits);
 
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
@@ -445,14 +443,15 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
 
     // handle anonymous sub-expressions
     if (Array.isArray(ctx.cur)) {
-      const values = fixArgs(ctx.cur).map(x => calculateFromTokens(cb(x, ctx)));
+      const values = cb(ctx.cur, ctx)
+        .reduce((prev, cur) => prev.concat(cur), []);
 
       // prepend multiplication if goes after units/numbers
       if (!ctx.isDef && ['unit', 'number'].includes(ctx.left.token[0])) {
         ctx.ast.push(toToken(['expr', '*', 'mul']));
       }
 
-      ctx.ast.push(values.map(x => toToken(x)));
+      ctx.ast.push(...values);
       continue;
     }
 

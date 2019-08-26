@@ -170,14 +170,15 @@ export default class Solv {
 
     try {
       subTree.forEach(ast => {
-        output.push(...fixArgs(cb(ast)));
+        output.push(fixArgs(cb(ast)).reduce((p, c) => p.concat(c), []));
       });
     } catch (e) {
       this.error = ParseError.build(e, source || this.source, 2, this.filepath);
       return [];
     }
 
-    return output.map(x => calculateFromTokens(x))
+    return output
+      .map(x => calculateFromTokens(x))
       .map(x => Array.isArray(x) && x.length === 1 ? x[0] : x)
       .filter(x => Array.isArray(x) ? x.length : typeof x !== 'undefined');
   }

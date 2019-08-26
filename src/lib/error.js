@@ -19,7 +19,7 @@ export default class ParseError extends Error {
       if (e.ctx.content) {
         offsets = [e.ctx.begin, e.ctx.end];
       } else if (e.ctx.cur) {
-        offsets = Array.isArray(e.ctx.cur[0]) ? e.ctx.cur[0] : e.ctx.cur;
+        offsets = Array.isArray(e.ctx.cur) ? e.ctx.cur[0] : e.ctx.cur;
         offsets = [offsets.begin, offsets.end];
       }
 

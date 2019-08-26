@@ -101,7 +101,7 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
     return new Expression({ token });
   }
 
-  if (!(token instanceof Expression)) {
+  if (!(token instanceof Expression) && typeof fromCallback === 'function') {
     const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
     if (!retval) {
@@ -109,6 +109,10 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
     }
 
     return new Expression(token, retval);
+  }
+
+  if (!token) {
+    throw new ParseError('WAT', arg1);
   }
 
   return new Expression(token);
