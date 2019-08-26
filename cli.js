@@ -159,18 +159,17 @@ if (!returnAsJSON) {
   function flush(split) {
     split = split ? '\n' : '';
     values.forEach(x => {
-      push(null, `${split}${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
+      if (x instanceof Error) {
+        push(null, `${split}${indent}${chalk.red('//=>')} ${chalk.red(x.message)}\n`);
+      } else {
+        push(null, `${split}${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
+      }
       split = '';
     });
   }
 
   calc.tree.forEach(subTree => {
     const results = calc.eval([subTree]);
-
-    if (calc.error) {
-      process.stderr.write(chalk.red(calc.error.stack));
-      process.exit(1);
-    }
 
     subTree.forEach(node => {
       if (Array.isArray(node)) {
@@ -200,6 +199,11 @@ if (!returnAsJSON) {
     if (results.length) {
       values.push(results);
     }
+
+    if (calc.error) {
+      values.push(calc.error);
+      calc.error = null;
+    }
   });
 
   if (values.length) {
@@ -223,11 +227,11 @@ if (!returnAsJSON) {
       process.stderr.write(`${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '))}\n`);
     });
   }
-}
 
-if (calc.error && !returnAsJSON) {
-  process.stderr.write(chalk.red(calc.error.stack));
-  process.exit(1);
+  if (calc.error && !returnAsJSON) {
+    process.stderr.write(chalk.red(calc.error.stack));
+    process.exit(1);
+  }
 }
 
 if (sharedFile) require('fs').writeFileSync(sharedFile, JSON.stringify(calc.expressions, (k, v) => {
