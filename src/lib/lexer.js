@@ -169,7 +169,7 @@ export function getTokensFrom(text, units) {
         || (value.indexOf('/*') === 0 && value.substr(value.length-2) === '*/')
       )
 
-      // (inside parenthesis)
+      // (inside parentheses)
       || (depth && oldScore && (hasSep(value) || hasChar(value)))
 
       // definitions
@@ -179,10 +179,10 @@ export function getTokensFrom(text, units) {
       || ('(' === value && hasOp(nextChar))
     ) score += 1.5;
 
-    // always give score to parenthesis
+    // always give score to parentheses
     if ('({[]})'.includes(value)) score += 1;
 
-    // increase depth if we're into a definition, not inside any parenthesis!
+    // increase depth if we're into a definition, not inside any parentheses!
     if ('(='.includes(value) && oldScore) depth++;
     else if (');'.includes(value) && depth) depth--;
 
