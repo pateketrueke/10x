@@ -263,6 +263,12 @@ export function reduceFromLogic(cb, ctx, expressions) {
         return true;
       }
 
+      // handle foreign-imports
+      if (branches[':import']) {
+        console.log({branches});
+        return true;
+      }
+
       console.log('SYM_LOGIC', branches);
       return false;
     });
