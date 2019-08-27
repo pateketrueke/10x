@@ -171,37 +171,37 @@ if (!returnAsJSON) {
   calc.tree.forEach(subTree => {
     const results = calc.eval([subTree]);
 
-    subTree.forEach(node => {
-      if (Array.isArray(node)) {
-        push('open', '(');
-        render(node);
-        push('close', ')');
-      } else if (node.token[0] === 'def') {
-        push(node.token[0], node.token[1]);
-      } else {
-        if (typeof node.token[1] === 'string' && node.token[1].includes('\n') && values.length) {
-          push(node.token[0], node.token[1]);
-          push(null, '\x1b[1A');
-          flush(node.begin[1] !== 0);
-          if (node.token[1] === '\n') push(null, '\n');
-          indent = '';
-          values = [];
-        } else {
-          push(node.token[0], node.token[1]);
-        }
-
-        if ((node.token[0] === 'text' || node.token[0] === 'expr') && node.begin[1] === 0) {
-          indent = (node.token[1].match(/^ +/) || [])[0] || '';
-        }
-      }
-    });
-
-    if (results.length) {
-      values.push(results);
-    }
-
     if (calc.error) {
       values.push(calc.error);
+    } else {
+      subTree.forEach(node => {
+        if (Array.isArray(node)) {
+          push('open', '(');
+          render(node);
+          push('close', ')');
+        } else if (node.token[0] === 'def') {
+          push(node.token[0], node.token[1]);
+        } else {
+          if (typeof node.token[1] === 'string' && node.token[1].includes('\n') && values.length) {
+            push(node.token[0], node.token[1]);
+            push(null, '\x1b[1A');
+            flush(node.begin[1] !== 0);
+            if (node.token[1] === '\n') push(null, '\n');
+            indent = '';
+            values = [];
+          } else {
+            push(node.token[0], node.token[1]);
+          }
+
+          if ((node.token[0] === 'text' || node.token[0] === 'expr') && node.begin[1] === 0) {
+            indent = (node.token[1].match(/^ +/) || [])[0] || '';
+          }
+        }
+      });
+
+      if (results.length) {
+        values.push(results);
+      }
     }
   });
 
