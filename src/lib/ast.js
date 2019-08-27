@@ -129,7 +129,7 @@ export function fixTokens(ast) {
   return ast.reduce((prev, cur) => {
     if (!Array.isArray(cur) && cur.token[0] === 'symbol') {
       keyName = cur.token[1];
-    } else if (Array.isArray(cur) || cur.token[0] !== 'expr') {
+    } else if (Array.isArray(cur) || !(cur.token[0] === 'expr' && hasSep(cur.token[1]))) {
       if (!array && keyName) {
         prev[keyName] = prev[keyName] || (prev[keyName] = []);
         prev[keyName].push(cur);

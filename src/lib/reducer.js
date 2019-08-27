@@ -455,7 +455,8 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     }
 
     // skip definitions only!
-    if (Array.isArray(ctx.cur) || ctx.cur.token[0] !== 'def') ctx.ast.push(ctx.cur);
+    if (Array.isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
+    else if (ctx.cur.token[0] !== 'def') ctx.ast.push(ctx.cur);
   }
 
   return ctx.ast;
