@@ -192,7 +192,12 @@ export function transform(tokens, units) {
 
     if (token.depth || token.score) {
       // enable depth by blocks, just for symbols
-      if (token.cur.charAt() === ':' && nextScore > 2) open = true;
+      if (!subTree._fixed && token.cur.charAt() === ':' && nextScore > 2) {
+        chunks[++inc] = [token];
+        chunks[inc]._fixed = true;
+        open = true;
+        continue;
+      }
 
       // split on first high-ranked token
       if (subTree.length && !subTree._fixed) {
