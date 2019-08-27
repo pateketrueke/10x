@@ -190,7 +190,7 @@ export function transform(tokens, units) {
 
     do { nextScore = (tokens[++key] || {}).score; } while (nextScore < 2);
 
-    if (open || token.depth || token.score) {
+    if (token.depth || token.score) {
       // enable depth by blocks, just for symbols
       if (!open && token.cur.charAt() === ':' && nextScore > 2) {
         if (subTree.length) {
@@ -223,6 +223,7 @@ export function transform(tokens, units) {
       // break on any non-white space
       if (!' \n'.includes(token.cur) && subTree._fixed) {
         chunks[++inc] = [token];
+        normalize(subTree);
         open = false;
         continue;
       }
