@@ -24,10 +24,6 @@ const OP_TYPES = {
   '<': 'lt',
   '>': 'gt',
   '!': 'not',
-  '[': 'begin',
-  ']': 'end',
-  '{': 'begin',
-  '}': 'end',
   '=': 'equal',
   '+': 'plus',
   '-': 'min',
@@ -52,7 +48,7 @@ export const hasTagName = x => TAG_TYPES.includes(x);
 export const hasTimeUnit = x => TIME_UNITS.includes(x);
 
 export const hasFmt = x => /^["`_*~]$/.test(x);
-export const hasSep = x => '{[()]}|;,'.includes(x);
+export const hasSep = x => '()|;,'.includes(x);
 export const hasNum = x => /^-?(?:\.\d+|\d+(?:[_,.]\d+)*)%?/.test(x);
 export const hasExpr = x => /^(?:from|to|of|a[ts]|i[ns])$/i.test(x);
 export const hasChar = x => CURRENCY_MAPPINGS[x] || ALPHA_MAPPINGS[x] || /^[a-zA-Z_#']/.test(x);

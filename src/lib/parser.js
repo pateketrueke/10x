@@ -54,11 +54,6 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     return ['comment', text];
   }
 
-  // handle mixed objects
-  if (text === '[]' || text === '{}') {
-    return ['object', text === '[]' ? [] : {}];
-  }
-
   // handle white-space and dots...
   if (' \n'.includes(text)) {
     return ['text', text];
@@ -192,7 +187,7 @@ export function transform(tokens, units) {
 
     if (token.depth || token.score) {
       // enable depth by blocks, just for symbols before groups...
-      if (!subTree._fixed && token.cur.charAt() === ':' && '{[(!'.includes(nextToken.cur)) {
+      if (!subTree._fixed && token.cur.charAt() === ':' && '(!'.includes(nextToken.cur)) {
         if (subTree.length) {
           chunks[++inc] = [token];
           chunks[inc]._fixed = true;

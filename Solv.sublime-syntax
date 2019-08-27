@@ -14,7 +14,7 @@ scope: source.text.slv
 contexts:
   main:
     # expressions
-    - match: '[({\[]'
+    - match: '\('
       scope: punctuation.definition.comment
       push:
         - include: scope:source.text.slv
@@ -25,7 +25,7 @@ contexts:
           scope: keyword.other
         - match: "[<!=>~|&+-]{2}|[-+*=/<>]|[-a-zA-Z_#\\u00C0-\\u00FF]+"
           scope: variable.other
-        - match: '[\]})]'
+        - match: '\)'
           pop: true
 
     # strings

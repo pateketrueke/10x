@@ -104,9 +104,6 @@ export function fixCalls(tokens, def) {
 export function fixTree(ast) {
   let tokens = ast.filter(x => Array.isArray(x) || !hasTagName(x.token[0]));
 
-  let arr = ast._array;
-  let obj = ast._object;
-
   for (let i = 0; i < tokens.length; i += 1) {
     let cur = Array.isArray(tokens[i])
       ? fixTree(tokens[i])
@@ -307,10 +304,6 @@ export function buildTree(tokens) {
     ) {
       if (t.token[0] === 'open' || t.token[2] === 'begin') {
         const leaf = [];
-
-        // flag tokens for further detection...
-        if (t.token[1] === '{') leaf._object = true;
-        if (t.token[1] === '[') leaf._array = true;
 
         root.push(leaf);
         stack.push(root);
