@@ -320,8 +320,9 @@ export function reduceFromFX(cb, ctx, expressions) {
 
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
-    const [lft, rgt, ...others] = cb(ctx.cutFromOffset().slice(1), ctx).reduce((p, c) => p.concat(c), []);
-    const result = evaluateComparison(ctx.cur.token[1], lft.token[1], rgt.token[1], others);
+    // FIXME: ... improve all this shit...
+    const [lft, rgt, ...others] = cb(ctx.cutFromOffset().slice(1), ctx).reduce((p, c) => p.concat(reduceFromInput(c.token)), []);
+    const result = evaluateComparison(ctx.cur.token[1], lft, rgt, others);
 
     ctx.cur = toToken([typeof result, typeof result === 'string' ? `"${result}"` : result]);
   }
@@ -374,6 +375,9 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
     const locals = reduceFromArgs(def.args, args);
 
     ctx.cur = def.args.length ? cb(def.body.slice(), ctx, locals) : def.body;
+
+    // console.log({def,call,locals})
+    // console.log(ctx.cur)
 
     // FIXME: validate arity while recursing...
     if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
