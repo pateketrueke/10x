@@ -177,6 +177,7 @@ export function normalize(subTree) {
 export function transform(tokens, units) {
   const chunks = [];
 
+  let open = false;
   let inc = 0;
 
   // split tokens based on their complexity
@@ -190,6 +191,9 @@ export function transform(tokens, units) {
     do { nextScore = (tokens[++key] || {}).score; } while (nextScore < 2);
 
     if (token.depth || token.score) {
+      // enable depth by blocks, just for symbols
+      if (token.cur.charAt() === ':' && nextScore > 2) open = true;
+
       // split on first high-ranked token
       if (subTree.length && !subTree._fixed) {
         if (subTree[0].score > 2 || (';(='.includes(token.cur) && subTree.length === 1)) {
@@ -210,14 +214,18 @@ export function transform(tokens, units) {
       if (!' \n'.includes(token.cur) && subTree._fixed) {
         chunks[++inc] = [token];
         normalize(subTree);
+        open = false;
         continue;
       }
     }
 
     subTree.push(token);
 
+    // disable depth by blocks...
+    if (open && token.cur === ';') open = false;
+
     // make sure we're always splitting on new-lines!
-    if (!token.depth && token.cur === '\n') inc++;
+    if (!(open || token.depth) && token.cur === '\n') inc++;
   }
 
   // merge non-fixed chunks

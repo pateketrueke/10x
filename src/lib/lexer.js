@@ -137,7 +137,6 @@ export function getTokensFrom(text, units) {
       return prev;
     }
 
-    const nextToken = tokens.slice(i).find(x => !' \n'.includes(x.cur));
     const nextChar = ((tokens[i + 1] || [])[0] || {}).cur;
 
     let score = 0;
