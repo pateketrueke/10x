@@ -424,17 +424,18 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     ctx.endOffset = tokens.findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k') - i;
     ctx.cutFromOffset = () => (ctx.endOffset >= 0 ? ctx.tokens.splice(ctx.i, ctx.endOffset) : ctx.tokens.splice(ctx.i));
 
+    // FIXME: improve API and fixed how arrays are handled...
+
     // handle anonymous sub-expressions
     if (Array.isArray(ctx.cur)) {
-      const values = cb(ctx.cur, ctx)
-        .reduce((prev, cur) => prev.concat(cur), []);
+      const fixedValue = calculateFromTokens(cb(ctx.cur, ctx));
 
       // prepend multiplication if goes after units/numbers
       if (!ctx.isDef && !Array.isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
         ctx.ast.push(toToken(['expr', '*', 'mul']));
       }
 
-      ctx.ast.push(...values);
+      ctx.ast.push(toToken(fixedValue));
       continue;
     }
 
@@ -443,7 +444,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
       if (ctx.root.isDef || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
       // append last-operator between consecutive unit-expressions
-      if (!ctx.left.depth && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+      if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
         ctx.ast.push(toToken(ctx.lastOp));
       }
 
