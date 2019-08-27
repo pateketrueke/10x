@@ -190,8 +190,8 @@ if (!returnAsJSON) {
           push(node.token[0], node.token[1]);
         }
 
-        if (node.token[0] === 'text' && node.begin[1] === 0) {
-          indent = (node.token[1].match(/^ +/) || [])[0] || indent || '';
+        if ((node.token[0] === 'text' || node.token[0] === 'expr') && node.begin[1] === 0) {
+          indent = (node.token[1].match(/^ +/) || [])[0] || '';
         }
       }
     });
