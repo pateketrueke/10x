@@ -65,12 +65,15 @@ export function toValue(value) {
     return value.toString().split(' ').slice(0, 5).join(' ');
   }
 
+  // FIXME: handle format on laaaarge numbers?
   if (typeof value === 'number') {
-    const sub = value.toString().match(/^.*?\.0+\d{1,3}/);
+    // const sub = value.toString().match(/^.*?\.0+\d{1,3}/);
 
-    if (!sub) {
-      value = value.toFixed(2).replace(/\.0+$/, '');
-    } else value = sub[0];
+    // if (!sub) {
+    //   value = value.toFixed(2).replace(/\.0+$/, '');
+    // } else value = sub[0];
+
+    return value.toString();
   }
 
   // simplify decimals

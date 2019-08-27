@@ -321,7 +321,7 @@ export function reduceFromFX(cb, ctx, expressions) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
     // FIXME: ... improve all this shit...
-    const [lft, rgt, ...others] = cb(ctx.cutFromOffset().slice(1), ctx).reduce((p, c) => p.concat(reduceFromInput(c.token)), []);
+    const [lft, rgt, ...others] = cb(ctx.cutFromOffset().slice(1), ctx).map(x => reduceFromInput(x.token));
     const result = evaluateComparison(ctx.cur.token[1], lft, rgt, others);
 
     ctx.cur = toToken([typeof result, typeof result === 'string' ? `"${result}"` : result]);
