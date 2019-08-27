@@ -160,7 +160,7 @@ if (!returnAsJSON) {
     split = split ? '\n' : '';
     values.forEach(x => {
       if (x instanceof Error) {
-        push(null, `${split}${indent}${chalk.red(`//! ${x.message}`)}\n`);
+        push(null, `${split}${indent}${chalk.red(`//! ${x.stack}`)}\n`);
       } else {
         push(null, `${split}${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
       }
