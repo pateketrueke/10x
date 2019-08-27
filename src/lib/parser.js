@@ -190,11 +190,16 @@ export function transform(tokens, units) {
 
     do { nextScore = (tokens[++key] || {}).score; } while (nextScore < 2);
 
-    if (token.depth || token.score) {
+    if (open || token.depth || token.score) {
       // enable depth by blocks, just for symbols
-      if (!subTree._fixed && token.cur.charAt() === ':' && nextScore > 2) {
-        chunks[++inc] = [token];
-        chunks[inc]._fixed = true;
+      if (!open && token.cur.charAt() === ':' && nextScore > 2) {
+        if (subTree.length) {
+          chunks[++inc] = [token];
+          chunks[inc]._fixed = true;
+        } else {
+          subTree._fixed = true;
+          subTree.push(token)
+        }
         open = true;
         continue;
       }
@@ -218,7 +223,6 @@ export function transform(tokens, units) {
       // break on any non-white space
       if (!' \n'.includes(token.cur) && subTree._fixed) {
         chunks[++inc] = [token];
-        normalize(subTree);
         open = false;
         continue;
       }

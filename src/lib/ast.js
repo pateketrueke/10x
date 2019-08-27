@@ -127,7 +127,7 @@ export function fixTokens(ast) {
   let keyName;
 
   return ast.reduce((prev, cur) => {
-    if (!Array.isArray(cur) && ['unit', 'symbol'].includes(cur.token[0])) {
+    if (!Array.isArray(cur) && cur.token[0] === 'symbol') {
       keyName = cur.token[1];
     } else {
       if (!array && keyName) {
@@ -201,7 +201,7 @@ export function fixArgs(values, flatten) {
         offset++;
       }
     } else {
-      last.push(...cur);
+      last.push(cur);
     }
   }
 

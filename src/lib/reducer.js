@@ -230,32 +230,39 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
 export function reduceFromLogic(cb, ctx, expressions) {
   // collect all tokens after symbols
   if (ctx.cur.token[0] === 'symbol') {
-    const subTree = ctx.nextOffset >= 0 ? ctx.tokens.splice(ctx.i, ctx.nextOffset) : ctx.tokens.splice(ctx.i);
-    const branches = fixTokens(subTree);
+    const subTree = ctx.cutFromOffset();
+    const symbol = subTree.shift();
 
-    // handle if-then-else logic
-    if (branches[':if'] || branches[':unless']) {
-      const ifBranch = branches[':if'] || branches[':unless'];
-      const orBranch = branches[':else'] || branches[':otherwise'];
+    // handle multiple braches
+    fixArgs(subTree).map(x => {
+      const branches = fixTokens([symbol].concat(x));
 
-      let not = branches[':unless'] && !branches[':if'];
-      let test = ifBranch.shift();
+      // handle if-then-else logic
+      if (branches[':if'] || branches[':unless']) {
+        const ifBranch = branches[':if'] || branches[':unless'];
+        const orBranch = branches[':else'] || branches[':otherwise'];
 
-      // handle negative variations
-      if (!Array.isArray(test) && test.token[0] === 'expr' && test.token[2] === 'not') {
-        test = ifBranch.shift();
-        not = !not;
+        let not = branches[':unless'] && !branches[':if'];
+        let test = ifBranch.shift();
+
+        // handle negative variations
+        if (!Array.isArray(test) && test.token[0] === 'expr' && test.token[2] === 'not') {
+          test = ifBranch.shift();
+          not = !not;
+        }
+
+        const retval = calculateFromTokens(cb(test.slice(), ctx));
+
+        // evaluate respective branches
+        if (not ? !retval[1] : retval[1]) {
+          ctx.ast.push(...cb(ifBranch, ctx));
+        } else if (orBranch) {
+          ctx.ast.push(...cb(orBranch, ctx));
+        }
+      } else {
+        console.log('SYM_LOGIC', branches);
       }
-
-      const retval = calculateFromTokens(cb(test.slice(), ctx));
-
-      // evaluate respective branches
-      if (not ? !retval[1] : retval[1]) {
-        ctx.ast.push(cb(ifBranch));
-      } else if (orBranch) {
-        ctx.ast.push(cb(orBranch));
-      }
-    }
+    });
   }
 }
 
@@ -304,7 +311,7 @@ export function reduceFromFX(cb, ctx, expressions) {
 
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
-    const [lft, rgt, ...others] = cb(ctx.tokens.splice(ctx.i + 1), ctx).reduce((p, c) => p.concat(c), []);
+    const [lft, rgt, ...others] = ctx.cutFromOffset().slice(1);
     const result = evaluateComparison(ctx.cur.token[1], lft.token[1], rgt.token[1], others);
 
     ctx.cur = toToken([typeof result, typeof result === 'string' ? `"${result}"` : result]);
@@ -405,7 +412,8 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     ctx.cur = tokens[i];
     ctx.left = tokens[i - 1] || { token: [] };
     ctx.right = tokens[i + 1] || { token: [] };
-    ctx.nextOffset = tokens.findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1])) - i;
+    ctx.endOffset = tokens.findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k') - i;
+    ctx.cutFromOffset = () => (ctx.endOffset >= 0 ? ctx.tokens.splice(ctx.i, ctx.endOffset) : ctx.tokens.splice(ctx.i));
 
     // handle anonymous sub-expressions
     if (Array.isArray(ctx.cur)) {

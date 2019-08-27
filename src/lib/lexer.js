@@ -182,8 +182,8 @@ export function getTokensFrom(text, units) {
     if ('({[]})'.includes(value)) score += 1;
 
     // increase depth if we're into a definition, not inside any parentheses!
-    if ('(='.includes(value) && oldScore) depth++;
-    else if (');'.includes(value) && depth) depth--;
+    if ('{[(='.includes(value) && oldScore) depth++;
+    else if (')]};'.includes(value) && depth) depth--;
 
     prev.push({
       depth,
