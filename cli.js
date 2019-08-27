@@ -63,12 +63,12 @@ if (!returnAsJSON) {
   const buffer = [];
 
   function puts(type, chunk, speed) {
-    if (typeof chunk !== 'string') {
+    if (type !== 'number' && typeof chunk !== 'string') {
       process.stdout.write(chalk.yellow(`:${chunk}`));
       return;
     }
 
-    return chunk.split(speed ? /(?=[\x00-\x7F])/ : /(?=\b)/)
+    return String(chunk).split(speed ? /(?=[\x00-\x7F])/ : /(?=\b)/)
       .reduce((prev, cur) => prev.then(() => {
         switch (type) {
           case null:
