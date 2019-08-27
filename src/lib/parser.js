@@ -192,7 +192,7 @@ export function transform(tokens, units) {
 
     if (token.depth || token.score) {
       // enable depth by blocks, just for symbols before groups...
-      if (!subTree._fixed && token.cur.charAt() === ':' && '{[('.includes(nextToken.cur)) {
+      if (!subTree._fixed && token.cur.charAt() === ':' && '{[(!'.includes(nextToken.cur)) {
         if (subTree.length) {
           chunks[++inc] = [token];
           chunks[inc]._fixed = true;
