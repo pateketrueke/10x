@@ -91,7 +91,7 @@ export function evaluateComparison(op, left, right, others) {
 
   switch (op) {
     case '!~': return !left.includes(right);
-    case '=~': return left.includes(right);
+    case '~=': return left.includes(right);
     case '!=': return left !== right;
     case '==': return left === right;
     case '<=': return left <= right;

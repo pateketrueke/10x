@@ -10,7 +10,7 @@ const OP_TYPES = {
   '==': 'iseq',
   '<=': 'lteq',
   '>=': 'gteq',
-  '=~': 'like',
+  '~=': 'like',
   '++': 'inc',
   '--': 'dec',
   '&&': 'and',

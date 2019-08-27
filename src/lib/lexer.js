@@ -37,7 +37,7 @@ export function getTokensFrom(text, units) {
         inFormat = hasSep(last)
           && (next === '_' || hasChar(next) || hasNum(next));
       } else if (cur === '~') {
-        inFormat = next !== '>';
+        inFormat = !'=>'.includes(next);
       } else {
         inFormat = true;
       }
