@@ -201,7 +201,11 @@ export function fixArgs(values, flatten) {
         offset++;
       }
     } else {
-      last.push(cur);
+      if (flatten !== false) {
+        last.push(...cur);
+      } else {
+        last.push(cur);
+      }
     }
   }
 

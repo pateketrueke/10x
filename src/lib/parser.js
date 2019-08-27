@@ -186,13 +186,13 @@ export function transform(tokens, units) {
     const token = tokens[i];
 
     let key = i;
-    let nextScore;
+    let nextToken;
 
-    do { nextScore = (tokens[++key] || {}).score; } while (nextScore < 2);
+    do { nextToken = tokens[++key] || {}; } while (nextToken.score < 2);
 
     if (token.depth || token.score) {
-      // enable depth by blocks, just for symbols
-      if (!open && token.cur.charAt() === ':' && nextScore > 2) {
+      // enable depth by blocks, just for symbols before groups...
+      if (!subTree._fixed && token.cur.charAt() === ':' && '{[('.includes(nextToken.cur)) {
         if (subTree.length) {
           chunks[++inc] = [token];
           chunks[inc]._fixed = true;
@@ -216,7 +216,7 @@ export function transform(tokens, units) {
         chunks[inc]._fixed = true;
 
         // break on non-regular tokens!
-        if ('":'.includes(token.cur.charAt()) && (nextScore < 2 || nextScore > 3)) inc++;
+        if ('":'.includes(token.cur.charAt()) && (nextToken.score < 2 || nextToken.score > 3)) inc++;
         continue;
       }
     } else {

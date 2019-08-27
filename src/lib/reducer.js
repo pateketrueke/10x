@@ -234,7 +234,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
     const symbol = subTree.shift();
 
     // handle multiple braches
-    fixArgs(subTree).map(x => {
+    fixArgs(subTree, false).map(x => {
       const branches = fixTokens([symbol].concat(x));
 
       // handle if-then-else logic

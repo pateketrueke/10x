@@ -171,7 +171,7 @@ export default class Solv {
     try {
       this.error = null;
       subTree.forEach(ast => {
-        output.push(cb(ast));
+        output.push(...fixArgs(cb(ast)));
       });
     } catch (e) {
       this.error = ParseError.build(e, source || this.source, 2, this.filepath);
