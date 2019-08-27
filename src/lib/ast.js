@@ -118,43 +118,26 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
   return new Expression(token);
 }
 
-export function fixTokens(ast, flatten) {
-  if (!Array.isArray(ast[0])) return ast;
+export function fixTokens(ast) {
+  if (!Array.isArray(ast)) return ast;
 
-  const target = ast[0][0] === 'symbol' ? {} : [];
+  const target = ast[0].token[0] === 'symbol' ? {} : [];
   const array = Array.isArray(target);
 
-  let lastKeyName;
   let keyName;
 
   return ast.reduce((prev, cur) => {
-    if (cur[0] === 'expr' && cur[1] === ',') return prev;
-
-    // flatten nested tokens...
-    while (cur.length === 1) cur = cur[0];
-
-    if (array) {
-      prev.push(fixTokens(cur));
-      return prev;
-    }
-
-    if (!keyName && ['unit', 'symbol'].includes(cur[0])) {
-      keyName = cur[1];
-
-      if (cur[2]) {
-        prev[keyName] = cur[2];
-        lastKeyName = keyName;
-        keyName = null;
+    if (!Array.isArray(cur) && ['unit', 'symbol'].includes(cur.token[0])) {
+      keyName = cur.token[1];
+    } else {
+      if (!array && keyName) {
+        prev[keyName] = prev[keyName] || (prev[keyName] = []);
+        prev[keyName].push(fixTokens(cur));
       }
-    } else if (keyName) {
-      const sub = fixTokens(cur);
 
-      // avoid wrapping tokens twice...
-      prev[keyName] = (flatten !== false && Array.isArray(sub[0])) ? sub : [sub];
-      lastKeyName = keyName;
-      keyName = null;
-    } else if (prev[lastKeyName]) {
-      prev[lastKeyName].push(cur);
+      if (array) {
+        prev.push(fixTokens(cur));
+      }
     }
 
     return prev;

@@ -227,46 +227,36 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   if (hasTimeUnit(ctx.cur.token[2])) ctx.isDate = true;
 }
 
-export function reduceFromLogic(ctx, tokens, expressions) {
-  // // collect all tokens after symbols
-  // if (isSymbol || (!value && cur[0] === 'symbol'))  {
-  //   isSymbol = true;
-  //   fixedStack.push(cur);
+export function reduceFromLogic(cb, ctx, tokens, expressions) {
+  // collect all tokens after symbols
+  if (ctx.cur.token[0] === 'symbol') {
+    const subTree = ctx.nextOffset >= 0 ? ctx.tokens.splice(ctx.i, ctx.nextOffset) : ctx.tokens.splice(ctx.i);
+    const branches = fixTokens(subTree, false);
 
-  //   if (fixedStack.length && ((i == tokens.length - 1) || (cur[0] === 'expr' && hasSep(cur[1])))) {
-  //     const branches = fixTokens(fixedStack, false);
+    // handle if-then-else logic
+    if (branches[':if'] || branches[':unless']) {
+      const ifBranch = branches[':if'] || branches[':unless'];
+      const orBranch = branches[':else'] || branches[':otherwise'];
 
-  //     console.log({branches});
+      let not = branches[':unless'] && !branches[':if'];
+      let test = ifBranch.shift();
 
-  //     // handle if-then-else logic
-  //     if (branches[':if'] || branches[':unless']) {
-  //       const ifBranch = branches[':if'] || branches[':unless'];
-  //       const orBranch = branches[':else'] || branches[':otherwise'];
+      // handle negative variations
+      if (!Array.isArray(test) && test.token[0] === 'expr' && test.token[2] === 'not') {
+        test = ifBranch.shift();
+        not = !not;
+      }
 
-  //       let not = branches[':unless'] && !branches[':if'];
-  //       let test = (branches[':if'] || branches[':unless']).shift();
+      const retval = calculateFromTokens(cb(test, ctx));
 
-  //       // handle negative variations
-  //       if (test[0] === 'expr' && test[2] === 'not') {
-  //         not = true;
-  //         test = ifBranch.shift();
-  //         test = [].concat.apply([test[0]], test.slice(1));
-  //       }
-
-  //       const retval = calculateFromTokens(cb(test));
-
-  //       // evaluate respective branches
-  //       if (not ? !retval[1] : retval[1]) {
-  //         fixedTokens.push(calculateFromTokens(cb(ifBranch)));
-  //       } else if (orBranch) {
-  //         fixedTokens.push(calculateFromTokens(cb(orBranch)));
-  //       }
-  //     }
-
-  //     isSymbol = false;
-  //   }
-  //   continue;
-  // }
+      // evaluate respective branches
+      if (not ? !retval[1] : retval[1]) {
+        ctx.ast.push(cb(ifBranch));
+      } else if (orBranch) {
+        ctx.ast.push(cb(orBranch));
+      }
+    }
+  }
 }
 
 export function reduceFromFX(cb, ctx, expressions) {
@@ -313,35 +303,12 @@ export function reduceFromFX(cb, ctx, expressions) {
   // }
 
   // handle logical expressions
-  // if (ctx.cur[0] === 'fx') {
-  //   const [op, ...body] = ctx.tokens.slice(ctx.i);
-  //   const args = [];
+  if (ctx.cur.token[0] === 'fx') {
+    const [op, lft, rgt, ...others] = ctx.tokens.splice(ctx.i);
+    const result = evaluateComparison(op.token[1], lft.token[1], rgt ? rgt.token[1] : undefined, others.map(x => x.token[1]));
 
-  //   let buffer = [];
-  //   let offset = -1;
-
-  //   // split on consecutive values
-  //   for (let i = 0; i < body.length; i += 1) {
-  //     if (['string', 'symbol', 'number', 'object', 'boolean', 'function', 'undefined'].includes(body[i][0])) offset++;
-  //     if (offset >= 0) {
-  //       buffer = args[offset] || (args[offset] = []);
-  //       buffer.push(body[i]);
-  //     }
-  //   }
-
-  //   // skip from non-arguments
-  //   if (!args.length) {
-  //     ctx.stack.push(ctx.cur);
-  //     return;
-  //   }
-
-  //   // FIXME: validate input or something?
-  //   const [lft, rgt, ...others] = args.map(x => calculateFromTokens(cb(x, ctx)));
-  //   const result = evaluateComparison(ctx.cur[1], lft[1], rgt ? rgt[1] : undefined, others.map(x => x[1]));
-
-  //   // also, how these values are rendered back?
-  //   ctx.stack.push([typeof result, typeof result === 'string' ? `"${result}"` : result]);
-  // }
+    ctx.cur = toToken([typeof result, typeof result === 'string' ? `"${result}"` : result]);
+  }
 }
 
 export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
@@ -420,9 +387,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
   const ctx = {
     tokens,
     ast: [],
-    stack: [],
     isDate: null,
-    isSymbol: null,
     lastUnit: null,
     lastOp: ['expr', '+', 'plus'],
   };
@@ -440,6 +405,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     ctx.cur = tokens[i];
     ctx.left = tokens[i - 1] || { token: [] };
     ctx.right = tokens[i + 1] || { token: [] };
+    ctx.nextOffset = tokens.findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1])) - i;
 
     // handle anonymous sub-expressions
     if (Array.isArray(ctx.cur)) {
@@ -464,7 +430,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
         ctx.ast.push(toToken(ctx.lastOp));
       }
 
-      // reduceFromLogic(cb, ctx, expressions);
+      reduceFromLogic(cb, ctx, expressions);
       reduceFromFX(cb, ctx, expressions);
       reduceFromDefs(cb, ctx, expressions, supportedUnits);
       reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
