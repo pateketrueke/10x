@@ -192,24 +192,17 @@ export function transform(tokens, units) {
     if (token.depth || token.score) {
       // split on first high-ranked token
       if (subTree.length && !subTree._fixed) {
-        if (';(='.includes(token.cur) && subTree.length === 1) {
+        if (subTree[0].score > 2 || (';(='.includes(token.cur) && subTree.length === 1)) {
           subTree._fixed = true;
           subTree.push(token)
           continue;
         }
 
-        // handle strings and symbols
-        if ('":'.includes(token.cur.charAt())) {
-          chunks[++inc] = [token];
-          chunks[inc]._fixed = true;
-
-          // break on non-regular tokens!
-          if (nextScore < 2 || nextScore > 3) inc++;
-          continue;
-        }
-
         chunks[++inc] = [token];
         chunks[inc]._fixed = true;
+
+        // break on non-regular tokens!
+        if ('":'.includes(token.cur.charAt()) && (nextScore < 2 || nextScore > 3)) inc++;
         continue;
       }
     } else {
