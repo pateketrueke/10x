@@ -227,11 +227,11 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   if (hasTimeUnit(ctx.cur.token[2])) ctx.isDate = true;
 }
 
-export function reduceFromLogic(cb, ctx, tokens, expressions) {
+export function reduceFromLogic(cb, ctx, expressions) {
   // collect all tokens after symbols
   if (ctx.cur.token[0] === 'symbol') {
     const subTree = ctx.nextOffset >= 0 ? ctx.tokens.splice(ctx.i, ctx.nextOffset) : ctx.tokens.splice(ctx.i);
-    const branches = fixTokens(subTree, false);
+    const branches = fixTokens(subTree);
 
     // handle if-then-else logic
     if (branches[':if'] || branches[':unless']) {
@@ -247,7 +247,7 @@ export function reduceFromLogic(cb, ctx, tokens, expressions) {
         not = !not;
       }
 
-      const retval = calculateFromTokens(cb(test, ctx));
+      const retval = calculateFromTokens(cb(test.slice(), ctx));
 
       // evaluate respective branches
       if (not ? !retval[1] : retval[1]) {
@@ -304,8 +304,8 @@ export function reduceFromFX(cb, ctx, expressions) {
 
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
-    const [op, lft, rgt, ...others] = ctx.tokens.splice(ctx.i);
-    const result = evaluateComparison(op.token[1], lft.token[1], rgt ? rgt.token[1] : undefined, others.map(x => x.token[1]));
+    const [lft, rgt, ...others] = cb(ctx.tokens.splice(ctx.i + 1), ctx).reduce((p, c) => p.concat(c), []);
+    const result = evaluateComparison(ctx.cur.token[1], lft.token[1], rgt.token[1], others);
 
     ctx.cur = toToken([typeof result, typeof result === 'string' ? `"${result}"` : result]);
   }
@@ -357,7 +357,7 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
     const args = cb(call.args, ctx);
     const locals = reduceFromArgs(def.args, args);
 
-    ctx.cur = def.args.length ? cb(def.body, ctx, locals) : def.body;
+    ctx.cur = def.args.length ? cb(def.body.slice(), ctx, locals) : def.body;
 
     // FIXME: validate arity while recursing...
     if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {

@@ -132,11 +132,11 @@ export function fixTokens(ast) {
     } else {
       if (!array && keyName) {
         prev[keyName] = prev[keyName] || (prev[keyName] = []);
-        prev[keyName].push(fixTokens(cur));
+        prev[keyName].push(cur);
       }
 
       if (array) {
-        prev.push(fixTokens(cur));
+        prev.push(cur);
       }
     }
 
