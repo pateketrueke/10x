@@ -233,8 +233,8 @@ export function reduceFromLogic(cb, ctx, expressions) {
     const subTree = ctx.cutFromOffset();
     const symbol = subTree.shift();
 
-    // handle multiple braches
-    fixArgs(subTree, false).map(x => {
+    // handle multiple branches
+    fixArgs(subTree, false).some(x => {
       const branches = fixTokens([symbol].concat(x));
 
       // handle if-then-else logic
@@ -259,9 +259,12 @@ export function reduceFromLogic(cb, ctx, expressions) {
         } else if (orBranch) {
           ctx.ast.push(...cb(orBranch, ctx));
         }
-      } else {
-        console.log('SYM_LOGIC', branches);
+
+        return true;
       }
+
+      console.log('SYM_LOGIC', branches);
+      return false;
     });
   }
 }

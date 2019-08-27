@@ -125,9 +125,17 @@ export function fixTree(ast) {
     //   // cur[0] = 'def';
     // }
 
+    if (Array.isArray(cur) && cur.length > 1) {
+      // handle tuples
+      if (cur[0].token[0] === 'symbol' && ['number', 'string', 'unit'].includes(cur[1].token[0])) {
+        tokens.splice(i, 1, toToken(['object', fixTokens(cur)]));
+        continue;
+      }
+    }
+
     if (!Array.isArray(prev)) {
       if (prev.token[0] === 'def') {
-        const offset  = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[1] === ';');
+        const offset  = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
         const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
         const firstNode = subTree.shift();
 
