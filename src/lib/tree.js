@@ -125,7 +125,7 @@ export function fixTree(ast) {
     //   // cur[0] = 'def';
     // }
 
-    if (Array.isArray(cur) && cur.length > 1) {
+    if (Array.isArray(cur) && cur.length > 1 && !Array.isArray(cur[0])) {
       // handle tuples
       if (cur[0].token[0] === 'symbol' && ['number', 'string', 'unit'].includes(cur[1].token[0])) {
         tokens.splice(i, 1, toToken(['object', fixTokens(cur)]));
