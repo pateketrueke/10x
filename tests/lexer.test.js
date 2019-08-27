@@ -88,24 +88,24 @@ describe('Lexer', () => {
     });
 
     it('should rank numbers and separators', () => {
-      expect(sumTokensFrom('1, 2, 3')).to.eql(5);
+      expect(sumTokensFrom('1, 2, 3')).to.eql(15);
     });
 
     it('should rank symbols and strings', () => {
-      expect(sumTokensFrom(':foo "bar baz"')).to.eql(2);
+      expect(sumTokensFrom(':foo "bar baz"')).to.eql(6);
     });
 
     it('should rank comments', () => {
-      expect(sumTokensFrom('// foo bar\nbaz buzz')).to.eql(1);
-      expect(sumTokensFrom('/* foo bar\nbaz */ buzz')).to.eql(1);
+      expect(sumTokensFrom('// foo bar\nbaz buzz')).to.eql(1.5);
+      expect(sumTokensFrom('/* foo bar\nbaz */ buzz')).to.eql(1.5);
     });
 
     it('should rank operators', () => {
-      expect(sumTokensFrom('(<= 1 2)')).to.eql(5);
+      expect(sumTokensFrom('(<= 1 2)')).to.eql(15.5);
     });
 
     it('should rank definitions', () => {
-      expect(sumTokensFrom('x = 1.2 ;')).to.eql(4);
+      expect(sumTokensFrom('x = 1.2 ;')).to.eql(6);
     });
   });
 });

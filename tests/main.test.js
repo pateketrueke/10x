@@ -35,7 +35,7 @@ describe('DSL', () => {
 
     it('should handle common errors', () => {
       expect(() => value('1ml - 1cm')).to.throw(/Cannot convert incompatible measures of volume and length/);
-      expect(() => value('cm=1.2;')).to.throw(/Cannot override already built-in unit/);
+      expect(() => value('cm=1.2;')).to.throw(/Cannot override built-in unit/);
     });
 
     it('should handle most basic units', () => {
@@ -43,7 +43,7 @@ describe('DSL', () => {
     });
 
     it('should handle some logical operators', () => {
-      expect(calc('(<= >= == != !~ =~ -- ++ < > = && || ~> |> <|)').tokens.filter(x => x.token[2]).map(x => x.token[2]))
+      expect(calc('(<= >= == != !~ ~= -- ++ < > = && || ~> |> <|)').tokens.filter(x => x.token[2]).map(x => x.token[2]))
         .to.eql(['lteq', 'gteq', 'iseq', 'noteq', 'notlike', 'like', 'dec', 'inc', 'lt', 'gt', 'equal', 'and', 'x-or', 'void', 'rpipe', 'lpipe']);
     });
 
