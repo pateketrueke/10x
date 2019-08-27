@@ -424,7 +424,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
         .reduce((prev, cur) => prev.concat(cur), []);
 
       // prepend multiplication if goes after units/numbers
-      if (!ctx.isDef && ['unit', 'number'].includes(ctx.left.token[0])) {
+      if (!ctx.isDef && !Array.isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
         ctx.ast.push(toToken(['expr', '*', 'mul']));
       }
 
@@ -437,7 +437,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
       if (ctx.root.isDef || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
       // append last-operator between consecutive unit-expressions
-      if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+      if (!ctx.left.depth && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
         ctx.ast.push(toToken(ctx.lastOp));
       }
 

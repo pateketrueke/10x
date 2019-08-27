@@ -161,6 +161,7 @@ export function normalize(subTree) {
   if (nonOps.length) {
     const avg = nonOps.reduce((prev, cur) => prev + cur.score, 0) / nonOps.length;
 
+
     if (avg < 2) {
       delete subTree._fixed;
     }
@@ -201,7 +202,7 @@ export function transform(tokens, units) {
 
       // split on first high-ranked token
       if (subTree.length && !subTree._fixed) {
-        if (subTree[0].score > 2 || (';(='.includes(token.cur) && subTree.length === 1)) {
+        if (subTree[0].score >= 1.5 || (';(='.includes(token.cur) && subTree.length === 1)) {
           subTree._fixed = true;
           subTree.push(token)
           continue;
@@ -238,6 +239,7 @@ export function transform(tokens, units) {
     if (cur._fixed) {
       prev.push(null, ...tokenize(cur.map(x => ({
         content: x.cur,
+        depth: x.depth,
         begin: [x.row, x.col],
         end: [x.row, x.col + x.cur.length],
       })), units));
@@ -248,6 +250,7 @@ export function transform(tokens, units) {
 
     prev.push(null, toToken({
       content: cur.reduce((p, c) => p + c.cur, ''),
+      depth: cur.reduce((p, c) => p + c.depth, 0) / cur.length,
       begin: [cur[0].row, cur[0].col],
       end: [last.row, last.col + last.cur.length],
     }, fromMarkdown));

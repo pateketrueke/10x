@@ -19,11 +19,14 @@ export default class ParseError extends Error {
       if (e.ctx.content) {
         offsets = [e.ctx.begin, e.ctx.end];
       } else if (e.ctx.cur) {
-        offsets = Array.isArray(e.ctx.cur) ? e.ctx.cur[0] : e.ctx.cur;
-        offsets = [offsets.begin, offsets.end];
+        // console.log(e.ctx.tokens)
+        // while (Array.isArray(e.ctx.cur)) e.ctx.cur = e.ctx.cur[0];
+        offsets = [e.ctx.tokens[0].begin, e.ctx.tokens[0].end];
+        // offsets = [e.ctx.cur.begin, e.ctx.cur.end];
       }
 
       if (offsets) {
+
         const [[x1, y1], [x2, y2]] = offsets;
         const prefix = filepath ? `${filepath}:` : 'line ';
 
