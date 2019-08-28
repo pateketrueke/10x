@@ -159,7 +159,9 @@ export function fixTree(ast) {
         }
 
         // discard token separator
-        tokens.splice(i, 1);
+        if (prev._body && !prev._args) {
+          tokens.splice(i, 1);
+        }
 
         // update token definition
         prev.token[2] = {
