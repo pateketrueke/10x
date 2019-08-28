@@ -156,15 +156,13 @@ if (!returnAsJSON) {
     push('close', ')');
   }
 
-  function flush(split) {
-    split = split ? '\n' : '';
+  function flush() {
     values.forEach(x => {
       if (x instanceof Error) {
-        push(null, `${split}${indent}${chalk.red(`//! ${x.stack}`)}\n`);
+        push(null, `${indent}${chalk.red(`//! ${x.message}`)}\n`);
       } else {
-        push(null, `${split}${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
+        push(null, `${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
       }
-      split = '';
     });
   }
 
@@ -174,32 +172,30 @@ if (!returnAsJSON) {
     // FIXME: recursively render...
     if (calc.error) {
       values.push(calc.error);
-    } else {
-      subTree.forEach(node => {
-        if (Array.isArray(node)) {
-          render(node);
-        } else {
-          if (typeof node.token[1] === 'string' && node.token[1].includes('\n') && values.length) {
-            push(node.token[0], node.token[1]);
-            push(null, '\x1b[1A');
-            flush(node.begin[1] !== 0);
-            if (node.token[1] === '\n') push(null, '\n');
-            indent = '';
-            values = [];
-          } else {
-            push(node.token[0], node.token[1]);
-          }
-
-          if ((node.token[0] === 'text' || node.token[0] === 'expr') && node.begin[1] === 0) {
-            indent = (node.token[1].match(/^ +/) || [])[0] || '';
-          }
-        }
-      });
-
-      if (results.length) {
-        values.push(results);
-      }
     }
+
+    if (results.length) {
+      values.push(results);
+    }
+
+    // FIXME: skip errored line?
+    subTree.forEach(node => {
+      if (Array.isArray(node)) {
+        render(node);
+      } else {
+        push(node.token[0], node.token[1]);
+
+        if (typeof node.token[1] === 'string' && node.token[1].includes('\n') && values.length) {
+          flush();
+          indent = '';
+          values = [];
+        }
+
+        if (typeof node.token[1] === 'string' && node.begin[1] === 0) {
+          indent = (node.token[1].match(/^ +/) || [])[0] || '';
+        }
+      }
+    });
   });
 
   if (values.length) {
