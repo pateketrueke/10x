@@ -10,6 +10,8 @@ import {
 
 import ParseError from './error';
 
+// FIXME: clean up this shit...
+
 export function fixCalls(tokens, def) {
   // for (let i = 0; i < tokens.length; i += 1) {
   //   const cur = tokens[i];
@@ -119,19 +121,6 @@ export function fixTree(ast) {
     const prev = tokens[i - 1] || { token: [] };
     const next = tokens[i + 1] || { token: [] };
 
-    // skip empty leafs
-    if (cur.length === 0) {
-      tokens.splice(i, 1);
-      continue;
-    }
-
-    // // look for partial-applications, e.g. `u=...;`
-    // if (next && next[0] === 'expr' && next[2] === 'equal' && cur[0] === 'unit') {
-    //   console.log('REDEF?');
-    //   // cur[2] = fixTree(tokens.splice(i + 1)).concat([['expr', ';', 'k']]);
-    //   // cur[0] = 'def';
-    // }
-
     if (Array.isArray(cur) && cur.length > 1 && !Array.isArray(cur[0])) {
       // handle tuples
       if (cur[0].token[0] === 'symbol' && ['number', 'string', 'unit'].includes(cur[1].token[0])) {
@@ -166,14 +155,19 @@ export function fixTree(ast) {
         // update token definition
         prev.token[2] = {
           args: prev._args ? fixArgs(cur, true) : null,
-          body: prev._body ? fixTree(fixCalls(subTree.slice(1))) : null,
+          body: prev._body ? fixTree(subTree.slice(1)) : null,
         };
         continue;
       }
     }
 
     // FIXME: compose lambda-calls with multiple arguments...
-    if (!Array.isArray(cur) && !Array.isArray(next) && cur.token[0] === 'unit' && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))) {
+    if (
+      !Array.isArray(cur)
+      && !Array.isArray(next)
+      && cur.token[0] === 'unit'
+      && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))
+    ) {
       const offset = tokens.slice(i).findIndex(x => x.token[0] === 'fx' && x.token[2] === 'func');
 
       if (offset > 0) {
@@ -182,7 +176,7 @@ export function fixTree(ast) {
 
         tokens.splice(i, 0, toToken(['fn', '$', {
           args: fixArgs(tokens.splice(i, offset), true),
-          body: fixTree(fixCalls(tokens.splice(i, endPos).slice(1))),
+          body: fixTree(tokens.splice(i, endPos).slice(1)),
         }]));
         break;
       }
