@@ -358,47 +358,48 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
     }
 
     // FIXME: improve error objects and such...
-    if (def.args.length && def.args.length !== call.args.length && def.body[0][0] !== 'fn') {
+    if (def.args && def.args.length !== call.args.length && def.body[0][0] !== 'fn') {
       throw new ParseError(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
     }
 
+    // FIXME: no def.args?
     // prepend _ symbol for currying
-    if (!def.args.length) {
-      if (call.args) {
-        // FIXME: don't throw on lambda calls...
-        // throw new ParseError(`Unexpected arguments for ${ctx.cur.token[0]} \`${name}\``, ctx);
-      }
+    // if (!def.args.length) {
+    //   if (call.args) {
+    //     // FIXME: don't throw on lambda calls...
+    //     // throw new ParseError(`Unexpected arguments for ${ctx.cur.token[0]} \`${name}\``, ctx);
+    //   }
 
-      // def.args.unshift(toToken(['unit', '_']));
-    }
+    //   // def.args.unshift(toToken(['unit', '_']));
+    // }
 
     // FIXME: there is a side-effect, symbol/unit _ can appear twice...
     const args = cb(call.args, ctx);
-    const locals = reduceFromArgs(def.args, args);
+    const locals = def.args ? reduceFromArgs(def.args, args) : {};
 
-    ctx.cur = def.args.length ? cb(def.body.slice(), ctx, locals) : def.body;
+    ctx.cur = def.args ? cb(def.body.slice(), ctx, locals) : def.body.slice();
 
     // // console.log({def,call,locals})
     // // console.log(ctx.cur)
 
-    // // FIXME: validate arity while recursing...
-    // if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
-    //   const fixedLength = args.length;
+    // FIXME: validate arity while recursing...
+    if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
+      const fixedLength = args.length;
 
-    //   if (ctx.cur.length > 1) {
-    //     console.log('FNX', ctx.cur);
-    //   }
+      if (ctx.cur.length > 1) {
+        console.log('FNX', ctx.cur);
+      }
 
-    //   // apply lambda-calls as we have arguments
-    //   while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
-    //     Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, args));
-    //     ctx.cur = cb(ctx.cur[0].token[2].body, ctx, locals);
-    //   }
+      // apply lambda-calls as we have arguments
+      while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
+        Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, args));
+        ctx.cur = cb(ctx.cur[0].token[2].body, ctx, locals);
+      }
 
-    //   if (args.length) {
-    //     throw new ParseError(`Expecting \`${name}.#${fixedLength - args.length}\` args, given #${fixedLength}`, ctx);
-    //   }
-    // }
+      if (args.length) {
+        throw new ParseError(`Expecting \`${name}.#${fixedLength - args.length}\` args, given #${fixedLength}`, ctx);
+      }
+    }
 
     ctx.cur = toToken(calculateFromTokens(ctx.cur));
   }
