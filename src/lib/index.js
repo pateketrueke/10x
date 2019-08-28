@@ -1,5 +1,6 @@
 import { getTokensFrom } from './lexer';
 import { transform } from './parser';
+import { fixTree } from './tree';
 import { isInt } from './shared';
 
 import {
@@ -157,9 +158,21 @@ export default class Solv {
     const cb = ast => reduceFromAST(ast, convertFrom, this.expressions, null, this.units);
     const output = [];
 
+    const subTree = (tokens || this.tree).reduce((prev, cur) => {
+      const subTree = fixTree(cur);
+
+      if (subTree.length) {
+        prev.push(subTree);
+      }
+
+      return prev;
+    }, []);
+
     try {
       this.error = null;
-      output.push(...fixArgs(cb(tokens || this.tree)));
+      subTree.forEach(ast => {
+        output.push(...fixArgs(cb(ast)));
+      });
     } catch (e) {
       this.error = ParseError.build(e, source || this.source, 2, this.filepath);
       return [];
