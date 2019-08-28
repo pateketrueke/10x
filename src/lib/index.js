@@ -1,6 +1,5 @@
 import { getTokensFrom } from './lexer';
 import { transform } from './parser';
-import { fixTree } from './tree';
 import { isInt } from './shared';
 
 import {
@@ -64,7 +63,7 @@ export default class Solv {
 
       this.tree = tokens.tree;
       this.error = tokens.error;
-      this.tokens = JSON.parse(JSON.stringify(tokens.ast));
+      this.tokens = tokens.ast;
 
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
@@ -155,24 +154,12 @@ export default class Solv {
   }
 
   eval(tokens, source) {
-    const output = [];
-    const subTree = (tokens || this.tree).reduce((prev, cur) => {
-      const subTree = fixTree(cur);
-
-      if (subTree.length) {
-        prev.push(subTree);
-      }
-
-      return prev;
-    }, [])
-
     const cb = ast => reduceFromAST(ast, convertFrom, this.expressions, null, this.units);
+    const output = [];
 
     try {
       this.error = null;
-      subTree.forEach(ast => {
-        output.push(...fixArgs(cb(ast)));
-      });
+      output.push(...fixArgs(cb(tokens || this.tree)));
     } catch (e) {
       this.error = ParseError.build(e, source || this.source, 2, this.filepath);
       return [];

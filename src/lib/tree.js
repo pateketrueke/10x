@@ -134,44 +134,45 @@ export function fixTree(ast) {
     }
 
     if (!Array.isArray(prev)) {
-      if (prev.token[0] === 'def') {
-        const offset  = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
-        const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
-        const firstNode = subTree.shift();
+      if (prev.token[0] === 'def' && !prev.token[2]) {
+        let subTree = [];
 
-        if (Array.isArray(firstNode)) {
+        if (Array.isArray(cur)) {
           prev._args = true;
-          subTree.shift();
+          tokens.splice(i, 1);
         }
 
-        if (subTree.length > 0) {
+        if (!Array.isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal') {
+          const offset  = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
+
+          subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
           prev._body = true;
         }
 
         // update token definition
         prev.token[2] = {
-          args: prev._args ? fixArgs(cur, true) : [],
-          body: fixTree(fixCalls(subTree)),
+          args: prev._args ? fixArgs(cur, true) : null,
+          body: prev._body ? fixTree(fixCalls(subTree.slice(1))) : null,
         };
         continue;
       }
     }
 
     // FIXME: compose lambda-calls with multiple arguments...
-    if (!Array.isArray(cur) && !Array.isArray(next) && cur.token[0] === 'unit' && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))) {
-      const offset = tokens.slice(i).findIndex(x => x.token[0] === 'fx' && x.token[2] === 'func');
+    // if (!Array.isArray(cur) && !Array.isArray(next) && cur.token[0] === 'unit' && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))) {
+    //   const offset = tokens.slice(i).findIndex(x => x.token[0] === 'fx' && x.token[2] === 'func');
 
-      if (offset > 0) {
-        const cut = tokens.slice(offset).findIndex(x => x.token[0] === 'expr' && hasSep(x.token[1]));
-        const endPos = cut >= 0 ? cut : tokens.length - offset;
+    //   if (offset > 0) {
+    //     const cut = tokens.slice(offset).findIndex(x => x.token[0] === 'expr' && hasSep(x.token[1]));
+    //     const endPos = cut >= 0 ? cut : tokens.length - offset;
 
-        tokens.splice(i, 0, toToken(['fn', '$', {
-          args: fixArgs(tokens.splice(i, offset), true),
-          body: fixTree(fixCalls(tokens.splice(i, endPos).slice(1))),
-        }]));
-        break;
-      }
-    }
+    //     tokens.splice(i, 0, toToken(['fn', '$', {
+    //       args: fixArgs(tokens.splice(i, offset), true),
+    //       body: fixTree(fixCalls(tokens.splice(i, endPos).slice(1))),
+    //     }]));
+    //     break;
+    //   }
+    // }
 
     // if (next && next[0] === 'fx' && ['lpipe', 'rpipe'].includes(next[2]) && cur[0] !== 'symbol') {
     //   const offset  = tokens.slice(i).findIndex(x => x[0] === 'expr' || x[0] === 'fx');

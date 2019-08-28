@@ -237,6 +237,8 @@ export function reduceFromLogic(cb, ctx, expressions) {
     fixArgs(subTree, false).some(x => {
       const branches = fixTokens([symbol].concat(x));
 
+      // console.log('SYM_LOGIC', branches);
+
       // handle if-then-else logic
       if (branches[':if'] || branches[':unless']) {
         const ifBranch = branches[':if'] || branches[':unless'];
@@ -376,29 +378,29 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
 
     ctx.cur = def.args.length ? cb(def.body.slice(), ctx, locals) : def.body;
 
-    // console.log({def,call,locals})
-    // console.log(ctx.cur)
+    // // console.log({def,call,locals})
+    // // console.log(ctx.cur)
 
-    // FIXME: validate arity while recursing...
-    if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
-      const fixedLength = args.length;
+    // // FIXME: validate arity while recursing...
+    // if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
+    //   const fixedLength = args.length;
 
-      if (ctx.cur.length > 1) {
-        console.log('FNX', ctx.cur);
-      }
+    //   if (ctx.cur.length > 1) {
+    //     console.log('FNX', ctx.cur);
+    //   }
 
-      // apply lambda-calls as we have arguments
-      while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
-        Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, args));
-        ctx.cur = cb(ctx.cur[0].token[2].body, ctx, locals);
-      }
+    //   // apply lambda-calls as we have arguments
+    //   while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
+    //     Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, args));
+    //     ctx.cur = cb(ctx.cur[0].token[2].body, ctx, locals);
+    //   }
 
-      if (args.length) {
-        throw new ParseError(`Expecting \`${name}.#${fixedLength - args.length}\` args, given #${fixedLength}`, ctx);
-      }
-    }
+    //   if (args.length) {
+    //     throw new ParseError(`Expecting \`${name}.#${fixedLength - args.length}\` args, given #${fixedLength}`, ctx);
+    //   }
+    // }
 
-    ctx.cur = toToken(calculateFromTokens(ctx.cur.reduce((prev, cur) => prev.concat(cur), [])));
+    ctx.cur = toToken(calculateFromTokens(ctx.cur));
   }
 }
 
@@ -439,6 +441,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
         ctx.ast.push(toToken(['expr', '*', 'mul']));
       }
 
+      // console.log('RE', {fixedValue}, toToken(fixedValue));
       ctx.ast.push(toToken(fixedValue));
       continue;
     }

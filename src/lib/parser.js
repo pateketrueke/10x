@@ -5,6 +5,7 @@ import {
 } from './shared';
 
 import {
+  fixTree,
   buildTree,
 } from './tree';
 
@@ -270,7 +271,7 @@ export function transform(tokens, units) {
 
   return {
     ast: body.filter(x => x !== null),
-    tree: fixedTree,
+    tree: fixedTree.map(x => fixTree(x)).filter(x => x.length),
     error: _e || undefined,
   };
 }
