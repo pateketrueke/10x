@@ -169,7 +169,7 @@ if (!returnAsJSON) {
   }
 
   calc.tree.forEach(subTree => {
-    const results = calc.eval([subTree]);
+    const results = calc.eval(subTree);
 
     // FIXME: recursively render...
     if (calc.error) {
