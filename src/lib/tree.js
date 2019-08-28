@@ -101,6 +101,13 @@ export function fixCalls(tokens, def) {
   return tokens;
 }
 
+export function fixChunk(tokens, i) {
+  const offset  = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
+  const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
+
+  return subTree;
+}
+
 export function fixTree(ast) {
   let tokens = ast.filter(x => Array.isArray(x) || !hasTagName(x.token[0]));
 
@@ -137,15 +144,17 @@ export function fixTree(ast) {
       if (prev.token[0] === 'def' && !prev.token[2]) {
         let subTree = [];
 
+        // FIXME: dedupe...
         if (Array.isArray(cur)) {
           prev._args = true;
           tokens.splice(i, 1);
+        } else if (cur.token[0] === 'expr' && cur.token[2] === 'equal') {
+          subTree = fixChunk(tokens, i);
+          prev._body = true;
         }
 
-        if (!Array.isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal') {
-          const offset  = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
-
-          subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
+        if (!Array.isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal' && !prev._body) {
+          subTree = fixChunk(tokens, i);
           prev._body = true;
         }
 
