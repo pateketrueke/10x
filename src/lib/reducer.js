@@ -76,71 +76,6 @@ export function reduceFromInput(token) {
   return fixedValue;
 }
 
-export function reduceFromEffect(cb, def, args, value) {
-  console.log('FX', {def,args,value});
-  return [];
-  // const fixedValue = value[0][0] !== 'object'
-  //   ? value.map(x => reduceFromInput(x))
-  //   : reduceFromInput(value[0]);
-
-  // let fixedResult;
-
-  // // FIXME: apply ranges, e.g. n-m, -n, n..-m, etc. (strings, arrays only)
-  // if (def[1].substr(0, 2) === '::') {
-  //   // FIXME: what to do?
-  // } else {
-  //   fixedResult = fixedValue[def[1].substr(1)];
-  // }
-
-  // // handle lambda-calls as side-effects
-  // if (!args.length && def[2][0][0] === 'fn') {
-  //   const input = def[2][0][2][0];
-  //   const body = def[2][0][2].slice(1);
-  //   const fixedArgs = {};
-
-  //   args = fixArgs(def[2]).map(x => {
-  //     const t = Array.isArray(x[0]) ? x[0] : x;
-  //     const b = fixArgs(body[0].length === 1 ? body[0] : body);
-
-  //     if (t[0] === 'fn') {
-  //       return (...context) => {
-  //         Object.assign(fixedArgs, reduceFromArgs(input, context));
-
-  //         const peek = reduceFromTokens(b[0], fixedArgs);
-  //         const subTree = reduceFromTokens(b.slice(1), fixedArgs);
-
-  //         // return the last value from additional expressions
-  //         if (subTree.length) return subTree.pop();
-
-  //         // otherwise, we evaluate and return
-  //         return calculateFromTokens(peek);
-  //       };
-  //     }
-
-  //     return t;
-  //   });
-  // }
-
-  // // apply side-effects!
-  // if (typeof fixedResult === 'function') {
-  //   fixedResult = fixedResult.apply(fixedValue, args.map(x => {
-  //     // FIXME: use classes/symbols to properly identify tokens?
-  //     if (typeof x !== 'function') return [x];
-  //     return x;
-  //   }));
-  // }
-
-  // fixedResult = typeof fixedResult === 'string' ? `"${fixedResult}"` : fixedResult;
-
-  // // flatten back nested values from side-effects...
-  // if (fixedResult[0] === 'object' && Array.isArray(fixedResult[1])) {
-  //   fixedResult[1] = fixedResult[1].map(x => x.length === 1 ? x[0] : x);
-  // }
-
-  // // recast previous token with the new value
-  // return [typeof fixedResult, fixedResult];
-}
-
 export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   // handle unit expressions
   if (ctx.cur.token[0] === 'unit') {
@@ -237,8 +172,6 @@ export function reduceFromLogic(cb, ctx, expressions) {
     fixArgs(subTree, false).some(x => {
       const branches = fixTokens([symbol].concat(x));
 
-      // console.log('SYM_LOGIC', branches);
-
       // handle if-then-else logic
       if (branches[':if'] || branches[':unless']) {
         const ifBranch = branches[':if'] || branches[':unless'];
@@ -278,48 +211,6 @@ export function reduceFromLogic(cb, ctx, expressions) {
 }
 
 export function reduceFromFX(cb, ctx, expressions) {
-  // partial calls
-  if (ctx.cur.token[0] === 'fx' && ['lpipe', 'rpipe'].includes(ctx.cur.token[2]) && ctx.right.token[0] === 'def') {
-    console.log('FX_PIPE_DEF');
-    // const rightToken = [right[0], right[1], [right[2][0].map(x => x.slice())]];
-    // const placeholder = rightToken[2][0].findIndex(x => x[0] === 'symbol' && x[1] === '_');
-
-    // // inject argument!
-    // if (placeholder >= 0) {
-    //   rightToken[2][0][placeholder] = left;
-    // } else {
-    //   if (cur[2] === 'lpipe') rightToken[2][0].unshift(left, ['expr', ',', 'or']);
-    //   if (cur[2] === 'rpipe') rightToken[2][0].push(['expr', ',', 'or'], left);
-    // }
-
-    // const result = cb([rightToken]);
-    // const subTree = result.concat(tokens.slice(i + 2));
-
-    // fixedTokens.pop();
-    // fixedTokens.push(cb(subTree)[0]);
-    // break;
-  }
-
-  // apply symbol-accessor op
-  if (ctx.cur.token[0] === 'symbol' && ['unit', 'number', 'string', 'object'].includes(ctx.left.token[0])) {
-    // console.log(ctx);
-    console.log('SYM_ATTRS');
-  }
-  // if (ctx.current && ctx.cur.token[0] === 'symbol' && ) {
-    // const args = fixArgs(cb(ctx.tokens[ctx.i + 1] || [], ctx), false)
-    //   .map(x => calculateFromTokens(x));
-
-    // console.log('SYM_FX',{args,ctx});
-
-    // ctx.current = cb(fixArgs(ctx.left), ctx);
-
-    // // FIXME: this should receive whole context instead...
-    // ctx.current = reduceFromEffect(cb, ctx.cur, args, ctx.current);
-
-    // ctx.stack[ctx.stack.length - 1] = ctx.current;
-  //   return;
-  // }
-
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
     // FIXME: ... improve all this shit...
@@ -338,10 +229,6 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
       if (hasOwnKeyword(supportedUnits, ctx.cur.token[1])) {
         throw new ParseError(`Cannot override built-in unit \`${ctx.cur.token[1]}\``, ctx);
       }
-
-      // if (hasOwnKeyword(expressions, ctx.cur.token[1])) {
-      //   throw new ParseError(`Cannot redefine unit \`${ctx.cur.token[1]}\``, ctx);
-      // }
 
       expressions[ctx.cur.token[1]] = ctx.cur.token[2];
       return;
@@ -362,25 +249,10 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
       throw new ParseError(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
     }
 
-    // FIXME: no def.args?
-    // prepend _ symbol for currying
-    // if (!def.args.length) {
-    //   if (call.args) {
-    //     // FIXME: don't throw on lambda calls...
-    //     // throw new ParseError(`Unexpected arguments for ${ctx.cur.token[0]} \`${name}\``, ctx);
-    //   }
-
-    //   // def.args.unshift(toToken(['unit', '_']));
-    // }
-
-    // FIXME: there is a side-effect, symbol/unit _ can appear twice...
     const args = cb(call.args, ctx);
     const locals = def.args ? reduceFromArgs(def.args, args) : {};
 
     ctx.cur = def.args ? cb(def.body.slice(), ctx, locals) : def.body.slice();
-
-    // // console.log({def,call,locals})
-    // // console.log(ctx.cur)
 
     // FIXME: validate arity while recursing...
     if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
@@ -405,7 +277,7 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
   }
 }
 
-// FIXME: split into phases, let maths to be reusable...
+// FIXME: split into phases, let maths to be reusable... also, reuse helpers, lots of them!
 export function reduceFromAST(tokens, convert, expressions, parentContext, supportedUnits) {
   const ctx = {
     tokens,
@@ -428,10 +300,10 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     ctx.cur = tokens[i];
     ctx.left = tokens[i - 1] || { token: [] };
     ctx.right = tokens[i + 1] || { token: [] };
+
+    // FIXME: improve this shit...
     ctx.endOffset = tokens.findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k') - i;
     ctx.cutFromOffset = () => (ctx.endOffset >= 0 ? ctx.tokens.splice(ctx.i, ctx.endOffset) : ctx.tokens.splice(ctx.i));
-
-    // FIXME: improve API and fixed how arrays are handled...
 
     // handle anonymous sub-expressions
     if (Array.isArray(ctx.cur)) {

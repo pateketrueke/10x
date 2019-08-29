@@ -85,10 +85,6 @@ export function calculateFromDate(op, left, right) {
 
 // handle basic conditions
 export function evaluateComparison(op, left, right, others) {
-  // parse from JSON as it's already escaped...
-  // if (typeof left === 'string') left = toValue(left);
-  // if (typeof right === 'string') right = toValue(right);
-
   switch (op) {
     case '!~': return !left.includes(right);
     case '~=': return left.includes(right);
@@ -99,11 +95,8 @@ export function evaluateComparison(op, left, right, others) {
     case '<': return left < right;
     case '>': return left > right;
     case '&&': return left && right;
-
-    // FIXME: WAT?
-    case '++': return left + right;
-    case '--': return left.substr(right.length);
-    default: return null;
+    default:
+      throw new TypError(`Not implemented: ${op}`);
   }
 }
 
