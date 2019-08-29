@@ -70,25 +70,25 @@ export function fixTree(ast) {
     }
 
     // FIXME: compose lambda-calls with multiple arguments...
-    if (
-      !Array.isArray(cur)
-      && !Array.isArray(next)
-      && cur.token[0] === 'unit'
-      && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))
-    ) {
-      const offset = tokens.slice(i).findIndex(x => x.token[0] === 'fx' && x.token[2] === 'func');
+    // if (
+    //   !Array.isArray(cur)
+    //   && !Array.isArray(next)
+    //   && cur.token[0] === 'unit'
+    //   && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))
+    // ) {
+    //   const offset = tokens.slice(i).findIndex(x => x.token[0] === 'fx' && x.token[2] === 'func');
 
-      if (offset > 0) {
-        const cut = tokens.slice(offset).findIndex(x => x.token[0] === 'expr' && hasSep(x.token[1]));
-        const endPos = cut >= 0 ? cut : tokens.length - offset;
+    //   if (offset > 0) {
+    //     const cut = tokens.slice(offset).findIndex(x => x.token[0] === 'expr' && hasSep(x.token[1]));
+    //     const endPos = cut >= 0 ? cut : tokens.length - offset;
 
-        tokens.splice(i, 0, toToken(['fn', '$', {
-          args: fixArgs(tokens.splice(i, offset), true),
-          body: fixTree(tokens.splice(i, endPos).slice(1)),
-        }]));
-        break;
-      }
-    }
+    //     tokens.splice(i, 0, toToken(['fn', '$', {
+    //       args: fixArgs(tokens.splice(i, offset), true),
+    //       body: fixTree(tokens.splice(i, endPos).slice(1)),
+    //     }]));
+    //     break;
+    //   }
+    // }
 
     tokens[i] = cur;
   }

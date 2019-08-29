@@ -5,7 +5,7 @@ import { isInt } from './shared';
 
 import {
   fixArgs,
-  toFraction, toNumber, toValue,
+  toFraction, toNumber, toValue, toPlain,
 } from './ast';
 
 import ParseError from './error';
@@ -96,6 +96,8 @@ export default class Solv {
 
     if (token[0] === 'number') {
       token[1] = toNumber(token[1]);
+    } else {
+      token[1] = toPlain(token[1]);
     }
 
     if (
