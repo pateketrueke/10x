@@ -221,7 +221,7 @@ export function reduceFromFX(cb, ctx, expressions) {
   }
 }
 
-export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
+export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInternals) {
   // handle var/call definitions
   if (ctx.cur.token[0] === 'def') {
     // define var/call
@@ -249,36 +249,44 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits) {
       throw new ParseError(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
     }
 
-    const args = cb(call.args, ctx);
-    const locals = def.args ? reduceFromArgs(def.args, args) : {};
+    const fixedArgs = cb(call.args, ctx);
+    const fixedKey = JSON.stringify({ name, fixedArgs });
+
+    // this helps to compute faster!
+    if (memoizedInternals[fixedKey]) {
+      ctx.cur = memoizedInternals[fixedKey];
+      return;
+    }
+
+    const locals = def.args ? reduceFromArgs(def.args, fixedArgs) : {};
 
     ctx.cur = def.args ? cb(def.body.slice(), ctx, locals) : def.body.slice();
 
     // FIXME: validate arity while recursing...
     if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
-      const fixedLength = args.length;
+      const fixedLength = fixedArgs.length;
 
       if (ctx.cur.length > 1) {
         console.log('FNX', ctx.cur);
       }
 
       // apply lambda-calls as we have arguments
-      while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
-        Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, args));
+      while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && fixedArgs.length) {
+        Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, fixedArgs));
         ctx.cur = cb(ctx.cur[0].token[2].body, ctx, locals);
       }
 
-      if (args.length) {
-        throw new ParseError(`Expecting \`${name}.#${fixedLength - args.length}\` args, given #${fixedLength}`, ctx);
+      if (fixedArgs.length) {
+        throw new ParseError(`Expecting \`${name}.#${fixedLength - fixedArgs.length}\` args, given #${fixedLength}`, ctx);
       }
     }
 
-    ctx.cur = toToken(calculateFromTokens(ctx.cur));
+    memoizedInternals[fixedKey] = ctx.cur = toToken(calculateFromTokens(ctx.cur));
   }
 }
 
 // FIXME: split into phases, let maths to be reusable... also, reuse helpers, lots of them!
-export function reduceFromAST(tokens, convert, expressions, parentContext, supportedUnits) {
+export function reduceFromAST(tokens, convert, expressions, parentContext, supportedUnits, memoizedInternals = {}) {
   const ctx = {
     tokens,
     ast: [],
@@ -289,7 +297,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
 
   // resolve from nested AST expressions
   const cb = (t, context, subExpressions) =>
-    reduceFromAST(t, convert, Object.assign({}, expressions, subExpressions), context, supportedUnits);
+    reduceFromAST(t, convert, Object.assign({}, expressions, subExpressions), context, supportedUnits, memoizedInternals);
 
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
@@ -330,7 +338,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
 
       reduceFromLogic(cb, ctx, expressions);
       reduceFromFX(cb, ctx, expressions);
-      reduceFromDefs(cb, ctx, expressions, supportedUnits);
+      reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInternals);
       reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
     }
 
