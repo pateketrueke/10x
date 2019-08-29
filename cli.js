@@ -183,7 +183,11 @@ if (!returnAsJSON) {
       if (Array.isArray(node)) {
         render(node);
       } else {
-        push(node.token[0], node.token[1]);
+        if (calc.error && calc.error.ctx.cur === node) {
+          push(null, chalk.red(node.token[1]));
+        } else {
+          push(node.token[0], node.token[1]);
+        }
 
         if (typeof node.token[1] === 'string') {
           if (node.token[1].includes('\n') && values.length) {
