@@ -149,8 +149,7 @@ export function toInput(token) {
 export function toPlain(values, raw) {
   if (Array.isArray(values)) {
     if (raw) {
-      return values.map(x => toPlain(x, raw))
-        .reduce((prev, cur) => prev.concat(cur), []);
+      return values.map(x => toPlain(x, raw));
     }
 
     return values.map(x => toPlain(x));
@@ -161,9 +160,9 @@ export function toPlain(values, raw) {
   }
 
   Object.keys(values).forEach(key => {
-    const fixedValue = toInput(toPlain(values[key], true));
+    const fixedValue = toPlain(values[key], true);
 
-    if (typeof fixedValue === 'object') {
+    if (typeof fixedValue === 'object' && !Array.isArray(fixedValue)) {
       values[toProperty(key)] = toPlain(fixedValue, true);
     } else {
       values[toProperty(key)] = fixedValue;
