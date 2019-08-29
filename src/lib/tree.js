@@ -104,19 +104,17 @@ export function buildTree(tokens) {
   const offsets = [];
 
   for (let i = 0; i < tokens.length; i += 1) {
+    const next = tokens[i + 1] || { token: [] };
     const t = tokens[i];
 
-    if (
-      t.token[0] === 'unit'
-      && tokens[i + 1] && '(='.includes(tokens[i + 1].token[1])
-    ) t.token[0] = 'def';
+    // reassign definition tokens
+    if (t.token[0] === 'unit' && '(='.includes(next.token[1])) {
+      t.token[0] = 'def';
+    }
 
     // handle nesting
-    if (
-      ['open', 'close'].includes(t.token[0])
-      || ['begin', 'end'].includes(t.token[2])
-    ) {
-      if (t.token[0] === 'open' || t.token[2] === 'begin') {
+    if (['open', 'close'].includes(t.token[0])) {
+      if (t.token[0] === 'open') {
         const leaf = [];
 
         root.push(leaf);
@@ -129,15 +127,7 @@ export function buildTree(tokens) {
       }
     } else {
       if (!root) {
-        let pair;
-
-        switch (tokens[i - 1].token[1]) {
-          case '}': pair = '{'; break;
-          case ']': pair = '['; break;
-          default: pair = '('; break;
-        }
-
-        throw new ParseError(`Unexpected end, missing \`${pair}\``, tokens[i - 1]);
+        throw new ParseError('Unexpected end, missing `(`', tokens[i - 1]);
       }
 
       root.push(t);
