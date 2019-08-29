@@ -70,9 +70,9 @@ contexts:
 
     # FIXME: enable open/close modes as parentheses, but just for definition calls...?
     # basic operators
-    - match: "(?<=[<!=>~|&+-]{2}|[-+*=/<>])\\s*[a-zA-Z_][-a-zA-Z_#'\\u00C0-\\u00FF]*\\s*(?=[<!=>~|&+-]{2}|[-+*=/<>]|$)"
+    - match: "(?<=[<!=>~|&+-]{2}|[-+*/<>])\\s*[a-zA-Z_][-a-zA-Z_#'\\u00C0-\\u00FF]*\\s*(?=[<!=>~|&+-]{2}|[-+*/<>]|$)"
       scope: keyword.other
-    - match: "[a-zA-Z_][-a-zA-Z_#'\\u00C0-\\u00FF]*(?=\\s*([<!=>~|&+-]{2}|[-+*/;]))"
+    - match: "(?<=^|\\b)[a-zA-Z_][-a-zA-Z_#'\\u00C0-\\u00FF]*\\s*(?=[<!=>~|&+-]{2}|[-+*/;])"
       scope: keyword.other
 
     # units and numbers
