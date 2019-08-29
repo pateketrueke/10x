@@ -161,6 +161,10 @@ export function toPlain(values, cb) {
     return values;
   }
 
+  if (!cb) {
+    cb = x => x.map(y => toInput(y.token));
+  }
+
   if (Array.isArray(values)) {
     return values.map(x => toPlain(x, cb));
   }
