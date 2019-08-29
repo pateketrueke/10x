@@ -201,6 +201,7 @@ if (!returnAsJSON) {
   });
 
   if (values.length) {
+    push(null, '\n');
     flush();
   }
 
