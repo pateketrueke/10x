@@ -76,7 +76,7 @@ export function toValue(value) {
 
   if (typeof value === 'number') {
     if (value >= Number.MAX_SAFE_INTEGER) {
-      return value.toString();
+      return value.toString().replace(/e[+-]/i, '^');
     }
 
     const sub = value.toString().match(/^.*?\.0+\d{1,3}/);
@@ -85,7 +85,7 @@ export function toValue(value) {
       value = value.toFixed(2).replace(/\.0+$/, '');
     } else value = sub[0];
 
-    return value;
+    return value.replace(/(?<=\.\d+)0+$/, '');
   }
 
   // simplify decimals
