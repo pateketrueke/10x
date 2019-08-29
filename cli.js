@@ -185,14 +185,16 @@ if (!returnAsJSON) {
       } else {
         push(node.token[0], node.token[1]);
 
-        if (typeof node.token[1] === 'string' && node.token[1].includes('\n') && values.length) {
-          flush();
-          indent = '';
-          values = [];
-        }
+        if (typeof node.token[1] === 'string') {
+          if (node.token[1].includes('\n') && values.length) {
+            flush();
+            indent = '';
+            values = [];
+          }
 
-        if (typeof node.token[1] === 'string' && node.begin[1] === 0) {
-          indent = (node.token[1].match(/^ +/) || [])[0] || '';
+          if (node.begin[1] === 0) {
+            indent = (node.token[1].match(/^ +/) || [])[0] || '';
+          }
         }
       }
     });
