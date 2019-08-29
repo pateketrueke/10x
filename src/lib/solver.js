@@ -3,7 +3,7 @@ import {
 } from './shared';
 
 import {
-  toValue, toNumber, toFraction,
+  toPlain, toValue, toNumber, toFraction,
 } from './ast';
 
 export function calculateFromMS(diff) {
@@ -180,7 +180,7 @@ export function operateExpression(ops, expr) {
 
 // FIXME: cleanup?
 export function calculateFromTokens(expr) {
-  expr = expr.map(x => x.token);
+  expr = toPlain(expr);
   expr = operateExpression(['for', '*', '/'], expr);
   expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in', 'to'], expr);
 

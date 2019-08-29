@@ -30,6 +30,10 @@ export function highestCommonFactor(a, b) {
   return b !== 0 ? highestCommonFactor(b, a % b) : a;
 }
 
+export function toProperty(value) {
+  return value.substr(1).replace(/-([a-z])/g, (_, prop) => prop.toUpperCase());
+}
+
 export function toFraction(number) {
   const decimals = number.toString().match(/\.0+\d/);
   const length = Math.max(decimals ? decimals[0].length : 3, 3);
@@ -131,6 +135,44 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
   }
 
   return new Expression(token);
+}
+
+export function toInput(token) {
+  let fixedValue = token[1];
+
+  if (token[0] === 'string') fixedValue = JSON.parse(fixedValue);
+  if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
+
+  return fixedValue;
+}
+
+export function toPlain(values, raw) {
+  if (Array.isArray(values)) {
+    if (raw) {
+      return values.map(x => toPlain(x, raw))
+        .reduce((prev, cur) => prev.concat(cur), []);
+    }
+
+    return values.map(x => toPlain(x));
+  }
+
+  if (values instanceof Expression) {
+    return values.token;
+  }
+
+  Object.keys(values).forEach(key => {
+    const fixedValue = toInput(toPlain(values[key], true));
+
+    if (typeof fixedValue === 'object') {
+      values[toProperty(key)] = toPlain(fixedValue, true);
+    } else {
+      values[toProperty(key)] = fixedValue;
+    }
+
+    delete values[key];
+  });
+
+  return values;
 }
 
 export function fixTokens(ast) {

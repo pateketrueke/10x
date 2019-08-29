@@ -9,7 +9,7 @@ import {
 
 import {
   fixArgs, fixTokens,
-  toToken, toValue, toNumber,
+  toPlain, toInput, toToken, toValue, toNumber,
 } from './ast';
 
 import ParseError from './error';
@@ -64,16 +64,6 @@ export function reduceFromArgs(keys, values) {
     prev[cur.token[1]] = { body: [values.shift()] };
     return prev;
   }, {});
-}
-
-export function reduceFromInput(token) {
-  // make sure we're parsing values!
-  let fixedValue = token[1];
-
-  if (token[0] === 'string') fixedValue = toValue(fixedValue);
-  if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
-
-  return fixedValue;
 }
 
 export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
@@ -171,7 +161,6 @@ export function reduceFromLogic(cb, ctx, expressions) {
     // handle multiple branches
     fixArgs(subTree, false).some(x => {
       const branches = fixTokens([symbol].concat(x));
-
       // handle if-then-else logic
       if (branches[':if'] || branches[':unless']) {
         const ifBranch = branches[':if'] || branches[':unless'];
@@ -200,8 +189,8 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
       // handle foreign-imports
       if (branches[':import']) {
-        console.log({branches});
-        return true;
+        console.log(toPlain(branches));
+        return false;
       }
 
       console.log('SYM_LOGIC', branches);
@@ -214,8 +203,8 @@ export function reduceFromFX(cb, ctx, expressions) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
     // FIXME: ... improve all this shit...
-    const [lft, rgt, ...others] = cb(ctx.cutFromOffset().slice(1), ctx).map(x => reduceFromInput(x.token));
-    const result = evaluateComparison(ctx.cur.token[1], lft, rgt, others);
+    const [lft, rgt, ...others] = cb(ctx.cutFromOffset().slice(1), ctx).map(x => toInput(x.token));
+    const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
 
     ctx.cur = toToken([typeof result, typeof result === 'string' ? `"${result}"` : result]);
   }
@@ -344,7 +333,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
 
     // skip definitions only!
     if (Array.isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
-    else if (ctx.cur.token[0] !== 'def') ctx.ast.push(ctx.cur);
+    else if (!['symbol', 'def'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
   }
 
   return ctx.ast;
