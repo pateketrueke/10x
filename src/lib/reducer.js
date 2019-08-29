@@ -189,7 +189,8 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
       // handle foreign-imports
       if (branches[':import']) {
-        console.log(toPlain(branches, x => cb(x, ctx)));
+        // FIXME: validate inputs...
+        console.log(toPlain(branches, x => x.map(y => toInput(y.token))));
         return false;
       }
 

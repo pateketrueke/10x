@@ -140,6 +140,16 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
 export function toInput(token) {
   let fixedValue = token[1];
 
+  if (token[0] === 'object') {
+    Object.keys(token[1]).forEach(k => {
+      const fixedTokens = token[1][k].map(x => toInput(x.token));
+
+      token[1][toProperty(k)] = fixedTokens;
+
+      delete token[1][k];
+    });
+  }
+
   if (token[0] === 'string') fixedValue = JSON.parse(fixedValue);
   if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
 
