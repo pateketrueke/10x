@@ -189,7 +189,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
       // handle foreign-imports
       if (branches[':import']) {
-        console.log(toPlain(branches));
+        console.log(toPlain(branches, x => cb(x, ctx)));
         return false;
       }
 
@@ -311,7 +311,6 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
         ctx.ast.push(toToken(['expr', '*', 'mul']));
       }
 
-      // console.log('RE', {fixedValue}, toToken(fixedValue));
       ctx.ast.push(toToken(fixedValue));
       continue;
     }
@@ -323,6 +322,11 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
       // append last-operator between consecutive unit-expressions
       if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
         ctx.ast.push(toToken(ctx.lastOp));
+      }
+
+      if (ctx.cur.token[0] === 'object') {
+        ctx.ast.push(toToken(['object', toPlain(ctx.cur.token[1], x => cb(x, ctx))]));
+        continue;
       }
 
       reduceFromLogic(cb, ctx, expressions);

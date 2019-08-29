@@ -146,27 +146,24 @@ export function toInput(token) {
   return fixedValue;
 }
 
-export function toPlain(values, raw) {
-  if (Array.isArray(values)) {
-    if (raw) {
-      return values.map(x => toPlain(x, raw));
-    }
-
-    return values.map(x => toPlain(x));
+export function toPlain(values, cb) {
+  if (values instanceof Expression) {
+    return values;
   }
 
-  if (values instanceof Expression) {
-    return values.token;
+  if (Array.isArray(values)) {
+    return values.map(x => toPlain(x, cb));
   }
 
   Object.keys(values).forEach(key => {
-    const fixedValue = toPlain(values[key], true);
+    const fixedValue = toPlain(values[key], cb);
+    const subTree = fixedValue.map(x => {
+      return x[0] === 'object' ? toPlain(x[1], cb) : x;
+    });
 
-    if (typeof fixedValue === 'object' && !Array.isArray(fixedValue)) {
-      values[toProperty(key)] = toPlain(fixedValue, true);
-    } else {
-      values[toProperty(key)] = fixedValue;
-    }
+    values[toProperty(key)] = Array.isArray(subTree[0])
+      ? subTree.map(x => cb(fixArgs(x)))
+      : cb(subTree);
 
     delete values[key];
   });
