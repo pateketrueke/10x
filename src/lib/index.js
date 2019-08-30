@@ -5,7 +5,7 @@ import { isInt } from './shared';
 
 import {
   fixArgs,
-  toFraction, toNumber, toValue, toInput, toPlain,
+  toFraction, toNumber, toValue, toInput,
 } from './ast';
 
 import ParseError from './error';

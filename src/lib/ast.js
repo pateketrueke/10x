@@ -167,28 +167,24 @@ export function toInput(token, cb) {
 }
 
 export function toPlain(values, cb) {
-  if (values instanceof Expression) {
-    return values;
-  }
-
   if (!cb) {
     cb = x => x.map(y => !Array.isArray(y) ? toInput(y.token) : y);
   }
 
   if (Array.isArray(values)) {
-    if (Array.isArray(values[0]) && values[0].length === 1) {
-      return cb(values[0]);
-    }
-
-    return cb(values);
+    return cb(values.map(x => toPlain(x, cb)));
   }
 
   Object.keys(values).forEach(key => {
-    const fixedValue = toPlain(values[key], cb);
+    let fixedValue = values[key];
 
-    values[key] = Array.isArray(fixedValue[0])
-      ? fixedValue.map(x => cb(fixArgs(x)))
-      : cb(fixedValue);
+    if (fixedValue[0] === 'object') {
+      Object.keys(fixedValue[1]).forEach(key => {
+        fixedValue[1][key] = cb(fixedValue[1][key]);
+      });
+    }
+
+    values[key] = fixedValue;
   });
 
   return values;

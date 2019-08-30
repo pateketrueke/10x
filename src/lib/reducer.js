@@ -190,12 +190,12 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
       // handle foreign-imports
       if (branches[':import'] && branches[':from']) {
+        if (branches[':from'].length > 1) {
+          throw new ParseError(`Expecting one source, given \`${toPlain(branches[':from']).join(', ')}\``, ctx);
+        }
+
         const importBranch = toPlain(branches[':import']);
         const fromBranch = toPlain(branches[':from']);
-
-        if (fromBranch.length > 1) {
-          throw new ParseError(`Expecting one source, given \`${fromBranch.join(', ')}\``, ctx);
-        }
 
         console.log({importBranch});
         console.log({fromBranch});
