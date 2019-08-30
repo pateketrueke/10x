@@ -90,17 +90,13 @@ export function reduceFromArgs(keys, values) {
 export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   // handle unit expressions
   if (ctx.cur.token[0] === 'unit') {
-    if (!ctx.root.isDef && !ctx.isDef && !hasOwnKeyword(supportedUnits, ctx.cur.token[1])) {
-      if (!hasOwnKeyword(expressions, ctx.cur.token[1])) {
-        throw new ParseError(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
-      }
+    if (!hasOwnKeyword(expressions, ctx.cur.token[1])) {
+      throw new ParseError(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
     }
 
     // resolve definition body
-    if (hasOwnKeyword(expressions, ctx.cur.token[1])) {
-      ctx.cur = cb(expressions[ctx.cur.token[1]].body, ctx);
-      return;
-    }
+    ctx.cur = cb(expressions[ctx.cur.token[1]].body, ctx);
+    return;
   }
 
   // handle N-unit, return a new expression from 3x to [3, *, x]
@@ -359,10 +355,10 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     if (Array.isArray(ctx.cur)) {
       const fixedValue = calculateFromTokens(cb(ctx.cur, ctx));
 
-      // prepend multiplication if goes after units/numbers
-      if (!ctx.isDef && !Array.isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
-        ctx.ast.push(toToken(['expr', '*', 'mul']));
-      }
+      // // prepend multiplication if goes after units/numbers
+      // if (!ctx.isDef && !Array.isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
+      //   ctx.ast.push(toToken(['expr', '*', 'mul']));
+      // }
 
       ctx.ast.push(toToken(fixedValue));
       continue;
@@ -370,12 +366,12 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
 
     if (!Array.isArray(ctx.left)) {
       // flag well-known definitions, as they are open...
-      if (ctx.root.isDef || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
+      // if (ctx.root.isDef || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
-      // append last-operator between consecutive unit-expressions
-      if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
-        ctx.ast.push(toToken(ctx.lastOp));
-      }
+      // // append last-operator between consecutive unit-expressions
+      // if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+      //   ctx.ast.push(toToken(ctx.lastOp));
+      // }
 
       // recompose objects into readable values
       if (ctx.cur.token[0] === 'object') {
