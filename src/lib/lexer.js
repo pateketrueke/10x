@@ -30,7 +30,7 @@ export function getTokensFrom(text, units) {
     }
 
     // keep formatting blocks together
-    if (!inBlock && !inFormat && hasFmt(cur) && !hasOp(last)) {
+    if (!inBlock && !inFormat && hasFmt(cur)) {
       if (cur === '*')  {
         inFormat = next === '*' || hasChar(next);
       } else if (cur === '_') {
@@ -52,9 +52,9 @@ export function getTokensFrom(text, units) {
     }
 
     // disable formatting (avoid escapes)
-    if (inFormat && inFormat[0] !== i - 1 && inFormat[1] === cur && last !== '\\' && cur !== next) {
-      inFormat = false;
+    if (inFormat && i > inFormat[0] && inFormat[1] === cur && last !== '\\' && cur !== next) {
       buffer.push({ cur, row, col });
+      inFormat = false;
       continue;
     }
 

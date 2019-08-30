@@ -187,6 +187,11 @@ export function transform(tokens, units) {
     do { nextToken = tokens[++key] || {}; } while (nextToken.score < 2);
 
     if (token.depth || token.score) {
+      // set leafs as fixed!
+      if (!subTree.length) {
+        subTree._fixed = true;
+      }
+
       // enable depth by blocks, just for symbols before groups...
       if (!subTree._fixed && token.cur.charAt() === ':' && '(!'.includes(nextToken.cur)) {
         if (subTree.length) {
