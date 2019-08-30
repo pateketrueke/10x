@@ -141,6 +141,10 @@ export function toInput(token, cb) {
   let fixedValue = token[1];
 
   if (token[0] === 'object') {
+    if (Array.isArray(token[1])) {
+      return token[1].map(x => toInput(x, cb));
+    }
+
     Object.keys(token[1]).forEach(k => {
       const fixedTokens = token[1][k].map(x => Array.isArray(x) ? fixArgs(x) : x);
 

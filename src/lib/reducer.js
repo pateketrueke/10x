@@ -14,6 +14,10 @@ import {
 
 import ParseError from './error';
 
+export function reduceFromBinding(def, args) {
+  return -1;
+}
+
 export function reduceFromValue(token) {
   let text = token[1];
 
@@ -279,7 +283,18 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInt
       }
     }
 
-    memoizedInternals[fixedKey] = ctx.cur = toToken(calculateFromTokens(ctx.cur));
+    // resolve intermediate values
+    ctx.cur = toToken(calculateFromTokens(ctx.cur));
+
+    // forward arguments to bindings
+    if (ctx.cur.token[0] === 'bind') {
+      const args = fixedArgs.map(x => toInput(x.token));
+      const value = reduceFromBinding(ctx.cur.token[1], args);
+
+      ctx.cur = toToken([typeof value, typeof value === 'string' ? `"${value}"` : value]);
+    }
+
+    memoizedInternals[fixedKey] = ctx.cur;
   }
 }
 
