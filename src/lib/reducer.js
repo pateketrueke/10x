@@ -15,7 +15,24 @@ import {
 import ParseError from './error';
 
 export function reduceFromBinding(def, args) {
-  return -1;
+  let target = def[0];
+
+  // FIXME: load from well-knwon symbols, and for external sources?
+  // e.g. white-list or allow most methods as they are?
+  if (typeof def[0] === 'string') {
+    switch (def[0]) {
+      case 'String':
+        target = global[def[0]];
+        break;
+      default:
+        throw new Error(`Undefined binding for \`${def[0]}\``);
+    }
+  }
+
+  const fn = target.prototype[def[1]];
+
+  // FIXME: enable lambdas?
+  return fn.call(...args);
 }
 
 export function reduceFromValue(token) {
@@ -168,6 +185,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
       // handle foreign-imports
       if (set[':import'] && set[':from']) {
+        // FIXME: improve this shit... try to highlight invalid token?
         if (set[':from'].length > 1) {
           throw new ParseError(`Expecting one source, given \`${toPlain(set[':from']).join(', ')}\``, ctx);
         }
@@ -175,8 +193,19 @@ export function reduceFromLogic(cb, ctx, expressions) {
         const importInfo = toPlain(set[':import']);
         const fromInfo = toPlain(set[':from']);
 
-        console.log({importInfo});
-        console.log({fromInfo});
+        importInfo.forEach(def => {
+          if (!Array.isArray(def)) {
+            Object.keys(def).forEach(k => {
+              expressions[def[k][0]] = {
+                body: [toToken(['bind', [fromInfo[0], k]])],
+              };
+            });
+          } else {
+            expressions[def[0]] = {
+              body: [toToken(['bind', [fromInfo[0], def[0]]])],
+            };
+          }
+        });
         return false;
       }
 
