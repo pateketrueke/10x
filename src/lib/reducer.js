@@ -161,6 +161,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
     // handle multiple branches
     fixArgs(subTree, false).some(x => {
       const branches = fixTokens([symbol].concat(x));
+
       // handle if-then-else logic
       if (branches[':if'] || branches[':unless']) {
         const ifBranch = branches[':if'] || branches[':unless'];
@@ -188,9 +189,16 @@ export function reduceFromLogic(cb, ctx, expressions) {
       }
 
       // handle foreign-imports
-      if (branches[':import']) {
-        // FIXME: validate inputs...
-        console.log(toPlain(branches));
+      if (branches[':import'] && branches[':from']) {
+        const importBranch = toPlain(branches[':import']);
+        const fromBranch = toPlain(branches[':from']);
+
+        if (fromBranch.length > 1) {
+          throw new ParseError(`Expecting one source, given \`${fromBranch.join(', ')}\``, ctx);
+        }
+
+        console.log({importBranch});
+        console.log({fromBranch});
         return false;
       }
 
@@ -325,8 +333,9 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
         ctx.ast.push(toToken(ctx.lastOp));
       }
 
+      // recompose objects into readable values
       if (ctx.cur.token[0] === 'object') {
-        ctx.ast.push(toToken(['object', toPlain(ctx.cur.token[1], x => cb(x, ctx))]));
+        ctx.ast.push(toToken(['object', toInput(ctx.cur.token, x => calculateFromTokens(cb(x, ctx)))]));
         continue;
       }
 

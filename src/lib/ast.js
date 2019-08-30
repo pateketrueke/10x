@@ -137,16 +137,26 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
   return new Expression(token);
 }
 
-export function toInput(token) {
+export function toInput(token, cb) {
   let fixedValue = token[1];
 
   if (token[0] === 'object') {
     Object.keys(token[1]).forEach(k => {
-      const fixedTokens = token[1][k].map(x => toInput(x.token));
+      const fixedTokens = token[1][k].map(x => Array.isArray(x) ? fixArgs(x) : x);
 
-      token[1][toProperty(k)] = fixedTokens;
+      let fixedValue = cb && !Array.isArray(fixedTokens[0])
+        ? cb(fixedTokens)
+        : fixedTokens;
+
+      if (Array.isArray(fixedValue[0])) {
+        fixedValue = ['object', fixedValue.reduce((prev, cur) => prev.concat(cur), []).map(x => cb ? cb(x) : x)];
+      } else if (fixedValue[0] === 'object') {
+        fixedValue = fixedValue[1];
+      }
 
       delete token[1][k];
+
+      token[1][toProperty(k)] = fixedValue;
     });
   }
 
@@ -162,24 +172,23 @@ export function toPlain(values, cb) {
   }
 
   if (!cb) {
-    cb = x => x.map(y => toInput(y.token));
+    cb = x => x.map(y => !Array.isArray(y) ? toInput(y.token) : y);
   }
 
   if (Array.isArray(values)) {
-    return values.map(x => toPlain(x, cb));
+    if (Array.isArray(values[0]) && values[0].length === 1) {
+      return cb(values[0]);
+    }
+
+    return cb(values);
   }
 
   Object.keys(values).forEach(key => {
     const fixedValue = toPlain(values[key], cb);
-    const subTree = fixedValue.map(x => {
-      return x[0] === 'object' ? toPlain(x[1], cb) : x;
-    });
 
-    values[toProperty(key)] = Array.isArray(subTree[0])
-      ? subTree.map(x => cb(fixArgs(x)))
-      : cb(subTree);
-
-    delete values[key];
+    values[key] = Array.isArray(fixedValue[0])
+      ? fixedValue.map(x => cb(fixArgs(x)))
+      : cb(fixedValue);
   });
 
   return values;
