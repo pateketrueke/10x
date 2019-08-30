@@ -85,6 +85,7 @@ export function getTokensFrom(text, units) {
       || (hasNum(last) && ':.'.includes(cur) && hasNum(next))
       || ((hasNum(last) || '-.'.includes(last)) && hasNum(cur))
       || ((hasChar(last) || hasNum(last)) && (hasChar(cur) || hasNum(cur)))
+      || (hasChar(last) && cur === '-' && hasChar(next)) || (last === '-' && hasChar(cur))
       || (isInt(last) && cur === '/' && isInt(next)) || (last === '/' && isInt(buffer[0].cur))
 
       // handle checkboxes
