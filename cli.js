@@ -159,7 +159,7 @@ if (!returnAsJSON) {
   function flush() {
     values.forEach(x => {
       if (x instanceof Error) {
-        push(null, `${indent}${chalk.red(`//! ${x.message}`)}\n`);
+        push(null, `${indent}${chalk.red(`//! ${x[showDebugInfo ? 'stack' : 'message']}`)}\n`);
       } else {
         push(null, `${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
       }
@@ -183,8 +183,8 @@ if (!returnAsJSON) {
       if (Array.isArray(node)) {
         render(node);
       } else {
-        if (calc.error && calc.error.ctx.cur === node) {
-          push(null, chalk.red(node.token[1]));
+        if (calc.error && calc.error.ctx && calc.error.ctx.cur === node) {
+          push(null, chalk.bgRed(node.token[1]));
         } else {
           push(node.token[0], node.token[1]);
         }
