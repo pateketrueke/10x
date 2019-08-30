@@ -27,6 +27,7 @@ function makeEntry(input, output, liveReload) {
     watch: {
       clearScreen: false,
     },
+    external: ['convert-units', 'currency-symbol.js'],
   };
 }
 
