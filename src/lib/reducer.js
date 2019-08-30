@@ -160,14 +160,28 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
     // handle multiple branches
     fixArgs(subTree, false).some(x => {
-      const branches = fixTokens([symbol].concat(x));
+      const set = fixTokens([symbol].concat(x));
+
+      // handle foreign-imports
+      if (set[':import'] && set[':from']) {
+        if (set[':from'].length > 1) {
+          throw new ParseError(`Expecting one source, given \`${toPlain(set[':from']).join(', ')}\``, ctx);
+        }
+
+        const importInfo = toPlain(set[':import']);
+        const fromInfo = toPlain(set[':from']);
+
+        console.log({importInfo});
+        console.log({fromInfo});
+        return false;
+      }
 
       // handle if-then-else logic
-      if (branches[':if'] || branches[':unless']) {
-        const ifBranch = branches[':if'] || branches[':unless'];
-        const orBranch = branches[':else'] || branches[':otherwise'];
+      if (set[':if'] || set[':unless']) {
+        const ifBranch = set[':if'] || set[':unless'];
+        const orBranch = set[':else'] || set[':otherwise'];
 
-        let not = branches[':unless'] && !branches[':if'];
+        let not = set[':unless'] && !set[':if'];
         let test = ifBranch.shift();
 
         // handle negative variations
@@ -188,21 +202,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
         return true;
       }
 
-      // handle foreign-imports
-      if (branches[':import'] && branches[':from']) {
-        if (branches[':from'].length > 1) {
-          throw new ParseError(`Expecting one source, given \`${toPlain(branches[':from']).join(', ')}\``, ctx);
-        }
-
-        const importBranch = toPlain(branches[':import']);
-        const fromBranch = toPlain(branches[':from']);
-
-        console.log({importBranch});
-        console.log({fromBranch});
-        return false;
-      }
-
-      console.log('SYM_LOGIC', branches);
+      console.log('SYM_LOGIC', set);
       return false;
     });
   }
