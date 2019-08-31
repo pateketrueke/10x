@@ -1,4 +1,5 @@
 import {
+  isArray,
   hasSep, hasTagName, hasPercent,
 } from './shared';
 
@@ -99,7 +100,7 @@ export function toValue(value) {
 }
 
 export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
-  if (Array.isArray(token)) {
+  if (isArray(token)) {
     return new LangExpr({ token });
   }
 
@@ -120,18 +121,18 @@ export function toInput(token, cb) {
   let fixedValue = token[1];
 
   if (token[0] === 'object') {
-    if (Array.isArray(token[1])) {
+    if (isArray(token[1])) {
       return token[1].map(x => toInput(x, cb));
     }
 
     Object.keys(token[1]).forEach(k => {
-      const fixedTokens = token[1][k].map(x => Array.isArray(x) ? fixArgs(x) : x);
+      const fixedTokens = token[1][k].map(x => isArray(x) ? fixArgs(x) : x);
 
-      let fixedValue = cb && !Array.isArray(fixedTokens[0])
+      let fixedValue = cb && !isArray(fixedTokens[0])
         ? cb(fixedTokens)
         : fixedTokens;
 
-      if (Array.isArray(fixedValue[0])) {
+      if (isArray(fixedValue[0])) {
         fixedValue = ['object', fixedValue.reduce((prev, cur) => prev.concat(cur), []).map(x => cb ? cb(x) : x)];
       } else if (fixedValue[0] === 'object') {
         fixedValue = fixedValue[1];
@@ -151,10 +152,10 @@ export function toInput(token, cb) {
 
 export function toPlain(values, cb) {
   if (!cb) {
-    cb = x => x.map(y => !Array.isArray(y) ? toInput(y.token) : y);
+    cb = x => x.map(y => !isArray(y) ? toInput(y.token) : y);
   }
 
-  if (Array.isArray(values)) {
+  if (isArray(values)) {
     return cb(values.map(x => toPlain(x, cb)));
   }
 
@@ -171,6 +172,10 @@ export function toPlain(values, cb) {
   });
 
   return values;
+}
+
+export function toList(tokens) {
+  return tokens.map(x => isArray(x) ? toList(x) : x.token);
 }
 
 export function toCut(from, tokens, endOffset) {
@@ -215,11 +220,11 @@ export function fixBinding(obj, name, alias, context) {
 
           // extract definitions from AST without evaluation
           for (let i = 0; i < ast.length; i += 1) {
-            if (!Array.isArray(ast[i][0]) && ast[i][0].token[0] === 'def' && ast[i][0].token[1] === name) {
-              if (ast[i].some(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'equal')) {
+            if (!isArray(ast[i][0]) && ast[i][0].token[0] === 'def' && ast[i][0].token[1] === name) {
+              if (ast[i].some(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'equal')) {
                 // rename matching definition if it's aliased!
                 const fixedAST = fixValues(ast[i], x => x.map(y => {
-                  if (!Array.isArray(y) && y.token[0] === 'def' && y.token[1] === name && alias) y.token[1] = alias;
+                  if (!isArray(y) && y.token[0] === 'def' && y.token[1] === name && alias) y.token[1] = alias;
                   return y;
                 }));
 
@@ -252,17 +257,17 @@ export function fixBinding(obj, name, alias, context) {
 }
 
 export function fixTokens(ast) {
-  if (!Array.isArray(ast)) return ast;
+  if (!isArray(ast)) return ast;
 
   const target = ast[0].token[0] === 'symbol' ? {} : [];
-  const array = Array.isArray(target);
+  const array = isArray(target);
 
   let keyName;
 
   return ast.reduce((prev, cur) => {
-    if (!Array.isArray(cur) && cur.token[0] === 'symbol') {
+    if (!isArray(cur) && cur.token[0] === 'symbol') {
       keyName = cur.token[1];
-    } else if (Array.isArray(cur) || !(cur.token[0] === 'expr' && hasSep(cur.token[1]))) {
+    } else if (isArray(cur) || !(cur.token[0] === 'expr' && hasSep(cur.token[1]))) {
       if (!array && keyName) {
         prev[keyName] = prev[keyName] || (prev[keyName] = []);
         prev[keyName].push(cur);
@@ -298,7 +303,7 @@ export function fixStrings(tokens, split) {
 }
 
 export function fixValues(tokens, cb) {
-  if (Array.isArray(tokens[0])) {
+  if (isArray(tokens[0])) {
     return tokens.map(x => fixValues(x, cb));
   }
 
@@ -329,7 +334,7 @@ export function fixArgs(values, flatten) {
     const last = stack[offset] || (stack[offset] = []);
     const cur = values[i];
 
-    if (!Array.isArray(cur)) {
+    if (!isArray(cur)) {
       last.push(cur);
 
       // normalize raw separators
@@ -376,7 +381,7 @@ export function fixInput(args, lpipe) {
 }
 
 export function fixApply(kind, body, args) {
-  if (!Array.isArray(args[0])) args = [];
+  if (!isArray(args[0])) args = [];
 
   if (kind === 'lpipe') return [body].concat(fixInput(args, true));
   if (kind === 'rpipe') return fixInput(args).concat([body]);

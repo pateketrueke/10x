@@ -1,7 +1,11 @@
 import { getTokensFrom } from './lexer';
 import { transform } from './parser';
 import { fixTree } from './tree';
-import { isInt } from './shared';
+import { toList } from './ast';
+
+import {
+  isInt, isArray,
+} from './shared';
 
 import {
   fixArgs,
@@ -15,7 +19,7 @@ import { calculateFromTokens } from './solver';
 
 import {
   unitFrom, convertFrom,
-  DEFAULT_TYPES, DEFAULT_MAPPINGS, DEFAULT_EXPRESSIONS, DEFAULT_INFLECTIONS,
+  DEFAULT_MAPPINGS, DEFAULT_EXPRESSIONS, DEFAULT_INFLECTIONS,
 } from './convert';
 
 export default class Solv {
@@ -39,13 +43,6 @@ export default class Solv {
         ...DEFAULT_MAPPINGS,
         ...(opts.units || {}),
       },
-    });
-
-    Object.defineProperty(this, 'types', {
-      value: [
-        ...DEFAULT_TYPES,
-        ...(opts.types || []),
-      ],
     });
 
     // public properties
@@ -85,7 +82,7 @@ export default class Solv {
   }
 
   format(result, separator, formatter) {
-    if (Array.isArray(result[0])) {
+    if (isArray(result[0])) {
       const fixedResult = result.map(x => this.value(x, formatter).format);
 
       if (separator) {
@@ -188,8 +185,8 @@ export default class Solv {
     }
 
     return output
-      .map(x => calculateFromTokens(x))
-      .map(x => Array.isArray(x) && x.length === 1 ? x[0] : x)
-      .filter(x => Array.isArray(x) ? x.length : typeof x !== 'undefined');
+      .map(x => calculateFromTokens(toList(x)))
+      .map(x => isArray(x) && x.length === 1 ? x[0] : x)
+      .filter(x => isArray(x) ? x.length : typeof x !== 'undefined');
   }
 }

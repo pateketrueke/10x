@@ -1,4 +1,5 @@
 import {
+  isArray,
   hasTagName,
   hasOp, hasSep, hasChar,
 } from './shared';
@@ -12,24 +13,24 @@ import LangErr from './error';
 
 // FIXME: clean up this shit...
 export function fixChunk(tokens, i) {
-  const offset  = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
+  const offset  = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
   const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
 
   return subTree;
 }
 
 export function fixTree(ast) {
-  let tokens = ast.filter(x => Array.isArray(x) || !hasTagName(x.token[0]));
+  let tokens = ast.filter(x => isArray(x) || !hasTagName(x.token[0]));
 
   for (let i = 0; i < tokens.length; i += 1) {
-    let cur = Array.isArray(tokens[i])
+    let cur = isArray(tokens[i])
       ? fixTree(tokens[i])
       : tokens[i];
 
     const prev = tokens[i - 1] || { token: [] };
     const next = tokens[i + 1] || { token: [] };
 
-    if (Array.isArray(cur) && cur.length > 1 && !Array.isArray(cur[0])) {
+    if (isArray(cur) && cur.length > 1 && !isArray(cur[0])) {
       // handle tuples
       if (cur[0].token[0] === 'symbol' && ['number', 'string', 'unit'].includes(cur[1].token[0])) {
         tokens.splice(i, 1, toToken(['object', fixTokens(cur)]));
@@ -37,12 +38,12 @@ export function fixTree(ast) {
       }
     }
 
-    if (!Array.isArray(prev)) {
+    if (!isArray(prev)) {
       if (prev.token[0] === 'def' && !prev.token[2]) {
         let subTree = [];
 
         // FIXME: dedupe...
-        if (Array.isArray(cur)) {
+        if (isArray(cur)) {
           prev._args = true;
           tokens.splice(i, 1);
         } else if (cur.token[0] === 'expr' && cur.token[2] === 'equal') {
@@ -50,7 +51,7 @@ export function fixTree(ast) {
           prev._body = true;
         }
 
-        if (!Array.isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal' && !prev._body) {
+        if (!isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal' && !prev._body) {
           subTree = fixChunk(tokens, i);
           prev._body = true;
         }
@@ -71,15 +72,15 @@ export function fixTree(ast) {
 
     // FIXME: compose lambda-calls with multiple arguments...
     if (
-      !Array.isArray(cur)
-      && !Array.isArray(next)
+      !isArray(cur)
+      && !isArray(next)
       && cur.token[0] === 'unit'
       && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))
     ) {
-      const offset = tokens.slice(i).findIndex(x => !Array.isArray(x) && x.token[0] === 'fx' && x.token[2] === 'func');
+      const offset = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'fx' && x.token[2] === 'func');
 
       if (offset > 0) {
-        const cut = tokens.slice(offset).findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]));
+        const cut = tokens.slice(offset).findIndex(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]));
         const endPos = cut >= 0 ? cut : tokens.length - offset;
 
         tokens.splice(i, 0, toToken(['fn', '$', {

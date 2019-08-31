@@ -178,9 +178,7 @@ export function operateExpression(ops, expr) {
   return expr;
 }
 
-// FIXME: cleanup?
 export function calculateFromTokens(expr) {
-  expr = expr.map(x => x.token);
   expr = operateExpression(['for', '*', '/'], expr);
   expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in', 'to'], expr);
 

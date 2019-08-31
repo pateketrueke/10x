@@ -1,4 +1,5 @@
 import {
+  isArray,
   hasSep, hasTimeUnit, hasExpr, hasChar,
   hasNum, hasMonths, hasTagName, hasOwnKeyword,
 } from './shared';
@@ -9,7 +10,7 @@ import {
 
 import {
   fixArgs, fixValues, fixTokens, fixResult, fixBinding,
-  toCut, toPlain, toInput, toToken, toValue, toNumber,
+  toCut, toList, toPlain, toInput, toToken, toValue, toNumber,
 } from './ast';
 
 import LangErr from './error';
@@ -100,10 +101,10 @@ export function reduceFromUnits(cb, ctx, self, convert) {
     const base = parseFloat(ctx.cur.token[1]);
     const subTree = fixArgs(cb(ctx.env[ctx.cur.token[2]].body, ctx)).reduce((p, c) => p.concat(c), []);
 
-    ctx.cur = subTree.map(x => toToken(calculateFromTokens(cb([
+    ctx.cur = subTree.map(x => toToken(calculateFromTokens(toList(cb([
       toToken(['number', base]),
       toToken(['expr', '*', 'mul']),
-    ].concat([x]), ctx))));
+    ].concat([x]), ctx)))));
     return;
   }
 
@@ -169,7 +170,7 @@ export function reduceFromImports(set, env, self) {
   }
 
   set[':import'].forEach(sub => {
-    if (Array.isArray(sub)) {
+    if (isArray(sub)) {
       if (!sub[0].every(x => x.token[0] === 'unit')) {
         throw new Error(`
           Methods to :import should be units,
@@ -208,7 +209,7 @@ export function reduceFromImports(set, env, self) {
   const fromInfo = toPlain(set[':from']);
 
   importInfo.forEach(def => {
-    if (!Array.isArray(def)) {
+    if (!isArray(def)) {
       Object.keys(def).forEach(k => {
         env[def[k][0]] = fixBinding(fromInfo[0], k, def[k][0], self);
       });
@@ -245,12 +246,12 @@ export function reduceFromLogic(cb, ctx, self) {
         let test = ifBranch.shift();
 
         // handle negative variations
-        if (!Array.isArray(test) && test.token[0] === 'expr' && test.token[2] === 'not') {
+        if (!isArray(test) && test.token[0] === 'expr' && test.token[2] === 'not') {
           test = ifBranch.shift();
           not = !not;
         }
 
-        const retval = toInput(calculateFromTokens(cb(test.slice(), ctx)));
+        const retval = toInput(calculateFromTokens(toList(cb(test.slice(), ctx))));
 
         // evaluate respective branches
         if (not ? !retval : retval) {
@@ -321,20 +322,20 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       ? cb(def.body.slice(), ctx, locals)
       : def.body.slice();
 
-    if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
+    if (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
       if (ctx.cur.length > 1) {
         console.log('FNX', ctx.cur);
       }
 
       // apply lambda-calls as we have arguments
-      while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
+      while (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
         Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, args));
         ctx.cur = cb(ctx.cur[0].token[2].body, ctx, locals);
       }
     }
 
     // resolve intermediate values
-    ctx.cur = toToken(calculateFromTokens(ctx.cur));
+    ctx.cur = toToken(calculateFromTokens(toList(ctx.cur)));
 
     // forward arguments to bindings
     if (ctx.cur.token[0] === 'bind') {
@@ -375,14 +376,14 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     ctx.right = tokens[i + 1] || { token: [] };
 
     // store nearest offset to cut right before delimiters!
-    ctx.endOffset = tokens.findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k') - i;
+    ctx.endOffset = tokens.findIndex(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k') - i;
 
     // handle anonymous sub-expressions
-    if (Array.isArray(ctx.cur)) {
-      const fixedValue = calculateFromTokens(cb(ctx.cur, ctx));
+    if (isArray(ctx.cur)) {
+      const fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
 
       // prepend multiplication if goes after units/numbers
-      if (!ctx.isDef && !Array.isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
+      if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
         ctx.ast.push(toToken(['expr', '*', 'mul']));
       }
 
@@ -390,7 +391,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       continue;
     }
 
-    if (!Array.isArray(ctx.left)) {
+    if (!isArray(ctx.left)) {
       // flag well-known definitions, as they are open...
       if (ctx.root.isDef || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
@@ -401,7 +402,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
       // recompose objects into readable values
       if (ctx.cur.token[0] === 'object') {
-        ctx.ast.push(toToken(['object', toInput(ctx.cur.token, x => calculateFromTokens(cb(x, ctx)))]));
+        ctx.ast.push(toToken(['object', toInput(ctx.cur.token, x => calculateFromTokens(toList(cb(x, ctx))))]));
         continue;
       }
 
@@ -416,7 +417,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     }
 
     // skip definitions only!
-    if (Array.isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
+    if (isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
     else if (!['symbol', 'def'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
   }
 

@@ -60,12 +60,6 @@ export const ALPHA_MAPPINGS = Object.keys(ALPHA_CHARS)
     return prev;
   }, {});
 
-// fixed-length types
-export const DEFAULT_TYPES = [
-  ['0000-00-00T00:00:00', 'datetime'],
-  ['0000-00-00', 'datetime'],
-];
-
 export const INC_DEC = [
   ['week', 'weekend'],
   ['yesterday', 'today', 'now', 'tonight', 'tomorrow'],
@@ -121,35 +115,4 @@ export function convertFrom(num, base, target) {
   }
 
   return new Convert(num).from(base).to(target);
-}
-
-export function unitFrom(types) {
-  const tokens = types
-    .sort((a, b) => b[0].length - a[0].length)
-    .map(x => [x[0].split('').map((v, l) => (s => (v === '0' ? (s >= 0) : v === s))), x[1]]);
-
-  const find = v => {
-    let found = [];
-
-    for (let j = 0; j < tokens.length; j += 1) {
-      const result = tokens[j][0].every((f, i) => f(v[i]));
-
-      if (result) {
-        found = [j, tokens[j][0].length];
-        break;
-      }
-    }
-
-    return found;
-  }
-
-  return value => {
-    const [offset, length] = find(value);
-
-    if (length && tokens[offset]) {
-      return [value.slice(0, length).join(''), tokens[offset][1]];
-    }
-
-    return null;
-  };
 }
