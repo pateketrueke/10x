@@ -12,7 +12,7 @@ function pad(nth, length) {
   return `     ${nth}`.substr(-length);
 }
 
-export default class ParseError extends Error {
+export default class LangErr extends Error {
   constructor(msg, ctx) {
     super(deindent(msg));
 

@@ -12,7 +12,7 @@ import {
   toCut, toPlain, toInput, toToken, toValue, toNumber,
 } from './ast';
 
-import ParseError from './error';
+import LangErr from './error';
 
 export function reduceFromBinding(call, args) {
   // FIXME: apply lambdas as arguments?
@@ -413,7 +413,7 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
         reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInternals);
         reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
       } catch (e) {
-        throw new ParseError(e.message, ctx);
+        throw new LangErr(e.message, ctx);
       }
     }
 

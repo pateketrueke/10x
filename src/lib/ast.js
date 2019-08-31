@@ -2,8 +2,8 @@ import {
   hasSep, hasTagName, hasPercent,
 } from './shared';
 
-import ParseError from './error';
-import Expression from './expr';
+import LangErr from './error';
+import LangExpr from './expr';
 
 export function highestCommonFactor(a, b) {
   return b !== 0 ? highestCommonFactor(b, a % b) : a;
@@ -96,20 +96,20 @@ export function toValue(value) {
 
 export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
   if (Array.isArray(token)) {
-    return new Expression({ token });
+    return new LangExpr({ token });
   }
 
-  if (!(token instanceof Expression) && typeof fromCallback === 'function') {
+  if (!(token instanceof LangExpr) && typeof fromCallback === 'function') {
     const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
 
     if (!retval) {
-      throw new ParseError(`Unexpected token \`${token.content}\``, token);
+      throw new LangErr(`Unexpected token \`${token.content}\``, token);
     }
 
-    return new Expression(token, retval);
+    return new LangExpr(token, retval);
   }
 
-  return new Expression(token);
+  return new LangExpr(token);
 }
 
 export function toInput(token, cb) {

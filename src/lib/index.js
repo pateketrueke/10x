@@ -8,7 +8,7 @@ import {
   toFraction, toNumber, toValue, toInput,
 } from './ast';
 
-import ParseError from './error';
+import LangErr from './error';
 
 import { reduceFromAST } from './reducer';
 import { calculateFromTokens } from './solver';
@@ -69,7 +69,7 @@ export default class Solv {
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
     } catch (e) {
-      this.error = ParseError.build(e, source, 2, filepath);
+      this.error = LangErr.build(e, source, 2, filepath);
     }
 
     return this;
@@ -174,7 +174,7 @@ export default class Solv {
         output.push(...fixArgs(cb(ast)));
       });
     } catch (e) {
-      this.error = ParseError.build(e, source || this.source, 2, this.filepath);
+      this.error = LangErr.build(e, source || this.source, 2, this.filepath);
       return [];
     }
 

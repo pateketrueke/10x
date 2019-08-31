@@ -1,4 +1,4 @@
-export default class Expression {
+export default class LangExpr {
   constructor(info, token) {
     if (!token) {
       token = info.token;

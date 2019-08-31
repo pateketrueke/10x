@@ -8,7 +8,7 @@ import {
   fixCut, fixArgs, fixApply, fixInput, fixTokens,
 } from './ast';
 
-import ParseError from './error';
+import LangErr from './error';
 
 // FIXME: clean up this shit...
 export function fixChunk(tokens, i) {
@@ -127,7 +127,7 @@ export function buildTree(tokens) {
       }
     } else {
       if (!root) {
-        throw new ParseError('Unexpected end, missing `(`', tokens[i - 1]);
+        throw new LangErr('Unexpected end, missing `(`', tokens[i - 1]);
       }
 
       root.push(t);
@@ -138,7 +138,7 @@ export function buildTree(tokens) {
     const fixedOffset = offsets.pop();
     const fixedToken = fixedOffset.token[1];
 
-    throw new ParseError(`Missing terminator for \`${fixedToken}\``, fixedOffset);
+    throw new LangErr(`Missing terminator for \`${fixedToken}\``, fixedOffset);
   }
 
   return tree;
