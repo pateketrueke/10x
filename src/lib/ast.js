@@ -203,17 +203,15 @@ export function fixTree(ast) {
       && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))
     ) {
       const offset = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'fx' && x.token[2] === 'func');
+      const cutBody = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]));
+      const cutOffset = cutBody >= 0 ? cutBody : tokens.length - offset;
+      const fixedTokens = tokens.splice(i, cutOffset + 1);
 
-      if (offset > 0) {
-        const cut = tokens.slice(offset).findIndex(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]));
-        const endPos = cut >= 0 ? cut : tokens.length - offset;
-
-        tokens.splice(i, 0, toToken(['fn', '$', {
-          args: fixArgs(tokens.splice(i, offset), true),
-          body: fixTree(tokens.splice(i, endPos).slice(1)),
-        }]));
-        break;
-      }
+      tokens.splice(i, 1, toToken(['fn', '$', {
+        args: fixArgs(fixedTokens.slice(0, offset), true),
+        body: fixTree(fixedTokens.slice(offset + 1)),
+      }]));
+      continue;
     }
 
     tokens[i] = cur;
@@ -240,7 +238,10 @@ export function fixBinding(obj, name, alias, context) {
   // FIXME: load from well-knwon symbols, and for external sources?
   // e.g. white-list or allow most methods as they are?
   switch (obj) {
+    case 'Object':
     case 'String':
+    case 'Array':
+    case 'Math':
       target = Function.prototype.call.bind(global[obj].prototype[name]);
       break;
     default: {
