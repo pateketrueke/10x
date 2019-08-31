@@ -1,7 +1,7 @@
 import {
   isArray,
   hasMonths, hasOwnKeyword,
-  hasTimeUnit, hasExpr, hasChar,
+  hasTimeUnit, hasExpr, hasChar, hasSep,
 } from './shared';
 
 import {
@@ -373,7 +373,14 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     // handle anonymous sub-expressions
     if (isArray(ctx.cur)) {
-      const fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
+      let fixedValue;
+
+      // evaluate simple lists only
+      if (!ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))) {
+        fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
+      } else {
+        fixedValue = ['object', fixArgs(ctx.cur, false)];
+      }
 
       // prepend multiplication if goes after units/numbers
       if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
