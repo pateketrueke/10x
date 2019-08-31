@@ -3,15 +3,15 @@ import {
 } from './shared';
 
 import {
-  toValue, toNumber, toFraction,
+  toNumber, toFraction,
 } from './ast';
 
 export function calculateFromMS(diff) {
   const hourTime = 1000 * 60;
-  const seconds = Math.floor(diff / 1000 % 60);
-  const minutes = Math.floor(diff / hourTime % 60);
-  const hours = Math.floor(diff / (hourTime * 60) % 24);
-  const days = Math.floor(diff / (hourTime * 60 * 24) % 365);
+  const seconds = Math.floor((diff / 1000) % 60);
+  const minutes = Math.floor((diff / hourTime) % 60);
+  const hours = Math.floor((diff / (hourTime * 60)) % 24);
+  const days = Math.floor((diff / (hourTime * 60 * 24)) % 365);
 
   return []
     .concat(days ? `${days}d` : [])
@@ -84,7 +84,7 @@ export function calculateFromDate(op, left, right) {
 }
 
 // handle basic conditions
-export function evaluateComparison(op, left, right, others) {
+export function evaluateComparison(op, left, right) {
   switch (op) {
     case '!~': return !left.includes(right);
     case '~=': return left.includes(right);
@@ -95,8 +95,9 @@ export function evaluateComparison(op, left, right, others) {
     case '<': return left < right;
     case '>': return left > right;
     case '&&': return left && right;
+    case '||': return left || right;
     default:
-      throw new TypError(`Not implemented: ${op}`);
+      throw new TypeError(`Not implemented: ${op}`);
   }
 }
 

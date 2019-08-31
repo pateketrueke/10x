@@ -1,7 +1,7 @@
 import {
   isArray,
-  hasSep, hasTimeUnit, hasExpr, hasChar,
-  hasNum, hasMonths, hasTagName, hasOwnKeyword,
+  hasMonths, hasOwnKeyword,
+  hasTimeUnit, hasExpr, hasChar,
 } from './shared';
 
 import {
@@ -29,9 +29,6 @@ export function reduceFromValue(token) {
     text = text.replace(/(\d)(\w)/, '$1 $2');
   }
 
-  // handle ISO strings
-  if (text.length >= 10 && !isAny(text, ' ')) return new Date(text);
-
   const now = new Date();
   const year = now.getFullYear();
   const today = now.toString().split(' ').slice(0, 4).join(' ');
@@ -50,7 +47,7 @@ export function reduceFromValue(token) {
   if (['week', 'weekend'].includes(text.toLowerCase())) {
     const diffDay = text.toLowerCase() === 'weekend' ? 6 : 1;
 
-    now.setDate(now.getDate() + (diffDay + 7 - now.getDay()) % 7);
+    now.setDate(now.getDate() + ((diffDay + 7 - now.getDay()) % 7));
 
     return now;
   }

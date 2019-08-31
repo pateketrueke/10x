@@ -1,5 +1,4 @@
 import {
-  isInt,
   hasKeyword, hasDatetime,
   hasOp, hasSep, hasNum, hasChar, hasExpr,
 } from './shared';
@@ -142,7 +141,7 @@ export function tokenize(input, units) {
 
     do { nextToken = input[++key]; } while (nextToken && nextToken.content === ' ');
 
-    const fixedToken = toToken(cur, fromSymbols, units, lastToken, nextToken && nextToken.content);;
+    const fixedToken = toToken(cur, fromSymbols, units, lastToken, nextToken && nextToken.content);
 
     if (fixedToken.token[0] !== 'text') {
       lastToken = fixedToken;
@@ -199,7 +198,7 @@ export function transform(tokens, units) {
           chunks[inc]._fixed = true;
         } else {
           subTree._fixed = true;
-          subTree.push(token)
+          subTree.push(token);
         }
         open = true;
         continue;
@@ -209,7 +208,7 @@ export function transform(tokens, units) {
       if (subTree.length && !subTree._fixed) {
         if (subTree[0].score >= 1.5 || (';(='.includes(token.cur) && subTree.length === 1)) {
           subTree._fixed = true;
-          subTree.push(token)
+          subTree.push(token);
           continue;
         }
 
@@ -220,14 +219,12 @@ export function transform(tokens, units) {
         if ('":'.includes(token.cur.charAt()) && (nextToken.score < 2 || nextToken.score > 3)) inc++;
         continue;
       }
-    } else {
       // break on any non-white space
-      if (!' \n'.includes(token.cur) && subTree._fixed) {
-        chunks[++inc] = [token];
-        normalize(subTree);
-        open = false;
-        continue;
-      }
+    } else if (!' \n'.includes(token.cur) && subTree._fixed) {
+      chunks[++inc] = [token];
+      normalize(subTree);
+      open = false;
+      continue;
     }
 
     subTree.push(token);

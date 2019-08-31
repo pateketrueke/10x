@@ -1,68 +1,13 @@
-const fs = require('fs');
+module.exports = ({
+  calc, chalk, playBack, showDebugInfo,
+}) => {
+  // FIXME: enable more options...
+  const ANIMATION_SPEED = playBack === true ? 260 : playBack || 0;
 
-global.console.log = (...args) => {
-  args.forEach(value => {
-    process.stderr.write(require('util').inspect(value, { colors: true, depth: 10, maxArrayLength: Infinity }) + '\n');
-  });
-};
-
-const chalk = require('chalk');
-const Solv = require('./dist/lib.js');
-
-const argv = require('wargs')(process.argv.slice(2), {
-  boolean: 'rjdVC',
-  alias: {
-    r: 'raw',
-    j: 'json',
-    d: 'debug',
-    V: 'verbose',
-    C: 'no-colors',
-    s: 'shared',
-    p: 'playback',
-  },
-});
-
-const returnRawJSON = argv.flags.raw;
-const returnAsJSON = argv.flags.json;
-const showDebugInfo = argv.flags.debug;
-const showVerboseInfo = argv.flags.verbose;
-const hasNoColors = !argv.flags.colors;
-const playBack = argv.flags.playback;
-
-const sharedFilePath = argv.flags.shared;
-const sharedFile = sharedFilePath && require('path').resolve(sharedFilePath);
-const sharedExpressions = {};
-
-if (sharedFile && require('fs').existsSync(sharedFile)) {
-  Object.assign(sharedExpressions, JSON.parse(require('fs').readFileSync(sharedFile)));
-}
-
-const colors = !hasNoColors;
-
-const args = argv.raw;
-const file = argv._.shift();
-
-const calc = new Solv({
-  expressions: sharedExpressions,
-});
-
-let code = '';
-
-if (file && fs.existsSync(file)) {
-  code += fs.readFileSync(file).toString();
-}
-
-code += args.join(' ');
-
-calc.resolve(code, file);
-
-if (showVerboseInfo) {
-  console.log(calc);
-}
-
-// FIXME: since all evaluation can be async...
-if (!returnAsJSON) {
   const buffer = [];
+
+  let indent = '';
+  let values = [];
 
   function puts(type, chunk, speed) {
     if (type !== 'number' && typeof chunk !== 'string') {
@@ -70,7 +15,7 @@ if (!returnAsJSON) {
       return;
     }
 
-    return String(chunk).split(speed ? /(?=[\x00-\x7F])/ : /(?=\b)/)
+    return String(chunk).split(speed ? /(?=[\x00-\x7F])/ : /(?=\b)/) // eslint-disable-line
       .reduce((prev, cur) => prev.then(() => {
         switch (type) {
           case null:
@@ -125,12 +70,6 @@ if (!returnAsJSON) {
         }
       }), Promise.resolve());
   }
-
-  // FIXME: enable options...
-  const ANIMATION_SPEED = playBack === true ? 260 : playBack || 0;
-
-  let indent = '';
-  let values = [];
 
   function push(type, chunk) {
     buffer.push(() => new Promise(ok => {
@@ -210,30 +149,4 @@ if (!returnAsJSON) {
   }
 
   buffer.reduce((prev, cur) => prev.then(() => cur()), Promise.resolve());
-} else {
-  const fixedResults = calc.eval();
-
-  if (returnAsJSON) {
-    process.stdout.write(JSON.stringify({
-      error: returnRawJSON ? JSON.stringify(calc.error) : calc.error,
-      tree: returnRawJSON ? JSON.stringify(calc.tree) : calc.tree,
-      input: calc.input.map(x => returnRawJSON ? JSON.stringify(x) : x),
-      tokens: calc.tokens.map(x => returnRawJSON ? JSON.stringify(x) : x),
-      results: fixedResults.map(x => returnRawJSON ? JSON.stringify(x) : x),
-    }));
-  } else {
-    fixedResults.forEach(x => {
-      process.stderr.write(`${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '))}\n`);
-    });
-  }
-
-  if (calc.error && !returnAsJSON) {
-    process.stderr.write(chalk.red(calc.error.stack));
-    process.exit(1);
-  }
-}
-
-if (sharedFile) require('fs').writeFileSync(sharedFile, JSON.stringify(calc.expressions, (k, v) => {
-  if (['begin', 'end'].includes(k)) return undefined;
-  return v;
-}));
+};

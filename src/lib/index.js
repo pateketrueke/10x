@@ -6,12 +6,8 @@ import {
 } from './shared';
 
 import {
-  toList, fixTree,
-} from './ast';
-
-import {
-  fixArgs,
-  toFraction, toNumber, toValue, toInput,
+  fixArgs, fixTree,
+  toFraction, toNumber, toValue, toList,
 } from './ast';
 
 import LangErr from './error';
@@ -189,7 +185,7 @@ export default class Solv {
 
     return output
       .map(x => calculateFromTokens(toList(x)))
-      .map(x => isArray(x) && x.length === 1 ? x[0] : x)
-      .filter(x => isArray(x) ? x.length : typeof x !== 'undefined');
+      .map(x => (isArray(x) && x.length === 1 ? x[0] : x))
+      .filter(x => (isArray(x) ? x.length : typeof x !== 'undefined'));
   }
 }

@@ -13,7 +13,7 @@ export function getTokensFrom(text, units) {
   let row = 0;
   let col = -1;
 
-  const chars = text.split(/(?=[\x00-\x7F])/);
+  const chars = text.split(/(?=[\x00-\x7F])/); // eslint-disable-line
   const tokens = [];
 
   for (let i = 0; i < chars.length; i += 1) {
@@ -36,7 +36,7 @@ export function getTokensFrom(text, units) {
 
     // keep formatting blocks together
     if (!inBlock && !inFormat && hasFmt(cur)) {
-      if (cur === '*')  {
+      if (cur === '*') {
         inFormat = next === '*' || hasChar(next);
       } else if (cur === '_') {
         inFormat = hasSep(last)
@@ -108,7 +108,7 @@ export function getTokensFrom(text, units) {
       || (inBlock === 'multiline' && last === '*' && cur === '/')
     ) inBlock = inFormat = false;
 
-    if (!inBlock && cur === '\n')  {
+    if (!inBlock && cur === '\n') {
       offset++;
     }
   }
@@ -171,7 +171,7 @@ export function getTokensFrom(text, units) {
       // comments
       (
         value.indexOf('//') === 0
-        || (value.indexOf('/*') === 0 && value.substr(value.length-2) === '*/')
+        || (value.indexOf('/*') === 0 && value.substr(value.length - 2) === '*/')
       )
 
       // (inside parentheses)
@@ -181,7 +181,7 @@ export function getTokensFrom(text, units) {
       || ('(='.includes(value) && oldScore)
 
       // side-effects
-      || ('(' === value && hasOp(nextChar))
+      || (hasOp(nextChar) && value === '(')
     ) score += 1.5;
 
     // always give score to parentheses

@@ -2,7 +2,7 @@
   "name": "solv-lang",
   "version": "0.0.0",
   "bin": {
-    "solv": "cli"
+    "solv": "bin/cli"
   },
   "scripts": {
     "build": "rollup -c",
@@ -12,6 +12,7 @@
     "start:dev": "sirv public --single --dev",
     "dev:test": "npm run test -- -w",
     "mocha": "_mocha --exit --recursive -bR spec",
+    "pretest": "eslint src/lib bin/*.js",
     "test": "npm run test:unit --",
     "test:ci": "npm run test:coverage -- -r lcov",
     "test:unit": "TZ=UTC npm run mocha -- -r esm 'tests/*.test.js'",
