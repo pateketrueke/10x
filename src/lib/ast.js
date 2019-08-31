@@ -173,6 +173,10 @@ export function toCut(from, tokens, endOffset) {
   return endOffset >= 0 ? tokens.splice(from, endOffset) : tokens.splice(from);
 }
 
+export function fixResult(value) {
+  return [typeof value, typeof value === 'string' ? `"${value}"` : value];
+}
+
 export function fixBinding(obj, name, context) {
   let target;
 
@@ -208,15 +212,12 @@ export function fixBinding(obj, name, context) {
       }
   }
 
+  // FIXME: this would lead to disasters?
   if (typeof target !== 'function') {
-    throw new Error(`Expecting \`${name}\` binding to be a function, given \`${target}\``);
+    return fixResult(target);
   }
 
   return ['bind', [obj, name, target]];
-}
-
-export function fixResult(value) {
-  return [typeof value, typeof value === 'string' ? `"${value}"` : value];
 }
 
 export function fixTokens(ast) {
