@@ -163,19 +163,9 @@ export default class Solv {
     const cb = ast => reduceFromAST(ast, this, { convertFrom }, null, this.expressions);
     const output = [];
 
-    const fixedTree = (tokens || this.tree).reduce((prev, cur) => {
-      const subTree = fixTree(cur);
-
-      if (subTree.length) {
-        prev.push(subTree);
-      }
-
-      return prev;
-    }, []);
-
     try {
       this.error = null;
-      fixedTree.forEach(ast => {
+      (tokens || this.tree).forEach(ast => {
         output.push(...fixArgs(cb(ast)));
       });
     } catch (e) {

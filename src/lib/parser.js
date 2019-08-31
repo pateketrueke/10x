@@ -6,7 +6,7 @@ import {
 import {
   toToken,
   buildTree,
-  fixArgs, fixStrings,
+  fixArgs, fixTree, fixStrings,
 } from './ast';
 
 export function fromMarkdown(text) {
@@ -239,17 +239,19 @@ export function transform(tokens, units) {
   // merge non-fixed chunks
   const body = fixStrings(chunks.reduce((prev, cur) => {
     if (cur._fixed) {
+      // wrap sequence within nulls to recognize later
       prev.push(null, ...tokenize(cur.map(x => ({
         content: x.cur,
         depth: x.depth,
         begin: [x.row, x.col],
         end: [x.row, x.col + x.cur.length],
-      })), units));
+      })), units), null);
       return prev;
     }
 
     const last = cur[cur.length - 1];
 
+    // null-prefix to pair with previous nulls
     prev.push(null, toToken({
       content: cur.reduce((p, c) => p + c.cur, ''),
       depth: cur.reduce((p, c) => p + c.depth, 0) / cur.length,
@@ -261,14 +263,22 @@ export function transform(tokens, units) {
   }, []));
 
   // copy all tokens to protect them!
-  const fixedAST = body.filter(x => x !== null).map(x => toToken(x));
+  const fixedAST = body.map(x => (x !== null ? toToken(x) : x));
 
   // handle errors during tree-building
   let fixedTree;
   let _e;
 
   try {
-    fixedTree = fixArgs(body, null).map(x => buildTree(x)).filter(x => x.length);
+    fixedTree = fixArgs(body, null).reduce((prev, cur) => {
+      const subTree = fixTree(buildTree(cur));
+
+      if (subTree.length) {
+        prev.push(subTree);
+      }
+
+      return prev;
+    }, []);
   } catch (e) {
     _e = e;
   }
