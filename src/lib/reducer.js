@@ -16,7 +16,7 @@ import LangErr from './error';
 
 export function reduceFromBinding(call, args) {
   // FIXME: apply lambdas as arguments?
-  return call[2].call(...args);
+  return call[2](...args);
 }
 
 export function reduceFromValue(token) {
@@ -153,7 +153,7 @@ export function reduceFromUnits(cb, ctx, self, convert) {
   if (hasTimeUnit(ctx.cur.token[2])) ctx.isDate = true;
 }
 
-export function reduceFromImports(set, env) {
+export function reduceFromImports(set, env, self) {
   if (!set[':from']) {
     throw new Error(`
       Missing :from definition,
@@ -211,20 +211,20 @@ export function reduceFromImports(set, env) {
     if (!Array.isArray(def)) {
       Object.keys(def).forEach(k => {
         env[def[k][0]] = {
-          body: [toToken(fixBinding(fromInfo[0], k))],
+          body: [toToken(fixBinding(fromInfo[0], k, self))],
         };
       });
     } else {
       def.forEach(k => {
         env[k] = {
-          body: [toToken(fixBinding(fromInfo[0], k))],
+          body: [toToken(fixBinding(fromInfo[0], k, self))],
         };
       });
     }
   });
 }
 
-export function reduceFromLogic(cb, ctx) {
+export function reduceFromLogic(cb, ctx, self) {
   // collect all tokens after symbols
   if (ctx.cur.token[0] === 'symbol') {
     const subTree = toCut(ctx.i, ctx.tokens, ctx.endOffset);
@@ -236,7 +236,7 @@ export function reduceFromLogic(cb, ctx) {
 
       // handle foreign-imports
       if (set[':import']) {
-        reduceFromImports(set, ctx.env);
+        reduceFromImports(set, ctx.env, self);
         return false;
       }
 
@@ -410,7 +410,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       }
 
       try {
-        reduceFromLogic(cb, ctx);
+        reduceFromLogic(cb, ctx, context);
         reduceFromFX(cb, ctx);
         reduceFromDefs(cb, ctx, context, memoizedInternals);
         reduceFromUnits(cb, ctx, context, settings.convertFrom);

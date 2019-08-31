@@ -173,22 +173,39 @@ export function toCut(from, tokens, endOffset) {
   return endOffset >= 0 ? tokens.splice(from, endOffset) : tokens.splice(from);
 }
 
-export function fixBinding(obj, name) {
+export function fixBinding(obj, name, context) {
   let target;
 
   // FIXME: load from well-knwon symbols, and for external sources?
   // e.g. white-list or allow most methods as they are?
   switch (obj) {
     case 'String':
-      target = global[obj].prototype[name];
+      target = Function.prototype.call.bind(global[obj].prototype[name]);
       break;
     default:
       // FIXME: for browser usage, decouple this...
-      // const fs = require('fs');
-      // const path = require('path');
-      // const srcFile = path.resolve();
+      const fs = require('fs');
+      const path = require('path');
+      const srcFile = path.resolve(path.dirname(context.filepath), obj);
 
-      throw new Error(`Missing \`${name}\` binding from \`${obj}\``);
+      if (fs.existsSync(srcFile)) {
+        let def;
+
+        if (srcFile.indexOf('.js') === srcFile.length - 3) {
+          def = require(srcFile);
+          def = typeof def === 'function'
+            ? { default: def }
+            : def;
+        }
+
+        if (def) {
+          target = def[name];
+        }
+      }
+
+      if (!target) {
+        throw new Error(`Missing \`${name}\` binding from \`${obj}\``);
+      }
   }
 
   if (typeof target !== 'function') {
