@@ -15,18 +15,23 @@ function pad(nth, length) {
 export default class ParseError extends Error {
   constructor(msg, ctx) {
     super(deindent(msg));
-    this.target = ctx.cur;
+
+    this.target = undefined;
     this.offsets = undefined;
 
-    if (ctx.content) {
-      this.offsets = [ctx.begin, ctx.end];
-    }
+    if (ctx) {
+      this.target = ctx.cur;
 
-    if (ctx.cur) {
-      if (!ctx.tokens.length) {
-        this.offsets = [ctx.cur.begin, ctx.cur.end];
-      } else {
-        this.offsets = [ctx.tokens[0].begin, ctx.tokens[ctx.tokens.length - 1].end];
+      if (ctx.content) {
+        this.offsets = [ctx.begin, ctx.end];
+      }
+
+      if (ctx.cur) {
+        if (!ctx.tokens.length) {
+          this.offsets = [ctx.cur.begin, ctx.cur.end];
+        } else {
+          this.offsets = [ctx.tokens[0].begin, ctx.tokens[ctx.tokens.length - 1].end];
+        }
       }
     }
   }

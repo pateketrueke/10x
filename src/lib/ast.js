@@ -3,28 +3,7 @@ import {
 } from './shared';
 
 import ParseError from './error';
-
-export class Expression {
-  constructor(info, token) {
-    if (!token) {
-      token = info.token;
-      delete info.token;
-    }
-
-    Object.keys(info).forEach(k => {
-      Object.defineProperty(this, k, {
-        value: info[k],
-        writable: true,
-        configurable: true,
-      });
-    });
-
-    this.token = token.slice();
-
-    // not needed anymore
-    delete this.content;
-  }
-}
+import Expression from './expr';
 
 export function highestCommonFactor(a, b) {
   return b !== 0 ? highestCommonFactor(b, a % b) : a;
@@ -188,6 +167,14 @@ export function toPlain(values, cb) {
   });
 
   return values;
+}
+
+export function toCut(from, tokens, endOffset) {
+  return endOffset >= 0 ? tokens.splice(from, endOffset) : tokens.splice(from);
+}
+
+export function fixResult(value) {
+  return [typeof value, typeof value === 'string' ? `"${value}"` : value];
 }
 
 export function fixTokens(ast) {

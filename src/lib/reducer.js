@@ -8,8 +8,8 @@ import {
 } from './solver';
 
 import {
-  fixArgs, fixTokens,
-  toPlain, toInput, toToken, toValue, toNumber,
+  fixArgs, fixTokens, fixResult,
+  toCut, toPlain, toInput, toToken, toValue, toNumber,
 } from './ast';
 
 import ParseError from './error';
@@ -169,10 +169,81 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   if (hasTimeUnit(ctx.cur.token[2])) ctx.isDate = true;
 }
 
+export function reduceFromImports(set, expressions) {
+  if (!set[':from']) {
+    throw new ParseError(`
+      Missing :from definition,
+        e.g. \`:import (...) :from "...";\`
+    `);
+  }
+
+  if (set[':from'].length > 1) {
+    throw new ParseError(`
+      Expecting only one :from definition,
+        e.g. \`:import (...) :from "...";\`
+    `);
+  }
+
+  set[':import'].forEach(sub => {
+    if (Array.isArray(sub)) {
+      if (!sub.every(x => x.token[0] === 'unit')) {
+        throw new ParseError(`
+          Methods to :import should be units,
+            e.g. \`:import (a ...) :from "...";\`
+        `);
+      }
+    } else {
+      const fixedKeys = Object.keys(sub.token[1]);
+
+      if (!fixedKeys.every(x => hasChar(x.substr(1)))) {
+        throw new ParseError(`
+          Aliased methods to :import should be units,
+            e.g. \`:import (:a ...) :from "...";\`
+        `);
+      }
+
+      fixedKeys.forEach(key => {
+        if (sub.token[1][key].length > 1) {
+          throw new ParseError(`
+            Expecting only one alias per method to :import,
+              e.g. \`:import (:method alias) :from "...";\`
+          `);
+        }
+
+        if (sub.token[1][key][0].token[0] !== 'unit') {
+          throw new ParseError(`
+            Aliased methods to :import should be units,
+              e.g. \`:import (:method alias) :from "...";\`
+          `);
+        }
+      });
+    }
+  });
+
+  const importInfo = toPlain(set[':import']);
+  const fromInfo = toPlain(set[':from']);
+
+  importInfo.forEach(def => {
+    if (!Array.isArray(def)) {
+      Object.keys(def).forEach(k => {
+        expressions[def[k][0]] = {
+          body: [toToken(['bind', [fromInfo[0], k]])],
+        };
+      });
+    } else {
+      def.forEach(k => {
+        expressions[k] = {
+          body: [toToken(['bind', [fromInfo[0], k]])],
+        };
+      });
+    }
+  });
+}
+
 export function reduceFromLogic(cb, ctx, expressions) {
   // collect all tokens after symbols
   if (ctx.cur.token[0] === 'symbol') {
-    const subTree = ctx.cutFromOffset();
+    const subTree = toCut(ctx.i, ctx.tokens, ctx.endOffset);
     const symbol = subTree.shift();
 
     // handle multiple branches
@@ -181,74 +252,11 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
       // handle foreign-imports
       if (set[':import']) {
-        if (!set[':from']) {
-          throw new ParseError(`
-            Missing :from definition,
-              e.g. \`:import (...) :from "...";\`
-          `, ctx);
+        try {
+          reduceFromImports(set, expressions);
+        } catch (e) {
+          throw new ParseError(e.message, ctx);
         }
-
-        if (set[':from'].length > 1) {
-          throw new ParseError(`
-            Expecting only one :from definition,
-              e.g. \`:import (...) :from "...";\`
-          `, ctx);
-        }
-
-        set[':import'].forEach(sub => {
-          if (Array.isArray(sub)) {
-            if (!sub.every(x => x.token[0] === 'unit')) {
-              throw new ParseError(`
-                Methods to :import should be units,
-                  e.g. \`:import (a ...) :from "...";\`
-              `, ctx);
-            }
-          } else {
-            const fixedKeys = Object.keys(sub.token[1]);
-
-            if (!fixedKeys.every(x => hasChar(x.substr(1)))) {
-              throw new ParseError(`
-                Aliased methods to :import should be units,
-                  e.g. \`:import (:a ...) :from "...";\`
-              `, ctx);
-            }
-
-            fixedKeys.forEach(key => {
-              if (sub.token[1][key].length > 1) {
-                throw new ParseError(`
-                  Expecting only one alias per method to :import,
-                    e.g. \`:import (:method alias) :from "...";\`
-                `, ctx);
-              }
-
-              if (sub.token[1][key][0].token[0] !== 'unit') {
-                throw new ParseError(`
-                  Aliased methods to :import should be units,
-                    e.g. \`:import (:method alias) :from "...";\`
-                `, ctx);
-              }
-            });
-          }
-        });
-
-        const importInfo = toPlain(set[':import']);
-        const fromInfo = toPlain(set[':from']);
-
-        importInfo.forEach(def => {
-          if (!Array.isArray(def)) {
-            Object.keys(def).forEach(k => {
-              expressions[def[k][0]] = {
-                body: [toToken(['bind', [fromInfo[0], k]])],
-              };
-            });
-          } else {
-            def.forEach(k => {
-              expressions[k] = {
-                body: [toToken(['bind', [fromInfo[0], k]])],
-              };
-            });
-          }
-        });
         return false;
       }
 
@@ -287,11 +295,10 @@ export function reduceFromLogic(cb, ctx, expressions) {
 export function reduceFromFX(cb, ctx, expressions) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
-    // FIXME: ... improve all this shit...
-    const [lft, rgt, ...others] = cb(ctx.cutFromOffset().slice(1), ctx).map(x => toInput(x.token));
+    const [lft, rgt, ...others] = cb(toCut(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => toInput(x.token));
     const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
 
-    ctx.cur = toToken([typeof result, typeof result === 'string' ? `"${result}"` : result]);
+    ctx.cur = toToken(fixResult(result));
   }
 }
 
@@ -394,9 +401,8 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     ctx.left = tokens[i - 1] || { token: [] };
     ctx.right = tokens[i + 1] || { token: [] };
 
-    // FIXME: improve this shit...
+    // store nearest offset to cut right before delimiters!
     ctx.endOffset = tokens.findIndex(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k') - i;
-    ctx.cutFromOffset = () => (ctx.endOffset >= 0 ? ctx.tokens.splice(ctx.i, ctx.endOffset) : ctx.tokens.splice(ctx.i));
 
     // handle anonymous sub-expressions
     if (Array.isArray(ctx.cur)) {
