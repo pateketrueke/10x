@@ -283,18 +283,20 @@ export function fixBinding(obj, name, alias, context) {
         } else {
           const ast = context.external(fs.readFileSync(srcFile).toString(), srcFile).tree;
 
-          // FIXME: helpers and cleanup?
-          // extract definitions from AST without evaluation
           for (let i = 0; i < ast.length; i += 1) {
-            if (!isArray(ast[i][0]) && ast[i][0].token[0] === 'def' && ast[i][0].token[1] === name) {
-              if (ast[i].some(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'equal')) {
+            const subTree = ast[i];
+
+            for (let j = 0; j < subTree.length; j += 1) {
+              const node = subTree[j];
+
+              if (!isArray(node) && node.token[0] === 'def' && node.token[1] === name && node._body) {
                 // rename matching definition if it's aliased!
-                const fixedAST = fixValues(ast[i], x => x.map(y => {
+                fixValues(node.token[2].body, x => x.map(y => {
                   if (!isArray(y) && y.token[0] === 'def' && y.token[1] === name && alias) y.token[1] = alias;
                   return y;
                 }));
 
-                return fixTree(fixedAST)[0].token[2];
+                return node.token[2];
               }
             }
           }
