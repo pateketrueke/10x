@@ -71,34 +71,34 @@ export function reduceFromArgs(keys, values) {
   }, {});
 }
 
-export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
+export function reduceFromUnits(cb, ctx, self, convert) {
   // handle unit expressions
   if (ctx.cur.token[0] === 'unit') {
-    if (!hasOwnKeyword(expressions, ctx.cur.token[1])) {
+    if (!hasOwnKeyword(ctx.env, ctx.cur.token[1])) {
       throw new Error(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``);
     }
 
     // resolve definition body
-    ctx.cur = cb(expressions[ctx.cur.token[1]].body, ctx);
+    ctx.cur = cb(ctx.env[ctx.cur.token[1]].body, ctx);
     return;
   }
 
   // handle N-unit, return a new expression from 3x to [3, *, x]
   if (
     ctx.cur.token[0] === 'number'
-    && !hasOwnKeyword(supportedUnits, ctx.cur.token[2])
+    && !hasOwnKeyword(self.units, ctx.cur.token[2])
     && ctx.cur.token[2] && !['x-fraction', 'datetime'].includes(ctx.cur.token[2])
   ) {
-    if (!hasOwnKeyword(expressions, ctx.cur.token[2])) {
+    if (!hasOwnKeyword(ctx.env, ctx.cur.token[2])) {
       throw new Error(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``);
     }
 
-    if (expressions[ctx.cur.token[2]].args && expressions[ctx.cur.token[2]].args.length) {
+    if (ctx.env[ctx.cur.token[2]].args && ctx.env[ctx.cur.token[2]].args.length) {
       throw new Error(`Invalid usage of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``);
     }
 
     const base = parseFloat(ctx.cur.token[1]);
-    const subTree = fixArgs(cb(expressions[ctx.cur.token[2]].body, ctx)).reduce((p, c) => p.concat(c), []);
+    const subTree = fixArgs(cb(ctx.env[ctx.cur.token[2]].body, ctx)).reduce((p, c) => p.concat(c), []);
 
     ctx.cur = subTree.map(x => toToken(calculateFromTokens(cb([
       toToken(['number', base]),
@@ -153,7 +153,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   if (hasTimeUnit(ctx.cur.token[2])) ctx.isDate = true;
 }
 
-export function reduceFromImports(set, expressions) {
+export function reduceFromImports(set, env) {
   if (!set[':from']) {
     throw new Error(`
       Missing :from definition,
@@ -210,13 +210,13 @@ export function reduceFromImports(set, expressions) {
   importInfo.forEach(def => {
     if (!Array.isArray(def)) {
       Object.keys(def).forEach(k => {
-        expressions[def[k][0]] = {
+        env[def[k][0]] = {
           body: [toToken(fixBinding(fromInfo[0], k))],
         };
       });
     } else {
       def.forEach(k => {
-        expressions[k] = {
+        env[k] = {
           body: [toToken(fixBinding(fromInfo[0], k))],
         };
       });
@@ -224,7 +224,7 @@ export function reduceFromImports(set, expressions) {
   });
 }
 
-export function reduceFromLogic(cb, ctx, expressions) {
+export function reduceFromLogic(cb, ctx) {
   // collect all tokens after symbols
   if (ctx.cur.token[0] === 'symbol') {
     const subTree = toCut(ctx.i, ctx.tokens, ctx.endOffset);
@@ -236,7 +236,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
       // handle foreign-imports
       if (set[':import']) {
-        reduceFromImports(set, expressions);
+        reduceFromImports(set, ctx.env);
         return false;
       }
 
@@ -272,7 +272,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
   }
 }
 
-export function reduceFromFX(cb, ctx, expressions) {
+export function reduceFromFX(cb, ctx) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
     const [lft, rgt, ...others] = cb(toCut(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => toInput(x.token));
@@ -282,23 +282,23 @@ export function reduceFromFX(cb, ctx, expressions) {
   }
 }
 
-export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInternals) {
+export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
   // handle var/call definitions
   if (ctx.cur.token[0] === 'def') {
     // define var/call
     if (ctx.cur._body) {
-      if (hasOwnKeyword(supportedUnits, ctx.cur.token[1])) {
+      if (hasOwnKeyword(self.units, ctx.cur.token[1])) {
         throw new Error(`Cannot override built-in unit \`${ctx.cur.token[1]}\``);
       }
 
-      expressions[ctx.cur.token[1]] = ctx.cur.token[2];
+      ctx.env[ctx.cur.token[1]] = ctx.cur.token[2];
       return;
     }
 
     // side-effects will operate on previous values
     const name = ctx.cur.token[1];
     const call = ctx.cur.token[2];
-    const def = expressions[name];
+    const def = ctx.env[name];
 
     // warn on undefined calls
     if (!(def && call)) {
@@ -353,18 +353,24 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInt
 }
 
 // FIXME: split into phases, let maths to be reusable... also, reuse helpers, lots of them!
-export function reduceFromAST(tokens, convert, expressions, parentContext, supportedUnits, memoizedInternals = {}) {
+export function reduceFromAST(tokens, context, settings, parentContext, memoizedInternals = {}) {
   const ctx = {
     tokens,
     ast: [],
+    env: context.expressions,
     isDate: null,
     lastUnit: null,
     lastOp: ['expr', '+', 'plus'],
   };
 
   // resolve from nested AST expressions
-  const cb = (t, context, subExpressions) =>
-    reduceFromAST(t, convert, Object.assign({}, expressions, subExpressions), context, supportedUnits, memoizedInternals);
+  const cb = (t, subContext, subExpressions) => {
+    // merge into current context
+    Object.assign(ctx.env, subExpressions);
+
+    // create a new context...
+    return reduceFromAST(t, context, settings, subContext, memoizedInternals);
+  };
 
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
@@ -408,10 +414,10 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
       }
 
       try {
-        reduceFromLogic(cb, ctx, expressions);
-        reduceFromFX(cb, ctx, expressions);
-        reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInternals);
-        reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
+        reduceFromLogic(cb, ctx);
+        reduceFromFX(cb, ctx);
+        reduceFromDefs(cb, ctx, context, memoizedInternals);
+        reduceFromUnits(cb, ctx, context, settings.convertFrom);
       } catch (e) {
         throw new LangErr(e.message, ctx);
       }
