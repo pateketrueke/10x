@@ -1,186 +1,10 @@
 import {
   isArray,
-  hasSep, hasTagName, hasPercent,
+  hasOp, hasChar, hasSep, hasTagName, hasPercent,
 } from './shared';
-
-import {
-  fixTree,
-} from './tree';
 
 import LangErr from './error';
 import LangExpr from './expr';
-
-export function highestCommonFactor(a, b) {
-  return b !== 0 ? highestCommonFactor(b, a % b) : a;
-}
-
-export function toProperty(value) {
-  return value.substr(1).replace(/-([a-z])/g, (_, prop) => prop.toUpperCase());
-}
-
-export function toFraction(number) {
-  const decimals = number.toString().match(/\.0+\d/);
-  const length = Math.max(decimals ? decimals[0].length : 3, 3);
-
-  // adjust correction from zero-left padded decimals
-  const div = parseInt(`1${Array.from({ length }).join('0')}`);
-  const base = Math.floor(parseFloat(number) * div) / div;
-
-  const [left, right] = base.toString().split('.');
-
-  if (!right) {
-    return `${left}/1`;
-  }
-
-  let numerator = left + right;
-  let denominator = Math.pow(10, right.length);
-
-  const factor = highestCommonFactor(numerator, denominator);
-
-  denominator /= factor;
-  numerator /= factor;
-
-  return `${numerator}/${denominator}`;
-}
-
-export function toNumber(value) {
-  if (typeof value === 'string') {
-    if (value.includes('/')) {
-      const [a, b] = value.split(/[\s/]/);
-
-      return a / b;
-    }
-
-    return value.replace(/[^%:a-z\s\d.-]/ig, '');
-  }
-
-  return value;
-}
-
-export function toValue(value) {
-  if (value instanceof Date) {
-    return value.toString().split(' ').slice(0, 5).join(' ');
-  }
-
-  if (typeof value === 'number') {
-    if (value >= Number.MAX_SAFE_INTEGER) {
-      return value.toString().replace(/e[+-]/i, '^');
-    }
-
-    const sub = value.toString().match(/^.*?\.0+\d{1,3}/);
-
-    if (!sub) {
-      value = value.toFixed(2).replace(/\.0+$/, '');
-    } else value = sub[0];
-
-    return value.replace(/(?<=\.\d+)0+$/, '');
-  }
-
-  // simplify decimals
-  if (typeof value === 'string' && value.includes('.')) {
-    const [base, decimals] = value.replace('%', '').split('.');
-    const input = decimals.split('');
-    const out = [];
-
-    for (let i = 0; i < input.length; i += 1) {
-      const old = out[out.length - 1];
-
-      if (old > 0) {
-        if (input[i] > 0) out.push(input[i]);
-        break;
-      }
-
-      out.push(input[i]);
-    }
-
-    value = `${base}.${out.join('')}${hasPercent(value) ? '%' : ''}`;
-  }
-
-  return value;
-}
-
-export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
-  if (isArray(token)) {
-    return new LangExpr({ token });
-  }
-
-  if (!(token instanceof LangExpr) && typeof fromCallback === 'function') {
-    const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
-
-    if (!retval) {
-      throw new LangErr(`Unexpected token \`${token.content}\``, token);
-    }
-
-    return new LangExpr(token, retval);
-  }
-
-  return new LangExpr(token);
-}
-
-export function toInput(token, cb) {
-  let fixedValue = token[1];
-
-  if (token[0] === 'object') {
-    if (isArray(token[1])) {
-      return token[1].map(x => toInput(x, cb));
-    }
-
-    Object.keys(token[1]).forEach(k => {
-      const fixedTokens = token[1][k].map(x => isArray(x) ? fixArgs(x) : x);
-
-      let fixedValue = cb && !isArray(fixedTokens[0])
-        ? cb(fixedTokens)
-        : fixedTokens;
-
-      if (isArray(fixedValue[0])) {
-        fixedValue = ['object', fixedValue.reduce((prev, cur) => prev.concat(cur), []).map(x => cb ? cb(x) : x)];
-      } else if (fixedValue[0] === 'object') {
-        fixedValue = fixedValue[1];
-      }
-
-      delete token[1][k];
-
-      token[1][toProperty(k)] = fixedValue;
-    });
-  }
-
-  if (token[0] === 'string') fixedValue = JSON.parse(fixedValue);
-  if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
-
-  return fixedValue;
-}
-
-export function toPlain(values, cb) {
-  if (!cb) {
-    cb = x => x.map(y => !isArray(y) ? toInput(y.token) : y);
-  }
-
-  if (isArray(values)) {
-    return cb(values.map(x => toPlain(x, cb)));
-  }
-
-  Object.keys(values).forEach(key => {
-    let fixedValue = values[key];
-
-    if (fixedValue[0] === 'object') {
-      Object.keys(fixedValue[1]).forEach(key => {
-        fixedValue[1][key] = cb(fixedValue[1][key]);
-      });
-    }
-
-    values[key] = fixedValue;
-  });
-
-  return values;
-}
-
-export function toList(tokens) {
-  return tokens.map(x => isArray(x) ? toList(x) : x.token);
-}
-
-export function toCut(from, tokens, endOffset) {
-  return endOffset >= 0 ? tokens.splice(from, endOffset) : tokens.splice(from);
-}
 
 export function fixResult(value) {
   return [typeof value, typeof value === 'string' ? `"${value}"` : value];
@@ -394,4 +218,310 @@ export function fixCut(ast, slice, offset) {
   const subTree = pos >= 0 ? ast.splice(offset, pos) : ast.splice(offset);
 
   return subTree;
+}
+
+// FIXME: clean up this shit...
+export function fixChunk(tokens, i) {
+  const offset  = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
+  const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
+
+  return subTree;
+}
+
+export function fixTree(ast) {
+  let tokens = ast.filter(x => isArray(x) || !hasTagName(x.token[0]));
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    let cur = isArray(tokens[i])
+      ? fixTree(tokens[i])
+      : tokens[i];
+
+    const prev = tokens[i - 1] || { token: [] };
+    const next = tokens[i + 1] || { token: [] };
+
+    if (isArray(cur) && cur.length > 1 && !isArray(cur[0])) {
+      // handle tuples
+      if (cur[0].token[0] === 'symbol' && ['number', 'string', 'unit'].includes(cur[1].token[0])) {
+        tokens.splice(i, 1, toToken(['object', fixTokens(cur)]));
+        continue;
+      }
+    }
+
+    if (!isArray(prev)) {
+      if (prev.token[0] === 'def' && !prev.token[2]) {
+        let subTree = [];
+
+        // FIXME: dedupe...
+        if (isArray(cur)) {
+          prev._args = true;
+          tokens.splice(i, 1);
+        } else if (cur.token[0] === 'expr' && cur.token[2] === 'equal') {
+          subTree = fixChunk(tokens, i);
+          prev._body = true;
+        }
+
+        if (!isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal' && !prev._body) {
+          subTree = fixChunk(tokens, i);
+          prev._body = true;
+        }
+
+        // discard token separator
+        if (prev._body && !prev._args) {
+          tokens.splice(i, 1);
+        }
+
+        // update token definition
+        prev.token[2] = {
+          args: prev._args ? fixArgs(cur, true) : null,
+          body: prev._body ? fixTree(subTree.slice(1)) : null,
+        };
+        continue;
+      }
+    }
+
+    // FIXME: compose lambda-calls with multiple arguments...
+    if (
+      !isArray(cur)
+      && !isArray(next)
+      && cur.token[0] === 'unit'
+      && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))
+    ) {
+      const offset = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'fx' && x.token[2] === 'func');
+
+      if (offset > 0) {
+        const cut = tokens.slice(offset).findIndex(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]));
+        const endPos = cut >= 0 ? cut : tokens.length - offset;
+
+        tokens.splice(i, 0, toToken(['fn', '$', {
+          args: fixArgs(tokens.splice(i, offset), true),
+          body: fixTree(tokens.splice(i, endPos).slice(1)),
+        }]));
+        break;
+      }
+    }
+
+    tokens[i] = cur;
+  }
+
+  return tokens;
+}
+
+export function buildTree(tokens) {
+  let root = [];
+
+  const tree = root;
+  const stack = [];
+  const offsets = [];
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const next = tokens[i + 1] || { token: [] };
+    const t = tokens[i];
+
+    // reassign definition tokens
+    if (t.token[0] === 'unit' && '(='.includes(next.token[1])) {
+      t.token[0] = 'def';
+    }
+
+    // handle nesting
+    if (['open', 'close'].includes(t.token[0])) {
+      if (t.token[0] === 'open') {
+        const leaf = [];
+
+        root.push(leaf);
+        stack.push(root);
+        offsets.push(t);
+        root = leaf;
+      } else {
+        root = stack.pop();
+        offsets.pop(t);
+      }
+    } else {
+      if (!root) {
+        throw new LangErr('Unexpected end, missing `(`', tokens[i - 1]);
+      }
+
+      root.push(t);
+    }
+  }
+
+  if (stack.length) {
+    const fixedOffset = offsets.pop();
+    const fixedToken = fixedOffset.token[1];
+
+    throw new LangErr(`Missing terminator for \`${fixedToken}\``, fixedOffset);
+  }
+
+  return tree;
+}
+
+export function highestCommonFactor(a, b) {
+  return b !== 0 ? highestCommonFactor(b, a % b) : a;
+}
+
+export function toProperty(value) {
+  return value.substr(1).replace(/-([a-z])/g, (_, prop) => prop.toUpperCase());
+}
+
+export function toFraction(number) {
+  const decimals = number.toString().match(/\.0+\d/);
+  const length = Math.max(decimals ? decimals[0].length : 3, 3);
+
+  // adjust correction from zero-left padded decimals
+  const div = parseInt(`1${Array.from({ length }).join('0')}`);
+  const base = Math.floor(parseFloat(number) * div) / div;
+
+  const [left, right] = base.toString().split('.');
+
+  if (!right) {
+    return `${left}/1`;
+  }
+
+  let numerator = left + right;
+  let denominator = Math.pow(10, right.length);
+
+  const factor = highestCommonFactor(numerator, denominator);
+
+  denominator /= factor;
+  numerator /= factor;
+
+  return `${numerator}/${denominator}`;
+}
+
+export function toNumber(value) {
+  if (typeof value === 'string') {
+    if (value.includes('/')) {
+      const [a, b] = value.split(/[\s/]/);
+
+      return a / b;
+    }
+
+    return value.replace(/[^%:a-z\s\d.-]/ig, '');
+  }
+
+  return value;
+}
+
+export function toValue(value) {
+  if (value instanceof Date) {
+    return value.toString().split(' ').slice(0, 5).join(' ');
+  }
+
+  if (typeof value === 'number') {
+    if (value >= Number.MAX_SAFE_INTEGER) {
+      return value.toString().replace(/e[+-]/i, '^');
+    }
+
+    const sub = value.toString().match(/^.*?\.0+\d{1,3}/);
+
+    if (!sub) {
+      value = value.toFixed(2).replace(/\.0+$/, '');
+    } else value = sub[0];
+
+    return value.replace(/(?<=\.\d+)0+$/, '');
+  }
+
+  // simplify decimals
+  if (typeof value === 'string' && value.includes('.')) {
+    const [base, decimals] = value.replace('%', '').split('.');
+    const input = decimals.split('');
+    const out = [];
+
+    for (let i = 0; i < input.length; i += 1) {
+      const old = out[out.length - 1];
+
+      if (old > 0) {
+        if (input[i] > 0) out.push(input[i]);
+        break;
+      }
+
+      out.push(input[i]);
+    }
+
+    value = `${base}.${out.join('')}${hasPercent(value) ? '%' : ''}`;
+  }
+
+  return value;
+}
+
+export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
+  if (isArray(token)) {
+    return new LangExpr({ token });
+  }
+
+  if (!(token instanceof LangExpr) && typeof fromCallback === 'function') {
+    const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
+
+    if (!retval) {
+      throw new LangErr(`Unexpected token \`${token.content}\``, token);
+    }
+
+    return new LangExpr(token, retval);
+  }
+
+  return new LangExpr(token);
+}
+
+export function toInput(token, cb) {
+  let fixedValue = token[1];
+
+  if (token[0] === 'object') {
+    if (isArray(token[1])) {
+      return token[1].map(x => toInput(x, cb));
+    }
+
+    Object.keys(token[1]).forEach(k => {
+      const fixedTokens = token[1][k].map(x => isArray(x) ? fixArgs(x) : x);
+
+      let fixedValue = cb && !isArray(fixedTokens[0])
+        ? cb(fixedTokens)
+        : fixedTokens;
+
+      if (isArray(fixedValue[0])) {
+        fixedValue = ['object', fixedValue.reduce((prev, cur) => prev.concat(cur), []).map(x => cb ? cb(x) : x)];
+      } else if (fixedValue[0] === 'object') {
+        fixedValue = fixedValue[1];
+      }
+
+      delete token[1][k];
+
+      token[1][toProperty(k)] = fixedValue;
+    });
+  }
+
+  if (token[0] === 'string') fixedValue = JSON.parse(fixedValue);
+  if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
+
+  return fixedValue;
+}
+
+export function toPlain(values, cb) {
+  if (!cb) {
+    cb = x => x.map(y => !isArray(y) ? toInput(y.token) : y);
+  }
+
+  if (isArray(values)) {
+    return cb(values.map(x => toPlain(x, cb)));
+  }
+
+  Object.keys(values).forEach(key => {
+    let fixedValue = values[key];
+
+    if (fixedValue[0] === 'object') {
+      Object.keys(fixedValue[1]).forEach(key => {
+        fixedValue[1][key] = cb(fixedValue[1][key]);
+      });
+    }
+
+    values[key] = fixedValue;
+  });
+
+  return values;
+}
+
+export function toList(tokens) {
+  return tokens.map(x => isArray(x) ? toList(x) : x.token);
+}
+
+export function toCut(from, tokens, endOffset) {
+  return endOffset >= 0 ? tokens.splice(from, endOffset) : tokens.splice(from);
 }

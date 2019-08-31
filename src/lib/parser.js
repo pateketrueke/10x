@@ -5,11 +5,8 @@ import {
 } from './shared';
 
 import {
-  buildTree,
-} from './tree';
-
-import {
   toToken,
+  buildTree,
   fixArgs, fixStrings,
 } from './ast';
 
@@ -139,6 +136,7 @@ export function tokenize(input, units) {
   let lastToken;
 
   return input.reduce((prev, cur, i) => {
+    // FIXME: helper
     let key = i;
     let nextToken;
 
@@ -156,11 +154,12 @@ export function tokenize(input, units) {
 }
 
 export function normalize(subTree) {
-  const nonOps = subTree.filter(x => !hasSep(x.cur) && !' \n'.includes(x.cur));
+  // FIXME: helper
+  const nonOps = subTree.filter(x => !(hasSep(x.cur) || ' \n'.includes(x.cur)));
 
   if (nonOps.length) {
+    // FIXME: helper
     const avg = nonOps.reduce((prev, cur) => prev + cur.score, 0) / nonOps.length;
-
 
     if (avg < 2) {
       delete subTree._fixed;
@@ -181,6 +180,7 @@ export function transform(tokens, units) {
     const subTree = chunks[inc] || (chunks[inc] = []);
     const token = tokens[i];
 
+    // FIXME: helper
     let key = i;
     let nextToken;
 

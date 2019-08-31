@@ -1,11 +1,13 @@
 import { getTokensFrom } from './lexer';
 import { transform } from './parser';
-import { fixTree } from './tree';
-import { toList } from './ast';
 
 import {
   isInt, isArray,
 } from './shared';
+
+import {
+  toList, fixTree,
+} from './ast';
 
 import {
   fixArgs,
@@ -18,7 +20,7 @@ import { reduceFromAST } from './reducer';
 import { calculateFromTokens } from './solver';
 
 import {
-  unitFrom, convertFrom,
+  convertFrom,
   DEFAULT_MAPPINGS, DEFAULT_EXPRESSIONS, DEFAULT_INFLECTIONS,
 } from './convert';
 
@@ -53,6 +55,7 @@ export default class Solv {
   }
 
   external(source, filepath) {
+    // FIXME: clone or inherit units/expressions?
     if (!this.includes[filepath] || this.includes[filepath].source !== source) {
       this.includes[filepath] = new Solv().resolve(source, filepath);
     }
@@ -160,11 +163,11 @@ export default class Solv {
     };
   }
 
-  eval(tokens, source, options) {
-    const cb = ast => reduceFromAST(ast, this, { ...options, convertFrom }, null, this.expressions);
+  eval(tokens, source) {
+    const cb = ast => reduceFromAST(ast, this, { convertFrom }, null, this.expressions);
     const output = [];
 
-    const subTree = (tokens || this.tree).reduce((prev, cur) => {
+    const fixedTree = (tokens || this.tree).reduce((prev, cur) => {
       const subTree = fixTree(cur);
 
       if (subTree.length) {
@@ -176,7 +179,7 @@ export default class Solv {
 
     try {
       this.error = null;
-      subTree.forEach(ast => {
+      fixedTree.forEach(ast => {
         output.push(...fixArgs(cb(ast)));
       });
     } catch (e) {

@@ -9,8 +9,8 @@ import {
 } from './solver';
 
 import {
+  toCut, toList, toPlain, toInput, toToken, toNumber,
   fixArgs, fixValues, fixTokens, fixResult, fixBinding,
-  toCut, toList, toPlain, toInput, toToken, toValue, toNumber,
 } from './ast';
 
 import LangErr from './error';
@@ -208,6 +208,7 @@ export function reduceFromImports(set, env, self) {
   const importInfo = toPlain(set[':import']);
   const fromInfo = toPlain(set[':from']);
 
+  // extend current context with resolved bindings
   importInfo.forEach(def => {
     if (!isArray(def)) {
       Object.keys(def).forEach(k => {

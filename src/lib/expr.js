@@ -17,5 +17,10 @@ export default class LangExpr {
 
     // not needed anymore
     delete this.content;
+
+    // shortcuts
+    Object.defineProperty(this, 'is', { get: () => this.token[0] });
+    Object.defineProperty(this, 'expr', { get: () => this.token[1] });
+    Object.defineProperty(this, 'value', { get: () => this.token[2] });
   }
 }

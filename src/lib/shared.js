@@ -80,3 +80,15 @@ export const hasDatetime = x => {
   if (x && RE_HOURS.test(x)) return 'HOURS';
   if (x && RE_MONTHS.test(x)) return 'MONTHS';
 };
+
+export const pad = (nth, length) => `     ${nth}`.substr(-length);
+
+export const repeat = (char, length) => Array.from({ length }).join(char);
+
+export const deindent = (text, length) => {
+  const tabs = ((text.match(/^\s+/m) || [])[0] || '').substr(1);
+
+  return text.split('\n').map(x => x.substr(tabs.length)).join('\n').trim();
+};
+
+// FIXME: add helpers!

@@ -1,16 +1,8 @@
-function deindent(text, length) {
-  const tabs = ((text.match(/^\s+/m) || [])[0] || '').substr(1);
-
-  return text.split('\n').map(x => x.substr(tabs.length)).join('\n').trim();
-}
-
-function repeat(char, length) {
-  return Array.from({ length }).join(char);
-}
-
-function pad(nth, length) {
-  return `     ${nth}`.substr(-length);
-}
+import {
+  deindent,
+  repeat,
+  pad,
+} from './shared';
 
 export default class LangErr extends Error {
   constructor(msg, ctx) {
