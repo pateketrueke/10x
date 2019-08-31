@@ -197,7 +197,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
         set[':import'].forEach(sub => {
           if (Array.isArray(sub)) {
-            if (!sub.every(x => x[0] === 'unit')) {
+            if (!sub.every(x => x.token[0] === 'unit')) {
               throw new ParseError(`
                 Methods to :import should be units,
                   e.g. \`:import (a ...) :from "...";\`

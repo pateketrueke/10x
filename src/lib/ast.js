@@ -130,10 +130,6 @@ export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
     return new Expression(token, retval);
   }
 
-  if (!token) {
-    throw new ParseError('WAT', arg1);
-  }
-
   return new Expression(token);
 }
 
