@@ -213,8 +213,8 @@ export function reduceFromImports(set, env, self) {
         env[def[k][0]] = fixBinding(fromInfo[0], k, def[k][0], self);
       });
     } else {
-      def.forEach(k => {
-        env[k[0]] = fixBinding(fromInfo[0], k[0], null, self);
+      def.reduce((prev, cur) => prev.concat(cur), []).forEach(y => {
+        env[y] = fixBinding(fromInfo[0], y, null, self);
       });
     }
   });
