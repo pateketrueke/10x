@@ -159,7 +159,7 @@ if (!returnAsJSON) {
   function flush() {
     values.forEach(x => {
       if (x instanceof Error) {
-        push(null, `${indent}${chalk.red(`//! ${x[showDebugInfo ? 'stack' : 'message']}`)}\n`);
+        push(null, `${indent}${chalk.red(x[showDebugInfo ? 'stack' : 'message'])}\n`);
       } else {
         push(null, `${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
       }
@@ -169,7 +169,6 @@ if (!returnAsJSON) {
   calc.tree.forEach(subTree => {
     const results = calc.eval([subTree]);
 
-    // FIXME: recursively render...
     if (calc.error) {
       values.push(calc.error);
     }
@@ -178,12 +177,11 @@ if (!returnAsJSON) {
       values.push(results);
     }
 
-    // FIXME: skip errored line?
     subTree.forEach(node => {
       if (Array.isArray(node)) {
         render(node);
       } else {
-        if (calc.error && calc.error.ctx && calc.error.ctx.cur === node) {
+        if (calc.error && calc.error.target === node) {
           push(null, chalk.bgRed(node.token[1]));
         } else {
           push(node.token[0], node.token[1]);

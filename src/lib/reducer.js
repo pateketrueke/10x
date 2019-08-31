@@ -1,5 +1,5 @@
 import {
-  hasSep, hasTimeUnit, hasExpr,
+  hasSep, hasTimeUnit, hasExpr, hasChar,
   hasNum, hasMonths, hasTagName, hasOwnKeyword,
 } from './shared';
 
@@ -180,11 +180,55 @@ export function reduceFromLogic(cb, ctx, expressions) {
       const set = fixTokens([symbol].concat(x));
 
       // handle foreign-imports
-      if (set[':import'] && set[':from']) {
-        // FIXME: improve this shit... try to highlight invalid token?
-        if (set[':from'].length > 1) {
-          throw new ParseError(`Expecting one source, given \`${toPlain(set[':from']).join(', ')}\``, ctx);
+      if (set[':import']) {
+        if (!set[':from']) {
+          throw new ParseError(`
+            Missing :from definition,
+              e.g. \`:import (...) :from "...";\`
+          `, ctx);
         }
+
+        if (set[':from'].length > 1) {
+          throw new ParseError(`
+            Expecting only one :from source,
+              e.g. \`:import (...) :from "...";\`
+          `, ctx);
+        }
+
+        set[':import'].forEach(sub => {
+          if (Array.isArray(sub)) {
+            if (!sub.every(x => x[0] === 'unit')) {
+              throw new ParseError(`
+                Methods to :import should be units,
+                  e.g. \`:import (a b c) :from "...";\`
+              `, ctx);
+            }
+          } else if (sub.token[0] === 'object') {
+            const fixedKeys = Object.keys(sub.token[1]);
+
+            if (!fixedKeys.every(x => hasChar(x.substr(1)))) {
+              throw new ParseError(`
+                1
+              `, ctx);
+            }
+
+            fixedKeys.forEach(key => {
+              if (sub.token[1][key].length > 1) {
+                throw new ParseError(`
+                  2
+                `, ctx);
+              }
+
+              if (sub.token[1][key][0].token[0] !== 'unit') {
+                throw new ParseError(`
+                  3
+                `, ctx);
+              }
+            });
+          } else {
+            console.log({sub});
+          }
+        });
 
         const importInfo = toPlain(set[':import']);
         const fromInfo = toPlain(set[':from']);
@@ -197,9 +241,11 @@ export function reduceFromLogic(cb, ctx, expressions) {
               };
             });
           } else {
-            expressions[def[0]] = {
-              body: [toToken(['bind', [fromInfo[0], def[0]]])],
-            };
+            def.forEach(k => {
+              expressions[k] = {
+                body: [toToken(['bind', [fromInfo[0], k]])],
+              };
+            });
           }
         });
         return false;
