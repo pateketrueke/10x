@@ -210,11 +210,11 @@ export function reduceFromImports(set, env, self) {
   importInfo.forEach(def => {
     if (!Array.isArray(def)) {
       Object.keys(def).forEach(k => {
-        env[def[k][0]] = fixBinding(fromInfo[0], k, self);
+        env[def[k][0]] = fixBinding(fromInfo[0], k, def[k][0], self);
       });
     } else {
       def.forEach(k => {
-        env[k] = fixBinding(fromInfo[0], k, self);
+        env[k[0]] = fixBinding(fromInfo[0], k[0], null, self);
       });
     }
   });

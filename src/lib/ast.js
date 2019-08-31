@@ -181,7 +181,7 @@ export function fixResult(value) {
   return [typeof value, typeof value === 'string' ? `"${value}"` : value];
 }
 
-export function fixBinding(obj, name, context) {
+export function fixBinding(obj, name, alias, context) {
   let target;
 
   // FIXME: load from well-knwon symbols, and for external sources?
@@ -215,9 +215,15 @@ export function fixBinding(obj, name, context) {
 
           // extract definitions from AST without evaluation
           for (let i = 0; i < ast.length; i += 1) {
-            if (!Array.isArray(ast[i][0]) && ast[i][0].token[0] === 'def') {
+            if (!Array.isArray(ast[i][0]) && ast[i][0].token[0] === 'def' && ast[i][0].token[1] === name) {
               if (ast[i].some(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'equal')) {
-                return fixTree(ast[i])[0].token[2];
+                // rename matching definition if it's aliased!
+                const fixedAST = fixValues(ast[i], x => x.map(y => {
+                  if (!Array.isArray(y) && y.token[0] === 'def' && y.token[1] === name && alias) y.token[1] = alias;
+                  return y;
+                }));
+
+                return fixTree(fixedAST)[0].token[2];
               }
             }
           }
