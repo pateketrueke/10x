@@ -10,11 +10,12 @@ const chalk = require('chalk');
 const Solv = require('./dist/lib.js');
 
 const argv = require('wargs')(process.argv.slice(2), {
-  boolean: 'rjdC',
+  boolean: 'rjdVC',
   alias: {
     r: 'raw',
     j: 'json',
     d: 'debug',
+    V: 'verbose',
     C: 'no-colors',
     s: 'shared',
     p: 'playback',
@@ -24,6 +25,7 @@ const argv = require('wargs')(process.argv.slice(2), {
 const returnRawJSON = argv.flags.raw;
 const returnAsJSON = argv.flags.json;
 const showDebugInfo = argv.flags.debug;
+const showVerboseInfo = argv.flags.verbose;
 const hasNoColors = !argv.flags.colors;
 const playBack = argv.flags.playback;
 
@@ -54,7 +56,7 @@ code += args.join(' ');
 
 calc.resolve(code, file);
 
-if (showDebugInfo) {
+if (showVerboseInfo) {
   console.log(calc);
 }
 
