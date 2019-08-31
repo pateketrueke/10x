@@ -331,12 +331,6 @@ export function buildTree(tokens) {
     const next = tokens[i + 1] || { token: [] };
     const t = tokens[i];
 
-    // reassign definition tokens
-    // FIXME: more helpers
-    if (t.token[0] === 'unit' && '(='.includes(next.token[1])) {
-      t.token[0] = 'def';
-    }
-
     // handle nesting
     // FIXME: more helpers
     if (['open', 'close'].includes(t.token[0])) {

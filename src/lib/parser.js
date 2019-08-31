@@ -111,8 +111,8 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   }
 
   // handle definitions
-  if (hasChar(text) && rightToken === '=') {
-    return ['unit', text];
+  if (hasChar(text) && '(='.includes(rightToken)) {
+    return ['def', text];
   }
 
   const fixedUnit = hasKeyword(text, units, true);
