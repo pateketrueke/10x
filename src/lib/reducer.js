@@ -9,8 +9,8 @@ import {
 } from './solver';
 
 import {
-  toSlice, toList, toPlain, toInput, toToken, toNumber,
   fixArgs, fixValues, fixTokens, fixResult, fixBinding,
+  toSlice, toList, toPlain, toInput, toToken, toNumber, toArguments,
 } from './ast';
 
 import LangErr from './error';
@@ -52,16 +52,6 @@ export function reduceFromValue(token) {
   if (text.toLowerCase() === 'today') return new Date(`${today} 00:00:00`);
 
   return now;
-}
-
-export function reduceFromArgs(keys, values) {
-  const props = keys.filter(x => x.token[0] === 'unit');
-
-  // compute a map from given units and values
-  return props.reduce((prev, cur) => {
-    prev[cur.token[1]] = { body: [values.shift()] };
-    return prev;
-  }, {});
 }
 
 export function reduceFromUnits(cb, ctx, self, convert) {
@@ -309,7 +299,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       return;
     }
 
-    const locals = def.args ? reduceFromArgs(def.args, args) : {};
+    const locals = def.args ? toArguments(def.args, args) : {};
 
     ctx.cur = def.args
       ? cb(def.body.slice(), ctx, locals)
@@ -322,7 +312,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
       // apply lambda-calls as we have arguments
       while (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
-        Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, args));
+        Object.assign(locals, toArguments(ctx.cur[0].token[2].args, args));
         ctx.cur = cb(ctx.cur[0].token[2].body, ctx, locals);
       }
     }
@@ -332,10 +322,15 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
     // forward arguments to bindings
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = fixValues(args, x => x.map(y => toInput(y.token))[0]);
+      const inputArgs = fixValues(args, x => x.map(y => toInput(y.token, (z, data) => cb(z, ctx, data)))[0]);
       const inputValue = ctx.cur.token[1][2](...inputArgs);
 
-      ctx.cur = toToken(fixResult(inputValue));
+      if (Array.isArray(inputValue)) {
+        ctx.cur = toToken(['object', inputValue.map(x => toToken(calculateFromTokens(toList(x))))]);
+      } else {
+        ctx.cur = toToken(fixResult(inputValue));
+      }
+      return;
     }
 
     memoizedInternals[key] = ctx.cur;
@@ -405,6 +400,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         reduceFromDefs(cb, ctx, context, memoizedInternals);
         reduceFromUnits(cb, ctx, context, settings.convertFrom);
       } catch (e) {
+        // process.stderr.write(e.stack);
         throw new LangErr(e.message, ctx);
       }
     }

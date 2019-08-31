@@ -458,13 +458,29 @@ export function toProperty(value) {
   return value.substr(1).replace(/-([a-z])/g, (_, prop) => prop.toUpperCase());
 }
 
+export function toArguments(keys, values) {
+  const props = keys.filter(x => x.token[0] === 'unit');
+
+  // compute a map from given units and values
+  return props.reduce((prev, cur) => {
+    prev[cur.token[1]] = { body: [values.shift()] };
+    return prev;
+  }, {});
+}
+
 export function toInput(token, cb) {
+  // handle lambda-calls as side-effects
   if (token[0] === 'fn') {
-    return () => {
-      return -1;
+    const fixedArgs = {};
+
+    return (...context) => {
+      Object.assign(fixedArgs, toArguments(token[2].args, context.map(x => toToken(fixResult(x)))));
+
+      return cb(token[2].body.slice(), fixedArgs);
     };
   }
 
+  // intermediate state for objects
   if (token[0] === 'object') {
     if (isArray(token[1])) {
       return token[1].map(x => toInput(x, cb));
@@ -489,6 +505,7 @@ export function toInput(token, cb) {
     });
   }
 
+  // plain values
   let fixedValue = token[1];
 
   if (token[0] === 'string') fixedValue = JSON.parse(fixedValue);
