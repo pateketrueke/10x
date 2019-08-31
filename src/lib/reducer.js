@@ -330,7 +330,7 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInt
       throw new ParseError(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
     }
 
-    const fixedArgs = cb(call.args, ctx);
+    const fixedArgs = call.args.map(x => Array.isArray(x) ? cb(fixArgs(x), ctx) : x);
     const fixedKey = JSON.stringify({ name, fixedArgs });
 
     // this helps to compute faster!
@@ -367,10 +367,14 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInt
 
     // forward arguments to bindings
     if (ctx.cur.token[0] === 'bind') {
-      const args = fixedArgs.map(x => toInput(x.token));
+      const inputArgs = !Array.isArray(fixedArgs[0])
+        ? cb(fixedArgs, ctx)
+        : fixedArgs;
+
+      const args = inputArgs.map(x => Array.isArray(x) ? x.map(y => toInput(y.token)) : toInput(x.token));
       const value = reduceFromBinding(ctx.cur.token[1], args);
 
-      ctx.cur = toToken([typeof value, typeof value === 'string' ? `"${value}"` : value]);
+      ctx.cur = toToken(fixResult(value));
     }
 
     memoizedInternals[fixedKey] = ctx.cur;
@@ -408,10 +412,10 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
     if (Array.isArray(ctx.cur)) {
       const fixedValue = calculateFromTokens(cb(ctx.cur, ctx));
 
-      // // prepend multiplication if goes after units/numbers
-      // if (!ctx.isDef && !Array.isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
-      //   ctx.ast.push(toToken(['expr', '*', 'mul']));
-      // }
+      // prepend multiplication if goes after units/numbers
+      if (!ctx.isDef && !Array.isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
+        ctx.ast.push(toToken(['expr', '*', 'mul']));
+      }
 
       ctx.ast.push(toToken(fixedValue));
       continue;
@@ -419,12 +423,12 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
 
     if (!Array.isArray(ctx.left)) {
       // flag well-known definitions, as they are open...
-      // if (ctx.root.isDef || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
+      if (ctx.root.isDef || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
-      // // append last-operator between consecutive unit-expressions
-      // if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
-      //   ctx.ast.push(toToken(ctx.lastOp));
-      // }
+      // append last-operator between consecutive unit-expressions
+      if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+        ctx.ast.push(toToken(ctx.lastOp));
+      }
 
       // recompose objects into readable values
       if (ctx.cur.token[0] === 'object') {
