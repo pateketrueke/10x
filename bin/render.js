@@ -71,6 +71,18 @@ module.exports = ({
       }), Promise.resolve());
   }
 
+  function peek() {
+    const results = calc.eval([calc.tree.shift()]);
+
+    if (calc.error) {
+      values.push(calc.error);
+    }
+
+    if (results.length) {
+      values.push(results);
+    }
+  }
+
   function push(type, chunk) {
     buffer.push(() => new Promise(ok => {
       if (!type || !playBack) {
@@ -98,7 +110,7 @@ module.exports = ({
     values = [];
   }
 
-  for (let i = 0, k = 0; i < calc.tokens.length; i += 1) {
+  for (let i = 0; i < calc.tokens.length; i += 1) {
     const node = calc.tokens[i];
 
     if (node !== null) {
@@ -124,18 +136,10 @@ module.exports = ({
       }
     }
 
-    if (calc.tokens[i] === null && calc.tokens[i + 1] === null) {
-      const results = calc.eval([calc.tree[k++]]);
-
-      if (calc.error) {
-        values.push(calc.error);
-      }
-
-      if (results.length) {
-        values.push(results);
-      }
-    }
+    if (calc.tokens[i] === null && calc.tokens[i + 1] === null) peek();
   }
+
+  while (calc.tree.length) peek();
 
   if (values.length) {
     push(null, '\n');
