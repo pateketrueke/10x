@@ -2,6 +2,10 @@ import {
   hasSep, hasTagName, hasPercent,
 } from './shared';
 
+import {
+  fixTree,
+} from './tree';
+
 import LangErr from './error';
 import LangExpr from './expr';
 
@@ -190,8 +194,14 @@ export function fixBinding(obj, name, context) {
       // FIXME: for browser usage, decouple this...
       const fs = require('fs');
       const path = require('path');
-      const srcFile = path.resolve(path.dirname(context.filepath), obj);
 
+      const srcDir = context.filepath
+        ? path.dirname(context.filepath)
+        : process.cwd();
+
+      const srcFile = path.resolve(srcDir, obj);
+
+      // FIXME: cache this shit...
       if (fs.existsSync(srcFile)) {
         let def;
 
@@ -200,6 +210,17 @@ export function fixBinding(obj, name, context) {
           def = typeof def === 'function'
             ? { default: def }
             : def;
+        } else {
+          const ast = context.external(fs.readFileSync(srcFile).toString(), srcFile).tree;
+
+          // extract definitions from AST without evaluation
+          for (let i = 0; i < ast.length; i += 1) {
+            if (!Array.isArray(ast[i][0]) && ast[i][0].token[0] === 'def') {
+              if (ast[i].some(x => !Array.isArray(x) && x.token[0] === 'expr' && x.token[2] === 'equal')) {
+                return fixTree(ast[i])[0].token[2];
+              }
+            }
+          }
         }
 
         if (def) {
@@ -214,10 +235,14 @@ export function fixBinding(obj, name, context) {
 
   // FIXME: this would lead to disasters?
   if (typeof target !== 'function') {
-    return fixResult(target);
+    return {
+      body: [toToken(fixResult(target))],
+    };
   }
 
-  return ['bind', [obj, name, target]];
+  return {
+    body: [toToken(['bind', [obj, name, target]])],
+  };
 }
 
 export function fixTokens(ast) {

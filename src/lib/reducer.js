@@ -170,7 +170,7 @@ export function reduceFromImports(set, env, self) {
 
   set[':import'].forEach(sub => {
     if (Array.isArray(sub)) {
-      if (!sub.every(x => x.token[0] === 'unit')) {
+      if (!sub[0].every(x => x.token[0] === 'unit')) {
         throw new Error(`
           Methods to :import should be units,
             e.g. \`:import (a ...) :from "...";\`
@@ -210,15 +210,11 @@ export function reduceFromImports(set, env, self) {
   importInfo.forEach(def => {
     if (!Array.isArray(def)) {
       Object.keys(def).forEach(k => {
-        env[def[k][0]] = {
-          body: [toToken(fixBinding(fromInfo[0], k, self))],
-        };
+        env[def[k][0]] = fixBinding(fromInfo[0], k, self);
       });
     } else {
       def.forEach(k => {
-        env[k] = {
-          body: [toToken(fixBinding(fromInfo[0], k, self))],
-        };
+        env[k] = fixBinding(fromInfo[0], k, self);
       });
     }
   });

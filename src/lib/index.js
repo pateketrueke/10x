@@ -49,9 +49,18 @@ export default class Solv {
     });
 
     // public properties
+    this.includes = {};
     this.tokens = [];
     this.input = [];
     this.tree = [];
+  }
+
+  external(source, filepath) {
+    if (!this.includes[filepath] || this.includes[filepath].source !== source) {
+      this.includes[filepath] = new Solv().resolve(source, filepath);
+    }
+
+    return this.includes[filepath];
   }
 
   resolve(source, filepath) {
