@@ -190,7 +190,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
         if (set[':from'].length > 1) {
           throw new ParseError(`
-            Expecting only one :from source,
+            Expecting only one :from definition,
               e.g. \`:import (...) :from "...";\`
           `, ctx);
         }
@@ -200,33 +200,34 @@ export function reduceFromLogic(cb, ctx, expressions) {
             if (!sub.every(x => x[0] === 'unit')) {
               throw new ParseError(`
                 Methods to :import should be units,
-                  e.g. \`:import (a b c) :from "...";\`
+                  e.g. \`:import (a ...) :from "...";\`
               `, ctx);
             }
-          } else if (sub.token[0] === 'object') {
+          } else {
             const fixedKeys = Object.keys(sub.token[1]);
 
             if (!fixedKeys.every(x => hasChar(x.substr(1)))) {
               throw new ParseError(`
-                1
+                Aliased methods to :import should be units,
+                  e.g. \`:import (:a ...) :from "...";\`
               `, ctx);
             }
 
             fixedKeys.forEach(key => {
               if (sub.token[1][key].length > 1) {
                 throw new ParseError(`
-                  2
+                  Expecting only one alias per method to :import,
+                    e.g. \`:import (:method alias) :from "...";\`
                 `, ctx);
               }
 
               if (sub.token[1][key][0].token[0] !== 'unit') {
                 throw new ParseError(`
-                  3
+                  Aliased methods to :import should be units,
+                    e.g. \`:import (:method alias) :from "...";\`
                 `, ctx);
               }
             });
-          } else {
-            console.log({sub});
           }
         });
 
