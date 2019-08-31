@@ -266,10 +266,10 @@ export function reduceFromLogic(cb, ctx, expressions) {
           not = !not;
         }
 
-        const retval = calculateFromTokens(cb(test.slice(), ctx));
+        const retval = toInput(calculateFromTokens(cb(test.slice(), ctx)));
 
         // evaluate respective branches
-        if (not ? !retval[1] : retval[1]) {
+        if (not ? !retval : retval) {
           ctx.ast.push(...cb(ifBranch, ctx));
         } else if (orBranch) {
           ctx.ast.push(...cb(orBranch, ctx));
