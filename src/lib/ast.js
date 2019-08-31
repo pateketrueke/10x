@@ -183,6 +183,11 @@ export function fixBinding(obj, name) {
       target = global[obj].prototype[name];
       break;
     default:
+      // FIXME: for browser usage, decouple this...
+      // const fs = require('fs');
+      // const path = require('path');
+      // const srcFile = path.resolve();
+
       throw new Error(`Missing \`${name}\` binding from \`${obj}\``);
   }
 
