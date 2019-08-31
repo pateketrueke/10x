@@ -155,7 +155,7 @@ export default class Solv {
   }
 
   eval(tokens, source, options) {
-    const cb = ast => reduceFromAST(ast, this, { ...options, convertFrom });
+    const cb = ast => reduceFromAST(ast, this, { ...options, convertFrom }, null, this.expressions);
     const output = [];
 
     const subTree = (tokens || this.tree).reduce((prev, cur) => {

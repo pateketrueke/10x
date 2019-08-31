@@ -353,11 +353,11 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 }
 
 // FIXME: split into phases, let maths to be reusable... also, reuse helpers, lots of them!
-export function reduceFromAST(tokens, context, settings, parentContext, memoizedInternals = {}) {
+export function reduceFromAST(tokens, context, settings, parentContext, parentExpressions = {}, memoizedInternals = {}) {
   const ctx = {
     tokens,
     ast: [],
-    env: context.expressions,
+    env: parentExpressions,
     isDate: null,
     lastUnit: null,
     lastOp: ['expr', '+', 'plus'],
@@ -365,11 +365,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, memoized
 
   // resolve from nested AST expressions
   const cb = (t, subContext, subExpressions) => {
-    // merge into current context
-    Object.assign(ctx.env, subExpressions);
-
-    // create a new context...
-    return reduceFromAST(t, context, settings, subContext, memoizedInternals);
+    return reduceFromAST(t, context, settings, subContext, Object.assign({}, ctx.env, subExpressions), memoizedInternals);
   };
 
   // iterate all tokens to produce a new AST
