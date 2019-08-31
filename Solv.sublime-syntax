@@ -21,19 +21,19 @@ contexts:
         - meta_scope: punctuation.definition.comment
 
         # args before ops
-        - match: "([a-zA-Z_][-a-zA-Z_#'\\u00C0-\\u00FF]*\\s*(?=[<!=|>~]{2}|[-+*=/<>]))+"
+        - match: "([a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*\\s*(?=[<!=|>~]{2}|[-+*=/<>]))+"
           scope: keyword.other
 
         # args after ops
-        - match: "(?<=[<>]|[<!=|>~]{2})(\\s*[a-zA-Z_][-a-zA-Z_#'\\u00C0-\\u00FF]*?)+"
+        - match: "(?<=[<>]|[<!=|>~]{2})(\\s*[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*)+"
           scope: keyword.other
 
         # arguments
-        - match: "(?<=[(;,]|^)\\s*[a-zA-Z_][-a-zA-Z_#'\\u00C0-\\u00FF]*(?=[);,]|$)"
+        - match: "(?<=[(;,]|^)\\s*[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*(?=[);,]|$)"
           scope: keyword.other
 
         # ops and words
-        - match: "[<!=|>~]{2}|[-+*=/<>]|[a-zA-Z_][-a-zA-Z_#'\\u00C0-\\u00FF]*"
+        - match: "[<!=|>~]{2}|[-+*=/<>]|[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*"
           scope: variable.other
         - match: '\)'
           pop: true
@@ -69,15 +69,15 @@ contexts:
           pop: true
 
     # all normal words
-    - match: "(?<=[-+*/<=>]|^)\\s*[a-zA-Z_][-a-zA-Z_#'\\u00C0-\\u00FF]*\\s*(?=[-+*/<>;]|$)"
+    - match: "(?<=[-+*/<=>]|^)\\s*[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*\\s*(?=[-+*/<>;]|$)"
       scope: keyword.other
 
     # units and numbers
-    - match: "-?[\\w.]*\\d([-:_.]\\d)*\\w*%?|(?<=\\d)(\\s?[a-zA-Z_#']+([/-]\\w+)?)?"
+    - match: "-?[\\w.]*\\d([-:_.]\\d)*\\w*%?|(?<=\\d)(\\s?[a-zA-Z_][-/a-zA-Z_#']*)?"
       scope: constant
 
     # unit calls
-    - match: "(?<=\\b|^)\\s*(?!:)\\w+[-\\w#'\\u00C0-\\u00FF]*?(?=[(=])"
+    - match: "(?<=\\b|^)\\s*(?!:)\\w[-\\w#'\\u00C0-\\u00FF]*(?=[(=])"
       scope: entity.name.function
 
     # all symbols
