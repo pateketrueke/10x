@@ -8,31 +8,15 @@ import {
 } from './solver';
 
 import {
-  fixArgs, fixValues, fixTokens, fixResult,
+  fixArgs, fixValues, fixTokens, fixResult, fixBinding,
   toCut, toPlain, toInput, toToken, toValue, toNumber,
 } from './ast';
 
 import ParseError from './error';
 
-export function reduceFromBinding(def, args) {
-  let target = def[0];
-
-  // FIXME: load from well-knwon symbols, and for external sources?
-  // e.g. white-list or allow most methods as they are?
-  if (typeof def[0] === 'string') {
-    switch (def[0]) {
-      case 'String':
-        target = global[def[0]];
-        break;
-      default:
-        throw new Error(`Undefined binding for \`${def[0]}\``);
-    }
-  }
-
-  const fn = target.prototype[def[1]];
-
-  // FIXME: enable lambdas?
-  return fn.call(...args);
+export function reduceFromBinding(call, args) {
+  // FIXME: apply lambdas as arguments?
+  return call[2].call(...args);
 }
 
 export function reduceFromValue(token) {
@@ -227,13 +211,13 @@ export function reduceFromImports(set, expressions) {
     if (!Array.isArray(def)) {
       Object.keys(def).forEach(k => {
         expressions[def[k][0]] = {
-          body: [toToken(['bind', [fromInfo[0], k]])],
+          body: [toToken(fixBinding(fromInfo[0], k))],
         };
       });
     } else {
       def.forEach(k => {
         expressions[k] = {
-          body: [toToken(['bind', [fromInfo[0], k]])],
+          body: [toToken(fixBinding(fromInfo[0], k))],
         };
       });
     }

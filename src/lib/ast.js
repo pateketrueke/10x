@@ -173,6 +173,22 @@ export function toCut(from, tokens, endOffset) {
   return endOffset >= 0 ? tokens.splice(from, endOffset) : tokens.splice(from);
 }
 
+export function fixBinding(obj, name) {
+  let target;
+
+  // FIXME: load from well-knwon symbols, and for external sources?
+  // e.g. white-list or allow most methods as they are?
+  switch (obj) {
+    case 'String':
+      target = global[obj].prototype[name];
+      break;
+    default:
+      throw new Error(`Missing \`${name}\` binding from \`${obj}\``);
+  }
+
+  return ['bind', [obj, name, target]];
+}
+
 export function fixResult(value) {
   return [typeof value, typeof value === 'string' ? `"${value}"` : value];
 }
