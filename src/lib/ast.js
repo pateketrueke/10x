@@ -186,6 +186,10 @@ export function fixBinding(obj, name) {
       throw new Error(`Missing \`${name}\` binding from \`${obj}\``);
   }
 
+  if (typeof target !== 'function') {
+    throw new Error(`Expecting \`${name}\` binding to be a function, given \`${target}\``);
+  }
+
   return ['bind', [obj, name, target]];
 }
 

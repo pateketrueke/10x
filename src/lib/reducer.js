@@ -75,7 +75,7 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
   // handle unit expressions
   if (ctx.cur.token[0] === 'unit') {
     if (!hasOwnKeyword(expressions, ctx.cur.token[1])) {
-      throw new ParseError(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
+      throw new Error(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``);
     }
 
     // resolve definition body
@@ -90,11 +90,11 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
     && ctx.cur.token[2] && !['x-fraction', 'datetime'].includes(ctx.cur.token[2])
   ) {
     if (!hasOwnKeyword(expressions, ctx.cur.token[2])) {
-      throw new ParseError(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
+      throw new Error(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``);
     }
 
     if (expressions[ctx.cur.token[2]].args && expressions[ctx.cur.token[2]].args.length) {
-      throw new ParseError(`Invalid usage of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``, ctx);
+      throw new Error(`Invalid usage of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``);
     }
 
     const base = parseFloat(ctx.cur.token[1]);
@@ -155,14 +155,14 @@ export function reduceFromUnits(cb, ctx, convert, expressions, supportedUnits) {
 
 export function reduceFromImports(set, expressions) {
   if (!set[':from']) {
-    throw new ParseError(`
+    throw new Error(`
       Missing :from definition,
         e.g. \`:import (...) :from "...";\`
     `);
   }
 
   if (set[':from'].length > 1) {
-    throw new ParseError(`
+    throw new Error(`
       Expecting only one :from definition,
         e.g. \`:import (...) :from "...";\`
     `);
@@ -171,7 +171,7 @@ export function reduceFromImports(set, expressions) {
   set[':import'].forEach(sub => {
     if (Array.isArray(sub)) {
       if (!sub.every(x => x.token[0] === 'unit')) {
-        throw new ParseError(`
+        throw new Error(`
           Methods to :import should be units,
             e.g. \`:import (a ...) :from "...";\`
         `);
@@ -180,7 +180,7 @@ export function reduceFromImports(set, expressions) {
       const fixedKeys = Object.keys(sub.token[1]);
 
       if (!fixedKeys.every(x => hasChar(x.substr(1)))) {
-        throw new ParseError(`
+        throw new Error(`
           Aliased methods to :import should be units,
             e.g. \`:import (:a ...) :from "...";\`
         `);
@@ -188,14 +188,14 @@ export function reduceFromImports(set, expressions) {
 
       fixedKeys.forEach(key => {
         if (sub.token[1][key].length > 1) {
-          throw new ParseError(`
+          throw new Error(`
             Expecting only one alias per method to :import,
               e.g. \`:import (:method alias) :from "...";\`
           `);
         }
 
         if (sub.token[1][key][0].token[0] !== 'unit') {
-          throw new ParseError(`
+          throw new Error(`
             Aliased methods to :import should be units,
               e.g. \`:import (:method alias) :from "...";\`
           `);
@@ -236,11 +236,7 @@ export function reduceFromLogic(cb, ctx, expressions) {
 
       // handle foreign-imports
       if (set[':import']) {
-        try {
-          reduceFromImports(set, expressions);
-        } catch (e) {
-          throw new ParseError(e.message, ctx);
-        }
+        reduceFromImports(set, expressions);
         return false;
       }
 
@@ -292,7 +288,7 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInt
     // define var/call
     if (ctx.cur._body) {
       if (hasOwnKeyword(supportedUnits, ctx.cur.token[1])) {
-        throw new ParseError(`Cannot override built-in unit \`${ctx.cur.token[1]}\``, ctx);
+        throw new Error(`Cannot override built-in unit \`${ctx.cur.token[1]}\``);
       }
 
       expressions[ctx.cur.token[1]] = ctx.cur.token[2];
@@ -306,12 +302,12 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInt
 
     // warn on undefined calls
     if (!(def && call)) {
-      throw new ParseError(`Missing ${def ? 'arguments' : 'definition'} to call \`${name}\``, ctx);
+      throw new Error(`Missing ${def ? 'arguments' : 'definition'} to call \`${name}\``);
     }
 
     // FIXME: improve error objects and such...
     if (def.args && def.args.length !== call.args.length && def.body[0][0] !== 'fn') {
-      throw new ParseError(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
+      throw new Error(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`);
     }
 
     const args = fixValues(call.args, x => cb(x, ctx));
@@ -411,10 +407,14 @@ export function reduceFromAST(tokens, convert, expressions, parentContext, suppo
         continue;
       }
 
-      reduceFromLogic(cb, ctx, expressions);
-      reduceFromFX(cb, ctx, expressions);
-      reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInternals);
-      reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
+      try {
+        reduceFromLogic(cb, ctx, expressions);
+        reduceFromFX(cb, ctx, expressions);
+        reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInternals);
+        reduceFromUnits(cb, ctx, convert, expressions, supportedUnits);
+      } catch (e) {
+        throw new ParseError(e.message, ctx);
+      }
     }
 
     // skip definitions only!
