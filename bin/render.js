@@ -85,18 +85,6 @@ module.exports = ({
     }));
   }
 
-  function render(subTree) {
-    push('open', '(');
-    subTree.forEach(t => {
-      if (Array.isArray(t)) {
-        render(t);
-      } else {
-        push(t.token[0], t.token[1]);
-      }
-    });
-    push('close', ')');
-  }
-
   function flush() {
     values.forEach(x => {
       if (x instanceof Error) {
@@ -105,43 +93,49 @@ module.exports = ({
         push(null, `${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
       }
     });
+
+    indent = '';
+    values = [];
   }
 
-  calc.tree.forEach(subTree => {
-    const results = calc.eval([subTree]);
+  for (let i = 0, k = 0; i < calc.tokens.length; i += 1) {
+    const node = calc.tokens[i];
 
-    if (calc.error) {
-      values.push(calc.error);
-    }
-
-    if (results.length) {
-      values.push(results);
-    }
-
-    subTree.forEach(node => {
-      if (Array.isArray(node)) {
-        render(node);
-      } else {
-        if (calc.error && calc.error.target === node) {
-          push(null, chalk.bgRed(node.token[1]));
-        } else {
-          push(node.token[0], node.token[1]);
-        }
-
-        if (typeof node.token[1] === 'string') {
-          if (node.token[1].includes('\n') && values.length) {
-            flush();
-            indent = '';
-            values = [];
-          }
-
-          if (node.begin[1] === 0) {
-            indent = (node.token[1].match(/^ +/) || [])[0] || '';
-          }
-        }
+    if (node !== null) {
+      if (node.begin[1] === 0) {
+        indent = (node.token[1].match(/^ +/) || [])[0] || '';
       }
-    });
-  });
+
+      // FIXME: highlight errored tokens...
+      // if (calc.error && calc.error.target === node) {
+      //   push(null, chalk.bgRed(node.token[1]));
+      // } else {
+      //   push(node.token[0], node.token[1]);
+      // }
+
+      push(node.token[0], node.token[1]);
+
+      if (
+        typeof node.token[1] === 'string'
+        && node.token[1].includes('\n')
+        && values.length
+      ) {
+        flush();
+      }
+    }
+
+    if (calc.tokens[i] === null && calc.tokens[i + 1] === null) {
+      const results = calc.eval([calc.tree[k++]]);
+
+      if (calc.error) {
+        values.push(calc.error);
+      }
+
+      if (results.length) {
+        values.push(results);
+      }
+    }
+  }
 
   if (values.length) {
     push(null, '\n');
