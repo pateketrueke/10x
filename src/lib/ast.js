@@ -223,6 +223,14 @@ export function fixStrings(tokens, split) {
   }, [])
 }
 
+export function fixValues(tokens, cb) {
+  if (Array.isArray(tokens[0])) {
+    return tokens.map(x => fixValues(x, cb));
+  }
+
+  return cb(tokens);
+}
+
 export function fixArgs(values, flatten) {
   let offset = 0;
 
@@ -254,16 +262,16 @@ export function fixArgs(values, flatten) {
       if (
         flatten === null
         ? cur === null
-        : (cur.token[0] === 'expr' && '|;,'.includes(cur.token[1]))
+        : (cur.token[0] === 'expr' && ';,'.includes(cur.token[1]))
       ) {
         last.pop();
         offset++;
       }
     } else {
       if (flatten !== false) {
-        last.push(...cur);
+        last.push(...fixArgs(cur, flatten));
       } else {
-        last.push(cur);
+        last.push(fixArgs(cur, flatten));
       }
     }
   }

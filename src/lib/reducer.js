@@ -8,7 +8,7 @@ import {
 } from './solver';
 
 import {
-  fixArgs, fixTokens, fixResult,
+  fixArgs, fixValues, fixTokens, fixResult,
   toCut, toPlain, toInput, toToken, toValue, toNumber,
 } from './ast';
 
@@ -81,7 +81,7 @@ export function reduceFromArgs(keys, values) {
   const props = keys.filter(x => x.token[0] === 'unit');
 
   // compute a map from given units and values
-  return props.reduce((prev, cur, i) => {
+  return props.reduce((prev, cur) => {
     prev[cur.token[1]] = { body: [values.shift()] };
     return prev;
   }, {});
@@ -330,35 +330,30 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInt
       throw new ParseError(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`, ctx);
     }
 
-    const fixedArgs = call.args.map(x => Array.isArray(x) ? cb(fixArgs(x), ctx) : x);
-    const fixedKey = JSON.stringify({ name, fixedArgs });
+    const args = fixValues(call.args, x => cb(x, ctx));
+    const key = JSON.stringify({ name, args });
 
     // this helps to compute faster!
-    if (memoizedInternals[fixedKey]) {
-      ctx.cur = memoizedInternals[fixedKey];
+    if (memoizedInternals[key]) {
+      ctx.cur = memoizedInternals[key];
       return;
     }
 
-    const locals = def.args ? reduceFromArgs(def.args, fixedArgs) : {};
+    const locals = def.args ? reduceFromArgs(def.args, args) : {};
 
-    ctx.cur = def.args ? cb(def.body.slice(), ctx, locals) : def.body.slice();
+    ctx.cur = def.args
+      ? cb(def.body.slice(), ctx, locals)
+      : def.body.slice();
 
-    // FIXME: validate arity while recursing...
     if (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn') {
-      const fixedLength = fixedArgs.length;
-
       if (ctx.cur.length > 1) {
         console.log('FNX', ctx.cur);
       }
 
       // apply lambda-calls as we have arguments
-      while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && fixedArgs.length) {
-        Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, fixedArgs));
+      while (!Array.isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fn' && args.length) {
+        Object.assign(locals, reduceFromArgs(ctx.cur[0].token[2].args, args));
         ctx.cur = cb(ctx.cur[0].token[2].body, ctx, locals);
-      }
-
-      if (fixedArgs.length) {
-        throw new ParseError(`Expecting \`${name}.#${fixedLength - fixedArgs.length}\` args, given #${fixedLength}`, ctx);
       }
     }
 
@@ -367,17 +362,13 @@ export function reduceFromDefs(cb, ctx, expressions, supportedUnits, memoizedInt
 
     // forward arguments to bindings
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = !Array.isArray(fixedArgs[0])
-        ? cb(fixedArgs, ctx)
-        : fixedArgs;
+      const inputArgs = fixValues(args, x => x.map(y => toInput(y.token)));
+      const inputValue = reduceFromBinding(ctx.cur.token[1], inputArgs);
 
-      const args = inputArgs.map(x => Array.isArray(x) ? x.map(y => toInput(y.token)) : toInput(x.token));
-      const value = reduceFromBinding(ctx.cur.token[1], args);
-
-      ctx.cur = toToken(fixResult(value));
+      ctx.cur = toToken(fixResult(inputValue));
     }
 
-    memoizedInternals[fixedKey] = ctx.cur;
+    memoizedInternals[key] = ctx.cur;
   }
 }
 
