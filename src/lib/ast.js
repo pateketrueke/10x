@@ -211,7 +211,7 @@ export function fixTree(ast) {
 
         tokens.splice(i, 1, toToken(['fn', '$', {
           args: fixArgs(fixedTokens.slice(0, offset), true),
-          body: fixedTokens.slice(offset + 1),
+          body: fixTree(fixedTokens.slice(offset + 1)),
         }]));
       }
       continue;
@@ -223,12 +223,21 @@ export function fixTree(ast) {
   return tokens;
 }
 
-export function fixValues(tokens, cb) {
+export function fixValues(tokens, cb, y) {
   if (isArray(tokens[0])) {
-    return tokens.map(x => fixValues(x, cb));
+    return tokens.map(x => fixValues(x, cb, y));
   }
 
-  return cb(tokens);
+  const subTree = cb(tokens);
+
+  if (y
+    && Array.isArray(subTree)
+    && subTree.length === 1 && typeof subTree[0] !== 'string'
+  ) {
+    return subTree[0];
+  }
+
+  return subTree;
 }
 
 export function fixResult(value) {
@@ -468,10 +477,10 @@ export function toArguments(keys, values) {
   }, {});
 }
 
-export function toInput(token, cb) {
+export function toInput(token, cb, z) {
   // handle lambda-calls as side-effects
   if (token[0] === 'fn') {
-    const fixedArgs = {};
+    const fixedArgs = { ...z };
 
     return (...context) => {
       Object.assign(fixedArgs, toArguments(token[2].args, context.map(x => toToken(fixResult(x)))));
@@ -483,7 +492,7 @@ export function toInput(token, cb) {
   // intermediate state for objects
   if (token[0] === 'object') {
     if (isArray(token[1])) {
-      return token[1].map(x => toInput(x, cb));
+      return token[1].map(x => toInput(x, cb, z));
     }
 
     Object.keys(token[1]).forEach(k => {

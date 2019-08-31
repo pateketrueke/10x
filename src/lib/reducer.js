@@ -320,9 +320,14 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     // resolve intermediate values
     ctx.cur = toToken(calculateFromTokens(toList(ctx.cur)));
 
-    // forward arguments to bindings
+    // flag token for future bindings...
+    if (Object.keys(locals).length > 0) {
+      ctx.cur._bound = locals;
+    }
+
+    // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = fixValues(args, x => x.map(y => toInput(y.token, (z, data) => cb(z, ctx, data)))[0]);
+      const inputArgs = fixValues(args, x => x.map(y => toInput(y.token, (z, data) => cb(z, ctx, data), y._bound)), true);
       const inputValue = ctx.cur.token[1][2](...inputArgs);
 
       if (Array.isArray(inputValue)) {
