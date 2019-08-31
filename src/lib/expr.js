@@ -2,10 +2,10 @@ export default class LangExpr {
   constructor(info, token) {
     if (!token) {
       token = info.token;
-      delete info.token;
     }
 
-    Object.keys(info).forEach(k => {
+    // clone exact properties!
+    ['depth', 'begin', 'end'].forEach(k => {
       Object.defineProperty(this, k, {
         value: info[k],
         writable: true,

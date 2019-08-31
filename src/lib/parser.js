@@ -260,6 +260,9 @@ export function transform(tokens, units) {
     return prev;
   }, []));
 
+  // copy all tokens to protect them!
+  const fixedAST = body.filter(x => x !== null).map(x => toToken(x));
+
   // handle errors during tree-building
   let fixedTree;
   let _e;
@@ -271,7 +274,7 @@ export function transform(tokens, units) {
   }
 
   return {
-    ast: body.filter(x => x !== null),
+    ast: fixedAST,
     tree: fixedTree,
     error: _e || undefined,
   };
