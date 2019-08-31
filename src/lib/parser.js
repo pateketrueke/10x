@@ -46,7 +46,7 @@ export function fromMarkdown(text) {
 
 export function fromSymbols(text, units, leftToken, rightToken) {
   // handle comments
-  if (text.substr(0, 2) === '//') {
+  if (text.indexOf('//') === 0 || text.indexOf('/*') === 0) {
     return ['comment', text];
   }
 
