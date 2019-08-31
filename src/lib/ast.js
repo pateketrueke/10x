@@ -203,14 +203,17 @@ export function fixTree(ast) {
       && ((next.token[0] === 'expr' && next.token[2] === 'or') || (next.token[0] === 'fx' && next.token[2] === 'func'))
     ) {
       const offset = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'fx' && x.token[2] === 'func');
-      const cutBody = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]));
-      const cutOffset = cutBody >= 0 ? cutBody : tokens.length - offset;
-      const fixedTokens = tokens.splice(i, cutOffset + 1);
 
-      tokens.splice(i, 1, toToken(['fn', '$', {
-        args: fixArgs(fixedTokens.slice(0, offset), true),
-        body: fixTree(fixedTokens.slice(offset + 1)),
-      }]));
+      if (offset !== -1) {
+        const cutBody = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]));
+        const cutOffset = cutBody >= 0 ? cutBody : tokens.length - offset;
+        const fixedTokens = tokens.splice(i, cutOffset + 1);
+
+        tokens.splice(i, 1, toToken(['fn', '$', {
+          args: fixArgs(fixedTokens.slice(0, offset), true),
+          body: fixedTokens.slice(offset + 1),
+        }]));
+      }
       continue;
     }
 
@@ -456,6 +459,12 @@ export function toProperty(value) {
 }
 
 export function toInput(token, cb) {
+  if (token[0] === 'fn') {
+    return () => {
+      return -1;
+    };
+  }
+
   if (token[0] === 'object') {
     if (isArray(token[1])) {
       return token[1].map(x => toInput(x, cb));

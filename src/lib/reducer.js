@@ -15,11 +15,6 @@ import {
 
 import LangErr from './error';
 
-export function reduceFromBinding(call, args) {
-  // FIXME: apply lambdas as arguments?
-  return call[2](...args);
-}
-
 export function reduceFromValue(token) {
   let text = token[1];
 
@@ -305,7 +300,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       throw new Error(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`);
     }
 
-    const args = fixValues(call.args, x => cb(x, ctx));
+    const args = fixValues(call.args, x => cb(!Array.isArray(x) ? [x] : x, ctx));
     const key = JSON.stringify({ name, args });
 
     // this helps to compute faster!
@@ -337,8 +332,8 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
     // forward arguments to bindings
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = fixValues(args, x => x.map(y => toInput(y.token)));
-      const inputValue = reduceFromBinding(ctx.cur.token[1], inputArgs);
+      const inputArgs = fixValues(args, x => x.map(y => toInput(y.token))[0]);
+      const inputValue = ctx.cur.token[1][2](...inputArgs);
 
       ctx.cur = toToken(fixResult(inputValue));
     }
