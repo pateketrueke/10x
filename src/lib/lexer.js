@@ -3,6 +3,7 @@ import {
 } from './shared';
 
 export function getTokensFrom(text, units) {
+  let inSym = false;
   let inBlock = false;
   let inFormat = false;
 
@@ -29,13 +30,17 @@ export function getTokensFrom(text, units) {
       col++;
     }
 
+    // flag for symbols
+    if (last === ':' && (hasChar(cur) || hasNum(cur))) inSym = true;
+    if (inSym && !(cur === '-' || hasChar(cur) || hasNum(cur))) inSym = false;
+
     // keep formatting blocks together
     if (!inBlock && !inFormat && hasFmt(cur)) {
       if (cur === '*')  {
         inFormat = next === '*' || hasChar(next);
       } else if (cur === '_') {
         inFormat = hasSep(last)
-          && (next === '_' || hasChar(next) || hasNum(next));
+          && (next === '_' || hasChar(next) || isInt(next));
       } else if (cur === '~') {
         inFormat = !'=>'.includes(next);
       } else {
@@ -85,8 +90,8 @@ export function getTokensFrom(text, units) {
       || (hasNum(last) && ':.'.includes(cur) && hasNum(next))
       || ((hasNum(last) || '-.'.includes(last)) && hasNum(cur))
       || ((hasChar(last) || hasNum(last)) && (hasChar(cur) || hasNum(cur)))
-      || (hasChar(last) && cur === '-' && hasChar(next)) || (last === '-' && hasChar(cur))
       || (isInt(last) && cur === '/' && isInt(next)) || (last === '/' && isInt(buffer[0].cur))
+      || (inSym && ((hasChar(last) && cur === '-' && hasChar(next)) || (last === '-' && hasChar(cur))))
 
       // handle checkboxes
       || (last === '[' && ' x'.includes(cur) && next === ']') || (' x'.includes(last) && cur === ']')
