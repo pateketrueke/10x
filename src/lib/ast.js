@@ -30,7 +30,7 @@ export function fixBinding(obj, name, alias, context) {
 
       const srcFile = path.resolve(srcDir, obj);
 
-      // FIXME: cache this shit...
+      // FIXME: cache this shit... also, disable for browser!! (or replace...)
       if (fs.existsSync(srcFile)) {
         let def;
 
@@ -198,28 +198,6 @@ export function fixArgs(values, flatten) {
   return stack;
 }
 
-export function fixInput(args, lpipe) {
-  return args.filter(x => !hasTagName(x[0])).reduce((p, c) => p.concat(c[0] === 'expr' ? [] : (
-    lpipe ? [['expr', ',', 'or'], c] : [c, ['expr', ',', 'or']]
-  )), []);
-}
-
-export function fixApply(kind, body, args) {
-  if (!isArray(args[0])) args = [];
-
-  if (kind === 'lpipe') return [body].concat(fixInput(args, true));
-  if (kind === 'rpipe') return fixInput(args).concat([body]);
-
-  return [];
-}
-
-export function fixCut(ast, slice, offset) {
-  const pos = ast.slice(offset + slice).findIndex(x => (x[0] === 'expr' && hasSep(x[1])) || x[0] === 'fx');
-  const subTree = pos >= 0 ? ast.splice(offset, pos) : ast.splice(offset);
-
-  return subTree;
-}
-
 // FIXME: clean up this shit...
 export function fixChunk(tokens, i) {
   const offset  = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
@@ -241,6 +219,7 @@ export function fixTree(ast) {
 
     if (isArray(cur) && cur.length > 1 && !isArray(cur[0])) {
       // handle tuples
+      // FIXME: more helpers
       if (cur[0].token[0] === 'symbol' && ['number', 'string', 'unit'].includes(cur[1].token[0])) {
         tokens.splice(i, 1, toToken(['object', fixTokens(cur)]));
         continue;
@@ -248,6 +227,7 @@ export function fixTree(ast) {
     }
 
     if (!isArray(prev)) {
+      // FIXME: more helpers
       if (prev.token[0] === 'def' && !prev.token[2]) {
         let subTree = [];
 
@@ -255,11 +235,13 @@ export function fixTree(ast) {
         if (isArray(cur)) {
           prev._args = true;
           tokens.splice(i, 1);
+          // FIXME: more helpers
         } else if (cur.token[0] === 'expr' && cur.token[2] === 'equal') {
           subTree = fixChunk(tokens, i);
           prev._body = true;
         }
 
+        // FIXME: more helpers
         if (!isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal' && !prev._body) {
           subTree = fixChunk(tokens, i);
           prev._body = true;
@@ -279,7 +261,7 @@ export function fixTree(ast) {
       }
     }
 
-    // FIXME: compose lambda-calls with multiple arguments...
+    // FIXME: compose lambda-calls with multiple arguments... helpers!!
     if (
       !isArray(cur)
       && !isArray(next)
@@ -318,11 +300,13 @@ export function buildTree(tokens) {
     const t = tokens[i];
 
     // reassign definition tokens
+    // FIXME: more helpers
     if (t.token[0] === 'unit' && '(='.includes(next.token[1])) {
       t.token[0] = 'def';
     }
 
     // handle nesting
+    // FIXME: more helpers
     if (['open', 'close'].includes(t.token[0])) {
       if (t.token[0] === 'open') {
         const leaf = [];
@@ -356,10 +340,6 @@ export function buildTree(tokens) {
 
 export function highestCommonFactor(a, b) {
   return b !== 0 ? highestCommonFactor(b, a % b) : a;
-}
-
-export function toProperty(value) {
-  return value.substr(1).replace(/-([a-z])/g, (_, prop) => prop.toUpperCase());
 }
 
 export function toFraction(number) {
@@ -443,6 +423,18 @@ export function toValue(value) {
   return value;
 }
 
+export function toList(tokens) {
+  return tokens.map(x => isArray(x) ? toList(x) : x.token);
+}
+
+export function toSlice(begin, tokens, endOffset) {
+  return endOffset >= 0 ? tokens.splice(begin, endOffset) : tokens.splice(begin);
+}
+
+export function toProperty(value) {
+  return value.substr(1).replace(/-([a-z])/g, (_, prop) => prop.toUpperCase());
+}
+
 export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
   if (isArray(token)) {
     return new LangExpr({ token });
@@ -516,12 +508,4 @@ export function toPlain(values, cb) {
   });
 
   return values;
-}
-
-export function toList(tokens) {
-  return tokens.map(x => isArray(x) ? toList(x) : x.token);
-}
-
-export function toCut(from, tokens, endOffset) {
-  return endOffset >= 0 ? tokens.splice(from, endOffset) : tokens.splice(from);
 }

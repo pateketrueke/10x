@@ -9,7 +9,7 @@ import {
 } from './solver';
 
 import {
-  toCut, toList, toPlain, toInput, toToken, toNumber,
+  toSlice, toList, toPlain, toInput, toToken, toNumber,
   fixArgs, fixValues, fixTokens, fixResult, fixBinding,
 } from './ast';
 
@@ -225,7 +225,7 @@ export function reduceFromImports(set, env, self) {
 export function reduceFromLogic(cb, ctx, self) {
   // collect all tokens after symbols
   if (ctx.cur.token[0] === 'symbol') {
-    const subTree = toCut(ctx.i, ctx.tokens, ctx.endOffset);
+    const subTree = toSlice(ctx.i, ctx.tokens, ctx.endOffset);
     const symbol = subTree.shift();
 
     // handle multiple branches
@@ -273,7 +273,7 @@ export function reduceFromLogic(cb, ctx, self) {
 export function reduceFromFX(cb, ctx) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
-    const [lft, rgt, ...others] = cb(toCut(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => toInput(x.token));
+    const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => toInput(x.token));
     const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
 
     ctx.cur = toToken(fixResult(result));
