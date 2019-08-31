@@ -90,7 +90,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   if (
     hasExpr(text)
     && (leftToken.token[0] === 'number')
-    && (hasNum(rightToken) || hasKeyword(rightToken, units))
+    && (!rightToken || hasNum(rightToken) || hasKeyword(rightToken, units))
   ) {
     return ['expr', text];
   }

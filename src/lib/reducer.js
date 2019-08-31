@@ -56,7 +56,7 @@ export function reduceFromValue(token) {
 
 export function reduceFromUnits(cb, ctx, self, convert) {
   // handle unit expressions
-  if (ctx.cur.token[0] === 'unit') {
+  if (ctx.cur.token[0] === 'unit' && !hasOwnKeyword(self.units, ctx.cur.token[1])) {
     if (!hasOwnKeyword(ctx.env, ctx.cur.token[1])) {
       throw new Error(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``);
     }

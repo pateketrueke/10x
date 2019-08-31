@@ -1,5 +1,5 @@
 import {
-  isInt, hasMonths, hasHours, hasKeyword, hasFmt, hasOp, hasSep, hasChar, hasNum,
+  isInt, hasMonths, hasHours, hasKeyword, hasFmt, hasOp, hasSep, hasChar, hasNum, hasExpr,
 } from './shared';
 
 export function getTokensFrom(text, units) {
@@ -120,6 +120,16 @@ export function getTokensFrom(text, units) {
     const lastValue = (prev[prev.length - 1] || {}).cur;
     const value = x.map(t => t.cur).join('');
 
+    let score = 0;
+
+    // keep expresions and units together, e.g. `3 weeks as days`
+    if (
+      (hasExpr(olderValue) && hasKeyword(value, units))
+      || (hasNum(olderValue) && hasExpr(value))
+    ) {
+      score += 2;
+    }
+
     // keep long-format dates, e.g. `Jun 10, 1987`
     if (hasMonths(oldestValue) && olderValue === ',' && isInt(value)) {
       prev[prev.length - 3].cur += olderValue + lastValue + value;
@@ -144,8 +154,6 @@ export function getTokensFrom(text, units) {
     }
 
     const nextChar = ((tokens[i + 1] || [])[0] || {}).cur;
-
-    let score = 0;
 
     if (
       // numbers
