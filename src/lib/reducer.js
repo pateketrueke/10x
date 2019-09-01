@@ -291,7 +291,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     }
 
     const args = fixValues(call.args, x => cb(!isArray(x) ? [x] : x, ctx));
-    const key = JSON.stringify([name, toPlain(args)]);
+    const key = JSON.stringify([name, args]);
 
     // this helps to compute faster!
     if (memoizedInternals[key]) {
@@ -333,7 +333,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       if (Array.isArray(inputValue)) {
         const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x))
 
-        ctx.cur = toToken(['object', fixedValues.map(x => toToken(fixResult(x)))]);
+        ctx.cur = toToken(['object', fixedValues.map(x => (!isArray(x) ? fixResult(x) : x))]);
       } else {
         ctx.cur = toToken(fixResult(inputValue));
       }
@@ -403,12 +403,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       // append last-operator between consecutive unit-expressions
       if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
         ctx.ast.push(toToken(ctx.lastOp));
-      }
-
-      // recompose objects into readable values
-      if (ctx.cur.token[0] === 'object') {
-        ctx.ast.push(toToken(['object', toInput(ctx.cur.token, x => calculateFromTokens(toList(cb(x, ctx))))]));
-        continue;
       }
 
       try {

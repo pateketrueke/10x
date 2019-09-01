@@ -503,7 +503,7 @@ export function toInput(token, cb, z) {
         : fixedTokens;
 
       if (isArray(fixedValue[0])) {
-        fixedValue = ['object', fixArgs(fixedValue, true)];
+        fixedValue = ['object', fixedValue];
       } else if (fixedValue[0] === 'object') {
         fixedValue = fixedValue[1];
       }

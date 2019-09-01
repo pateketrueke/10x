@@ -167,7 +167,8 @@ export function operateExpression(ops, expr) {
         }
       }
 
-      expr.splice(i - 1, 3, ['number', result, prev[2] || next[2]]);
+      // cleanup result tokens to avoid too much garbage...
+      expr.splice(i - 1, 3, ['number', result, prev[2] || next[2]].filter(x => typeof x !== 'undefined'));
 
       // if tokens are left...
       if (expr.length >= 3) {
