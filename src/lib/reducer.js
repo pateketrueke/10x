@@ -81,7 +81,7 @@ export function reduceFromUnits(cb, ctx, self, convert) {
     }
 
     const base = parseFloat(ctx.cur.token[1]);
-    const subTree = fixArgs(cb(ctx.env[ctx.cur.token[2]].body, ctx)).reduce((p, c) => p.concat(c), []);
+    const subTree = fixArgs(cb(ctx.env[ctx.cur.token[2]].body, ctx), true);
 
     ctx.cur = subTree.map(x => toToken(calculateFromTokens(toList(cb([
       toToken(['number', base]),
