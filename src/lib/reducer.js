@@ -333,7 +333,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       if (Array.isArray(inputValue)) {
         const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x))
 
-        ctx.cur = toToken(['object', fixedValues.map(x => (!isArray(x) ? fixResult(x) : x))]);
+        ctx.cur = toToken(['object', fixedValues.map(x => (!isArray(x) ? toToken(fixResult(x)) : toToken(x)))]);
       } else {
         ctx.cur = toToken(fixResult(inputValue));
       }
@@ -389,7 +389,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           ctx.ast.push(toToken(['expr', '*', 'mul']));
         }
       } else {
-        fixedValue = ['object', fixArgs(ctx.cur, false)];
+        fixedValue = ['object', fixArgs(ctx.cur, true)];
       }
 
       ctx.ast.push(toToken(fixedValue));
