@@ -77,7 +77,7 @@ contexts:
       scope: constant
 
     # unit calls
-    - match: "(?<=\\b|^)\\s*(?!:)\\w[-\\w#'\\u00C0-\\u00FF]*(?=[(=])"
+    - match: "(?<=\\b|^)\\s*(?!:)\\w[-\\w#'!\\u00C0-\\u00FF]*(?=[(=])"
       scope: entity.name.function
 
     # all symbols

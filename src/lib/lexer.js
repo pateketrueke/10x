@@ -97,6 +97,7 @@ export function getTokensFrom(text, units) {
       || (last === ':' && (hasNum(cur) || hasChar(cur)))
       || (hasNum(last) && ':.'.includes(cur) && hasNum(next))
       || ((hasNum(last) || '-.'.includes(last)) && hasNum(cur))
+      || ((hasChar(last) || isInt(last)) && cur === '!' && next === '(')
       || ((hasChar(last) || hasNum(last)) && (hasChar(cur) || hasNum(cur)))
       || (isInt(last) && cur === '/' && isInt(next)) || (last === '/' && isInt(buffer[0].cur))
       || (inSym && ((hasChar(last) && cur === '-' && hasChar(next)) || (last === '-' && hasChar(cur))))

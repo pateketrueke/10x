@@ -265,19 +265,20 @@ export function reduceFromFX(cb, ctx) {
 export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
   // handle var/call definitions
   if (ctx.cur.token[0] === 'def') {
+    const name = ctx.cur.token[1];
+    const call = ctx.cur.token[2];
+
     // define var/call
     if (ctx.cur._body) {
-      if (hasOwnKeyword(self.units, ctx.cur.token[1])) {
-        throw new Error(`Cannot override built-in unit \`${ctx.cur.token[1]}\``);
+      if (hasOwnKeyword(self.units, name)) {
+        throw new Error(`Cannot override built-in unit \`${name}\``);
       }
 
-      ctx.env[ctx.cur.token[1]] = ctx.cur.token[2];
+      ctx.env[name] = { ...call, _memo: ctx.cur._memo };
       return;
     }
 
     // side-effects will operate on previous values
-    const name = ctx.cur.token[1];
-    const call = ctx.cur.token[2];
     const def = ctx.env[name];
 
     // warn on undefined calls
@@ -291,10 +292,10 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     }
 
     const args = fixValues(call.args, x => cb(!isArray(x) ? [x] : x, ctx));
-    const key = JSON.stringify([name, toPlain(args)]);
+    const key = def._memo && JSON.stringify([name, toPlain(args)]);
 
     // this helps to compute faster!
-    if (memoizedInternals[key]) {
+    if (key && memoizedInternals[key]) {
       ctx.cur = memoizedInternals[key];
       return;
     }
@@ -340,8 +341,8 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       return;
     }
 
-    // do not memoize lambdas
-    if (ctx.cur.token[0] !== 'fn') {
+    // skip memoization from non scalar-values
+    if (key && ['number', 'string'].includes(ctx.cur.token[0])) {
       memoizedInternals[key] = ctx.cur;
     }
   }

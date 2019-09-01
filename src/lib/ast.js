@@ -188,6 +188,12 @@ export function fixTree(ast) {
           tokens.splice(i, 1);
         }
 
+        // flag definition for memoization
+        if (prev.token[1].substr(-1) === '!') {
+          prev.token[1] = prev.token[1].replace('!', '');
+          prev._memo = true;
+        }
+
         // update token definition
         prev.token[2] = {
           args: prev._args ? fixArgs(cur, true) : null,
