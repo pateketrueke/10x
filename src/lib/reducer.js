@@ -405,6 +405,12 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         ctx.ast.push(toToken(ctx.lastOp));
       }
 
+      // recompose objects into readable values
+      if (ctx.cur.token[0] === 'object' && !isArray(ctx.cur.token[1])) {
+        ctx.ast.push(toToken(['object', toInput(ctx.cur.token, x => calculateFromTokens(toList(cb(x, ctx))))]));
+        continue;
+      }
+
       try {
         reduceFromLogic(cb, ctx, context);
         reduceFromFX(cb, ctx);
