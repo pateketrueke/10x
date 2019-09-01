@@ -227,7 +227,7 @@ export function fixValues(tokens, cb, y) {
   if (isArray(tokens[0])) {
     const subTree = tokens.map(x => fixValues(x, cb, y));
 
-    return subTree.length === 1
+    return y && subTree.length === 1
       ? subTree[0]
       : subTree;
   }

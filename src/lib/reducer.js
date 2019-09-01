@@ -293,13 +293,13 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     const args = fixValues(call.args, x => cb(!isArray(x) ? [x] : x, ctx));
 
     // FIXME: enable memoization for some defs only...
-    // const key = JSON.stringify({ name, args });
+    const key = JSON.stringify({ name, args });
 
     // this helps to compute faster!
-    // if (memoizedInternals[key]) {
-    //   ctx.cur = memoizedInternals[key];
-    //   return;
-    // }
+    if (memoizedInternals[key]) {
+      ctx.cur = memoizedInternals[key];
+      return;
+    }
 
     const locals = def.args ? toArguments(def.args, args) : {};
 
@@ -342,7 +342,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       return;
     }
 
-    // memoizedInternals[key] = ctx.cur;
+    memoizedInternals[key] = ctx.cur;
   }
 }
 
