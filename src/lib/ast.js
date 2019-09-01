@@ -1,6 +1,6 @@
 import {
   isArray,
-  hasSep, hasTagName, hasPercent,
+  hasNum, hasSep, hasTagName, hasPercent,
 } from './shared';
 
 import LangErr from './error';
@@ -134,6 +134,12 @@ export function fixTokens(ast, z) {
   }, target);
 }
 
+export function* fixRange(start, end) {
+  yield start;
+  if (start === end) return;
+  yield* range(start + 1, end);
+}
+
 // FIXME: clean up this shit...
 export function fixChunk(tokens, i) {
   const offset = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
@@ -199,6 +205,19 @@ export function fixTree(ast) {
           args: prev._args ? fixArgs(cur, true) : null,
           body: prev._body ? fixTree(subTree.slice(1)) : null,
         };
+        continue;
+      }
+
+      // handle ranges...
+      if (!isArray(cur) && cur.token[0] === 'range') {
+        const base = prev.token[1];
+        const target = cur.token[1].substr(2);
+        const iterator = fixRange(base, target);
+
+        // build final iteraters
+        cur.token[1] = prev.token[1] + cur.token[1];
+        cur.token[2] = iterator;
+        tokens.splice(i - 1, 1);
         continue;
       }
     }

@@ -1,6 +1,6 @@
 import {
   isArray,
-  hasMonths, hasOwnKeyword,
+  hasNum, hasMonths, hasOwnKeyword,
   hasTimeUnit, hasExpr, hasChar, hasSep,
 } from './shared';
 
@@ -234,7 +234,7 @@ export function reduceFromLogic(cb, ctx, self) {
           not = !not;
         }
 
-        const retval = toInput(calculateFromTokens(toList(cb(test.slice(), ctx))));
+        const retval = toInput(calculateFromTokens(toList(cb(test, ctx))));
 
         // evaluate respective branches
         if (not ? !retval : retval) {
@@ -244,6 +244,12 @@ export function reduceFromLogic(cb, ctx, self) {
         if (orBranch) {
           return ctx.ast.push(...cb(orBranch, ctx));
         }
+      } else if (set[':each'] || set[':loop'] || set[':repeat']) {
+        const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
+        // const retval = cb(forBranch.shift(), ctx);
+
+        console.log(cb(forBranch.shift(), ctx));
+        console.log({forBranch});
       } else {
         console.log('SYM_LOGIC', set);
       }
