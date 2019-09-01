@@ -43,6 +43,14 @@ export default class Solv {
       },
     });
 
+    // shared registry for memoization
+    Object.defineProperty(this, '_', {
+      value: {},
+      writable: false,
+      enumerable: false,
+      configurable: false,
+    });
+
     // public properties
     this.includes = {};
     this.tokens = [];
@@ -160,7 +168,7 @@ export default class Solv {
   }
 
   eval(tokens, source) {
-    const cb = ast => reduceFromAST(ast, this, { convertFrom }, null, this.expressions);
+    const cb = ast => reduceFromAST(ast, this, { convertFrom }, null, this.expressions, this._);
     const output = [];
 
     try {
