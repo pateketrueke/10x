@@ -166,7 +166,7 @@ export default class Solv {
     try {
       this.error = null;
       (tokens || this.tree).forEach(ast => {
-        output.push(...fixArgs(cb(ast)));
+        if (ast) output.push(...fixArgs(cb(ast)));
       });
     } catch (e) {
       this.error = LangErr.build(e, source || this.source, 2, this.filepath);

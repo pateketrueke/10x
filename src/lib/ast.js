@@ -225,7 +225,11 @@ export function fixTree(ast) {
 
 export function fixValues(tokens, cb, y) {
   if (isArray(tokens[0])) {
-    return tokens.map(x => fixValues(x, cb, y));
+    const subTree = tokens.map(x => fixValues(x, cb, y));
+
+    return subTree.length === 1
+      ? subTree[0]
+      : subTree;
   }
 
   const subTree = cb(tokens);
@@ -479,16 +483,16 @@ export function toInput(token, cb, z) {
     const fixedArgs = { ...z };
 
     return (...context) => {
-      Object.assign(fixedArgs, toArguments(token[2].args, context.map(x => toToken(fixResult(x)))));
+      const newArgs = toArguments(token[2].args, context.map(x => toToken(fixResult(x))));
 
-      return cb(token[2].body.slice(), fixedArgs);
+      return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
     };
   }
 
   // intermediate state for objects
   if (token[0] === 'object') {
     if (isArray(token[1])) {
-      return token[1].map(x => toInput(x, cb, z));
+      return fixValues(token[1], x => x.map(y => toInput(y.token, cb, z)), true);
     }
 
     Object.keys(token[1]).forEach(k => {
@@ -499,7 +503,7 @@ export function toInput(token, cb, z) {
         : fixedTokens;
 
       if (isArray(fixedValue[0])) {
-        fixedValue = ['object', fixedValue.reduce((prev, cur) => prev.concat(cur), []).map(x => (cb ? cb(x) : x))];
+        fixedValue = ['object', fixArgs(fixedValue, true)];
       } else if (fixedValue[0] === 'object') {
         fixedValue = fixedValue[1];
       }

@@ -290,14 +290,16 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       throw new Error(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`);
     }
 
-    const args = fixValues(call.args, x => cb(!Array.isArray(x) ? [x] : x, ctx));
-    const key = JSON.stringify({ name, args });
+    const args = fixValues(call.args, x => cb(!isArray(x) ? [x] : x, ctx));
+
+    // FIXME: enable memoization for some defs only...
+    // const key = JSON.stringify({ name, args });
 
     // this helps to compute faster!
-    if (memoizedInternals[key]) {
-      ctx.cur = memoizedInternals[key];
-      return;
-    }
+    // if (memoizedInternals[key]) {
+    //   ctx.cur = memoizedInternals[key];
+    //   return;
+    // }
 
     const locals = def.args ? toArguments(def.args, args) : {};
 
@@ -331,14 +333,16 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       const inputValue = ctx.cur.token[1][2](...inputArgs);
 
       if (Array.isArray(inputValue)) {
-        ctx.cur = toToken(['object', inputValue.map(x => toToken(calculateFromTokens(toList(x))))]);
+        const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x))
+
+        ctx.cur = toToken(['object', fixedValues.map(x => toToken(fixResult(x)))]);
       } else {
         ctx.cur = toToken(fixResult(inputValue));
       }
       return;
     }
 
-    memoizedInternals[key] = ctx.cur;
+    // memoizedInternals[key] = ctx.cur;
   }
 }
 
@@ -376,7 +380,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       let fixedValue;
 
       // evaluate simple lists only (no separators)
-      if (!ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))) {
+      if (!isArray(ctx.cur[0]) && !ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))) {
         fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
 
         // prepend multiplication if goes after units/numbers
@@ -412,7 +416,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         reduceFromDefs(cb, ctx, context, memoizedInternals);
         reduceFromUnits(cb, ctx, context, settings.convertFrom);
       } catch (e) {
-        // process.stderr.write(e.stack);
+        process.stderr.write(e.stack);
         throw new LangErr(e.message, ctx);
       }
     }
