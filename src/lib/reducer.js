@@ -417,7 +417,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         reduceFromDefs(cb, ctx, context, memoizedInternals);
         reduceFromUnits(cb, ctx, context, settings.convertFrom);
       } catch (e) {
-        process.stderr.write(e.stack);
         throw new LangErr(e.message, ctx);
       }
     }
