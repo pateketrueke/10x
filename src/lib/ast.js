@@ -135,9 +135,13 @@ export function fixTokens(ast, z) {
 }
 
 export function* fixRange(start, end) {
-  yield start;
-  if (start === end) return;
-  yield* range(start + 1, end);
+  if (typeof start === 'number' && typeof end === 'number') {
+    yield start;
+    if (start === end) return;
+    yield* fixRange(start + 1, end);
+  } else if (hasNum(start)) {
+    yield* fixRange(parseFloat(start), parseFloat(end));
+  }
 }
 
 // FIXME: clean up this shit...
@@ -175,18 +179,18 @@ export function fixTree(ast) {
 
         // FIXME: dedupe...
         if (isArray(cur)) {
-          prev._args = true;
+          Object.defineProperty(prev, '_args', { value: true });
           tokens.splice(i, 1);
           // FIXME: more helpers
         } else if (cur.token[0] === 'expr' && cur.token[2] === 'equal') {
+          Object.defineProperty(prev, '_body', { value: true });
           subTree = fixChunk(tokens, i);
-          prev._body = true;
         }
 
         // FIXME: more helpers
         if (!isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal' && !prev._body) {
+          Object.defineProperty(prev, '_body', { value: true });
           subTree = fixChunk(tokens, i);
-          prev._body = true;
         }
 
         // discard token separator
@@ -214,9 +218,8 @@ export function fixTree(ast) {
         const target = cur.token[1].substr(2);
         const iterator = fixRange(base, target);
 
-        // build final iteraters
-        cur.token[1] = prev.token[1] + cur.token[1];
-        cur.token[2] = iterator;
+        // compose tokens for iterators
+        cur.token[1] = { base, target, iterator };
         tokens.splice(i - 1, 1);
         continue;
       }

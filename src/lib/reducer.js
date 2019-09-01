@@ -238,18 +238,27 @@ export function reduceFromLogic(cb, ctx, self) {
 
         // evaluate respective branches
         if (not ? !retval : retval) {
-          return ctx.ast.push(...cb(ifBranch, ctx));
-        }
-
-        if (orBranch) {
-          return ctx.ast.push(...cb(orBranch, ctx));
+          ctx.ast.push(...cb(ifBranch, ctx));
+        } else if (orBranch) {
+          ctx.ast.push(...cb(orBranch, ctx));
         }
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
-        // const retval = cb(forBranch.shift(), ctx);
+        const retval = toInput(calculateFromTokens(toList(cb(forBranch.shift(), ctx))));
 
-        console.log(cb(forBranch.shift(), ctx));
-        console.log({forBranch});
+        if (typeof retval === 'object' && retval.iterator) {
+          const it = retval.iterator;
+          const seq = [];
+
+          for (let nextValue = it.next(); nextValue.done !== true; nextValue = it.next()) {
+            const locals = { it: { body: [toToken(fixResult(nextValue.value))] } };
+
+            seq.push(...cb(forBranch.slice(), ctx, locals));
+          }
+
+          ctx.ast.push(toToken(['object', seq]));
+          return true;
+        }
       } else {
         console.log('SYM_LOGIC', set);
       }
@@ -329,7 +338,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
     // flag token for future bindings...
     if (Object.keys(locals).length > 0) {
-      ctx.cur._bound = locals;
+      Object.defineProperty(ctx.cur, '_bound', { value: locals });
     }
 
     // forward arguments to bindings, from the past!
