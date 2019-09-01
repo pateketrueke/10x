@@ -16,6 +16,9 @@ const value = (expr, opts, no) => {
 }
 
 const toTree = (expr, opts) => calc(expr, opts, true).tree;
+const toTokens = (expr, opts) => calc(expr, opts, true).tokens.filter(x => x !== null);
+
+const fix = subTree => [subTree.map(x => ({ token: x }))];
 
 const time = new Date(550303200000);
 
@@ -42,18 +45,13 @@ describe('DSL', () => {
       expect(value('1cm')).to.eql(['1 cm']);
     });
 
-    it('should handle some logical operators', () => {
-      expect(calc('(<= >= == != !~ ~= -- ++ < > = && || ~> |> <|)').tokens.filter(x => x.token[2]).map(x => x.token[2]))
-        .to.eql(['lteq', 'gteq', 'iseq', 'noteq', 'notlike', 'like', 'dec', 'inc', 'lt', 'gt', 'equal', 'and', 'x-or', 'void', 'rpipe', 'lpipe']);
-    });
-
     it('should tokenize double-quoted strings', () => {
-      expect(calc('Foo "bar baz" Buz').tokens[1].token[0]).to.eql('string');
+      expect(toTokens('Foo "bar baz" Buz')[1].token[0]).to.eql('string');
     });
 
     it('should tokenize symbol-like values', () => {
-      expect(calc('Foo :bar ::baz-buzz Bazzinga').tokens[1].token[0]).to.eql('symbol');
-      expect(calc('Foo :bar ::baz-buzz Bazzinga').tokens[3].token[0]).to.eql('text');
+      expect(toTokens('Foo :bar ::baz-buzz Bazzinga')[1].token[0]).to.eql('symbol');
+      expect(toTokens('Foo :bar ::baz-buzz Bazzinga')[3].token[0]).to.eql('text');
     });
 
     it('should skip empty sub-expressions', () => {
@@ -144,254 +142,72 @@ describe('DSL', () => {
     });
   });
 
-  describe('Function application', () => {
-    it.skip('should handle local functions', () => {
-      expect(value('undef(1,2,3)')).to.eql([]);
-      expect(value("f(x',y)=x'*y;f(2,3)")).to.eql(['6']);
-      expect(value("f(x',y)=(x'*y);f(2, 3)")).to.eql(['6']);
-      expect(value("f(a,b)=a+b;f1(a',b',c')=a'-f(b',c');f1(1,2,3)")).to.eql(['-4']);
-    });
-
-    it.skip('should handle lambda expressions', () => {
-      expect(value('fn=x->x*2;fn(-1);')).to.eql(['-2']);
-      expect(value('sum=a,b->a+b;sum(1,2)')).to.eql(['3']);
-      expect(value('add=x->y->x+y;add(2,3);')).to.eql(['5']);
-      expect(value('mul=x->y->x*y;twice=mul<|2;twice(12)')).to.eql(['24']);
-    });
-
-    it.skip('should handle partial application', () => {
-      expect(value('sum(x,y)=x+y;sum(5,3)')).to.eql(['8']);
-      expect(value('sum(x,y)=x+y;add5=sum<|5;add5(3)')).to.eql(['8']);
-      expect(toTree('always7=add5<|2;')).to.eql(toTree('always7=add5(2);'));
-      expect(toTree('0|>sum 1|>sum 2;')).to.eql(toTree('0|>sum(1)|>sum(2);'));
-      expect(toTree('0|>sum 1|>sum(2);')).to.eql(toTree('0|>sum(1)|>sum(2);'));
-      expect(value('sum(x,y)=x+y;0|>sum 1|>sum 2')).to.eql(['3']);
-      expect(toTree('0|>sum 1 2|>sum(3,4)')).to.eql(toTree('0|>sum(1,2)|>sum 3 4'));
-      expect(value('sum(x,y,z)=x+y+z;0|>sum 1 2|>sum 3 4')).to.eql(['10']);
-
-      expect(toTree('0|>sum 1 2 3')).to.eql([
-        ['number', '0'],
-        ['fx', '|>', 'rpipe'],
-        ['def', 'sum', [[['number', '1'], ['expr', ',', 'or'], ['number', '2'], ['expr', ',', 'or'], ['number', '3']]]],
-      ]);
-
-      expect(value('sum(a,b,c)=a+b+c;2|>sum 4 6')).to.eql(['12']);
-      expect(value('sum(a,b,c)=a+b+c;0<|sum 1 2 3')).to.eql(['3']);
-      expect(value('sum(a,b,c)=a+b+c;0<|sum _ 2 3')).to.eql(['5']);
-      expect(value('sum(a,b,c)=a+b+c;0<|sum 1 _ 3')).to.eql(['4']);
-      expect(value('sum(a,b,c)=a+b+c;0<|sum 1 2 _')).to.eql(['3']);
-
-      expect(toTree('a= b() <| c 1 2;')).to.eql([
-        ['def', 'a', [
-          ['expr', '=', 'equal'],
-          ['def', 'b', [[]]],
-          ['fx', '<|', 'lpipe'],
-          ['def', 'c', [[['number', '1'], ['expr', ',', 'or'], ['number', '2']]]],
-          ['expr', ';', 'k'],
-        ]]
-      ]);
-
-      expect(toTree('a= b() <| c 1;')).to.eql([
-        ['def', 'a', [
-          ['expr', '=', 'equal'],
-          ['def', 'b', [[]]],
-          ['fx', '<|', 'lpipe'],
-          ['def', 'c', [[['number', '1']]]],
-          ['expr', ';', 'k'],
-        ]]
-      ]);
-    });
-  })
-
   describe('Markdown-like formatting', () => {
-    it.skip('should handle code tags', () => {
-      expect(calc('foo `bar baz` buzz').tokens[1][0]).to.eql('code');
-      expect(calc('foo `bar baz` buzz').tokens[1][1]).to.eql('`bar baz`');
+    it('should handle code tags', () => {
+      expect(toTokens('foo `bar baz` buzz')[1].token[0]).to.eql('code');
+      expect(toTokens('foo `bar baz` buzz')[1].token[1]).to.eql('`bar baz`');
     });
 
-    it.skip('should handle del tags', () => {
-      expect(calc('foo ~bar baz~ buzz').tokens[1][0]).to.eql('del');
-      expect(calc('foo ~bar baz~ buzz').tokens[1][1]).to.eql('~bar baz~');
+    it('should handle del tags', () => {
+      expect(toTokens('foo ~bar baz~ buzz')[1].token[0]).to.eql('del');
+      expect(toTokens('foo ~bar baz~ buzz')[1].token[1]).to.eql('~bar baz~');
     });
 
-    it.skip('should handle bold tags', () => {
-      expect(calc('foo **bar baz** buzz').tokens[1][0]).to.eql('b');
-      expect(calc('foo __bar baz__ buzz').tokens[1][0]).to.eql('b');
-      expect(calc('foo __bar baz__ buzz').tokens[1][1]).to.eql('__bar baz__');
+    it('should handle bold tags', () => {
+      expect(toTokens('foo **bar baz** buzz')[1].token[0]).to.eql('b');
+      expect(toTokens('foo __bar baz__ buzz')[1].token[0]).to.eql('b');
+      expect(toTokens('foo __bar baz__ buzz')[1].token[1]).to.eql('__bar baz__');
     });
 
-    it.skip('should handle em tags', () => {
-      expect(calc('foo _bar baz_ buzz').tokens[1][0]).to.eql('em');
-      expect(calc('foo _bar baz_ buzz').tokens[1][1]).to.eql('_bar baz_');
+    it('should handle em tags', () => {
+      expect(toTokens('foo _bar baz_ buzz')[1].token[0]).to.eql('em');
+      expect(toTokens('foo _bar baz_ buzz')[1].token[1]).to.eql('_bar baz_');
     });
 
-    it.skip('should handle heading tags', () => {
-      expect(calc('## ~~foo~~ `bar` __baz__ **buzz**').tokens[0][0]).to.eql('heading');
-      expect(calc('## ~~foo~~ `bar` __baz__ **buzz**').tokens[0][2]).to.eql(2);
-      expect(calc('## ~~foo~~ `bar` __baz__ **buzz**').tokens[0][1]).to.eql('## ~~foo~~ `bar` __baz__ **buzz**');
+    it('should handle heading tags', () => {
+      expect(toTokens('## ~~foo~~ `bar` __baz__ **buzz**')[0].token[0]).to.eql('heading');
+      expect(toTokens('## ~~foo~~ `bar` __baz__ **buzz**')[0].token[2]).to.eql(2);
+      expect(toTokens('## ~~foo~~ `bar` __baz__ **buzz**')[0].token[1]).to.eql('## ~~foo~~ `bar` __baz__ **buzz**');
     });
 
-    it.skip('should handle blockquote tags', () => {
-      expect(calc('> ~~foo~~ `bar` __baz__ **buzz**').tokens[0][0]).to.eql('blockquote');
-      expect(calc('> ~~foo~~ `bar` __baz__ **buzz**').tokens[0][1]).to.eql('> ~~foo~~ `bar` __baz__ **buzz**');
+    it('should handle blockquote tags', () => {
+      expect(toTokens('> ~~foo~~ `bar` __baz__ **buzz**')[0].token[0]).to.eql('blockquote');
+      expect(toTokens('> ~~foo~~ `bar` __baz__ **buzz**')[0].token[1]).to.eql('> ~~foo~~ `bar` __baz__ **buzz**');
     });
   });
 
   describe('Symbols, strings and objects', () => {
-    it.skip('should handle symbols and strings', () => {
-      expect(toTree(':foo')).to.eql([['symbol', ':foo']]);
-      expect(toTree('"foo"')).to.eql([['string', '"foo"']]);
+    it('should handle symbols and strings', () => {
+      expect(toTree(':foo')).to.eql(fix([['symbol', ':foo']]));
+      expect(toTree('"foo"')).to.eql(fix([['string', '"foo"']]));
     });
 
-    it.skip('should split strings and symbols', () => {
-      expect(toTree(':foo "bar"')).to.eql([['symbol', ':foo'], ['string', '"bar"']]);
-      expect(toTree('"foo"')).to.eql([['string', '"foo"']]);
-      expect(toTree('"foo" :bar')).to.eql([['string', '"foo"'], ['symbol', ':bar']]);
-      expect(toTree('"foo" "bar"')).to.eql([['string', '"foo"'], ['string', '"bar"']]);
+    it('should split strings and symbols', () => {
+      expect(toTree(':foo "bar"')).to.eql(fix([['symbol', ':foo'], ['string', '"bar"']]));
+      expect(toTree('"foo"')).to.eql(fix([['string', '"foo"']]));
+      expect(toTree('"foo" :bar')).to.eql(fix([['string', '"foo"'], ['symbol', ':bar']]));
+      expect(toTree('"foo" "bar"')).to.eql(fix([['string', '"foo"'], ['string', '"bar"']]));
 
-      expect(toTree(':a "b" :c')).to.eql([['symbol', ':a'], ['string', '"b"'], ['symbol', ':c']]);
-      expect(toTree(':a "b" "c"')).to.eql([['symbol', ':a'], ['string', '"b"'], ['string', '"c"']]);
+      expect(toTree(':a "b" :c')).to.eql(fix([['symbol', ':a'], ['string', '"b"'], ['symbol', ':c']]));
+      expect(toTree(':a "b" "c"')).to.eql(fix([['symbol', ':a'], ['string', '"b"'], ['string', '"c"']]));
 
-      expect(toTree('"a" :b "c"')).to.eql([['string', '"a"'], ['symbol', ':b'], ['string', '"c"']]);
-      expect(toTree('"a" "b" :c')).to.eql([['string', '"a"'], ['string', '"b"'], ['symbol', ':c']]);
+      expect(toTree('"a" :b "c"')).to.eql(fix([['string', '"a"'], ['symbol', ':b'], ['string', '"c"']]));
+      expect(toTree('"a" "b" :c')).to.eql(fix([['string', '"a"'], ['string', '"b"'], ['symbol', ':c']]));
     });
 
-    it.skip('should keep symbols together', () => {
-      expect(toTree(':foo :bar')).to.eql([['symbol', ':foo', [['symbol', ':bar']]]]);
-      expect(toTree(':a :b :c')).to.eql([['symbol', ':a', [['symbol', ':b'], ['symbol', ':c']]]]);
-      expect(toTree(':a :b "c"')).to.eql([['symbol', ':a', [['symbol', ':b'], ['string', '"c"']]]]);
-      expect(toTree('"a" :b :c')).to.eql([['string', '"a"'], ['symbol', ':b', [['symbol', ':c']]]]);
+    it('should keep symbols separated', () => {
+      expect(toTree(':foo :bar')).to.eql(fix([['symbol', ':foo'], ['symbol', ':bar']]));
+      expect(toTree(':a :b :c')).to.eql(fix([['symbol', ':a'], ['symbol', ':b'], ['symbol', ':c']]));
+      expect(toTree(':a :b "c"')).to.eql(fix([['symbol', ':a'], ['symbol', ':b'], ['string', '"c"']]));
+      expect(toTree('"a" :b :c')).to.eql(fix([['string', '"a"'], ['symbol', ':b'], ['symbol', ':c']]));
     });
 
-    it.skip('should handle array-like values', () => {
-      expect(toTree('[:a]')).to.eql([[['symbol', ':a']]]);
-      expect(toTree(':a [:b]')).to.eql([['symbol', ':a'], [['symbol', ':b']]]);
-      expect(toTree(':a [:b "c"]')).to.eql([['symbol', ':a'], [['symbol', ':b'], ['string', '"c"']]]);
-      expect(toTree('"a" [:b "c"]')).to.eql([['string', '"a"'], [['symbol', ':b'], ['string', '"c"']]]);
-    });
-
-    it.skip('should handle object-like values', () => {
-      expect(toTree('a[b]')).to.eql([]);
-      expect(toTree(':a[b]')).to.eql([['symbol', ':a']]);
-      expect(toTree('a[:b]')).to.eql([['unit', 'a'], [['symbol', ':b']]]);
-      expect(toTree(':a[:b]')).to.eql([['symbol', ':a'], [['symbol', ':b']]]);
-      expect(toTree('a[:b "c"]')).to.eql([['unit', 'a'], [['symbol', ':b'], ['string', '"c"']]]);
-      expect(toTree(':a[:b "c"]')).to.eql([['symbol', ':a'], [['symbol', ':b'], ['string', '"c"']]]);
-      expect(toTree(':x a[]')).to.eql([['symbol', ':x', [['unit', 'a'], ['object', []]]]]);
-      expect(toTree(':x a{}')).to.eql([['symbol', ':x', [['unit', 'a'], ['object', {}]]]]);
-      expect(toTree(':x a[v 2]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', [['unit', 'v'], ['number', '2']]]]]]);
-      expect(toTree(':x a[:b c]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['unit', 'c']] }]]]]);
-      expect(toTree(':x a{:b c}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['unit', 'c']] }]]]]);
-      expect(toTree(':x a[:b "c"]')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['string', '"c"']] }]]]]);
-      expect(toTree(':x a{:b "c"}')).to.eql([['symbol', ':x', ['object', ['unit', 'a', { ':b': [['string', '"c"']] }]]]]);
-    });
-  });
-
-  describe('Using :symbols for definitions', () => {
-    it.skip('should apply :symbol-calls', () => {
-      expect(toTree('123:toString(36)').length).to.eql(3);
-      // expect(value('123:toString(36)')).to.eql(['3f']);
-      expect(toTree(`"foo":toUpperCase()`).length).to.eql(3);
-      // expect(value(`"foo":toUpperCase()`)).to.eql(['FOO']);
-    });
-
-    it.skip('should allow _ symbol as unit (placeholder)', () => {
-      expect(value('sum(x,_)=x+_;sum(1,2)')).to.eql(['3']);
-    });
-
-    it.skip('should consume all tokens if they are lists', () => {
-      expect(toTree(`:set o' 1, 2, 3`)).to.eql([['symbol', ':set', ['object', ['unit', "o'", [['number', '1'], ['number', '2'], ['number', '3']]]]]]);
-      expect(toTree(`:set o' 1, 2, 3`).length).to.eql(1);
-      expect(toTree(`:set o' {:k v}, 1`).length).to.eql(1);
-      expect(toTree(`:set o' :foo "bar"`).length).to.eql(2);
-      expect(toTree(`:set o' "foo" "bar"`).length).to.eql(2);
-
-      expect(toTree(`:set buffer head(buffer):concat tail(buffer)`).length).to.eql(3);
-      expect(toTree(`:set buffer "foo" "bar", "baz buzz", "bazzinga"`).length).to.eql(6);
-      expect(toTree(`:set buffer "foo", "bar", "baz buzz", "bazzinga"`).length).to.eql(1);
-
-      expect(toTree(`:set headers :content-type "text/html"`).length).to.eql(2);
-      expect(toTree(`:set headers "Content-Type" "text/html", "Length: 0"`).length).to.eql(4);
-      expect(toTree(`:set headers {:content-type "text/html"}, "Length: 0"`).length).to.eql(1);
-      expect(toTree(`:set headers ["Content-Type" "text/html", "Length: 0"]`).length).to.eql(1);
-      expect(toTree(`:set headers [{:content-type "text/html"}, "Length: 0"]`).length).to.eql(1);
-    });
-
-    it.skip('should consume all tokens if they are ops', () => {
-      expect(toTree(':a b { :y d, :k y }')).to.eql([
-        ['symbol', ':a', ['object', ['unit', 'b', {
-          ':y': [['unit', 'd']],
-          ':k': [['unit', 'y']],
-        }]]]
-      ]);
-
-      expect(toTree(':a b { :x [{ :y d * v / c, :k y } 2] :e 4 }')).to.eql([
-        ['symbol', ':a', ['object', ['unit', 'b', {
-          ':x': [[
-            {
-              ':y': [['unit', 'd'], ['expr', '*', 'mul'], ['unit', 'v'], ['expr', '/', 'div'], ['unit', 'c']],
-              ':k': [['unit', 'y']],
-            },
-            ['number', '2'],
-          ]],
-          ':e': [['number', '4']],
-        }]]]
-      ]);
-    });
-
-    it.skip('should allow mixed structures, like for pattern-matching, if-then-else, etc.', () => {
-      expect(toTree(':match x {:test (2 * 4) :whatever 3}')).to.eql([
-        ['symbol', ':match', ['object', ['unit', 'x', {
-          ':test': [['number', '2'], ['expr', '*', 'mul'], ['number', '4']],
-          ':whatever': [['number', '3']],
-        }]]],
-      ]);
-
-      expect(toTree(':if (== 1 2) :then 3 :else 4')).to.eql([
-        ['symbol', ':if'], [['fx', '==', 'iseq'], ['number', '1'], ['number', '2']],
-        ['symbol', ':then', ['number', '3']],
-        ['symbol', ':else', ['number', '4']],
-      ]);
-
-      expect(toTree(':do x')).to.eql([['symbol', ':do', [['unit', 'x']]]]);
-      expect(toTree(':do x y z')).to.eql([['symbol', ':do', [['unit', 'x'], ['unit', 'y']]], ['unit', 'z']]);
-      expect(toTree(':do x, y')).to.eql([['symbol', ':do', [['unit', 'x']]], ['expr', ',', 'or'], ['unit', 'y']]);
-      expect(toTree(':do x ~> y')).to.eql([['symbol', ':do', [['unit', 'x']]], ['fx', '~>', 'void'], ['unit', 'y']]);
-      expect(toTree(':do x ~> :null')).to.eql([['symbol', ':do', [['unit', 'x']]], ['fx', '~>', 'void'], ['symbol', null]]);
-
-      expect(toTree(':when (< 1 2) :do a ~> :null, (> 2 1) :do b ~> :false, :otherwise :do c ~> :true')).to.eql([
-        ['symbol', ':when'],
-        [['fx', '<', 'lt'], ['number', '1'], ['number', '2']],
-        ['symbol', ':do', [['unit', 'a']]], ['fx', '~>', 'void'], ['symbol', null], ['expr', ',', 'or'],
-        [['fx', '>', 'gt'], ['number', '2'], ['number', '1']],
-        ['symbol', ':do', [['unit', 'b']]], ['fx', '~>', 'void'], ['symbol', false], ['expr', ',', 'or'],
-        ['symbol', ':otherwise', [['symbol', ':do'], ['unit', 'c']]], ['fx', '~>', 'void'], ['symbol', true]
-      ]);
-
-      expect(toTree(':repeat 5 :do 3')).to.eql([['symbol', ':repeat', ['number', '5']], ['symbol', ':do', ['number', '3']]]);
-      expect(toTree(':loop 1..3 :do x')).to.eql([['symbol', ':loop'], ['range', '1..3'], ['symbol', ':do', [['unit', 'x']]]]);
-
-      expect(toTree(`:loop c'..f(3) :do x`)).to.eql([
-        ['symbol', ':loop', [['unit', "c'"], ['range', '..'], ['def', 'f', [[['number', '3']]]]]],
-        ['symbol', ':do', [['unit', 'x']]],
-      ]);
-
-      expect(toTree(`:loop x(c')..f(3) :do x`)).to.eql([
-        ['symbol', ':loop'],
-        ['def', 'x', [[['unit', "c'"]]]],
-        ['range', '..'],
-        ['def', 'f', [[['number', '3']]]],
-        ['symbol', ':do', [['unit', 'x']]],
-      ]);
-
-      expect(toTree(`:let i'=0; :while (< i' 3) :do n ~> 2, i'++`)).to.eql([
-        ['symbol', ':let'],
-        ['def', "i'", [['expr', '=', 'equal'], ['number', '0'], ['expr', ';', 'k']]],
-        ['symbol', ':while'], [['fx', '<', 'lt'], ['unit', "i'"], ['number', '3']],
-        ['symbol', ':do', [['unit', 'n']]],
-        ['fx', '~>', 'void'], ['number', '2'],
-        ['expr', ',', 'or'], ['unit', "i'"], ['fx', '++', 'inc'],
-      ]);
+    it('should handle tuple-like structures', () => {
+      expect(toTree('(:foo "bar")')).to.eql([[{
+        token: ['object', {
+          ':foo': [{ token: ['string', '"bar"'] }],
+        }],
+      }]]);
     });
   });
 });

@@ -36,15 +36,16 @@ export function getTokensFrom(text, units) {
 
     // keep formatting blocks together
     if (!inBlock && !inFormat && hasFmt(cur)) {
-      if (cur === '*') {
-        inFormat = next === '*' || hasChar(next);
-      } else if (cur === '_') {
-        inFormat = hasSep(last)
-          && (next === '_' || hasChar(next) || isInt(next));
-      } else if (cur === '~') {
-        inFormat = !'=>'.includes(next);
-      } else {
-        inFormat = true;
+      if (typeof last === 'undefined' || !(hasChar(last) || hasNum(last))) {
+        if (cur === '*') {
+          inFormat = next === '*' || hasChar(next);
+        } else if (cur === '_') {
+          inFormat = next === '_' || hasChar(next);
+        } else if (cur === '~') {
+          inFormat = !'=>'.includes(next);
+        } else {
+          inFormat = true;
+        }
       }
 
       if (inFormat) {
@@ -57,7 +58,11 @@ export function getTokensFrom(text, units) {
     }
 
     // disable formatting (avoid escapes)
-    if (inFormat && i > inFormat[0] && inFormat[1] === cur && last !== '\\' && cur !== next) {
+    if (
+      inFormat
+      && (i > inFormat[0] + 1)
+      && inFormat[1] === cur && last !== '\\' && cur !== next
+    ) {
       buffer.push({ cur, row, col });
       inFormat = false;
       continue;
@@ -75,6 +80,9 @@ export function getTokensFrom(text, units) {
       tokens[++offset] = [{ cur, row, col }];
       continue;
     }
+
+    // disable consecutive line-breaks on formatting blocks
+    if (inBlock === 'block' && cur === '\n' && next === '\n') inBlock = false;
 
     if (
       inBlock || inFormat || typeof last === 'undefined'
@@ -191,6 +199,9 @@ export function getTokensFrom(text, units) {
       // side-effects
       || (hasOp(nextChar) && value === '(')
     ) score += 1.5;
+
+    // formatting
+    if (hasFmt(x[0].cur) && x[0].cur === x[x.length - 1].cur) score += 0.5;
 
     // always give score to parentheses
     if ('()'.includes(value)) score += 1;

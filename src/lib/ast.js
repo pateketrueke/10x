@@ -44,34 +44,6 @@ export function fixStrings(tokens, split) {
   }, []);
 }
 
-export function fixTokens(ast, z) {
-  if (!isArray(ast)) return ast;
-
-  const target = ast[0].token[0] === 'symbol' ? {} : [];
-  const array = isArray(target);
-
-  let keyName;
-
-  return ast.reduce((prev, cur) => {
-    if (!isArray(cur) && cur.token[0] === 'symbol') {
-      keyName = cur.token[1];
-    } else if (isArray(cur) || !(cur.token[0] === 'expr' && hasSep(cur.token[1]))) {
-      const fixedToken = z && isArray(cur) ? fixArgs(cur, true) : cur;
-
-      if (!array && keyName) {
-        prev[keyName] = prev[keyName] || (prev[keyName] = []);
-        prev[keyName].push(fixedToken);
-      }
-
-      if (array) {
-        prev.push(fixedToken);
-      }
-    }
-
-    return prev;
-  }, target);
-}
-
 export function fixArgs(values, flatten) {
   let offset = 0;
 
@@ -132,6 +104,34 @@ export function fixArgs(values, flatten) {
   }
 
   return stack;
+}
+
+export function fixTokens(ast, z) {
+  if (!isArray(ast)) return ast;
+
+  const target = ast[0].token[0] === 'symbol' ? {} : [];
+  const array = isArray(target);
+
+  let keyName;
+
+  return ast.reduce((prev, cur) => {
+    if (!isArray(cur) && cur.token[0] === 'symbol') {
+      keyName = cur.token[1];
+    } else if (isArray(cur) || !(cur.token[0] === 'expr' && hasSep(cur.token[1]))) {
+      const fixedToken = z && isArray(cur) ? fixArgs(cur, true) : cur;
+
+      if (!array && keyName) {
+        prev[keyName] = prev[keyName] || (prev[keyName] = []);
+        prev[keyName].push(fixedToken);
+      }
+
+      if (array) {
+        prev.push(fixedToken);
+      }
+    }
+
+    return prev;
+  }, target);
 }
 
 // FIXME: clean up this shit...
@@ -336,7 +336,6 @@ export function buildTree(tokens) {
   const offsets = [];
 
   for (let i = 0; i < tokens.length; i += 1) {
-    const next = tokens[i + 1] || { token: [] };
     const t = tokens[i];
 
     // handle nesting
@@ -534,17 +533,20 @@ export function toPlain(values, cb) {
     return cb(values.map(x => toPlain(x, cb)));
   }
 
+  const copy = {};
+
   Object.keys(values).forEach(key => {
-    const fixedValue = values[key];
+    const fixedValue = values[key].slice();
 
     if (fixedValue[0] === 'object') {
-      Object.keys(fixedValue[1]).forEach(k => {
-        fixedValue[1][k] = cb(fixedValue[1][k]);
-      });
+      fixedValue[1] = Object.keys(fixedValue[1]).reduce((prev, k) => {
+        prev[k] = cb(fixedValue[1][k]);
+        return prev;
+      }, {});
     }
 
-    values[key] = fixedValue;
+    copy[key] = fixedValue;
   });
 
-  return values;
+  return copy;
 }

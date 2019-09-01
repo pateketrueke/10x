@@ -56,7 +56,7 @@ module.exports = ({
             process.stdout.write(chalk.italic.white(cur));
             break;
           case 'b':
-            process.stdout.write(chalk.bold.white(cur));
+            process.stdout.write(chalk.bold(cur));
             break;
           case 'expr':
           case 'fx':

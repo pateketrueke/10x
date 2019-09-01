@@ -192,8 +192,8 @@ export function transform(tokens, units) {
       }
 
       // enable depth by blocks, just for symbols before groups...
-      if (!subTree._fixed && token.cur.charAt() === ':' && '(!'.includes(nextToken.cur)) {
-        if (subTree.length) {
+      if (token.cur.charAt() === ':' && '(!'.includes(nextToken.cur)) {
+        if (!subTree._fixed && subTree.length) {
           chunks[++inc] = [token];
           chunks[inc]._fixed = true;
         } else {
@@ -213,7 +213,10 @@ export function transform(tokens, units) {
         }
 
         chunks[++inc] = [token];
-        chunks[inc]._fixed = true;
+
+        // keep formatting separated
+        if (token.score < 1) inc++;
+        else chunks[inc]._fixed = true;
 
         // break on non-regular tokens!
         if ('":'.includes(token.cur.charAt()) && (nextToken.score < 2 || nextToken.score > 3)) inc++;

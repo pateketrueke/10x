@@ -51,7 +51,7 @@ describe('Lexer', () => {
     it('should handle markdown-like tags', () => {
       expect(getTokensFrom('# foo\nbar').length).to.eql(2);
       expect(getTokensFrom('> foo\nbar').length).to.eql(2);
-      expect(getTokensFrom('~foo~ _123_ *bar* **bazz** __bu\nzz__ `bazzinga`').length).to.eql(13);
+      expect(getTokensFrom('~foo~ _123_ *bar* **bazz** __bu\nzz__ `bazzinga`').length).to.eql(12);
     });
 
     it('should handle checkboxes-like tags', () => {
@@ -92,7 +92,7 @@ describe('Lexer', () => {
     });
 
     it('should rank symbols and strings', () => {
-      expect(sumTokensFrom(':foo "bar baz"')).to.eql(6);
+      expect(sumTokensFrom(':foo "bar baz"')).to.eql(6.5);
     });
 
     it('should rank comments', () => {

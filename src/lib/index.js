@@ -6,7 +6,7 @@ import {
 } from './shared';
 
 import {
-  fixArgs, fixTree,
+  fixArgs,
   toFraction, toNumber, toValue, toList,
 } from './ast';
 

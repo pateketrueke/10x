@@ -10,10 +10,13 @@ describe('Parser', () => {
     it('should produce fixed tokens', () => {
       expect(tree('x=1.2;')).to.eql([
         [
-          { token: ['def', 'x'] },
-          { token: ['expr', '=', 'equal'] },
-          { token: ['number', '1.2'] },
-          { token: ['expr', ';', 'k'] },
+          {
+            _body: true,
+            token: ['def', 'x', {
+              args: null,
+              body: [{ token: ['number', '1.2'] }]
+            }],
+          },
         ],
       ]);
     });

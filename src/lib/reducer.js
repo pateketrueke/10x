@@ -221,11 +221,11 @@ export function reduceFromLogic(cb, ctx, self) {
       }
 
       // handle if-then-else logic
-      if (set[':if'] || set[':unless']) {
-        const ifBranch = set[':if'] || set[':unless'];
+      if (set[':if'] || set[':match'] || set[':not'] || set[':unless']) {
+        const ifBranch = set[':if'] || set[':not'] || set[':match'] || set[':unless'];
         const orBranch = set[':else'] || set[':otherwise'];
 
-        let not = set[':unless'] && !set[':if'];
+        let not = (set[':not'] || set[':unless']) && !(set[':if'] || set[':match']);
         let test = ifBranch.shift();
 
         // handle negative variations
@@ -238,15 +238,15 @@ export function reduceFromLogic(cb, ctx, self) {
 
         // evaluate respective branches
         if (not ? !retval : retval) {
-          ctx.ast.push(...cb(ifBranch, ctx));
-        } else if (orBranch) {
-          ctx.ast.push(...cb(orBranch, ctx));
+          return ctx.ast.push(...cb(ifBranch, ctx));
         }
 
-        return true;
+        if (orBranch) {
+          return ctx.ast.push(...cb(orBranch, ctx));
+        }
+      } else {
+        console.log('SYM_LOGIC', set);
       }
-
-      console.log('SYM_LOGIC', set);
       return false;
     });
   }
@@ -291,7 +291,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     }
 
     const args = fixValues(call.args, x => cb(!isArray(x) ? [x] : x, ctx));
-    const key = JSON.stringify([name, args]);
+    const key = JSON.stringify([name, toPlain(args)]);
 
     // this helps to compute faster!
     if (memoizedInternals[key]) {
@@ -331,7 +331,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       const inputValue = ctx.cur.token[1][2](...inputArgs);
 
       if (Array.isArray(inputValue)) {
-        const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x))
+        const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x));
 
         ctx.cur = toToken(['object', fixedValues.map(x => (!isArray(x) ? toToken(fixResult(x)) : toToken(x)))]);
       } else {
@@ -417,7 +417,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     // skip definitions only!
     if (isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
-    else if (!['symbol', 'def'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
+    else if (ctx.cur.token[0] !== 'def') ctx.ast.push(ctx.cur);
   }
 
   return ctx.ast;
