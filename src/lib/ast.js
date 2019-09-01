@@ -44,7 +44,7 @@ export function fixStrings(tokens, split) {
   }, []);
 }
 
-export function fixTokens(ast) {
+export function fixTokens(ast, z) {
   if (!isArray(ast)) return ast;
 
   const target = ast[0].token[0] === 'symbol' ? {} : [];
@@ -56,13 +56,15 @@ export function fixTokens(ast) {
     if (!isArray(cur) && cur.token[0] === 'symbol') {
       keyName = cur.token[1];
     } else if (isArray(cur) || !(cur.token[0] === 'expr' && hasSep(cur.token[1]))) {
+      const fixedToken = z && isArray(cur) ? fixArgs(cur, true) : cur;
+
       if (!array && keyName) {
         prev[keyName] = prev[keyName] || (prev[keyName] = []);
-        prev[keyName].push(cur);
+        prev[keyName].push(fixedToken);
       }
 
       if (array) {
-        prev.push(cur);
+        prev.push(fixedToken);
       }
     }
 
@@ -155,7 +157,7 @@ export function fixTree(ast) {
       // handle tuples
       // FIXME: more helpers
       if (cur[0].token[0] === 'symbol' && ['number', 'string', 'unit'].includes(cur[1].token[0])) {
-        tokens.splice(i, 1, toToken(['object', fixTokens(cur)]));
+        tokens.splice(i, 1, toToken(['object', fixTokens(cur, true)]));
         continue;
       }
     }
