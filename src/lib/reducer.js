@@ -76,8 +76,8 @@ export function reduceFromUnits(cb, ctx, self, convert) {
       throw new Error(`Missing definition of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``);
     }
 
-    if (ctx.env[ctx.cur.token[2]].args && ctx.env[ctx.cur.token[2]].args.length) {
-      throw new Error(`Invalid usage of ${ctx.cur.token[0]} \`${ctx.cur.token[1]}\``);
+    if (ctx.env[ctx.cur.token[2]].args) {
+      throw new Error(`Unable to call ${ctx.cur.token[0]} definition \`${ctx.cur.token[1]}\``);
     }
 
     const base = parseFloat(ctx.cur.token[1]);
@@ -375,16 +375,16 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     if (isArray(ctx.cur)) {
       let fixedValue;
 
-      // evaluate simple lists only
+      // evaluate simple lists only (no separators)
       if (!ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))) {
         fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
+
+        // prepend multiplication if goes after units/numbers
+        if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
+          ctx.ast.push(toToken(['expr', '*', 'mul']));
+        }
       } else {
         fixedValue = ['object', fixArgs(ctx.cur, false)];
-      }
-
-      // prepend multiplication if goes after units/numbers
-      if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
-        ctx.ast.push(toToken(['expr', '*', 'mul']));
       }
 
       ctx.ast.push(toToken(fixedValue));
