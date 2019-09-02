@@ -412,6 +412,12 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     if (isArray(ctx.cur)) {
       let fixedValue;
 
+      // handle plain arrays
+      if (ctx.root.cur && ctx.root.cur.token[0] === 'object') {
+        ctx.ast.push(cb(ctx.cur, ctx));
+        continue;
+      }
+
       // evaluate simple lists only (no separators)
       if (!isArray(ctx.cur[0]) && !ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))) {
         fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
@@ -430,7 +436,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     if (!isArray(ctx.left)) {
       // flag well-known definitions, as they are open...
-      if (ctx.root.isDef || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
+      if (ctx.root.isDef || isArray(ctx.root.cur) || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
       // append last-operator between consecutive unit-expressions
       if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
@@ -443,12 +449,29 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         reduceFromDefs(cb, ctx, context, memoizedInternals);
         reduceFromUnits(cb, ctx, context, settings.convertFrom);
 
+        // evaluate resulting object
+        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object') {
+          if (!isArray(ctx.cur.token[1])) {
+            ctx.cur.token[1] = toPlain(ctx.cur.token[1], true, x => {
+              const subTree = cb(x, ctx);
+
+              return !isArray(subTree[0])
+                ? [toToken(calculateFromTokens(toList(subTree)))]
+                : subTree;
+            });
+          }
+        }
+
         // unwind values to current AST
         if (
           !isArray(ctx.cur)
           && ctx.cur.token[0] === 'object'
           && ctx.left.token[0] === 'expr' && ctx.left.token[2] === 'amp'
         ) {
+          if (!isArray(ctx.cur.token[1])) {
+            throw new Error(`Expecting sequence to unwind, given ${ctx.cur.token[1]}`);
+          }
+
           ctx.ast.pop();
           ctx.ast.push(...ctx.cur.token[1]);
           continue;

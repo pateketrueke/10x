@@ -7,7 +7,7 @@ import {
 
 import {
   fixArgs,
-  toFraction, toNumber, toValue, toPlain, toList,
+  toFraction, toNumber, toValue,
 } from './ast';
 
 import LangErr from './error';
@@ -100,7 +100,7 @@ export default class Solv {
       return fixedResult;
     }
 
-    return this.value(result, formatter).format;
+    return this.value(result, indent, formatter, separator).format;
   }
 
   value(result, indent, formatter, separator) {
@@ -109,14 +109,18 @@ export default class Solv {
     }
 
     if (isArray(result)) {
-      return this.format(result, indent, formatter, separator);
+      return {
+        val: result,
+        type: 'object',
+        format: this.format(result, indent, formatter, separator),
+      };
     }
 
     if (result instanceof LangExpr) {
       const { token } = result;
 
       if (token[0] === 'object') {
-        const fixedObject = this.value(token[1], indent, formatter, separator);
+        const fixedObject = this.value(token[1], indent, formatter, separator).format;
 
         return {
           val: token[1],
@@ -192,7 +196,11 @@ export default class Solv {
       out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${this.format(result[key], indent, formatter, separator)}`);
     });
 
-    return out.join(',\n');
+    return {
+      value: result,
+      type: 'object',
+      format: out.join(`${separator}\n`),
+    };
   }
 
   eval(tokens, source) {

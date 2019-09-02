@@ -554,18 +554,29 @@ export function toInput(token, cb, z) {
   return fixedValue;
 }
 
-export function toPlain(values, cb) {
+export function toPlain(values, raw, cb) {
   if (!cb) {
     cb = x => x.map(y => (!isArray(y) ? toInput(y.token) : y));
   }
 
   if (isArray(values)) {
-    return cb(values.map(x => toPlain(x, cb)));
+    return cb(values.map(x => toPlain(x, raw, cb)));
+  }
+
+  if (!values || typeof values !== 'object') {
+    return values;
   }
 
   const copy = {};
 
   Object.keys(values).forEach(key => {
+    if (raw) {
+      copy[key] = !isArray(values[key])
+        ? toPlain(values[key], raw, cb)
+        : cb(values[key]);
+      return;
+    }
+
     const fixedValue = values[key].slice();
 
     if (fixedValue[0] === 'object') {
