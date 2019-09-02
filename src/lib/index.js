@@ -231,7 +231,7 @@ export default class Solv {
       .filter(x => x.length)
       .map(x => {
         // evaluate last chunks with expressions...
-        if (x.length > 1 && x.some(y => !isArray(y) && y.token[0] === 'expr')) {
+        if (x.length > 1 && x.every(y => !isArray(y))) {
           return toToken(calculateFromTokens(toList(x)));
         }
 
