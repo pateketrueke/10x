@@ -37,6 +37,7 @@ module.exports = ({
             process.stdout.write(chalk.magentaBright(cur));
             break;
           case 'number':
+          case 'range':
             process.stdout.write(chalk.blueBright(cur));
             break;
           case 'def':
