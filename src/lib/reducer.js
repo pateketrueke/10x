@@ -62,7 +62,7 @@ export function reduceFromUnits(cb, ctx, self, convert) {
     }
 
     // resolve definition body
-    ctx.cur = cb(ctx.env[ctx.cur.token[1]].body, ctx);
+    ctx.cur = cb(ctx.env[ctx.cur.token[1]].body.slice(), ctx);
     return;
   }
 
@@ -253,7 +253,7 @@ export function reduceFromLogic(cb, ctx, self) {
           for (let nextValue = it.next(); nextValue.done !== true; nextValue = it.next()) {
             const locals = { it: { body: [toToken(fixResult(nextValue.value))] } };
 
-            seq.push(...cb(forBranch.slice(), ctx, locals));
+            seq.push(...cb(forBranch, ctx, locals));
           }
         }
 
@@ -261,7 +261,7 @@ export function reduceFromLogic(cb, ctx, self) {
           const locals = { it: { body: [toToken(fixResult(retval))] } };
 
           for (let i = 0; i < retval; i += 1) {
-            seq.push(...cb(forBranch.slice(), ctx, locals));
+            seq.push(...cb(forBranch, ctx, locals));
           }
         }
 
