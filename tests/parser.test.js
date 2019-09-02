@@ -11,7 +11,6 @@ describe('Parser', () => {
       expect(tree('x=1.2;')).to.eql([
         [
           {
-            _body: true,
             token: ['def', 'x', {
               args: null,
               body: [{ token: ['number', '1.2'] }]

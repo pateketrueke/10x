@@ -413,14 +413,21 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       let fixedValue;
 
       // handle plain arrays
-      if (ctx.root.cur && ctx.root.cur.token[0] === 'object') {
+      if (
+        ctx.root.cur
+        && !isArray(ctx.root.cur)
+        && ctx.root.cur.token[0] === 'object'
+      ) {
         ctx.isDef = true;
         ctx.ast.push(cb(ctx.cur, ctx));
         continue;
       }
 
       // evaluate simple lists only (no separators)
-      if (!isArray(ctx.cur[0]) && !ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))) {
+      if (
+        !isArray(ctx.cur[0])
+        && !ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))
+      ) {
         fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
 
         // prepend multiplication if goes after units/numbers
@@ -478,6 +485,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
+        console.log(e);
         throw new LangErr(e.message, ctx);
       }
     }
