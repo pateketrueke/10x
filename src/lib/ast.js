@@ -213,7 +213,11 @@ export function fixTree(ast) {
       }
 
       // handle ranges...
-      if (!isArray(cur) && cur.token[0] === 'range') {
+      if (
+        !isArray(cur)
+        && prev.token[1]
+        && cur.token[0] === 'range'
+      ) {
         const base = prev.token[1];
         const target = cur.token[1].substr(2);
         const iterator = fixRange(base, target);

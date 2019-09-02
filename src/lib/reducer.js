@@ -469,11 +469,10 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
             });
           }
 
-          // FIXME: unwind values to current AST?
           if (
             !isArray(ctx.cur)
             && ctx.cur.token[0] === 'object'
-            && ctx.left.token[0] === 'expr' && ctx.left.token[2] === 'amp'
+            && ctx.left.token[0] === 'range' && ctx.left.token[1] === '..'
           ) {
             if (!isArray(ctx.cur.token[1])) {
               throw new Error(`Expecting sequence to unwind, given ${ctx.cur.token[1]}`);
