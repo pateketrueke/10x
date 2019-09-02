@@ -239,8 +239,12 @@ export function reduceFromLogic(cb, ctx, self) {
         // evaluate respective branches
         if (not ? !retval : retval) {
           ctx.ast.push(...cb(ifBranch, ctx));
-        } else if (orBranch) {
+          return true;
+        }
+
+        if (orBranch) {
           ctx.ast.push(...cb(orBranch, ctx));
+          return true;
         }
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
