@@ -91,11 +91,17 @@ export default class Solv {
 
   format(result, indent, formatter, separator, parentheses) {
     if (isArray(result)) {
-      const fixedResult = result.map(x => this.value(x, indent, formatter, separator).format);
+      const fixedResult = result.map(x => this.value(x, indent, formatter, separator, parentheses).format);
 
       if (separator) {
         if (parentheses) {
           return `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`;
+        }
+
+        if (isArray(result[0]) || result[0].token[0] === 'object') {
+          const tabs = Array.from({ length: indent + 2 }).join(' ');
+
+          return fixedResult.join(`${separator}\n${tabs}`);
         }
 
         return fixedResult.join(separator);
@@ -104,10 +110,10 @@ export default class Solv {
       return fixedResult;
     }
 
-    return this.value(result, indent, formatter, separator).format;
+    return this.value(result, indent, formatter, separator, parentheses).format;
   }
 
-  value(result, indent, formatter, separator) {
+  value(result, indent, formatter, separator, parentheses) {
     if (!result) {
       return null;
     }
@@ -116,7 +122,7 @@ export default class Solv {
       return {
         val: result,
         type: 'object',
-        format: this.format(result, indent, formatter, separator, true),
+        format: this.format(result, indent, formatter, separator, !parentheses || isArray(result[0])),
       };
     }
 
