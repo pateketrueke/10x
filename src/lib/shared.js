@@ -23,6 +23,8 @@ const OP_TYPES = {
   '<|': 'lpipe',
   '<': 'lt',
   '>': 'gt',
+  '@': 'at',
+  '&': 'amp',
   '!': 'not',
   '=': 'equal',
   '+': 'plus',

@@ -443,13 +443,13 @@ export function toNumber(value) {
 }
 
 export function toValue(token) {
-  const [type, value] = token;
+  let value = token[1];
 
-  if (type === 'number' && value instanceof Date) {
+  if (token[0] === 'number' && value instanceof Date) {
     return value.toString().split(' ').slice(0, 5).join(' ');
   }
 
-  if (type === 'number') {
+  if (token[0] === 'number') {
     if (value >= Number.MAX_SAFE_INTEGER) {
       return value.toString().replace(/e[+-]/i, '^');
     }
@@ -464,7 +464,7 @@ export function toValue(token) {
   }
 
   // simplify decimals
-  if (type === 'number' && typeof value === 'string' && value.includes('.')) {
+  if (token[0] === 'number' && typeof value === 'string' && value.includes('.')) {
     const [base, decimals] = value.replace('%', '').split('.');
     const input = decimals.split('');
     const out = [];
