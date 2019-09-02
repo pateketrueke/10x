@@ -9,6 +9,47 @@ module.exports = ({
   let indent = '';
   let values = [];
 
+  function ms() {
+    return (Math.random() * ANIMATION_SPEED) + (ANIMATION_SPEED / 2);
+  }
+
+  function out(type, text) {
+    switch (type) {
+      case null:
+        return text;
+      case 'blockquote':
+        return chalk.bold.whiteBright(text);
+      case 'comment':
+        return chalk.gray(text);
+      case 'symbol':
+        return chalk.yellow(text);
+      case 'string':
+        return chalk.greenBright(text);
+      case 'unit':
+        return chalk.magentaBright(text);
+      case 'number':
+      case 'range':
+        return chalk.blueBright(text);
+      case 'def':
+        return chalk.blue(text);
+      case 'heading':
+        return chalk.bold.underline.whiteBright(text);
+      case 'code':
+        return chalk.bgBlackBright.black(text);
+      case 'close':
+      case 'open':
+        return chalk.dim(text);
+      case 'em':
+        return chalk.italic.white(text);
+      case 'b':
+        return chalk.bold(text);
+      case 'expr':
+      case 'fx':
+      default:
+        return chalk.white(text);
+    }
+  }
+
   function puts(type, chunk, speed) {
     if (type !== 'number' && typeof chunk !== 'string') {
       process.stdout.write(chalk.yellow(`:${chunk}`));
@@ -17,54 +58,7 @@ module.exports = ({
 
     return String(chunk).split(speed ? /(?=[\x00-\x7F])/ : /(?=\b)/) // eslint-disable-line
       .reduce((prev, cur) => prev.then(() => {
-        switch (type) {
-          case null:
-            process.stdout.write(cur);
-            break;
-          case 'blockquote':
-            process.stdout.write(chalk.bold.whiteBright(cur));
-            break;
-          case 'comment':
-            process.stdout.write(chalk.gray(cur));
-            break;
-          case 'symbol':
-            process.stdout.write(chalk.yellow(cur));
-            break;
-          case 'string':
-            process.stdout.write(chalk.greenBright(cur));
-            break;
-          case 'unit':
-            process.stdout.write(chalk.magentaBright(cur));
-            break;
-          case 'number':
-          case 'range':
-            process.stdout.write(chalk.blueBright(cur));
-            break;
-          case 'def':
-            process.stdout.write(chalk.blue(cur));
-            break;
-          case 'heading':
-            process.stdout.write(chalk.bold.underline.whiteBright(cur));
-            break;
-          case 'code':
-            process.stdout.write(chalk.bgBlackBright.black(cur));
-            break;
-          case 'close':
-          case 'open':
-            process.stdout.write(chalk.dim(cur));
-            break;
-          case 'em':
-            process.stdout.write(chalk.italic.white(cur));
-            break;
-          case 'b':
-            process.stdout.write(chalk.bold(cur));
-            break;
-          case 'expr':
-          case 'fx':
-          default:
-            process.stdout.write(chalk.white(cur));
-            break;
-        }
+        process.stdout.write(out(type, cur));
 
         if (speed > 0) {
           return new Promise(ok => setTimeout(ok, Math.floor(speed / chunk.length)));
@@ -92,7 +86,7 @@ module.exports = ({
 
       setTimeout(() => {
         Promise.resolve()
-          .then(() => puts(type, chunk, (Math.random() * ANIMATION_SPEED) + (ANIMATION_SPEED / 2)))
+          .then(() => puts(type, chunk, ms()))
           .then(ok);
       }, (Math.random() * (ANIMATION_SPEED / 10)) + 1);
     }));
@@ -103,7 +97,7 @@ module.exports = ({
       if (x instanceof Error) {
         push(null, `${indent}${chalk.red(x[showDebugInfo ? 'stack' : 'message'])}\n`);
       } else {
-        push(null, `${indent}${chalk.gray('//=>')} ${calc.format(x, chalk.gray(', '), v => chalk.cyanBright(v))}\n`);
+        push(null, `${indent}${chalk.gray('//=>')} ${calc.format(x, out, chalk.gray(', '))}\n`);
       }
     });
 

@@ -7,10 +7,11 @@ import {
 
 import {
   fixArgs,
-  toFraction, toNumber, toValue, toList,
+  toFraction, toNumber, toValue, toPlain, toList,
 } from './ast';
 
 import LangErr from './error';
+import LangExpr from './expr';
 
 import { reduceFromAST } from './reducer';
 import { calculateFromTokens } from './solver';
@@ -88,9 +89,9 @@ export default class Solv {
     return this;
   }
 
-  format(result, separator, formatter) {
-    if (isArray(result[0])) {
-      const fixedResult = result.map(x => this.value(x, formatter).format);
+  format(result, formatter, separator) {
+    if (isArray(result)) {
+      const fixedResult = result.map(x => this.value(x, formatter, separator).format);
 
       if (separator) {
         return fixedResult.join(separator);
@@ -102,69 +103,89 @@ export default class Solv {
     return this.value(result, formatter).format;
   }
 
-  value(token, formatter) {
-    if (!token) {
+  value(result, formatter, separator) {
+    if (!result) {
       return null;
     }
 
-    if (token[0] === 'number') {
-      token[1] = toNumber(token[1]);
+    if (isArray(result)) {
+      return this.format(result, formatter, separator);
     }
 
-    if (
-      token[2]
-      && token[0] === 'number'
-      && !(isInt(token[1]) || token[1] instanceof Date)
-    ) {
-      // remove trailing words from units
-      token[1] = String(token[1]).replace(/[\sa-z/-]+$/ig, '');
-    }
+    if (result instanceof LangExpr) {
+      const { token } = result;
 
-    let fixedValue = toValue(token);
-    let fixedUnit = token[2];
+      if (token[0] === 'object') {
+        const fixedObject = this.value(token[1], formatter, separator);
 
-    // adjust unit-fractions
-    if (typeof fixedUnit === 'string' && fixedUnit.indexOf('fr-') === 0) {
-      fixedValue = toFraction(fixedValue);
-      fixedUnit = fixedUnit.split('fr-')[1];
-    }
-
-    // add thousand separators
-    if (token[0] === 'number' && isInt(fixedValue)) {
-      fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
-
-    if (
-      fixedUnit
-      && !(['datetime', 'x-fraction'].includes(fixedUnit) || token[1] instanceof Date)
-    ) {
-      // apply well-known inflections
-      if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
-        const [one, many] = this.inflections[fixedUnit];
-        const base = parseFloat(fixedValue);
-
-        if (base === 1.0 && one) fixedUnit = one;
-        if (base !== 1.0 && many) fixedUnit = many;
+        return {
+          val: token[1],
+          type: token[0],
+          format: isArray(token[1]) ? `[ ${fixedObject} ]` : `{ ${fixedObject} }`,
+        };
       }
 
-      if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
-        fixedValue += ` ${fixedUnit}`;
+      if (token[0] === 'number') {
+        token[1] = toNumber(token[1]);
       }
+
+      if (
+        token[2]
+        && token[0] === 'number'
+        && !(isInt(token[1]) || token[1] instanceof Date)
+      ) {
+        // remove trailing words from units
+        token[1] = String(token[1]).replace(/[\sa-z/-]+$/ig, '');
+      }
+
+      let fixedValue = toValue(token);
+      let fixedUnit = token[2];
+
+      // adjust unit-fractions
+      if (typeof fixedUnit === 'string' && fixedUnit.indexOf('fr-') === 0) {
+        fixedValue = toFraction(fixedValue);
+        fixedUnit = fixedUnit.split('fr-')[1];
+      }
+
+      // add thousand separators
+      if (token[0] === 'number' && isInt(fixedValue)) {
+        fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      }
+
+      if (
+        fixedUnit
+        && !(['datetime', 'x-fraction'].includes(fixedUnit) || token[1] instanceof Date)
+      ) {
+        // apply well-known inflections
+        if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
+          const [one, many] = this.inflections[fixedUnit];
+          const base = parseFloat(fixedValue);
+
+          if (base === 1.0 && one) fixedUnit = one;
+          if (base !== 1.0 && many) fixedUnit = many;
+        }
+
+        if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
+          fixedValue += ` ${fixedUnit}`;
+        }
+      }
+
+      let formattedValue = typeof fixedValue !== 'string'
+        ? JSON.stringify(fixedValue)
+        : fixedValue;
+
+      if (typeof formatter === 'function') {
+        formattedValue = formatter(token[0], formattedValue);
+      }
+
+      return {
+        val: token[1],
+        type: token[0],
+        format: formattedValue,
+      };
     }
 
-    let formattedValue = typeof fixedValue !== 'string'
-      ? JSON.stringify(fixedValue)
-      : fixedValue;
-
-    if (typeof formatter === 'function') {
-      formattedValue = formatter(formattedValue);
-    }
-
-    return {
-      val: token[1],
-      type: token[0],
-      format: formattedValue,
-    };
+    return 'OBJECT';
   }
 
   eval(tokens, source) {
@@ -181,9 +202,6 @@ export default class Solv {
       return [];
     }
 
-    return output
-      .map(x => calculateFromTokens(toList(x)))
-      .map(x => (isArray(x) && x.length === 1 ? x[0] : x))
-      .filter(x => (isArray(x) ? x.length : typeof x !== 'undefined'));
+    return output.reduce((p, c) => p.concat(c), []);
   }
 }
