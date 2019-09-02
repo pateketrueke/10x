@@ -457,7 +457,7 @@ export function toValue(token) {
     const sub = value.toString().match(/^.*?\.0+\d{1,3}/);
 
     if (!sub) {
-      value = value.toFixed(2).replace(/\.0+$/, '');
+      value = parseFloat(value).toFixed(2).replace(/\.0+$/, '');
     } else value = sub[0];
 
     return value.replace(/(?<=\.\d+)0+$/, '');

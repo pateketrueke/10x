@@ -89,12 +89,12 @@ export default class Solv {
     return this;
   }
 
-  format(result, formatter, separator) {
+  format(result, indent, formatter, separator) {
     if (isArray(result)) {
-      const fixedResult = result.map(x => this.value(x, formatter, separator).format);
+      const fixedResult = result.map(x => this.value(x, indent, formatter, separator).format);
 
       if (separator) {
-        return fixedResult.join(separator);
+        return `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`;
       }
 
       return fixedResult;
@@ -103,25 +103,25 @@ export default class Solv {
     return this.value(result, formatter).format;
   }
 
-  value(result, formatter, separator) {
+  value(result, indent, formatter, separator) {
     if (!result) {
       return null;
     }
 
     if (isArray(result)) {
-      return this.format(result, formatter, separator);
+      return this.format(result, indent, formatter, separator);
     }
 
     if (result instanceof LangExpr) {
       const { token } = result;
 
       if (token[0] === 'object') {
-        const fixedObject = this.value(token[1], formatter, separator);
+        const fixedObject = this.value(token[1], indent, formatter, separator);
 
         return {
           val: token[1],
           type: token[0],
-          format: isArray(token[1]) ? `[ ${fixedObject} ]` : `{ ${fixedObject} }`,
+          format: fixedObject,
         };
       }
 
@@ -185,7 +185,14 @@ export default class Solv {
       };
     }
 
-    return 'OBJECT';
+    const tabs = Array.from({ length: indent + 3 }).join(' ');
+    const out = [];
+
+    Object.keys(result).forEach((key, i) => {
+      out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${this.format(result[key], indent, formatter, separator)}`);
+    });
+
+    return out.join(',\n');
   }
 
   eval(tokens, source) {
