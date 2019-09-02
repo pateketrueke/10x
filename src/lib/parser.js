@@ -171,6 +171,7 @@ export function normalize(subTree) {
 export function transform(tokens, units) {
   const chunks = [];
 
+  let oldChar = '';
   let open = false;
   let inc = 0;
 
@@ -230,13 +231,17 @@ export function transform(tokens, units) {
       continue;
     }
 
-    subTree.push(token);
+    // make sure we're always splitting on new-lines!
+    if (!(open || token.depth) && oldChar !== ',' && token.cur === '\n') inc++;
+
+    // keep new-lines if we're within a list...
+    if (!open && !' \n'.includes(token.cur)) oldChar = token.cur;
 
     // disable depth by blocks...
     if (open && token.cur === ';') open = false;
 
-    // make sure we're always splitting on new-lines!
-    if (!(open || token.depth) && token.cur === '\n') inc++;
+    // just append tokens!
+    subTree.push(token);
   }
 
   // merge non-fixed chunks
