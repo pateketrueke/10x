@@ -20,21 +20,10 @@ contexts:
         - include: scope:source.text.slv
         - meta_scope: punctuation.definition.comment
 
-        # args before ops
-        - match: "([a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*\\s*(?=[<!=|>~]{2}|[-+*=/<>]))+"
-          scope: keyword.other
-
-        # args after ops
-        - match: "(?<=[<>]|[<!=|>~]{2})(\\s*[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*)+"
-          scope: keyword.other
-
-        # arguments
-        - match: "(?<=[(;,]|^)\\s*[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*(?=[);,]|$)"
-          scope: keyword.other
-
-        # ops and words
-        - match: "[<!=|>~]{2}|[-+*=/<>]|[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*"
+        # all text inside parentheses
+        - match: "[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*"
           scope: variable.other
+
         - match: '\)'
           pop: true
 
@@ -68,8 +57,10 @@ contexts:
         - match: '$'
           pop: true
 
-    # all normal words
-    - match: "(?<=[-+*/<=>]|^)\\s*[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*\\s*(?=[-+*/<>;]|$)"
+    # all operators
+    - match: "([-<!=|>~]{2}|[-+*=/<&>])\\s*(?=\\d+|[a-zA-Z_][a-zA-Z_#'\\u00C0-\\u00FF]*|:\\w+)"
+      scope: keyword.other
+    - match: "(?<=[)]|\\d|[a-zA-Z_#'\\u00C0-\\u00FF])\\s*([-<!=|>~]{2}|[-+*=/<&>])"
       scope: keyword.other
 
     # units and numbers
