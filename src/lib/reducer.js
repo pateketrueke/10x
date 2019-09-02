@@ -245,20 +245,28 @@ export function reduceFromLogic(cb, ctx, self) {
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
         const retval = toInput(calculateFromTokens(toList(cb(forBranch.shift(), ctx))));
+        const seq = [];
 
         if (typeof retval === 'object' && retval.iterator) {
           const it = retval.iterator;
-          const seq = [];
 
           for (let nextValue = it.next(); nextValue.done !== true; nextValue = it.next()) {
             const locals = { it: { body: [toToken(fixResult(nextValue.value))] } };
 
             seq.push(...cb(forBranch.slice(), ctx, locals));
           }
-
-          ctx.ast.push(toToken(['object', seq]));
-          return true;
         }
+
+        if (typeof retval === 'number') {
+          const locals = { it: { body: [toToken(fixResult(retval))] } };
+
+          for (let i = 0; i < retval; i += 1) {
+            seq.push(...cb(forBranch.slice(), ctx, locals));
+          }
+        }
+
+        ctx.ast.push(toToken(['object', seq]));
+        return true;
       } else {
         console.log('SYM_LOGIC', set);
       }
@@ -431,9 +439,9 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       }
     }
 
-    // skip definitions only!
+    // skip definitions and symbols!
     if (isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
-    else if (ctx.cur.token[0] !== 'def') ctx.ast.push(ctx.cur);
+    else if (!['symbol', 'def'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
   }
 
   return ctx.ast;
