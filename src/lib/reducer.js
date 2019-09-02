@@ -435,7 +435,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           ctx.ast.push(toToken(['expr', '*', 'mul']));
         }
       } else {
-        fixedValue = ['object', fixArgs(ctx.cur)];
+        fixedValue = ['object', fixArgs(cb(ctx.cur, ctx))];
       }
 
       ctx.ast.push(toToken(fixedValue));
@@ -470,6 +470,19 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           }
 
           // FIXME: unwind values to current AST?
+          if (
+            !isArray(ctx.cur)
+            && ctx.cur.token[0] === 'object'
+            && ctx.left.token[0] === 'expr' && ctx.left.token[2] === 'amp'
+          ) {
+            if (!isArray(ctx.cur.token[1])) {
+              throw new Error(`Expecting sequence to unwind, given ${ctx.cur.token[1]}`);
+            }
+
+            ctx.ast.pop();
+            ctx.ast.push(...ctx.cur.token[1]);
+            continue;
+          }
         }
       } catch (e) {
         throw new LangErr(e.message, ctx);

@@ -24,6 +24,7 @@ const OP_TYPES = {
   '<': 'lt',
   '>': 'gt',
   '!': 'not',
+  '&': 'amp',
   '=': 'equal',
   '+': 'plus',
   '-': 'min',
