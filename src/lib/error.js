@@ -15,6 +15,7 @@ export default class LangErr extends Error {
       this.target = ctx.cur;
 
       if (ctx.content) {
+        this.target = ctx;
         this.offsets = [ctx.begin, ctx.end];
       }
 
