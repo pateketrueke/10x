@@ -50,7 +50,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     return ['comment', text];
   }
 
-  // handle white-space and dots...
+  // handle white-space
   if (' \n'.includes(text)) {
     return ['text', text];
   }
@@ -61,7 +61,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
   }
 
   // handle range-values
-  if (text.includes('..')) {
+  if (text.indexOf('..') === 0) {
     return ['range', text];
   }
 

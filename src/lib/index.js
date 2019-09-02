@@ -120,7 +120,7 @@ export default class Solv {
       token[1] = String(token[1]).replace(/[\sa-z/-]+$/ig, '');
     }
 
-    let fixedValue = toValue(token[1]);
+    let fixedValue = toValue(token);
     let fixedUnit = token[2];
 
     // adjust unit-fractions
@@ -130,7 +130,7 @@ export default class Solv {
     }
 
     // add thousand separators
-    if (isInt(fixedValue)) {
+    if (token[0] === 'number' && isInt(fixedValue)) {
       fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 

@@ -255,14 +255,14 @@ export function reduceFromLogic(cb, ctx, self) {
 
             seq.push(...cb(forBranch, ctx, locals));
           }
-        }
-
-        if (typeof retval === 'number') {
+        } else if (typeof retval === 'number') {
           const locals = { it: { body: [toToken(fixResult(retval))] } };
 
           for (let i = 0; i < retval; i += 1) {
             seq.push(...cb(forBranch, ctx, locals));
           }
+        } else {
+          console.log('UNDEF_SEQ', retval);
         }
 
         ctx.ast.push(toToken(['object', seq]));

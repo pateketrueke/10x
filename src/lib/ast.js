@@ -442,12 +442,14 @@ export function toNumber(value) {
   return value;
 }
 
-export function toValue(value) {
-  if (value instanceof Date) {
+export function toValue(token) {
+  const [type, value] = token;
+
+  if (type === 'number' && value instanceof Date) {
     return value.toString().split(' ').slice(0, 5).join(' ');
   }
 
-  if (typeof value === 'number') {
+  if (type === 'number') {
     if (value >= Number.MAX_SAFE_INTEGER) {
       return value.toString().replace(/e[+-]/i, '^');
     }
@@ -462,7 +464,7 @@ export function toValue(value) {
   }
 
   // simplify decimals
-  if (typeof value === 'string' && value.includes('.')) {
+  if (type === 'number' && typeof value === 'string' && value.includes('.')) {
     const [base, decimals] = value.replace('%', '').split('.');
     const input = decimals.split('');
     const out = [];
