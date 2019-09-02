@@ -228,12 +228,8 @@ export default class Solv {
     }
 
     // FIXME: multiple values cannot be unwinded...
-    // console.log({output});
-    // console.log(output.filter(x => x.length).map(x => !isArray(x[0])? calculateFromTokens(toList(x)) : x));
-
     return output
       .filter(x => x.length)
-      // .map(x => (isArray(x[0]) ? x[0] : x))
       .map(x => calculateFromTokens(toList(x)))
       .reduce((p, c) => p.concat(toToken(c)), []);
   }

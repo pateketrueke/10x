@@ -468,24 +468,10 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
                 : subTree;
             });
           }
-        }
 
-        // unwind values to current AST
-        if (
-          !isArray(ctx.cur)
-          && ctx.cur.token[0] === 'object'
-          && ctx.left.token[0] === 'expr' && ctx.left.token[2] === 'amp'
-        ) {
-          if (!isArray(ctx.cur.token[1])) {
-            throw new Error(`Expecting sequence to unwind, given ${ctx.cur.token[1]}`);
-          }
-
-          ctx.ast.pop();
-          ctx.ast.push(...ctx.cur.token[1]);
-          continue;
+          // FIXME: unwind values to current AST?
         }
       } catch (e) {
-        console.log(e);
         throw new LangErr(e.message, ctx);
       }
     }
