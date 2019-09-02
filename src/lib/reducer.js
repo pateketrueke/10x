@@ -265,7 +265,15 @@ export function reduceFromLogic(cb, ctx, self) {
           console.log('UNDEF_SEQ', retval);
         }
 
-        ctx.ast.push(toToken(['object', seq]));
+        if (
+          seq.length === 1
+          && !isArray(seq[0])
+          && seq[0].token[0] === 'object'
+        ) {
+          ctx.cur = seq[0];
+        } else {
+          ctx.cur = toToken(['object', seq]);
+        }
         return true;
       } else {
         console.log('SYM_LOGIC', set);
@@ -434,6 +442,17 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         reduceFromFX(cb, ctx);
         reduceFromDefs(cb, ctx, context, memoizedInternals);
         reduceFromUnits(cb, ctx, context, settings.convertFrom);
+
+        // unwind values to current AST
+        if (
+          !isArray(ctx.cur)
+          && ctx.cur.token[0] === 'object'
+          && ctx.left.token[0] === 'expr' && ctx.left.token[2] === 'amp'
+        ) {
+          ctx.ast.pop();
+          ctx.ast.push(...ctx.cur.token[1]);
+          continue;
+        }
       } catch (e) {
         throw new LangErr(e.message, ctx);
       }
