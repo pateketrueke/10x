@@ -432,7 +432,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           maths = true;
         }
       } else {
-        fixedValue = ['object', fixArgs(ctx.cur, true)];
+        fixedValue = ['object', fixArgs(ctx.cur)];
       }
 
       ctx.ast.push(toToken(fixedValue));
