@@ -7,7 +7,7 @@ import {
 
 import {
   fixArgs,
-  toFraction, toNumber, toValue,
+  toFraction, toNumber, toValue, toToken, toList,
 } from './ast';
 
 import LangErr from './error';
@@ -227,6 +227,9 @@ export default class Solv {
       return [];
     }
 
-    return output.reduce((p, c) => p.concat(c), []);
+    return output
+      .filter(x => x.length)
+      .map(x => calculateFromTokens(toList(x)))
+      .reduce((p, c) => p.concat(toToken(c)), []);
   }
 }

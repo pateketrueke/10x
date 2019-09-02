@@ -395,9 +395,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     return reduceFromAST(t, context, settings, subContext, Object.assign({}, ctx.env, subExpressions), memoizedInternals);
   };
 
-  // double-check!
-  let maths;
-
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
     ctx.root = parentContext || {};
@@ -429,7 +426,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         // prepend multiplication if goes after units/numbers
         if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
           ctx.ast.push(toToken(['expr', '*', 'mul']));
-          maths = true;
         }
       } else {
         fixedValue = ['object', fixArgs(ctx.cur)];
@@ -446,7 +442,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       // append last-operator between consecutive unit-expressions
       if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
         ctx.ast.push(toToken(ctx.lastOp));
-        maths = true;
       }
 
       try {
@@ -490,11 +485,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     // skip definitions and symbols!
     if (isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
     else if (!['symbol', 'def'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
-  }
-
-  // resolve pending maths...
-  if (maths) {
-    return [toToken(calculateFromTokens(toList(ctx.ast)))];
   }
 
   return ctx.ast;
