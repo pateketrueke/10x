@@ -89,12 +89,16 @@ export default class Solv {
     return this;
   }
 
-  format(result, indent, formatter, separator) {
+  format(result, indent, formatter, separator, parentheses) {
     if (isArray(result)) {
       const fixedResult = result.map(x => this.value(x, indent, formatter, separator).format);
 
       if (separator) {
-        return `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`;
+        if (parentheses) {
+          return `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`;
+        }
+
+        return fixedResult.join(separator);
       }
 
       return fixedResult;
@@ -112,7 +116,7 @@ export default class Solv {
       return {
         val: result,
         type: 'object',
-        format: this.format(result, indent, formatter, separator),
+        format: this.format(result, indent, formatter, separator, true),
       };
     }
 
@@ -199,7 +203,7 @@ export default class Solv {
     return {
       value: result,
       type: 'object',
-      format: out.join(`${separator}\n`),
+      format: `${formatter('open', '(')}${out.join(`${separator}\n`)}${formatter('close', ')')}`,
     };
   }
 

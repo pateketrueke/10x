@@ -1,7 +1,7 @@
 import {
   isArray,
   hasNum, hasMonths, hasOwnKeyword,
-  hasTimeUnit, hasExpr, hasChar, hasSep,
+  hasTimeUnit, hasExpr, hasChar, hasSep, hasOp,
 } from './shared';
 
 import {
@@ -436,7 +436,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     if (!isArray(ctx.left)) {
       // flag well-known definitions, as they are open...
-      if (ctx.root.isDef || isArray(ctx.root.cur) || ['def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
+      if (ctx.root.isDef /*|| isArray(ctx.root.cur) */|| ['object', 'def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
       // append last-operator between consecutive unit-expressions
       if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
