@@ -251,6 +251,7 @@ export function reduceFromLogic(cb, ctx, self) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
         const initialArgs = cb(forBranch.shift(), ctx);
 
+        // handle between lists and chunks
         const seq = !isArray(initialArgs[0])
           ? RangeExpr.resolve(toInput(calculateFromTokens(toList(cb(initialArgs, ctx)))), x => cb(forBranch, ctx, x))
           : RangeExpr.resolve(toList(initialArgs).reduce((p, c) => p.concat(toInput(c)), []), x => cb(forBranch, ctx, x));
@@ -284,30 +285,34 @@ export function reduceFromFX(cb, ctx) {
   }
 
   // handle ranges...
-  if (ctx.cur.token[0] === 'range') {
-    console.log(ctx.left, ctx.cur, ctx.right);
+  if (ctx.cur.token[0] === 'range' && !ctx.cur.token[2]) {
+    let target = ctx.cur;
+    let base = ctx.left;
+    let offset = 1;
+
+    if (!base.token[0]) {
+      base = toToken(['number', 0]);
+    } else {
+      // drop token from left...
+      ctx.tokens.splice(ctx.i - 1, 1);
+    }
+
+    // consume next token on untyped-ranges
+    if (ctx.cur.token[1] === '..') {
+      ctx.tokens.splice(ctx.i, 1);
+      target = ctx.right;
+    }
+
+    const [fixedBase, fixedTarget] = cb([base, target], ctx);
+
+    // recompose tokens on-the-fly
+    ctx.cur.token[1] = base.token[1] + ctx.cur.token[1] + (target !== ctx.cur ? target.token[1] : '');
+    ctx.cur.token[2] = new RangeExpr(toInput(fixedBase.token), toInput(fixedTarget.token));
+
+    ctx.cur.begin = base.begin || ctx.cur.begin;
+    ctx.cur.end = target.end;
+    ctx.ast.pop();
   }
-  // if (
-  //   !isArray(cur)
-  //   && prev.token[1]
-  //   && cur.token[0] === 'range'
-  // ) {
-  //   console.log({prev,cur,next});
-
-  //   let target = cur.token;
-  //   let offset = 1;
-
-  //   // consume next token on untyped-ranges
-  //   if (cur.token[1] === '..') {
-  //     tokens.splice(i - 1, 3, cur);
-  //     target = next.token;
-  //   } else {
-  //     tokens.splice(i - 1, 1);
-  //   }
-
-  //   cur.token[1] = new RangeExpr(toInput(prev.token), toInput(target));
-  //   continue;
-  // }
 }
 
 export function reduceFromDefs(cb, ctx, self, memoizedInternals) {

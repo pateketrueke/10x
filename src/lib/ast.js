@@ -488,6 +488,11 @@ export function toInput(token, cb, z) {
     };
   }
 
+  // return range-expressions as is...
+  if (token[0] === 'range') {
+    return token[2];
+  }
+
   // intermediate state for objects
   if (token[0] === 'object') {
     if (isArray(token[1])) {
