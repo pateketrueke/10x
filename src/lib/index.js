@@ -90,10 +90,6 @@ export default class Solv {
   }
 
   format(result, indent, formatter, separator, parentheses) {
-    if (!result.length) {
-      return '?';
-    }
-
     if (isArray(result)) {
       const fixedResult = result.map(x => this.value(x, indent, formatter, separator, parentheses).format);
 
@@ -233,14 +229,6 @@ export default class Solv {
 
     return output
       .filter(x => x.length)
-      .map(x => {
-        // evaluate last chunks with expressions...
-        if (x.length > 1 && x.some(y => !isArray(y) && y.token[0] === 'expr')) {
-          return toToken(calculateFromTokens(toList(x)));
-        }
-
-        return x;
-      })
-      .reduce((p, c) => p.concat(c), []);
+      .reduce((prev, cur) => prev.concat(cur), []);
   }
 }

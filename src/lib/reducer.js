@@ -249,8 +249,11 @@ export function reduceFromLogic(cb, ctx, self) {
         }
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
-        const retval = toInput(calculateFromTokens(toList(cb(forBranch.shift(), ctx))));
-        const seq = RangeExpr.resolve(retval, x => cb(forBranch, ctx, x));
+        const initialArgs = cb(forBranch.shift(), ctx);
+
+        const seq = !isArray(initialArgs[0])
+          ? RangeExpr.resolve(toInput(calculateFromTokens(toList(cb(initialArgs, ctx)))), x => cb(forBranch, ctx, x))
+          : RangeExpr.resolve(toList(initialArgs).reduce((p, c) => p.concat(toInput(c)), []), x => cb(forBranch, ctx, x));
 
         if (
           seq.length === 1
@@ -259,6 +262,7 @@ export function reduceFromLogic(cb, ctx, self) {
         ) {
           ctx.cur = seq[0];
         } else {
+          ctx.isDef = true;
           ctx.cur = toToken(['object', cb(seq, ctx)]);
         }
         return true;
@@ -410,6 +414,16 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         continue;
       }
 
+      // return unique leafs!
+      if (
+        !isArray(ctx.cur[0])
+        && ctx.cur.length === 1
+        && !['def', 'unit', 'range'].includes(ctx.cur[0].token[0])
+      ) {
+        ctx.ast.push(ctx.cur);
+        continue;
+      }
+
       // evaluate simple lists only (no separators)
       if (
         !isArray(ctx.cur[0])
@@ -471,6 +485,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           }
         }
       } catch (e) {
+        console.log(e)
         throw new LangErr(e.message, ctx);
       }
     }
