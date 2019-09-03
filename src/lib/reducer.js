@@ -485,7 +485,12 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           ctx.ast.push(toToken(['expr', '*', 'mul']));
         }
       } else {
-        fixedValue = ['object', fixArgs(cb(ctx.cur, ctx))];
+        // keep arrays as-is
+        if (isArray(ctx.cur[0])) {
+          fixedValue = ['object', cb(ctx.cur, ctx)];
+        } else {
+          fixedValue = ['object', fixArgs(cb(ctx.cur, ctx))];
+        }
       }
 
       ctx.ast.push(toToken(fixedValue));
