@@ -3,6 +3,10 @@ import {
   hasNum, hasSep, hasTagName, hasPercent,
 } from './shared';
 
+import {
+  tokenize,
+} from './utils';
+
 import LangErr from './error';
 import RangeExpr from './range';
 
@@ -255,10 +259,6 @@ export function fixValues(tokens, cb, y) {
   return subTree;
 }
 
-export function fixResult(value) {
-  return [typeof value, typeof value === 'string' ? [value] : value];
-}
-
 export function fixBinding(obj, name, alias, context) {
   let target;
 
@@ -328,7 +328,7 @@ export function fixBinding(obj, name, alias, context) {
   // FIXME: this would lead to disasters?
   if (typeof target !== 'function') {
     return {
-      body: [toToken(fixResult(target))],
+      body: [toToken(tokenize(target))],
     };
   }
 
@@ -507,7 +507,7 @@ export function toInput(token, cb, z) {
     const fixedArgs = { ...z };
 
     return (...context) => {
-      const newArgs = toArguments(token[2].args, context.map(x => toToken(fixResult(x))));
+      const newArgs = toArguments(token[2].args, context.map(x => toToken(tokenize(x))));
 
       return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
     };

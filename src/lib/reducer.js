@@ -9,7 +9,11 @@ import {
 } from './solver';
 
 import {
-  fixArgs, fixValues, fixTokens, fixResult, fixBinding,
+  tokenize,
+} from './utils';
+
+import {
+  fixArgs, fixValues, fixTokens, fixBinding,
   toSlice, toList, toPlain, toInput, toNumber, toArguments,
 } from './ast';
 
@@ -281,7 +285,7 @@ export function reduceFromFX(cb, ctx) {
     const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => toInput(x.token));
     const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
 
-    ctx.cur = toToken(fixResult(result));
+    ctx.cur = toToken(tokenize(result));
     return;
   }
 
@@ -401,9 +405,9 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       if (Array.isArray(inputValue)) {
         const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x));
 
-        ctx.cur = toToken(['object', fixedValues.map(x => (!isArray(x) ? toToken(fixResult(x)) : toToken(x)))]);
+        ctx.cur = toToken(['object', fixedValues.map(x => (!isArray(x) ? toToken(tokenize(x)) : toToken(x)))]);
       } else {
-        ctx.cur = toToken(fixResult(inputValue));
+        ctx.cur = toToken(tokenize(inputValue));
       }
       return;
     }

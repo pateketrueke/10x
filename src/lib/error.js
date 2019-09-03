@@ -3,7 +3,7 @@ import {
   flatten,
   repeat,
   pad,
-} from './shared';
+} from './utils';
 
 export default class LangErr extends Error {
   constructor(msg, ctx) {
