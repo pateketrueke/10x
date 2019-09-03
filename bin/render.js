@@ -57,6 +57,11 @@ module.exports = ({
       return;
     }
 
+    if (type === 'string') {
+      process.stdout.write(chalk.greenBright(chunk.replace(/#\{([^{}]+?)\}/g, chalk.dim('#{$1}'))));
+      return;
+    }
+
     return String(chunk).split(speed ? /(?=[\x00-\x7F])/ : /(?=\b)/) // eslint-disable-line
       .reduce((prev, cur) => prev.then(() => {
         process.stdout.write(out(type, cur));
