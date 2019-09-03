@@ -32,8 +32,21 @@ contexts:
       scope: string
       push:
         - meta_scope: string
+
+        # interpolated values
+        - match: '#\{'
+          scope: punctuation.definition.comment
+          push:
+            - clear_scopes: 1
+            - include: scope:source.text.slv
+            - meta_scope: punctuation.definition.comment
+            - match: '\}'
+              pop: true
+
+        # sequence escapes
         - match: '\\.'
           scope: constant.character.escape
+
         - match: '"'
           pop: true
 
