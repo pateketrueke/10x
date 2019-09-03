@@ -10,26 +10,29 @@ import {
 
 export default class RangeExpr {
   constructor(base, target, increment) {
-    // FIXME: validate input here...
-
     this.begin = base;
     this.end = typeof target === 'string'
       ? target.replace('..', '')
       : target;
 
     // default increment
+    this.alpha = false;
+    this.offsets = [this.begin, this.end];
     this.step = increment || 1;
 
     // handle alpha-numeric ranges...
     if (hasChar(this.begin) || hasChar(this.end)) {
+      this.begin = String(this.begin).charCodeAt();
+      this.end = String(this.end).charCodeAt();
+      this.alpha = true;
     } else {
       this.begin = parseFloat(this.begin);
       this.end = parseFloat(this.end);
+    }
 
-      // handle reverse-loops
-      if (this.begin > this.end) {
-        this.step = -1;
-      }
+    // handle reverse-loops
+    if (this.begin > this.end) {
+      this.step = -1;
     }
   }
 
@@ -46,9 +49,11 @@ export default class RangeExpr {
     const seq = [];
 
     for (let nextValue = it.next(); nextValue.done !== true; nextValue = it.next()) {
-      const locals = { _: { body: [toToken(fixResult(nextValue.value))] } };
+      const fixedValue = value.alpha
+        ? String.fromCharCode(nextValue.value)
+        : nextValue.value;
 
-      seq.push(...cb(locals));
+      seq.push(...cb({ _: { body: [toToken(fixResult(fixedValue))] } }));
     }
 
     return seq;

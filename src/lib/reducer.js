@@ -282,6 +282,32 @@ export function reduceFromFX(cb, ctx) {
 
     ctx.cur = toToken(fixResult(result));
   }
+
+  // handle ranges...
+  if (ctx.cur.token[0] === 'range') {
+    console.log(ctx.left, ctx.cur, ctx.right);
+  }
+  // if (
+  //   !isArray(cur)
+  //   && prev.token[1]
+  //   && cur.token[0] === 'range'
+  // ) {
+  //   console.log({prev,cur,next});
+
+  //   let target = cur.token;
+  //   let offset = 1;
+
+  //   // consume next token on untyped-ranges
+  //   if (cur.token[1] === '..') {
+  //     tokens.splice(i - 1, 3, cur);
+  //     target = next.token;
+  //   } else {
+  //     tokens.splice(i - 1, 1);
+  //   }
+
+  //   cur.token[1] = new RangeExpr(toInput(prev.token), toInput(target));
+  //   continue;
+  // }
 }
 
 export function reduceFromDefs(cb, ctx, self, memoizedInternals) {

@@ -183,18 +183,6 @@ export function fixTree(ast) {
         };
         continue;
       }
-
-      // handle ranges...
-      if (
-        !isArray(cur)
-        && prev.token[1]
-        && cur.token[0] === 'range'
-      ) {
-        // compose tokens for iterators
-        cur.token[1] = new RangeExpr(prev.token[1], cur.token[1]);
-        tokens.splice(i - 1, 1);
-        continue;
-      }
     }
 
     // FIXME: compose lambda-calls with multiple arguments... helpers!!
