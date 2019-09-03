@@ -138,7 +138,11 @@ export function fixTree(ast) {
     if (isArray(cur) && cur.length > 1 && !isArray(cur[0])) {
       // handle tuples
       // FIXME: more helpers
-      if (cur[0].token[0] === 'symbol' && ['number', 'string', 'unit'].includes(cur[1].token[0])) {
+      if (
+        !isArray(cur[1])
+        && cur[0].token[0] === 'symbol'
+        && ['number', 'string', 'unit'].includes(cur[1].token[0])
+      ) {
         tokens.splice(i, 1, toToken(['object', fixTokens(cur, true)]));
         continue;
       }
