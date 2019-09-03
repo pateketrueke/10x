@@ -1,5 +1,6 @@
 import {
   deindent,
+  flatten,
   repeat,
   pad,
 } from './shared';
@@ -20,10 +21,12 @@ export default class LangErr extends Error {
       }
 
       if (ctx.cur) {
-        if (!ctx.tokens.length) {
+        const ast = flatten(ctx.tokens);
+
+        if (!ast.length) {
           this.offsets = [ctx.cur.begin, ctx.cur.end];
         } else {
-          this.offsets = [ctx.tokens[0].begin, ctx.tokens[ctx.tokens.length - 1].end];
+          this.offsets = [ast[0].begin, ast[ast.length - 1].end];
         }
       }
     }

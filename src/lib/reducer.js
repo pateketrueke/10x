@@ -286,7 +286,7 @@ export function reduceFromFX(cb, ctx) {
   }
 
   // handle ranges...
-  if (ctx.cur.token[0] === 'range' && !ctx.cur.token[2]) {
+  if (ctx.cur.token[0] === 'range' && !ctx.cur.token[2] && !isArray(ctx.right)) {
     let target = toToken(ctx.cur);
     let base = ctx.left;
     let offset = 1;
@@ -524,8 +524,14 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
             continue;
           }
         }
+
+        // unwind ranges that were left untouched...
+        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'range' && ctx.cur.token[2]) {
+          ctx.ast.push(RangeExpr.resolve(ctx.cur.token[2], x => x._.body));
+          continue;
+        }
       } catch (e) {
-        console.log(e)
+        // console.log(e)
         throw new LangErr(e.message, ctx);
       }
     }
