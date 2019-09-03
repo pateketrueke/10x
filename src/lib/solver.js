@@ -182,7 +182,7 @@ export function operateExpression(ops, expr) {
 }
 
 export function calculateFromTokens(expr) {
-  if (expr.some(x => !isArray(x[0]) && x[0] === 'expr')) {
+  if (expr.length > 2) {
     expr = operateExpression(['for', '*', '/'], expr);
     expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in', 'to'], expr);
 
