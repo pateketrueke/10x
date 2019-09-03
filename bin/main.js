@@ -44,10 +44,6 @@ global.console.log = (...args) => {
 const args = argv.raw;
 const file = argv._.shift();
 
-const calc = new Solv({
-  expressions: sharedExpressions,
-});
-
 let code = '';
 
 if (file && fs.existsSync(file)) {
@@ -56,7 +52,11 @@ if (file && fs.existsSync(file)) {
 
 code += args.join(' ');
 
-calc.resolve(code, file);
+const calc = new Solv({
+  source: code,
+  filepath: file,
+  expressions: sharedExpressions,
+});
 
 if (showVerboseInfo) {
   console.log(calc);

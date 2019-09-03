@@ -57,24 +57,13 @@ export default class Solv {
     this.tokens = [];
     this.input = [];
     this.tree = [];
-  }
 
-  external(source, filepath) {
-    // FIXME: clone or inherit units/expressions?
-    if (!this.includes[filepath] || this.includes[filepath].source !== source) {
-      this.includes[filepath] = new Solv().resolve(source, filepath);
-    }
-
-    return this.includes[filepath];
-  }
-
-  resolve(source, filepath) {
-    this.filepath = filepath;
-    this.source = source;
-    this.input = getTokensFrom(source, this.units);
+    this.filepath = opts.filepath;
+    this.source = opts.source;
+    this.input = getTokensFrom(opts.source, this.units);
 
     try {
-      const tokens = transform(this.input, this.units);
+      const tokens = transform(this);
 
       this.tree = tokens.tree;
       this.error = tokens.error;
@@ -83,11 +72,18 @@ export default class Solv {
       // rethrow tree-building errors
       if (tokens.error) throw tokens.error;
     } catch (e) {
-      this.error = LangErr.build(e, source, 2, filepath);
+      this.error = LangErr.build(e, opts.source, 2, filepath);
     }
-
-    return this;
   }
+
+  // external(source, filepath) {
+  //   // FIXME: clone or inherit units/expressions?
+  //   if (!this.includes[filepath] || this.includes[filepath].source !== source) {
+  //     this.includes[filepath] = new Solv().resolve(source, filepath);
+  //   }
+
+  //   return this.includes[filepath];
+  // }
 
   format(result, indent, formatter, separator, parentheses) {
     if (isArray(result)) {

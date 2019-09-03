@@ -124,7 +124,7 @@ export function fixChunk(tokens, i) {
   return subTree;
 }
 
-export function fixTree(ast) {
+export function fixTree(ast, self) {
   const tokens = ast.filter(x => isArray(x) || !hasTagName(x.token[0]));
 
   for (let i = 0; i < tokens.length; i += 1) {
@@ -148,45 +148,48 @@ export function fixTree(ast) {
       }
     }
 
-    if (!isArray(prev)) {
-      // FIXME: more helpers
-      if (prev.token[0] === 'def' && !prev.token[2]) {
-        let subTree = [];
+    // sub-tokenize strings
+    if (!isArray(cur) && cur.token[0] === 'string') {
+      console.log('STR', cur, self);
+    }
 
-        // FIXME: dedupe...
-        if (isArray(cur)) {
-          Object.defineProperty(prev, '_args', { value: true });
-          tokens.splice(i, 1);
-          // FIXME: more helpers
-        } else if (cur.token[0] === 'expr' && cur.token[2] === 'equal') {
-          Object.defineProperty(prev, '_body', { value: true });
-          subTree = fixChunk(tokens, i);
-        }
+    // compose definition calls
+    if (!isArray(prev) && prev.token[0] === 'def' && !prev.token[2]) {
+      let subTree = [];
 
+      // FIXME: dedupe...
+      if (isArray(cur)) {
+        Object.defineProperty(prev, '_args', { value: true });
+        tokens.splice(i, 1);
         // FIXME: more helpers
-        if (!isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal' && !prev._body) {
-          Object.defineProperty(prev, '_body', { value: true });
-          subTree = fixChunk(tokens, i);
-        }
-
-        // discard token separator
-        if (prev._body && !prev._args) {
-          tokens.splice(i, 1);
-        }
-
-        // flag definition for memoization
-        if (prev.token[1].substr(-1) === '!') {
-          prev.token[1] = prev.token[1].replace('!', '');
-          prev._memo = true;
-        }
-
-        // update token definition
-        prev.token[2] = {
-          args: prev._args ? fixArgs(cur, true) : null,
-          body: prev._body ? fixTree(subTree.slice(1)) : null,
-        };
-        continue;
+      } else if (cur.token[0] === 'expr' && cur.token[2] === 'equal') {
+        Object.defineProperty(prev, '_body', { value: true });
+        subTree = fixChunk(tokens, i);
       }
+
+      // FIXME: more helpers
+      if (!isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal' && !prev._body) {
+        Object.defineProperty(prev, '_body', { value: true });
+        subTree = fixChunk(tokens, i);
+      }
+
+      // discard token separator
+      if (prev._body && !prev._args) {
+        tokens.splice(i, 1);
+      }
+
+      // flag definition for memoization
+      if (prev.token[1].substr(-1) === '!') {
+        prev.token[1] = prev.token[1].replace('!', '');
+        prev._memo = true;
+      }
+
+      // update token definition
+      prev.token[2] = {
+        args: prev._args ? fixArgs(cur, true) : null,
+        body: prev._body ? fixTree(subTree.slice(1)) : null,
+      };
+      continue;
     }
 
     // FIXME: compose lambda-calls with multiple arguments... helpers!!
