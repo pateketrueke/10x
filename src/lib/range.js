@@ -72,7 +72,7 @@ export default class RangeExpr {
       return RangeExpr.fromIterator(value, cb);
     }
 
-    console.log('UNDEF_SEQ', value);
+    console.log('UNDEF_SEQ', {value});
     return [];
   }
 

@@ -282,11 +282,12 @@ export function reduceFromFX(cb, ctx) {
     const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
 
     ctx.cur = toToken(fixResult(result));
+    return;
   }
 
   // handle ranges...
   if (ctx.cur.token[0] === 'range' && !ctx.cur.token[2]) {
-    let target = ctx.cur;
+    let target = toToken(ctx.cur);
     let base = ctx.left;
     let offset = 1;
 
@@ -299,14 +300,22 @@ export function reduceFromFX(cb, ctx) {
 
     // consume next token on untyped-ranges
     if (ctx.cur.token[1] === '..') {
+      target = toToken(ctx.right);
       ctx.tokens.splice(ctx.i, 1);
-      target = ctx.right;
     }
+
+    if (target.token[0] === 'range') {
+      target.token[0] = 'number';
+      target.token[1] = target.token[1].substr(2);
+    }
+
+    ctx.isDef = true;
 
     const [fixedBase, fixedTarget] = cb([base, target], ctx);
 
     // recompose tokens on-the-fly
-    ctx.cur.token[1] = base.token[1] + ctx.cur.token[1] + (target !== ctx.cur ? target.token[1] : '');
+    ctx.cur = toToken(ctx.cur);
+    ctx.cur.token[1] = base.token[1] + ctx.cur.token[1] + (ctx.cur.token[1] === '..' ? target.token[1] : '');
     ctx.cur.token[2] = new RangeExpr(toInput(fixedBase.token), toInput(fixedTarget.token));
 
     ctx.cur.begin = base.begin || ctx.cur.begin;
