@@ -52,7 +52,8 @@ export function getTokensFrom(text, units) {
         if (buffer.length) tokens[++offset] = [{ cur, row, col }];
         else buffer.push({ cur, row, col });
 
-        inFormat = [i, cur];
+        // allow empty strings
+        inFormat = [(cur === next && cur !== '"') ? i + 1 : i, cur];
         continue;
       }
     }
@@ -60,7 +61,7 @@ export function getTokensFrom(text, units) {
     // disable formatting (avoid escapes)
     if (
       inFormat
-      && (i > inFormat[0] + 1)
+      && (i > inFormat[0])
       && inFormat[1] === cur && last !== '\\' && cur !== next
     ) {
       buffer.push({ cur, row, col });
