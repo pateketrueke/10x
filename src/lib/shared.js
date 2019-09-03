@@ -5,7 +5,7 @@ import {
   TIME_UNITS, CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
 } from './convert';
 
-const TAG_TYPES = ['blockquote', 'comment', 'heading', 'check', 'em', 'b', 'code', 'text'];
+const TAG_TYPES = ['blockquote', 'comment', 'heading', 'check', 'em', 'b', 'pre', 'code', 'text'];
 
 const OP_TYPES = {
   '!~': 'notlike',

@@ -44,7 +44,7 @@ export function getTokensFrom(text, units) {
         } else if (cur === '~') {
           inFormat = !'=>'.includes(next);
         } else {
-          inFormat = true;
+          inFormat = next !== cur;
         }
       }
 
@@ -74,6 +74,11 @@ export function getTokensFrom(text, units) {
         (!col && '#>'.includes(cur))
         || (cur === '/' && '/*'.includes(next))
       ) inBlock = next === '*' ? 'multiline' : 'block';
+
+      // enable pre-code blocks
+      if (cur + next + chars[i + 2] === '```') {
+        inBlock = 'multiline';
+      }
     }
 
     // split on white-space at the beginning

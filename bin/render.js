@@ -38,6 +38,7 @@ module.exports = ({
         return chalk.bgBlackBright.black(text);
       case 'close':
       case 'open':
+      case 'pre':
         return chalk.dim(text);
       case 'em':
         return chalk.italic.white(text);

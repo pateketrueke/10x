@@ -10,8 +10,13 @@ import {
 } from './ast';
 
 export function fromMarkdown(text) {
+  // handle pre blocks
+  if (text.indexOf('```') === 0) {
+    return ['pre', text];
+  }
+
   // handle code blocks
-  if (text.charAt() === '`' && text.charAt(text.length - 1) === '`') {
+  if (text.charAt() === '`') {
     return ['code', text];
   }
 
