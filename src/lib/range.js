@@ -65,7 +65,7 @@ export default class RangeExpr {
     }
 
     if (typeof value === 'number') {
-      value = new RangeExpr(0, value);
+      value = new RangeExpr(1, value);
     }
 
     if (value instanceof RangeExpr) {

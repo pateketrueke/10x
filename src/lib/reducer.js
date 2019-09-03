@@ -253,7 +253,7 @@ export function reduceFromLogic(cb, ctx, self) {
         }
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
-        const initialArgs = cb(forBranch.shift(), ctx);
+        const initialArgs = cb(forBranch.shift(), ctx).reduce((p, c) => p.concat(c), []);
 
         // handle between lists and chunks
         const seq = !isArray(initialArgs[0])
