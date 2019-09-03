@@ -286,7 +286,12 @@ export function reduceFromFX(cb, ctx) {
   }
 
   // handle ranges...
-  if (ctx.cur.token[0] === 'range' && !ctx.cur.token[2] && !isArray(ctx.right)) {
+  if (
+    !ctx.cur.token[2]
+    && !isArray(ctx.right)
+    && ctx.cur.token[0] === 'range'
+    && ctx.right.token[0] !== 'symbol'
+  ) {
     let target = toToken(ctx.cur);
     let base = ctx.left;
     let offset = 1;
@@ -531,7 +536,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
-        // console.log(e)
+        console.log(e)
         throw new LangErr(e.message, ctx);
       }
     }
