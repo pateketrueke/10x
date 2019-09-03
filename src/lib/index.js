@@ -77,6 +77,15 @@ export default class Solv {
     }
   }
 
+  include(source, filepath) {
+    // FIXME: clone or inherit units/expressions?
+    if (!this.$[filepath] || this.$[filepath].source !== source) {
+      this.$[filepath] = new Solv({ source, filepath });
+    }
+
+    return this.$[filepath];
+  }
+
   partial(source, parent, offset) {
     const output = {
       error: null,
@@ -92,15 +101,6 @@ export default class Solv {
     if (output.error) throw output.error;
     return output;
   }
-
-  // external(source, filepath) {
-  //   // FIXME: clone or inherit units/expressions?
-  //   if (!this.include[filepath] || this.include[filepath].source !== source) {
-  //     this.include[filepath] = new Solv().resolve(source, filepath);
-  //   }
-
-  //   return this.include[filepath];
-  // }
 
   format(result, indent, formatter, separator, parentheses) {
     if (isArray(result)) {

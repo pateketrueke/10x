@@ -256,7 +256,7 @@ export function fixValues(tokens, cb, y) {
 }
 
 export function fixResult(value) {
-  return [typeof value, typeof value === 'string' ? JSON.stringify(value) : value];
+  return [typeof value, typeof value === 'string' ? [value] : value];
 }
 
 export function fixBinding(obj, name, alias, context) {
@@ -296,7 +296,7 @@ export function fixBinding(obj, name, alias, context) {
             target = def[name];
           }
         } else {
-          const ast = context.external(fs.readFileSync(srcFile).toString(), srcFile).tree;
+          const ast = context.include(fs.readFileSync(srcFile).toString(), srcFile).tree;
 
           for (let i = 0; i < ast.length; i += 1) {
             const subTree = ast[i];
