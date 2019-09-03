@@ -1,10 +1,10 @@
 import {
+  toToken,
   hasKeyword, hasDatetime,
   hasOp, hasSep, hasNum, hasChar, hasExpr,
 } from './shared';
 
 import {
-  toToken,
   buildTree,
   fixArgs, fixTree, fixStrings,
 } from './ast';
@@ -57,7 +57,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
 
   // handle placeholders
   if (text === '_') {
-    return ['symbol', '_'];
+    return ['unit', '_'];
   }
 
   // handle range-values

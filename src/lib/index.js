@@ -2,12 +2,12 @@ import { getTokensFrom } from './lexer';
 import { transform } from './parser';
 
 import {
-  isInt, isArray,
+  isInt, isArray, toToken,
 } from './shared';
 
 import {
   fixArgs,
-  toFraction, toNumber, toValue, toToken, toList,
+  toFraction, toNumber, toValue, toList,
 } from './ast';
 
 import LangErr from './error';

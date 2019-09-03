@@ -1,5 +1,5 @@
 import {
-  isArray,
+  isArray, toToken,
   hasNum, hasMonths, hasOwnKeyword,
   hasTimeUnit, hasExpr, hasChar, hasSep, hasOp,
 } from './shared';
@@ -10,10 +10,11 @@ import {
 
 import {
   fixArgs, fixValues, fixTokens, fixResult, fixBinding,
-  toSlice, toList, toPlain, toInput, toToken, toNumber, toArguments,
+  toSlice, toList, toPlain, toInput, toNumber, toArguments,
 } from './ast';
 
 import LangErr from './error';
+import RangeExpr from './range';
 
 export function reduceFromValue(token) {
   let text = token[1];
@@ -249,25 +250,7 @@ export function reduceFromLogic(cb, ctx, self) {
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
         const retval = toInput(calculateFromTokens(toList(cb(forBranch.shift(), ctx))));
-        const seq = [];
-
-        if (typeof retval === 'object' && retval.iterator) {
-          const it = retval.iterator;
-
-          for (let nextValue = it.next(); nextValue.done !== true; nextValue = it.next()) {
-            const locals = { it: { body: [toToken(fixResult(nextValue.value))] } };
-
-            seq.push(...cb(forBranch, ctx, locals));
-          }
-        } else if (typeof retval === 'number') {
-          const locals = { it: { body: [toToken(fixResult(retval))] } };
-
-          for (let i = 0; i < retval; i += 1) {
-            seq.push(...cb(forBranch, ctx, locals));
-          }
-        } else {
-          console.log('UNDEF_SEQ', retval);
-        }
+        const seq = RangeExpr.resolve(retval, x => cb(forBranch, ctx, x));
 
         if (
           seq.length === 1

@@ -199,6 +199,9 @@ export function getTokensFrom(text, units) {
 
       // side-effects
       || (hasOp(nextChar) && value === '(')
+
+      // rnages
+      || (value.indexOf('..') === 0)
     ) score += 1.5;
 
     // formatting

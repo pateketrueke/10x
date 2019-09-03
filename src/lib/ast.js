@@ -1,28 +1,10 @@
 import {
-  isArray,
+  isArray, toToken,
   hasNum, hasSep, hasTagName, hasPercent,
 } from './shared';
 
 import LangErr from './error';
-import LangExpr from './expr';
-
-export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
-  if (isArray(token)) {
-    return new LangExpr({ token });
-  }
-
-  if (!(token instanceof LangExpr) && typeof fromCallback === 'function') {
-    const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
-
-    if (!retval) {
-      throw new LangErr(`Unexpected token \`${token.content}\``, token);
-    }
-
-    return new LangExpr(token, retval);
-  }
-
-  return new LangExpr(token);
-}
+import RangeExpr from './range';
 
 export function fixStrings(tokens, split) {
   return tokens.reduce((prev, cur) => {
@@ -134,16 +116,6 @@ export function fixTokens(ast, z) {
   }, target);
 }
 
-export function* fixRange(start, end) {
-  if (typeof start === 'number' && typeof end === 'number') {
-    yield start;
-    if (start === end) return;
-    yield* fixRange(start + 1, end);
-  } else if (hasNum(start)) {
-    yield* fixRange(parseFloat(start), parseFloat(end));
-  }
-}
-
 // FIXME: clean up this shit...
 export function fixChunk(tokens, i) {
   const offset = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
@@ -218,12 +190,8 @@ export function fixTree(ast) {
         && prev.token[1]
         && cur.token[0] === 'range'
       ) {
-        const base = prev.token[1];
-        const target = cur.token[1].substr(2);
-        const iterator = fixRange(base, target);
-
         // compose tokens for iterators
-        cur.token[1] = { base, target, iterator };
+        cur.token[1] = new RangeExpr(prev.token[1], cur.token[1]);
         tokens.splice(i - 1, 1);
         continue;
       }
@@ -448,6 +416,10 @@ export function toNumber(value) {
 
 export function toValue(token) {
   let value = token[1];
+
+  if (token[0] === 'range') {
+    return token[1].toString();
+  }
 
   if (token[0] === 'number' && value instanceof Date) {
     return value.toString().split(' ').slice(0, 5).join(' ');

@@ -1,3 +1,5 @@
+import LangExpr from './expr';
+
 import {
   TIME_UNITS, CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
 } from './convert';
@@ -93,3 +95,21 @@ export const deindent = (text, length) => {
 };
 
 // FIXME: add helpers!
+
+export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
+  if (isArray(token)) {
+    return new LangExpr({ token });
+  }
+
+  if (!(token instanceof LangExpr) && typeof fromCallback === 'function') {
+    const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
+
+    if (!retval) {
+      throw new LangErr(`Unexpected token \`${token.content}\``, token);
+    }
+
+    return new LangExpr(token, retval);
+  }
+
+  return new LangExpr(token);
+}
