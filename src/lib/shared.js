@@ -1,3 +1,4 @@
+import LangErr from './error';
 import LangExpr from './expr';
 
 import {
