@@ -150,13 +150,17 @@ export function fixTree(ast, self) {
 
     // sub-tokenize strings
     if (!isArray(cur) && cur.token[0] === 'string') {
+      let fixedOffset = 0;
+
       const chunks = JSON.parse(cur.token[1]).split(/(#{[^{}]*?})/)
         .reduce((prev, x) => {
           if (x.indexOf('#{') === 0 && x.substr(-1) === '}') {
-            prev.push(self.partial(x.substr(2, x.length - 3), cur).tree);
+            prev.push(self.partial(x.substr(2, x.length - 3), cur, fixedOffset + 3).tree);
           } else {
             prev.push(x);
           }
+
+          fixedOffset += x.length;
 
           return prev;
         }, []);

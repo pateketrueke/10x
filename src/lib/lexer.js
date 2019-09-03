@@ -2,7 +2,7 @@ import {
   isInt, hasMonths, hasHours, hasKeyword, hasFmt, hasOp, hasSep, hasChar, hasNum, hasExpr,
 } from './shared';
 
-export function getTokensFrom(text, units) {
+export function getTokensFrom(text, units, parentNode, fixedOffset) {
   let inSym = false;
   let inBlock = false;
   let inFormat = false;
@@ -15,6 +15,11 @@ export function getTokensFrom(text, units) {
 
   const chars = text.split(/(?=[\x00-\x7F])/); // eslint-disable-line
   const tokens = [];
+
+  if (parentNode && fixedOffset) {
+    row += parentNode.begin[0];
+    col += parentNode.begin[1] + fixedOffset;
+  }
 
   for (let i = 0; i < chars.length; i += 1) {
     const buffer = tokens[offset] || (tokens[offset] = []);

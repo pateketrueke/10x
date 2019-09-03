@@ -70,10 +70,14 @@ export default class Solv {
     this.filepath = opts.filepath;
     this.source = opts.source;
 
-    Object.assign(this, this.partial(opts.source));
+    try {
+      Object.assign(this, this.partial(opts.source));
+    } catch (e) {
+      this.error = LangErr.build(e, opts.source, 2, this.filepath);
+    }
   }
 
-  partial(source, parent) {
+  partial(source, parent, offset) {
     const output = {
       error: null,
       input: [],
@@ -81,15 +85,11 @@ export default class Solv {
       ast: [],
     };
 
-    try {
-      output.input = getTokensFrom(source, this.units);
+    output.input = getTokensFrom(source, this.units, parent, offset);
 
-      Object.assign(output, transform(output, this));
-    } catch (e) {
-      e.target = parent || e.target;
-      output.error = LangExpr.build(e, source, 2, this.filepath);
-    }
+    Object.assign(output, transform(output, this));
 
+    if (output.error) throw output.error;
     return output;
   }
 

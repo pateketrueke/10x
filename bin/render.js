@@ -111,6 +111,10 @@ module.exports = ({
     values = [];
   }
 
+  if (calc.error) {
+    values.push(calc.error);
+  }
+
   for (let i = 0; i < calc.ast.length; i += 1) {
     const node = calc.ast[i];
 
