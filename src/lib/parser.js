@@ -278,6 +278,9 @@ export function transform(ctx, self) {
   // copy all tokens to protect them!
   const fixedAST = body.map(x => (x !== null ? toToken(x) : x));
 
+  // FIXME: in order to properly highlight interpolated expressions we need
+  // to touch the original tokens, just to split into sub-tokens...
+
   // handle errors during tree-building
   let fixedTree;
   let _e;
