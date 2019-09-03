@@ -1,5 +1,6 @@
 import {
-  isInt, hasExpr, hasPercent,
+  isInt, isArray,
+  hasExpr, hasPercent,
 } from './shared';
 
 import {
@@ -181,8 +182,16 @@ export function operateExpression(ops, expr) {
 }
 
 export function calculateFromTokens(expr) {
-  expr = operateExpression(['for', '*', '/'], expr);
-  expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in', 'to'], expr);
+  if (expr.some(x => !isArray(x[0]) && x[0] === 'expr')) {
+    expr = operateExpression(['for', '*', '/'], expr);
+    expr = operateExpression(['at', 'of', 'from', '+', '-', 'as', 'in', 'to'], expr);
 
-  return expr[0];
+    return expr[0];
+  }
+
+  if (expr.length === 1) {
+    return expr[0];
+  }
+
+  return expr;
 }

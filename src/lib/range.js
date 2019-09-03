@@ -1,6 +1,7 @@
 import {
-  hasNum,
   toToken,
+  isArray,
+  hasNum, hasChar,
 } from './shared';
 
 import {
@@ -16,9 +17,20 @@ export default class RangeExpr {
       ? target.replace('..', '')
       : target;
 
-    // if (hasNum(base))
-
+    // default increment
     this.step = increment || 1;
+
+    // handle alpha-numeric ranges...
+    if (hasChar(this.begin) || hasChar(this.end)) {
+    } else {
+      this.begin = parseFloat(this.begin);
+      this.end = parseFloat(this.end);
+
+      // handle reverse-loops
+      if (this.begin > this.end) {
+        this.step = -1;
+      }
+    }
   }
 
   getIterator() {
@@ -42,17 +54,11 @@ export default class RangeExpr {
     return seq;
   }
 
-  static *build(begin, end, i) {
-    if (typeof begin === 'number' && typeof end === 'number') {
-      yield begin;
-      if (begin === end) return;
-      yield* RangeExpr.build(begin + i, end, i);
-    } else if (hasNum(begin)) {
-      yield* RangeExpr.build(parseFloat(begin), parseFloat(end), i);
-    }
-  }
-
   static resolve(value, cb) {
+    if (isArray(value)) {
+      return value.map(x => cb({ _: { body: [toToken(fixResult(x))] } }));
+    }
+
     if (typeof value === 'number') {
       value = new RangeExpr(0, value);
     }
@@ -63,5 +69,11 @@ export default class RangeExpr {
 
     console.log('UNDEF_SEQ', value);
     return [];
+  }
+
+  static *build(begin, end, i) {
+    yield begin;
+    if (begin === end) return;
+    yield* RangeExpr.build(begin + i, end, i);
   }
 }

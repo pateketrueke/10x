@@ -485,6 +485,10 @@ export function toArguments(keys, values) {
 }
 
 export function toInput(token, cb, z) {
+  if (isArray(token[0])) {
+    return token.map(x => toInput(x, cb, z));
+  }
+
   // handle lambda-calls as side-effects
   if (token[0] === 'fn') {
     const fixedArgs = { ...z };
