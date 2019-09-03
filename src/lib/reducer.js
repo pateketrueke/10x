@@ -259,7 +259,7 @@ export function reduceFromLogic(cb, ctx, self) {
         ) {
           ctx.cur = seq[0];
         } else {
-          ctx.cur = toToken(['object', seq]);
+          ctx.cur = toToken(['object', cb(seq, ctx)]);
         }
         return true;
       } else {

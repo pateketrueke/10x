@@ -90,6 +90,10 @@ export default class Solv {
   }
 
   format(result, indent, formatter, separator, parentheses) {
+    if (!result.length) {
+      return '?';
+    }
+
     if (isArray(result)) {
       const fixedResult = result.map(x => this.value(x, indent, formatter, separator, parentheses).format);
 
