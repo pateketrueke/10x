@@ -111,8 +111,8 @@ module.exports = ({
     values = [];
   }
 
-  for (let i = 0; i < calc.tokens.length; i += 1) {
-    const node = calc.tokens[i];
+  for (let i = 0; i < calc.ast.length; i += 1) {
+    const node = calc.ast[i];
 
     if (node !== null) {
       if (node.begin[1] === 0) {
@@ -137,7 +137,7 @@ module.exports = ({
       }
     }
 
-    if (calc.tokens[i] === null && calc.tokens[i + 1] === null) peek();
+    if (calc.ast[i] === null && calc.ast[i + 1] === null) peek();
   }
 
   while (calc.tree.length) peek();

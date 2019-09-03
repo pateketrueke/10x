@@ -52,37 +52,54 @@ export default class Solv {
       configurable: false,
     });
 
-    // public properties
-    this.includes = {};
-    this.tokens = [];
+    // shared registry for included files
+    Object.defineProperty(this, '$', {
+      value: {},
+      writable: false,
+      enumerable: false,
+      configurable: false,
+    });
+
+    // empty defaults
+    this.error = null;
     this.input = [];
     this.tree = [];
+    this.ast = [];
 
+    // public properties
     this.filepath = opts.filepath;
     this.source = opts.source;
-    this.input = getTokensFrom(opts.source, this.units);
+
+    Object.assign(this, this.partial(opts.source));
+  }
+
+  partial(source, parent) {
+    const output = {
+      error: null,
+      input: [],
+      tree: [],
+      ast: [],
+    };
 
     try {
-      const tokens = transform(this);
+      output.input = getTokensFrom(source, this.units);
 
-      this.tree = tokens.tree;
-      this.error = tokens.error;
-      this.tokens = tokens.ast;
-
-      // rethrow tree-building errors
-      if (tokens.error) throw tokens.error;
+      Object.assign(output, transform(output, this));
     } catch (e) {
-      this.error = LangErr.build(e, opts.source, 2, filepath);
+      e.target = parent || e.target;
+      output.error = LangExpr.build(e, source, 2, this.filepath);
     }
+
+    return output;
   }
 
   // external(source, filepath) {
   //   // FIXME: clone or inherit units/expressions?
-  //   if (!this.includes[filepath] || this.includes[filepath].source !== source) {
-  //     this.includes[filepath] = new Solv().resolve(source, filepath);
+  //   if (!this.include[filepath] || this.include[filepath].source !== source) {
+  //     this.include[filepath] = new Solv().resolve(source, filepath);
   //   }
 
-  //   return this.includes[filepath];
+  //   return this.include[filepath];
   // }
 
   format(result, indent, formatter, separator, parentheses) {

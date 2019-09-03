@@ -150,7 +150,18 @@ export function fixTree(ast, self) {
 
     // sub-tokenize strings
     if (!isArray(cur) && cur.token[0] === 'string') {
-      console.log('STR', cur, self);
+      const chunks = JSON.parse(cur.token[1]).split(/(#{[^{}]*?})/)
+        .reduce((prev, x) => {
+          if (x.indexOf('#{') === 0 && x.substr(-1) === '}') {
+            prev.push(self.partial(x.substr(2, x.length - 3), cur).tree);
+          } else {
+            prev.push(x);
+          }
+
+          return prev;
+        }, []);
+
+      console.log('STR', chunks);
     }
 
     // compose definition calls

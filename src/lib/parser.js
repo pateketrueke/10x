@@ -173,7 +173,7 @@ export function normalize(subTree) {
   }
 }
 
-export function transform(self) {
+export function transform(ctx, self) {
   const chunks = [];
 
   let oldChar = '';
@@ -181,15 +181,15 @@ export function transform(self) {
   let inc = 0;
 
   // split tokens based on their complexity
-  for (let i = 0; i < self.input.length; i += 1) {
+  for (let i = 0; i < ctx.input.length; i += 1) {
     const subTree = chunks[inc] || (chunks[inc] = []);
-    const token = self.input[i];
+    const token = ctx.input[i];
 
     // FIXME: helper
     let key = i;
     let nextToken;
 
-    do { nextToken = self.input[++key] || {}; } while (nextToken.score < 2);
+    do { nextToken = ctx.input[++key] || {}; } while (nextToken.score < 2);
 
     if (token.depth || token.score) {
       // set leafs as fixed!
@@ -258,7 +258,7 @@ export function transform(self) {
         depth: x.depth,
         begin: [x.row, x.col],
         end: [x.row, x.col + x.cur.length],
-      })), self.units), null);
+      })), ctx.units), null);
       return prev;
     }
 
