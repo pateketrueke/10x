@@ -58,7 +58,7 @@ module.exports = ({
     }
 
     if (type === 'string') {
-      process.stdout.write(chalk.greenBright(chunk.replace(/#\{([^{}]+?)\}/g, chalk.dim('#{$1}'))));
+      process.stdout.write(chalk.greenBright(`"${chunk.replace(/#\{([^{}]+?)\}/g, chalk.dim('#{$1}'))}"`));
       return;
     }
 

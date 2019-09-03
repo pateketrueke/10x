@@ -430,6 +430,10 @@ export function toValue(token) {
     return token[1].toString();
   }
 
+  if (token[0] === 'string') {
+    return token[1].join('');
+  }
+
   if (token[0] === 'number' && value instanceof Date) {
     return value.toString().split(' ').slice(0, 5).join(' ');
   }
