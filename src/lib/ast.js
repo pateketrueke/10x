@@ -152,7 +152,7 @@ export function fixTree(ast, self) {
     if (!isArray(cur) && cur.token[0] === 'string') {
       let fixedOffset = 0;
 
-      const chunks = JSON.parse(cur.token[1]).split(/(#{[^{}]*?})/)
+      cur.token[1] = cur.token[1].split(/(#{[^{}]*?})/)
         .reduce((prev, x) => {
           if (x.indexOf('#{') === 0 && x.substr(-1) === '}') {
             prev.push(self.partial(x.substr(2, x.length - 3), cur, fixedOffset + 3).tree);
@@ -164,8 +164,7 @@ export function fixTree(ast, self) {
 
           return prev;
         }, []);
-
-      console.log('STR', chunks);
+      continue;
     }
 
     // compose definition calls
@@ -257,7 +256,7 @@ export function fixValues(tokens, cb, y) {
 }
 
 export function fixResult(value) {
-  return [typeof value, typeof value === 'string' ? `"${value}"` : value];
+  return [typeof value, typeof value === 'string' ? JSON.stringify(value) : value];
 }
 
 export function fixBinding(obj, name, alias, context) {
@@ -543,7 +542,7 @@ export function toInput(token, cb, z) {
   // plain values
   let fixedValue = token[1];
 
-  if (token[0] === 'string') fixedValue = JSON.parse(fixedValue);
+  if (token[0] === 'string') fixedValue = fixedValue.reduce((p, c) => p + c, '');
   if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
 
   return fixedValue;

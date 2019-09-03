@@ -503,12 +503,17 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         reduceFromDefs(cb, ctx, context, memoizedInternals);
         reduceFromUnits(cb, ctx, context, settings.convertFrom);
 
-        // FIXME: real interpolation means evaluation... so, it should be AST-thingy!
+        // handle interpolated strings
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
-          ctx.ast.push(toToken(['string', JSON.stringify(JSON.parse(ctx.cur.token[1]).replace(/#\{([^{}]+?)\}/g, (_, key) => {
-            if (ctx.env[key]) return toInput(calculateFromTokens(toList(cb(ctx.env[key].body, ctx))));
-            return _;
-          }))]));
+          ctx.ast.push(toToken(['string', ctx.cur.token[1].reduce((prev, cur) => {
+            if (isArray(cur)) {
+              prev.push(toInput(calculateFromTokens(toList(cb(cur, ctx)))));
+            } else {
+              prev.push(cur);
+            }
+
+            return prev;
+          }, [])]));
           continue;
         }
 

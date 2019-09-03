@@ -83,7 +83,7 @@ export function fromSymbols(text, units, leftToken, rightToken) {
 
   // handle double-quoted strings
   if (text.charAt() === '"' && text.charAt(text.length - 1) === '"') {
-    return ['string', text];
+    return ['string', JSON.parse(text)];
   }
 
   // handle separators
