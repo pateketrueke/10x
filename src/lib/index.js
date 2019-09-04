@@ -144,13 +144,12 @@ export default class Solv {
     }
 
     if (isArray(result[0])) {
+      const fixedResults = result.map(x => this.value(x, indent, formatter, separator, true).format);
+
       return {
         val: result,
         type: 'object',
-        format: 'FIXME',
-        format: `${formatter('open', '(')}${
-          result.map(x => this.value(x, indent, formatter, separator, true).format).join(separator)
-        }${formatter('close', ')')}`,
+        format: `${formatter('open', '(')}${fixedResults.join(separator)}${formatter('close', ')')}`,
       };
     }
 
