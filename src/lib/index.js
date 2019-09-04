@@ -7,7 +7,7 @@ import {
 
 import {
   fixArgs,
-  toFraction, toNumber, toValue, toList,
+  toFraction, toNumber, toInput, toValue, toList,
 } from './ast';
 
 import LangErr from './error';
@@ -243,5 +243,9 @@ export default class Solv {
     return output
       .filter(x => x.length)
       .reduce((p, c) => p.concat(!isArray(c[0]) ? toToken(calculateFromTokens(toList(c))) : c), []);
+  }
+
+  raw(tokens) {
+    return toInput(toList(tokens), x => this.raw(x));
   }
 }

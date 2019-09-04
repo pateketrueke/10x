@@ -68,15 +68,12 @@ if (!returnAsJSON) {
     calc, chalk, playBack, showDebugInfo,
   });
 } else {
-  const fixedResults = calc.eval();
+  const fixedResults = calc.raw(calc.eval());
 
   if (returnAsJSON) {
     process.stdout.write(JSON.stringify({
       error: returnRawJSON ? JSON.stringify(calc.error) : calc.error,
-      tree: returnRawJSON ? JSON.stringify(calc.tree) : calc.tree,
-      input: calc.input.map(x => (returnRawJSON ? JSON.stringify(x) : x)),
-      tokens: calc.tokens.map(x => (returnRawJSON ? JSON.stringify(x) : x)),
-      results: fixedResults.map(x => (returnRawJSON ? JSON.stringify(x) : x)),
+      results: returnRawJSON ? JSON.stringify(fixedResults) : fixedResults,
     }));
   } else {
     fixedResults.forEach(x => {
