@@ -104,7 +104,7 @@ export default class Solv {
 
   format(result, indent, formatter, separator, parentheses) {
     if (isArray(result)) {
-      const fixedResult = result.map(x => this.value(x, indent, formatter, separator, null).format);
+      const fixedResult = result.map(x => this.value(x, indent, formatter, separator, false).format);
 
       if (separator) {
         if (parentheses) {
@@ -131,11 +131,11 @@ export default class Solv {
       return null;
     }
 
-    if (isArray(result) && parentheses === null) {
+    if (isArray(result) && !parentheses) {
       return {
         val: result,
         type: 'object',
-        format: this.format(result, indent, formatter, separator, true),
+        format: this.format(result, indent, formatter, separator, parentheses === null || isArray(result[0])),
       };
     }
 
@@ -155,7 +155,7 @@ export default class Solv {
 
     if (isArray(result)) {
       if (result[0] === 'object') {
-        const fixedObject = this.value(result[1], indent, formatter, separator, null).format;
+        const fixedObject = this.value(result[1], indent, formatter, separator, false).format;
 
         return {
           val: result[1],
@@ -228,7 +228,9 @@ export default class Solv {
     const out = [];
 
     Object.keys(result).forEach((key, i) => {
-      out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${this.format(result[key], indent, formatter, separator)}`);
+      const fixedResult = this.format(result[key], indent, formatter, separator, isArray(result[key][0]));
+
+      out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${fixedResult}`);
     });
 
     return {
