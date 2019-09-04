@@ -12,7 +12,7 @@ const value = (expr, opts, no) => {
   const c = calc(expr, opts, no);
   const x = c.eval();
   if (!no && c.error) throw c.error;
-  return c.format(x);
+  return c.value(x, 0, (_, x) => x, ', ', false).format;
 }
 
 const toTree = (expr, opts) => calc(expr, opts, true).tree;
@@ -33,7 +33,7 @@ describe('DSL', () => {
     });
 
     it('should handle most basic operators', () => {
-      expect(value('1+2, 3-4, 5/6, 7*8')).to.eql(['3', '-1', '0.83', '56']);
+      expect(value('1+2, 3-4, 5/6, 7*8')).to.eql('3, -1, 0.83, 56');
     });
 
     it('should handle common errors', () => {
@@ -42,7 +42,7 @@ describe('DSL', () => {
     });
 
     it('should handle most basic units', () => {
-      expect(value('1cm')).to.eql(['1 cm']);
+      expect(value('1cm')).to.eql('1 cm');
     });
 
     it('should tokenize double-quoted strings', () => {
@@ -59,8 +59,8 @@ describe('DSL', () => {
     });
 
     it('should apply well-known inflections', () => {
-      expect(value('2 weeks as day')).to.eql(['14 days']);
-      expect(value('1d')).to.eql(['1 day']);
+      expect(value('2 weeks as day')).to.eql('14 days');
+      expect(value('1d')).to.eql('1 day');
     });
 
     it('should skip bad sequences from input', () => {
@@ -68,13 +68,13 @@ describe('DSL', () => {
     });
 
     it('should handle nested sub-expressions', () => {
-      expect(value('1 + 2')).to.eql(['3']);
-      expect(value('(1 + 2)')).to.eql(['3']);
-      expect(value('1 + (2 + 3)')).to.eql(['6']);
-      expect(value('(1 + (2 + 3))')).to.eql(['6']);
-      expect(value('1 + (2 + (3 + 4))')).to.eql(['10']);
-      expect(value('(1 + (2 + (3 + 4)))')).to.eql(['10']);
-      expect(value('1 + (2 + (3 - 4) - 2)')).to.eql(['0']);
+      expect(value('1 + 2')).to.eql('3');
+      expect(value('(1 + 2)')).to.eql('3');
+      expect(value('1 + (2 + 3)')).to.eql('6');
+      expect(value('(1 + (2 + 3))')).to.eql('6');
+      expect(value('1 + (2 + (3 + 4))')).to.eql('10');
+      expect(value('(1 + (2 + (3 + 4)))')).to.eql('10');
+      expect(value('1 + (2 + (3 - 4) - 2)')).to.eql('0');
     });
 
     it('should validate nested sub-expressions', () => {
@@ -84,44 +84,44 @@ describe('DSL', () => {
     });
 
     it('should handle separated sub-expressions', () => {
-      expect(value('1 2 or 3 4 and 5 6')).to.eql(['3', '7', '11']);
+      expect(value('1 2 or 3 4 and 5 6')).to.eql('3, 7, 11');
     });
 
     it('should add basic operators between numbers', () => {
-      expect(value('1 2 3')).to.eql(['6']);
-      expect(value('1 - 2 3')).to.eql(['-4']);
-      expect(value('2 ( 3 4 )')).to.eql(['14']);
-      expect(value('1 - ( 2 3 )')).to.eql(['-4']);
-      expect(value('1 2 3 / 4 5')).to.eql(['8.75']);
+      expect(value('1 2 3')).to.eql('6');
+      expect(value('1 - 2 3')).to.eql('-4');
+      expect(value('2 ( 3 4 )')).to.eql('14');
+      expect(value('1 - ( 2 3 )')).to.eql('-4');
+      expect(value('1 2 3 / 4 5')).to.eql('8.75');
     });
 
     it('should handle converting to fractions', () => {
-      expect(value('0.5 as fr')).to.eql(['1/2']);
-      expect(value('0.5 as frac')).to.eql(['1/2']);
-      expect(value('0.5 as fraction')).to.eql(['1/2']);
-      expect(value('0.5 as fractions')).to.eql(['1/2']);
-      expect(value('3 from 10 as fr')).to.eql(['30/1']);
-      expect(value('3 inches - 2 cm as fr')).to.eql(['221/100 in']);
+      expect(value('0.5 as fr')).to.eql('1/2');
+      expect(value('0.5 as frac')).to.eql('1/2');
+      expect(value('0.5 as fraction')).to.eql('1/2');
+      expect(value('0.5 as fractions')).to.eql('1/2');
+      expect(value('3 from 10 as fr')).to.eql('30/1');
+      expect(value('3 inches - 2 cm as fr')).to.eql('221/100 in');
     });
 
     it('should handle converting from units', () => {
-      expect(value('3cm as inches')).to.eql(['1.18 in']);
+      expect(value('3cm as inches')).to.eql('1.18 in');
     });
 
     it('should skip converting from currencies', () => {
-      expect(value('1 MXN as USD')).to.eql(['1 USD']);
+      expect(value('1 MXN as USD')).to.eql('1 USD');
     });
 
     it('should handle local expressions', () => {
-      expect(value("x'=1.2;3x'")).to.eql(['3.6']);
-      expect(value("x'=(1.2);3x'")).to.eql(['3.6']);
-      expect(value('just1_fix=0.1;2just1_fix')).to.eql(['0.2']);
+      expect(value("x'=1.2;3x'")).to.eql('3.6');
+      expect(value("x'=(1.2);3x'")).to.eql('3.6');
+      expect(value('just1_fix=0.1;2just1_fix')).to.eql('0.2');
     });
 
     it('should handle external expressions', () => {
       expect(value('2x', { expressions: { x: {
         body: [{ token: ['number', 1.5] }],
-      } } })).to.eql(['3']);
+      } } })).to.eql('3');
     });
 
     it.skip('should handle number suffixes', () => {
@@ -132,9 +132,9 @@ describe('DSL', () => {
     });
 
     it('should handle well-known dates', () => {
-      expect(value('900am')).to.eql(['Wed Jun 10 1987 09:00:00']);
-      expect(value('900 am')).to.eql(['Wed Jun 10 1987 09:00:00']);
-      expect(value('9:00 am')).to.eql(['Wed Jun 10 1987 09:00:00']);
+      expect(value('900am')).to.eql('Wed Jun 10 1987 09:00:00');
+      expect(value('900 am')).to.eql('Wed Jun 10 1987 09:00:00');
+      expect(value('9:00 am')).to.eql('Wed Jun 10 1987 09:00:00');
       // expect(value('now')).to.eql(['Wed Jun 10 1987 11:38:49']);
       // expect(value('today')).to.eql(['Wed Jun 10 1987 00:00:00']);
       // expect(value('tomorrow')).to.eql(['Thu Jun 11 1987 11:38:49']);
