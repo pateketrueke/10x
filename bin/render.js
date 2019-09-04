@@ -105,7 +105,7 @@ module.exports = ({
       if (x instanceof Error) {
         push(null, `${indent}${chalk.red(x[showDebugInfo ? 'stack' : 'message'].trim())}\n`);
       } else {
-        push(null, `${indent}${chalk.gray('//=>')} ${chalk.dim(calc.format(x, indent.length + 4, out, chalk.gray(', ')))}\n`);
+        push(null, `${indent}${chalk.gray('//=>')} ${chalk.dim(calc.value(x, indent.length + 4, out, chalk.gray(', ')).format)}\n`);
       }
     });
 

@@ -77,7 +77,7 @@ if (!returnAsJSON) {
     }));
   } else {
     fixedResults.forEach(x => {
-      process.stderr.write(`${chalk.gray('//=>')} ${calc.format(x, 4, out, chalk.gray(', '))}\n`);
+      process.stderr.write(`${chalk.gray('//=>')} ${calc.value(x, 4, out, chalk.gray(', ')).format}\n`);
     });
   }
 

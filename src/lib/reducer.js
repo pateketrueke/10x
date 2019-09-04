@@ -489,7 +489,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         if (isArray(ctx.cur[0])) {
           fixedValue = ['object', cb(ctx.cur, ctx)];
         } else {
-          fixedValue = ['object', fixArgs(cb(ctx.cur, ctx))];
+          fixedValue = ['object', fixArgs(cb(ctx.cur, ctx)).reduce((p, c) => p.concat(c), [])];
         }
       }
 

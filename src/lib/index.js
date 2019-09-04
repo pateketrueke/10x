@@ -103,29 +103,65 @@ export default class Solv {
   }
 
   // FIXME: treat this way to hide parentheses as away of flatten all the formatted results..
-
-  format(result, indent, formatter, separator, parentheses) {
-    if (isArray(result)) {
-      const fixedResult = result.map(x => this.value(x, indent, formatter, separator, null).format);
-
-      if (separator) {
-        if (parentheses) {
-          return `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`;
-        }
-
-        if (isArray(result[0]) || result[0].token[0] === 'object') {
-          const tabs = Array.from({ length: indent + 2 }).join(' ');
-
-          return fixedResult.join(`${separator}\n${tabs}`);
-        }
-
-        return fixedResult.join(separator);
-      }
-
-      return fixedResult;
+  format(token) {
+    if (token[0] === 'number') {
+      token[1] = toNumber(token[1]);
     }
 
-    return this.value(result, indent, formatter, separator, null).format;
+    if (
+      token[2]
+      && token[0] === 'number'
+      && !(isInt(token[1]) || token[1] instanceof Date)
+    ) {
+      // remove trailing words from units
+      token[1] = String(token[1]).replace(/[\sa-z/-]+$/ig, '');
+    }
+
+    let fixedValue = toValue(token);
+    let fixedUnit = token[2];
+
+    // adjust unit-fractions
+    if (typeof fixedUnit === 'string' && fixedUnit.indexOf('fr-') === 0) {
+      fixedValue = toFraction(fixedValue);
+      fixedUnit = fixedUnit.split('fr-')[1];
+    }
+
+    // add thousand separators
+    if (token[0] === 'number' && isInt(fixedValue)) {
+      fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    if (
+      fixedUnit
+      && !(['datetime', 'x-fraction'].includes(fixedUnit) || token[1] instanceof Date)
+    ) {
+      // apply well-known inflections
+      if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
+        const [one, many] = this.inflections[fixedUnit];
+        const base = parseFloat(fixedValue);
+
+        if (base === 1.0 && one) fixedUnit = one;
+        if (base !== 1.0 && many) fixedUnit = many;
+      }
+
+      if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
+        fixedValue += ` ${fixedUnit}`;
+      }
+    }
+
+    let formattedValue = typeof fixedValue !== 'string'
+      ? JSON.stringify(fixedValue)
+      : fixedValue;
+
+    if (typeof formatter === 'function') {
+      formattedValue = formatter(token[0], formattedValue);
+    }
+
+    return {
+      val: token[1],
+      type: token[0],
+      format: formattedValue,
+    };
   }
 
   value(result, indent, formatter, separator, parentheses) {
@@ -133,104 +169,62 @@ export default class Solv {
       return null;
     }
 
-    if (isArray(result) && parentheses !== null) {
+    if (isArray(result)) {
+      const fixedResult = result.map(x => this.value(x, indent, formatter, separator).format);
+
       return {
         val: result,
         type: 'object',
-        format: this.format(result, indent, formatter, separator, null),
+        format: `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`,
       };
+
+      // FIXME: this null unwinds indices from lists...
+      // const fixedResult = result.map(x => this.value(x, indent, formatter, separator).format);
+
+      // if (separator) {
+      //   if (parentheses) {
+      //     return {format:`${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`};
+      //   }
+
+      //   if (isArray(result[0]) || result[0].token[0] === 'object') {
+      //     const tabs = Array.from({ length: indent + 2 }).join(' ');
+
+      //     return fixedResult.join(`${separator}\n${tabs}`);
+      //   }
+
+      //   return {format:fixedResult.join(separator)};
+      // }
+
+      // return {format:fixedResult};
     }
 
     if (result instanceof LangExpr) {
-      result = result.token;
-    }
+      if (isArray(result.token[0])) {
+        return {
+          val: [],
+          type: 'object',
+          format: result.token.map(x => this.format(x)).join(separator),
+        };
+      }
 
-    if (isArray(result[0])) {
-      const fixedResults = result.map(x => this.value(x, indent, formatter, separator, null).format);
-
-      return {
-        val: result,
-        type: 'object',
-        format: `${formatter('open', '(')}${fixedResults.join(separator)}${formatter('close', ')')}`,
-      };
-    }
-
-    if (isArray(result) && typeof result[0] === 'string') {
-      if (result[0] === 'object') {
-        const fixedObject = this.value(result[1], indent, formatter, separator, null).format;
+      if (result.token[0] === 'object') {
+        const fixedObject = this.value(result.token[1], indent, formatter, separator).format;
 
         return {
-          val: result[1],
-          type: result[0],
+          val: result.token[1],
+          type: result.token[0],
           format: fixedObject,
         };
       }
 
-      if (result[0] === 'number') {
-        result[1] = toNumber(result[1]);
-      }
-
-      if (
-        result[2]
-        && result[0] === 'number'
-        && !(isInt(result[1]) || result[1] instanceof Date)
-      ) {
-        // remove trailing words from units
-        result[1] = String(result[1]).replace(/[\sa-z/-]+$/ig, '');
-      }
-
-      let fixedValue = toValue(result);
-      let fixedUnit = result[2];
-
-      // adjust unit-fractions
-      if (typeof fixedUnit === 'string' && fixedUnit.indexOf('fr-') === 0) {
-        fixedValue = toFraction(fixedValue);
-        fixedUnit = fixedUnit.split('fr-')[1];
-      }
-
-      // add thousand separators
-      if (result[0] === 'number' && isInt(fixedValue)) {
-        fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-      }
-
-      if (
-        fixedUnit
-        && !(['datetime', 'x-fraction'].includes(fixedUnit) || result[1] instanceof Date)
-      ) {
-        // apply well-known inflections
-        if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
-          const [one, many] = this.inflections[fixedUnit];
-          const base = parseFloat(fixedValue);
-
-          if (base === 1.0 && one) fixedUnit = one;
-          if (base !== 1.0 && many) fixedUnit = many;
-        }
-
-        if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
-          fixedValue += ` ${fixedUnit}`;
-        }
-      }
-
-      let formattedValue = typeof fixedValue !== 'string'
-        ? JSON.stringify(fixedValue)
-        : fixedValue;
-
-      if (typeof formatter === 'function') {
-        formattedValue = formatter(result[0], formattedValue);
-      }
-
-      return {
-        val: result[1],
-        type: result[0],
-        format: formattedValue,
-      };
+      return this.format(result.token);
     }
 
     const tabs = Array.from({ length: indent + 3 }).join(' ');
     const out = [];
 
     Object.keys(result).forEach((key, i) => {
-      const fixedResult = this.format(result[key], indent, formatter, separator, null);
+      const fixedResult = this.value(result[key], indent, formatter, separator).format;
 
       out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${fixedResult}`);
     });
@@ -255,6 +249,8 @@ export default class Solv {
       this.error = LangErr.build(e, source || this.source, 2, this.filepath);
       return [];
     }
+
+    console.log({output})
 
     return output
       .filter(x => x.length)
