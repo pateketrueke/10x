@@ -258,7 +258,7 @@ export function transform(ctx, self) {
         depth: x.depth,
         begin: [x.row, x.col],
         end: [x.row, x.col + x.cur.length],
-      })), ctx.units), null);
+      })), self.units), null);
       return prev;
     }
 
