@@ -325,7 +325,7 @@ export function reduceFromFX(cb, ctx) {
     // recompose tokens on-the-fly
     ctx.cur = toToken(ctx.cur);
     ctx.cur.token[1] = base.token[1] + ctx.cur.token[1] + (ctx.cur.token[1] === '..' ? target.token[1] : '');
-    ctx.cur.token[2] = new RangeExpr(toInput(fixedBase.token), toInput(fixedTarget.token));
+    ctx.cur.token[2] = new RangeExpr(toInput(fixedBase), toInput(fixedTarget));
 
     ctx.cur.begin = base.begin || ctx.cur.begin;
     ctx.cur.end = target.end;
@@ -399,7 +399,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
     // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = fixValues(args, x => x.map(y => toInput(y.token, (z, data) => cb(z, ctx, data), y._bound)), true);
+      const inputArgs = fixValues(args, x => x.map(y => toInput(y, (z, data) => cb(z, ctx, data), y._bound)), true);
       const inputValue = ctx.cur.token[1][2](...inputArgs);
 
       if (Array.isArray(inputValue)) {
