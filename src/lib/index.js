@@ -175,6 +175,7 @@ export default class Solv {
       return {
         val: result,
         type: 'object',
+        format: fixedResult.join(separator),
         format: parentheses !== false
           ? `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`
           : fixedResult.join(separator),
@@ -207,7 +208,7 @@ export default class Solv {
     const out = [];
 
     Object.keys(result).forEach((key, i) => {
-      const fixedResult = this.value(result[key], indent, formatter, separator, !isArray(result[key][0])).format;
+      const fixedResult = this.value(result[key], indent, formatter, separator).format;
 
       out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${fixedResult}`);
     });
@@ -215,7 +216,7 @@ export default class Solv {
     return {
       value: result,
       type: 'object',
-      format: out.join(`${separator}\n`)
+      format: `${formatter('open', '(')}${out.join(`${separator}\n`)}${formatter('close', ')')}`,
     };
   }
 
