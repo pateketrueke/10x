@@ -268,7 +268,7 @@ export function reduceFromLogic(cb, ctx, self) {
           ctx.cur = seq[0];
         } else {
           ctx.isDef = true;
-          ctx.cur = toToken(['object', cb(seq, ctx)]);
+          ctx.cur = toToken(['object', cb(seq.reduce((p, c) => p.concat(c), []), ctx)]);
         }
         return true;
       } else {
