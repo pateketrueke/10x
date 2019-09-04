@@ -133,7 +133,7 @@ export function fixTree(ast, self) {
 
   for (let i = 0; i < tokens.length; i += 1) {
     const cur = isArray(tokens[i])
-      ? fixTree(tokens[i])
+      ? fixTree(tokens[i], self)
       : tokens[i];
 
     const prev = tokens[i - 1] || { token: [] };
@@ -533,6 +533,8 @@ export function toInput(token, cb, z) {
 
       if (isArray(fixedTokens[0])) {
         fixedValue = fixedValue.reduce((p, x) => p.concat(cb ? cb(x) : x), [])[0];
+      } else if (isArray(fixedValue) && fixedValue.length === 1) {
+        fixedValue = fixedValue[0];
       }
 
       delete token[1][k];
