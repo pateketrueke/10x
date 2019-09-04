@@ -287,6 +287,7 @@ export function transform(ctx, self) {
 
   try {
     fixedTree = fixArgs(body, null).reduce((prev, cur) => {
+      console.log(buildTree(cur));
       const subTree = fixTree(buildTree(cur), self);
 
       if (subTree.length) {
@@ -298,6 +299,8 @@ export function transform(ctx, self) {
   } catch (e) {
     _e = e;
   }
+
+  console.log({fixedTree})
 
   return {
     ast: fixedAST,
