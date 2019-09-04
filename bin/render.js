@@ -6,6 +6,7 @@ module.exports = ({
 
   const buffer = [];
 
+  let didFlush = false;
   let indent = '';
   let values = [];
 
@@ -112,6 +113,7 @@ module.exports = ({
       }
     });
 
+    didFlush = true;
     indent = '';
     values = [];
   }
@@ -143,7 +145,7 @@ module.exports = ({
   while (calc.tree.length) peek();
 
   if (values.length) {
-    push(null, '\n');
+    if (!didFlush) push(null, '\n');
     flush();
   }
 
