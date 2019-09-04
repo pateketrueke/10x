@@ -553,8 +553,11 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
-        // console.log(e)
-        throw new LangErr(e.message, ctx);
+        if (!(e instanceof LangErr)) {
+          throw new LangErr(e.message, ctx);
+        }
+
+        throw e;
       }
     }
 
