@@ -104,7 +104,7 @@ export function fixTokens(ast, z) {
     if (!isArray(cur) && cur.token[0] === 'symbol') {
       keyName = cur.token[1];
     } else if (isArray(cur) || !(cur.token[0] === 'expr' && hasSep(cur.token[1]))) {
-      const fixedToken = z && isArray(cur) ? fixArgs(cur, true) : cur;
+      const fixedToken = z && isArray(cur) ? fixArgs(cur).reduce((p, c) => p.concat(c), []) : cur;
 
       if (!array && keyName) {
         prev[keyName] = prev[keyName] || (prev[keyName] = []);
@@ -533,7 +533,7 @@ export function toInput(token, cb, z) {
 
       if (isArray(fixedTokens[0])) {
         fixedValue = fixedValue.reduce((p, x) => p.concat(cb ? cb(x) : x), [])[0];
-      } else if (isArray(fixedValue) && fixedValue.length === 1) {
+      } else if (cb && isArray(fixedValue) && fixedValue.length === 1) {
         fixedValue = fixedValue[0];
       }
 
