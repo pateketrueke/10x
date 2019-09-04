@@ -221,6 +221,9 @@ export function getTokensFrom(text, units, parentNode, fixedOffset) {
     // always give score to parentheses
     if ('()'.includes(value)) score += 1;
 
+    // increase depth if there is complexity before
+    if (value.charAt() === ':' && oldScore) depth++;
+
     // increase depth if we're into a definition, not inside any parentheses!
     if ('(='.includes(value) && oldScore) depth++;
     else if (');'.includes(value) && depth) depth--;
