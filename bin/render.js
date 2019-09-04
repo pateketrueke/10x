@@ -78,7 +78,10 @@ module.exports = ({
 
     if (calc.error) {
       values.push(calc.error);
-      indent = Array.from({ length: calc.error.target.begin[1] + 1 }).join(' ');
+
+      if (calc.error.target.begin) {
+        indent = Array.from({ length: calc.error.target.begin[1] + 1 }).join(' ');
+      }
     }
 
     if (results.length) {

@@ -250,8 +250,6 @@ export default class Solv {
       return [];
     }
 
-    console.log({output})
-
     return output
       .filter(x => x.length)
       .reduce((p, c) => p.concat(!isArray(c[0]) ? toToken(calculateFromTokens(toList(c))) : c), []);
