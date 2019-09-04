@@ -138,7 +138,11 @@ module.exports = ({
 
   // evaluate and print remaining trees
   while (calc.tree.length) peek();
-  if (values.length) flush();
+
+  if (values.length) {
+    push(null, '\n');
+    flush();
+  }
 
   buffer.reduce((prev, cur) => prev.then(() => cur()), Promise.resolve());
 };
