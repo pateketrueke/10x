@@ -236,8 +236,8 @@ export function transform(ctx, self) {
       continue;
     }
 
-    // make sure we're always splitting on new-lines!
-    if (!(open || token.depth) && oldChar !== ',' && token.cur === '\n') inc++;
+    // make sure we're always splitting on delimiters!
+    if (!(open || token.depth) && oldChar !== ',' && ';\n'.includes(token.cur)) inc++;
 
     // keep new-lines if we're within a list...
     if (!open && !' \n'.includes(token.cur)) oldChar = token.cur;
