@@ -131,7 +131,7 @@ export default class Solv {
       return null;
     }
 
-    if (isArray(result)) {
+    if (isArray(result) && !parentheses) {
       return {
         val: result,
         type: 'object',
@@ -140,33 +140,46 @@ export default class Solv {
     }
 
     if (result instanceof LangExpr) {
-      const { token } = result;
+      result = result.token;
+    }
 
-      if (token[0] === 'object') {
-        const fixedObject = this.value(token[1], indent, formatter, separator).format;
+    if (isArray(result[0])) {
+      return {
+        val: result,
+        type: 'object',
+        format: 'FIXME',
+        format: `${formatter('open', '(')}${
+          result.map(x => this.value(x, indent, formatter, separator, true).format).join(separator)
+        }${formatter('close', ')')}`,
+      };
+    }
+
+    if (isArray(result)) {
+      if (result[0] === 'object') {
+        const fixedObject = this.value(result[1], indent, formatter, separator).format;
 
         return {
-          val: token[1],
-          type: token[0],
+          val: result[1],
+          type: result[0],
           format: fixedObject,
         };
       }
 
-      if (token[0] === 'number') {
-        token[1] = toNumber(token[1]);
+      if (result[0] === 'number') {
+        result[1] = toNumber(result[1]);
       }
 
       if (
-        token[2]
-        && token[0] === 'number'
-        && !(isInt(token[1]) || token[1] instanceof Date)
+        result[2]
+        && result[0] === 'number'
+        && !(isInt(result[1]) || result[1] instanceof Date)
       ) {
         // remove trailing words from units
-        token[1] = String(token[1]).replace(/[\sa-z/-]+$/ig, '');
+        result[1] = String(result[1]).replace(/[\sa-z/-]+$/ig, '');
       }
 
-      let fixedValue = toValue(token);
-      let fixedUnit = token[2];
+      let fixedValue = toValue(result);
+      let fixedUnit = result[2];
 
       // adjust unit-fractions
       if (typeof fixedUnit === 'string' && fixedUnit.indexOf('fr-') === 0) {
@@ -175,13 +188,13 @@ export default class Solv {
       }
 
       // add thousand separators
-      if (token[0] === 'number' && isInt(fixedValue)) {
+      if (result[0] === 'number' && isInt(fixedValue)) {
         fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       }
 
       if (
         fixedUnit
-        && !(['datetime', 'x-fraction'].includes(fixedUnit) || token[1] instanceof Date)
+        && !(['datetime', 'x-fraction'].includes(fixedUnit) || result[1] instanceof Date)
       ) {
         // apply well-known inflections
         if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
@@ -202,12 +215,12 @@ export default class Solv {
         : fixedValue;
 
       if (typeof formatter === 'function') {
-        formattedValue = formatter(token[0], formattedValue);
+        formattedValue = formatter(result[0], formattedValue);
       }
 
       return {
-        val: token[1],
-        type: token[0],
+        val: result[1],
+        type: result[0],
         format: formattedValue,
       };
     }
