@@ -170,7 +170,7 @@ export default class Solv {
     }
 
     if (isArray(result)) {
-      const fixedResult = result.map(x => this.value(x, indent, formatter, separator).format);
+      const fixedResult = result.map(x => this.value(x, indent, formatter, separator, !isArray(x[0])).format);
 
       return {
         val: result,
@@ -185,7 +185,7 @@ export default class Solv {
     if (result instanceof LangExpr) {
       if (isArray(result.token[0])) {
         return {
-          val: [],
+          val: result.token,
           type: 'object',
           format: result.token.map(x => this.format(x)).join(separator),
         };
@@ -208,7 +208,7 @@ export default class Solv {
     const out = [];
 
     Object.keys(result).forEach((key, i) => {
-      const fixedResult = this.value(result[key], indent, formatter, separator).format;
+      const fixedResult = this.value(result[key], indent, formatter, separator, false).format;
 
       out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${fixedResult}`);
     });
