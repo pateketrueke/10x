@@ -242,6 +242,14 @@ export default class Solv {
 
     return output
       .filter(x => x.length)
+      .map(x => {
+        // evaluate last chunks with expressions...
+        if (x.length > 1 && x.some(y => !isArray(y) && y.token[0] === 'expr')) {
+          return toToken(calculateFromTokens(toList(x)));
+        }
+
+        return x;
+      })
       .reduce((p, c) => p.concat(c), []);
   }
 }
