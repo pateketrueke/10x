@@ -531,10 +531,8 @@ export function toInput(token, cb, z) {
         ? cb(fixedTokens)
         : fixedTokens;
 
-      if (isArray(fixedValue[0])) {
-        fixedValue = ['object', fixedValue];
-      } else if (fixedValue[0] === 'object') {
-        fixedValue = fixedValue[1];
+      if (fixedValue.length === 1) {
+        fixedValue = fixedValue[0];
       }
 
       delete token[1][k];
