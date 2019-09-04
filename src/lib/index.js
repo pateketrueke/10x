@@ -102,9 +102,11 @@ export default class Solv {
     return output;
   }
 
+  // FIXME: treat this way to hide parentheses as away of flatten all the formatted results..
+
   format(result, indent, formatter, separator, parentheses) {
     if (isArray(result)) {
-      const fixedResult = result.map(x => this.value(x, indent, formatter, separator, false).format);
+      const fixedResult = result.map(x => this.value(x, indent, formatter, separator).format);
 
       if (separator) {
         if (parentheses) {
@@ -123,7 +125,7 @@ export default class Solv {
       return fixedResult;
     }
 
-    return this.value(result, indent, formatter, separator, parentheses).format;
+    return this.value(result, indent, formatter, separator).format;
   }
 
   value(result, indent, formatter, separator, parentheses) {
@@ -131,11 +133,11 @@ export default class Solv {
       return null;
     }
 
-    if (isArray(result) && !parentheses) {
+    if (isArray(result) && parentheses !== null) {
       return {
         val: result,
         type: 'object',
-        format: this.format(result, indent, formatter, separator, parentheses === null || isArray(result[0])),
+        format: this.format(result, indent, formatter, separator),
       };
     }
 
@@ -144,7 +146,7 @@ export default class Solv {
     }
 
     if (isArray(result[0])) {
-      const fixedResults = result.map(x => this.value(x, indent, formatter, separator, true).format);
+      const fixedResults = result.map(x => this.value(x, indent, formatter, separator).format);
 
       return {
         val: result,
@@ -153,9 +155,9 @@ export default class Solv {
       };
     }
 
-    if (isArray(result)) {
+    if (isArray(result) && typeof result[0] === 'string') {
       if (result[0] === 'object') {
-        const fixedObject = this.value(result[1], indent, formatter, separator, false).format;
+        const fixedObject = this.value(result[1], indent, formatter, separator).format;
 
         return {
           val: result[1],
@@ -228,7 +230,7 @@ export default class Solv {
     const out = [];
 
     Object.keys(result).forEach((key, i) => {
-      const fixedResult = this.format(result[key], indent, formatter, separator, isArray(result[key][0]));
+      const fixedResult = this.format(result[key], indent, formatter, separator);
 
       out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${fixedResult}`);
     });
