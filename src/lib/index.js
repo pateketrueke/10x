@@ -106,7 +106,7 @@ export default class Solv {
 
   format(result, indent, formatter, separator, parentheses) {
     if (isArray(result)) {
-      const fixedResult = result.map(x => this.value(x, indent, formatter, separator).format);
+      const fixedResult = result.map(x => this.value(x, indent, formatter, separator, null).format);
 
       if (separator) {
         if (parentheses) {
@@ -125,7 +125,7 @@ export default class Solv {
       return fixedResult;
     }
 
-    return this.value(result, indent, formatter, separator).format;
+    return this.value(result, indent, formatter, separator, null).format;
   }
 
   value(result, indent, formatter, separator, parentheses) {
@@ -137,7 +137,7 @@ export default class Solv {
       return {
         val: result,
         type: 'object',
-        format: this.format(result, indent, formatter, separator),
+        format: this.format(result, indent, formatter, separator, null),
       };
     }
 
@@ -146,7 +146,7 @@ export default class Solv {
     }
 
     if (isArray(result[0])) {
-      const fixedResults = result.map(x => this.value(x, indent, formatter, separator).format);
+      const fixedResults = result.map(x => this.value(x, indent, formatter, separator, null).format);
 
       return {
         val: result,
@@ -157,7 +157,7 @@ export default class Solv {
 
     if (isArray(result) && typeof result[0] === 'string') {
       if (result[0] === 'object') {
-        const fixedObject = this.value(result[1], indent, formatter, separator).format;
+        const fixedObject = this.value(result[1], indent, formatter, separator, null).format;
 
         return {
           val: result[1],
@@ -230,7 +230,7 @@ export default class Solv {
     const out = [];
 
     Object.keys(result).forEach((key, i) => {
-      const fixedResult = this.format(result[key], indent, formatter, separator);
+      const fixedResult = this.format(result[key], indent, formatter, separator, null);
 
       out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${fixedResult}`);
     });
