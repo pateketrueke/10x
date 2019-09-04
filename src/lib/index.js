@@ -208,7 +208,7 @@ export default class Solv {
     const out = [];
 
     Object.keys(result).forEach((key, i) => {
-      const fixedResult = this.value(result[key], indent, formatter, separator, false).format;
+      const fixedResult = this.value(result[key], indent, formatter, separator, !isArray(result[key][0])).format;
 
       out.push(`${i ? tabs : ''}${formatter('symbol', key)} ${fixedResult}`);
     });
