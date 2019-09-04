@@ -214,7 +214,7 @@ export default class Solv {
     });
 
     return {
-      value: result,
+      val: result,
       type: 'object',
       format: `${formatter('open', '(')}${out.join(`${separator}\n`)}${formatter('close', ')')}`,
     };
