@@ -131,7 +131,7 @@ export default class Solv {
       return null;
     }
 
-    if (isArray(result) && !parentheses) {
+    if (isArray(result)) {
       return {
         val: result,
         type: 'object',
