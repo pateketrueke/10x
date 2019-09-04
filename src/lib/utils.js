@@ -1,3 +1,7 @@
+import {
+  isArray,
+} from './shared';
+
 export const pad = (nth, length) => `     ${nth}`.substr(-length);
 
 export const repeat = (char, length) => Array.from({ length }).join(char);

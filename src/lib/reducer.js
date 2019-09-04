@@ -559,7 +559,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
-        console.log(e)
+        // console.log(e)
         throw new LangErr(e.message, ctx);
       }
     }
