@@ -103,7 +103,7 @@ export default class Solv {
   }
 
   // FIXME: treat this way to hide parentheses as away of flatten all the formatted results..
-  format(token) {
+  format(token, formatter) {
     if (token[0] === 'number') {
       token[1] = toNumber(token[1]);
     }
@@ -217,7 +217,7 @@ export default class Solv {
         };
       }
 
-      return this.format(result.token);
+      return this.format(result.token, formatter);
     }
 
     const tabs = Array.from({ length: indent + 3 }).join(' ');

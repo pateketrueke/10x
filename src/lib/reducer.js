@@ -529,13 +529,14 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         // evaluate resulting object
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object') {
           if (!isArray(ctx.cur.token[1])) {
-            ctx.cur.token[1] = toPlain(ctx.cur.token[1], true, x => {
-              const subTree = cb(x, ctx);
+            console.log('ARR_EVAL', ctx.cur.token[1]);
+            // ctx.cur.token[1] = toPlain(ctx.cur.token[1], true, x => {
+            //   const subTree = cb(x, ctx);
 
-              return !isArray(subTree[0])
-                ? [toToken(calculateFromTokens(toList(subTree)))]
-                : subTree;
-            });
+            //   return !isArray(subTree[0])
+            //     ? [toToken(calculateFromTokens(toList(subTree)))]
+            //     : subTree;
+            // });
           }
 
           if (
