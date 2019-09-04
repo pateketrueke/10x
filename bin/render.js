@@ -73,10 +73,12 @@ module.exports = ({
   }
 
   function peek() {
-    const results = calc.eval([calc.tree.shift()]);
+    const subTree = calc.tree.shift();
+    const results = calc.eval([subTree]);
 
     if (calc.error) {
       values.push(calc.error);
+      indent = Array.from({ length: calc.error.target.begin[1] + 1 }).join(' ');
     }
 
     if (results.length) {
@@ -101,7 +103,7 @@ module.exports = ({
   function flush() {
     values.forEach(x => {
       if (x instanceof Error) {
-        push(null, `${indent}${chalk.red(x[showDebugInfo ? 'stack' : 'message'])}\n`);
+        push(null, `${indent}${chalk.red(x[showDebugInfo ? 'stack' : 'message'].trim())}\n`);
       } else {
         push(null, `${indent}${chalk.gray('//=>')} ${calc.format(x, indent.length + 4, out, chalk.gray(', '))}\n`);
       }
@@ -119,37 +121,24 @@ module.exports = ({
     const node = calc.ast[i];
 
     if (node !== null) {
-      if (node.begin[1] === 0) {
+      push(node.token[0], node.token[1]);
+
+      // evaluate as soon we reach splits
+      if (calc.ast[i + 1] === null && calc.ast[i + 2] === null) peek();
+
+      // capture current identation to format results
+      if (typeof node.token[1] === 'string' && !node.begin[1]) {
         indent = (node.token[1].match(/^ +/) || [])[0] || '';
       }
 
-      // FIXME: highlight errored tokens...
-      // if (calc.error && calc.error.target === node) {
-      //   push(null, chalk.bgRed(node.token[1]));
-      // } else {
-      //   push(node.token[0], node.token[1]);
-      // }
-
-      push(node.token[0], node.token[1]);
-
-      if (
-        typeof node.token[1] === 'string'
-        && node.token[1].includes('\n')
-        && values.length
-      ) {
-        flush();
-      }
+      // but output results after any newline
+      if (values.length && node.token[0] === 'text' && node.token[1].includes('\n')) flush();
     }
-
-    if (calc.ast[i] === null && calc.ast[i + 1] === null) peek();
   }
 
+  // evaluate and print remaining trees
   while (calc.tree.length) peek();
-
-  if (values.length) {
-    push(null, '\n');
-    flush();
-  }
+  if (values.length) flush();
 
   buffer.reduce((prev, cur) => prev.then(() => cur()), Promise.resolve());
 };
