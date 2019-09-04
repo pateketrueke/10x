@@ -237,7 +237,10 @@ export function transform(ctx, self) {
     }
 
     // make sure we're always splitting on delimiters!
-    if (!(open || token.depth) && oldChar !== ',' && ';\n'.includes(token.cur)) inc++;
+    if (!(open || token.depth) && oldChar !== ',' && '\n'.includes(token.cur)) inc++;
+
+    // also, we split as we found more delimiters...
+    if (token.cur === ';' && hasSep(nextToken.cur)) inc++;
 
     // keep new-lines if we're within a list...
     if (!open && !' \n'.includes(token.cur)) oldChar = token.cur;
