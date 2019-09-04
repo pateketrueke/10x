@@ -4,7 +4,7 @@ import { getTokensFrom } from '../src/lib/lexer';
 import { DEFAULT_MAPPINGS } from '../src/lib/convert';
 
 describe('Parser', () => {
-  const tree = sample => transform(getTokensFrom(sample, DEFAULT_MAPPINGS), DEFAULT_MAPPINGS).tree;
+  const tree = sample => transform({ input: getTokensFrom(sample, { units:DEFAULT_MAPPINGS }) }, { units: DEFAULT_MAPPINGS }).tree;
 
   describe('tokenization', () => {
     it('should produce fixed tokens', () => {

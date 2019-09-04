@@ -2,8 +2,8 @@ import tk from 'timekeeper';
 import { expect } from 'chai';
 import Solvente from '../src/lib';
 
-const calc = (expr, opts, no) => {
-  const x = new Solvente(opts).resolve(expr);
+const calc = (source, opts, no) => {
+  const x = new Solvente({ source, ...opts });
   if (!no && x.error) throw x.error;
   return x;
 };
@@ -16,7 +16,7 @@ const value = (expr, opts, no) => {
 }
 
 const toTree = (expr, opts) => calc(expr, opts, true).tree;
-const toTokens = (expr, opts) => calc(expr, opts, true).tokens.filter(x => x !== null);
+const toAST = (expr, opts) => calc(expr, opts, true).ast.filter(x => x !== null);
 
 const fix = subTree => [subTree.map(x => ({ token: x }))];
 
@@ -46,12 +46,12 @@ describe('DSL', () => {
     });
 
     it('should tokenize double-quoted strings', () => {
-      expect(toTokens('Foo "bar baz" Buz')[1].token[0]).to.eql('string');
+      expect(toAST('Foo "bar baz" Buz')[1].token[0]).to.eql('string');
     });
 
     it('should tokenize symbol-like values', () => {
-      expect(toTokens('Foo :bar ::baz-buzz Bazzinga')[1].token[0]).to.eql('symbol');
-      expect(toTokens('Foo :bar ::baz-buzz Bazzinga')[3].token[0]).to.eql('text');
+      expect(toAST('Foo :bar ::baz-buzz Bazzinga')[1].token[0]).to.eql('symbol');
+      expect(toAST('Foo :bar ::baz-buzz Bazzinga')[3].token[0]).to.eql('text');
     });
 
     it('should skip empty sub-expressions', () => {
@@ -144,68 +144,68 @@ describe('DSL', () => {
 
   describe('Markdown-like formatting', () => {
     it('should handle code tags', () => {
-      expect(toTokens('foo `bar baz` buzz')[1].token[0]).to.eql('code');
-      expect(toTokens('foo `bar baz` buzz')[1].token[1]).to.eql('`bar baz`');
+      expect(toAST('foo `bar baz` buzz')[1].token[0]).to.eql('code');
+      expect(toAST('foo `bar baz` buzz')[1].token[1]).to.eql('`bar baz`');
     });
 
     it('should handle del tags', () => {
-      expect(toTokens('foo ~bar baz~ buzz')[1].token[0]).to.eql('del');
-      expect(toTokens('foo ~bar baz~ buzz')[1].token[1]).to.eql('~bar baz~');
+      expect(toAST('foo ~bar baz~ buzz')[1].token[0]).to.eql('del');
+      expect(toAST('foo ~bar baz~ buzz')[1].token[1]).to.eql('~bar baz~');
     });
 
     it('should handle bold tags', () => {
-      expect(toTokens('foo **bar baz** buzz')[1].token[0]).to.eql('b');
-      expect(toTokens('foo __bar baz__ buzz')[1].token[0]).to.eql('b');
-      expect(toTokens('foo __bar baz__ buzz')[1].token[1]).to.eql('__bar baz__');
+      expect(toAST('foo **bar baz** buzz')[1].token[0]).to.eql('b');
+      expect(toAST('foo __bar baz__ buzz')[1].token[0]).to.eql('b');
+      expect(toAST('foo __bar baz__ buzz')[1].token[1]).to.eql('__bar baz__');
     });
 
     it('should handle em tags', () => {
-      expect(toTokens('foo _bar baz_ buzz')[1].token[0]).to.eql('em');
-      expect(toTokens('foo _bar baz_ buzz')[1].token[1]).to.eql('_bar baz_');
+      expect(toAST('foo _bar baz_ buzz')[1].token[0]).to.eql('em');
+      expect(toAST('foo _bar baz_ buzz')[1].token[1]).to.eql('_bar baz_');
     });
 
     it('should handle heading tags', () => {
-      expect(toTokens('## ~~foo~~ `bar` __baz__ **buzz**')[0].token[0]).to.eql('heading');
-      expect(toTokens('## ~~foo~~ `bar` __baz__ **buzz**')[0].token[2]).to.eql(2);
-      expect(toTokens('## ~~foo~~ `bar` __baz__ **buzz**')[0].token[1]).to.eql('## ~~foo~~ `bar` __baz__ **buzz**');
+      expect(toAST('## ~~foo~~ `bar` __baz__ **buzz**')[0].token[0]).to.eql('heading');
+      expect(toAST('## ~~foo~~ `bar` __baz__ **buzz**')[0].token[2]).to.eql(2);
+      expect(toAST('## ~~foo~~ `bar` __baz__ **buzz**')[0].token[1]).to.eql('## ~~foo~~ `bar` __baz__ **buzz**');
     });
 
     it('should handle blockquote tags', () => {
-      expect(toTokens('> ~~foo~~ `bar` __baz__ **buzz**')[0].token[0]).to.eql('blockquote');
-      expect(toTokens('> ~~foo~~ `bar` __baz__ **buzz**')[0].token[1]).to.eql('> ~~foo~~ `bar` __baz__ **buzz**');
+      expect(toAST('> ~~foo~~ `bar` __baz__ **buzz**')[0].token[0]).to.eql('blockquote');
+      expect(toAST('> ~~foo~~ `bar` __baz__ **buzz**')[0].token[1]).to.eql('> ~~foo~~ `bar` __baz__ **buzz**');
     });
   });
 
   describe('Symbols, strings and objects', () => {
     it('should handle symbols and strings', () => {
       expect(toTree(':foo')).to.eql(fix([['symbol', ':foo']]));
-      expect(toTree('"foo"')).to.eql(fix([['string', '"foo"']]));
+      expect(toTree('"foo"')).to.eql(fix([['string', ['foo']]]));
     });
 
     it('should split strings and symbols', () => {
-      expect(toTree(':foo "bar"')).to.eql(fix([['symbol', ':foo'], ['string', '"bar"']]));
-      expect(toTree('"foo"')).to.eql(fix([['string', '"foo"']]));
-      expect(toTree('"foo" :bar')).to.eql(fix([['string', '"foo"'], ['symbol', ':bar']]));
-      expect(toTree('"foo" "bar"')).to.eql(fix([['string', '"foo"'], ['string', '"bar"']]));
+      expect(toTree(':foo "bar"')).to.eql(fix([['symbol', ':foo'], ['string', ['bar']]]));
+      expect(toTree('"foo"')).to.eql(fix([['string', ['foo']]]));
+      expect(toTree('"foo" :bar')).to.eql(fix([['string', ['foo']], ['symbol', ':bar']]));
+      expect(toTree('"foo" "bar"')).to.eql(fix([['string', ['foo']], ['string', ['bar']]]));
 
-      expect(toTree(':a "b" :c')).to.eql(fix([['symbol', ':a'], ['string', '"b"'], ['symbol', ':c']]));
-      expect(toTree(':a "b" "c"')).to.eql(fix([['symbol', ':a'], ['string', '"b"'], ['string', '"c"']]));
+      expect(toTree(':a "b" :c')).to.eql(fix([['symbol', ':a'], ['string', ['b']], ['symbol', ':c']]));
+      expect(toTree(':a "b" "c"')).to.eql(fix([['symbol', ':a'], ['string', ['b']], ['string', ['c']]]));
 
-      expect(toTree('"a" :b "c"')).to.eql(fix([['string', '"a"'], ['symbol', ':b'], ['string', '"c"']]));
-      expect(toTree('"a" "b" :c')).to.eql(fix([['string', '"a"'], ['string', '"b"'], ['symbol', ':c']]));
+      expect(toTree('"a" :b "c"')).to.eql(fix([['string', ['a']], ['symbol', ':b'], ['string', ['c']]]));
+      expect(toTree('"a" "b" :c')).to.eql(fix([['string', ['a']], ['string', ['b']], ['symbol', ':c']]));
     });
 
     it('should keep symbols separated', () => {
       expect(toTree(':foo :bar')).to.eql(fix([['symbol', ':foo'], ['symbol', ':bar']]));
       expect(toTree(':a :b :c')).to.eql(fix([['symbol', ':a'], ['symbol', ':b'], ['symbol', ':c']]));
-      expect(toTree(':a :b "c"')).to.eql(fix([['symbol', ':a'], ['symbol', ':b'], ['string', '"c"']]));
-      expect(toTree('"a" :b :c')).to.eql(fix([['string', '"a"'], ['symbol', ':b'], ['symbol', ':c']]));
+      expect(toTree(':a :b "c"')).to.eql(fix([['symbol', ':a'], ['symbol', ':b'], ['string', ['c']]]));
+      expect(toTree('"a" :b :c')).to.eql(fix([['string', ['a']], ['symbol', ':b'], ['symbol', ':c']]));
     });
 
     it('should handle tuple-like structures', () => {
       expect(toTree('(:foo "bar")')).to.eql([[{
         token: ['object', {
-          ':foo': [{ token: ['string', '"bar"'] }],
+          ':foo': [{ token: ['string', ['bar']] }],
         }],
       }]]);
     });
