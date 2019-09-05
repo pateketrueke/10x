@@ -8,7 +8,7 @@ import {
 
 import {
   fixArgs,
-  toInput,
+  fromInput,
 } from './ast';
 
 import Err from './error';
@@ -240,6 +240,6 @@ export default class Solv {
   }
 
   raw(tokens) {
-    return toInput(toList(tokens), x => this.raw(x));
+    return fromInput(toList(tokens), x => this.raw(x));
   }
 }

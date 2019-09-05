@@ -380,10 +380,10 @@ export function buildTree(tokens) {
 }
 
 // FIXME: operate over tokens!!
-export function toInput(token, cb, z) {
+export function fromInput(token, cb, z) {
   console.log({ token }, cb, z);
   // if (isArray(token[0])) {
-  //   return token.map(x => toInput(x, cb, z));
+  //   return token.map(x => fromInput(x, cb, z));
   // }
 
   // // handle lambda-calls as side-effects
@@ -405,7 +405,7 @@ export function toInput(token, cb, z) {
   // // intermediate state for objects
   // if (token[0] === 'object') {
   //   if (isArray(token[1])) {
-  //     return fixValues(token[1], x => x.map(y => toInput(y, cb, z)), true);
+  //     return fixValues(token[1], x => x.map(y => fromInput(y, cb, z)), true);
   //   }
 
   //   Object.keys(token[1]).forEach(k => {
@@ -438,13 +438,13 @@ export function toInput(token, cb, z) {
   // return fixedValue;
 }
 
-export function toPlain(values, raw, cb) {
+export function plainValue(values, raw, cb) {
   if (!cb) {
-    cb = x => x.map(y => toInput(y));
+    cb = x => x.map(y => fromInput(y));
   }
 
   if (isArray(values)) {
-    return cb(values.map(x => toPlain(x, raw, cb)));
+    return cb(values.map(x => plainValue(x, raw, cb)));
   }
 
   if (!values || typeof values !== 'object') {
@@ -456,7 +456,7 @@ export function toPlain(values, raw, cb) {
   Object.keys(values).forEach(key => {
     if (raw) {
       copy[key] = !isArray(values[key])
-        ? toPlain(values[key], raw, cb)
+        ? plainValue(values[key], raw, cb)
         : cb(values[key]);
       return;
     }

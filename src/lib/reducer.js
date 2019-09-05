@@ -13,7 +13,7 @@ import {
 } from './utils';
 
 import {
-  toPlain, toInput,
+  plainValue, fromInput,
   fixArgs, fixValues, fixTokens, fixBinding,
 } from './ast';
 
@@ -193,8 +193,8 @@ export function reduceFromImports(set, env, self) {
     }
   });
 
-  const importInfo = toPlain(set[':import']);
-  const fromInfo = toPlain(set[':from']);
+  const importInfo = plainValue(set[':import']);
+  const fromInfo = plainValue(set[':from']);
 
   // extend current context with resolved bindings
   importInfo.forEach(def => {
@@ -240,7 +240,7 @@ export function reduceFromLogic(cb, ctx, self) {
           not = !not;
         }
 
-        const retval = toInput(calculateFromTokens(toList(cb(test, ctx))));
+        const retval = fromInput(calculateFromTokens(toList(cb(test, ctx))));
 
         // evaluate respective branches
         if (not ? !retval : retval) {
@@ -258,8 +258,8 @@ export function reduceFromLogic(cb, ctx, self) {
 
         // handle between lists and chunks
         const seq = !isArray(initialArgs[0])
-          ? Range.resolve(toInput(calculateFromTokens(toList(cb(initialArgs, ctx)))), y => cb(forBranch, ctx, y))
-          : Range.resolve(toList(initialArgs).reduce((p, c) => p.concat(toInput(c)), []), y => cb(forBranch, ctx, y));
+          ? Range.resolve(fromInput(calculateFromTokens(toList(cb(initialArgs, ctx)))), y => cb(forBranch, ctx, y))
+          : Range.resolve(toList(initialArgs).reduce((p, c) => p.concat(fromInput(c)), []), y => cb(forBranch, ctx, y));
 
         if (
           seq.length === 1
@@ -283,7 +283,7 @@ export function reduceFromLogic(cb, ctx, self) {
 export function reduceFromFX(cb, ctx) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
-    const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => toInput(x.token));
+    const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => fromInput(x.token));
     const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
 
     ctx.cur = Expr.from(Expr.to(result));
@@ -325,7 +325,7 @@ export function reduceFromFX(cb, ctx) {
     // recompose tokens on-the-fly
     ctx.cur = Expr.from(ctx.cur);
     ctx.cur.token[1] = base.token[1] + ctx.cur.token[1] + (ctx.cur.token[1] === '..' ? target.token[1] : '');
-    ctx.cur.token[2] = new Range(toInput(fixedBase), toInput(fixedTarget));
+    ctx.cur.token[2] = new Range(fromInput(fixedBase), fromInput(fixedTarget));
 
     ctx.cur.begin = base.begin || ctx.cur.begin;
     ctx.cur.end = target.end;
@@ -363,7 +363,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     }
 
     const args = fixValues(call.args, x => cb(!isArray(x) ? [x] : x, ctx));
-    const key = def._memo && JSON.stringify([name, toPlain(args)]);
+    const key = def._memo && JSON.stringify([name, plainValue(args)]);
 
     // this helps to compute faster!
     if (key && memoizedInternals[key]) {
@@ -399,7 +399,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
     // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = fixValues(args, x => x.map(y => toInput(y, (z, data) => cb(z, ctx, data), y._bound)), true);
+      const inputArgs = fixValues(args, x => x.map(y => fromInput(y, (z, data) => cb(z, ctx, data), y._bound)), true);
       const inputValue = ctx.cur.token[1][2](...inputArgs);
 
       if (Array.isArray(inputValue)) {
@@ -512,7 +512,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
           ctx.ast.push(Expr.from(['string', ctx.cur.token[1].reduce((prev, cur) => {
             if (isArray(cur)) {
-              prev.push(toInput(calculateFromTokens(toList(cb(cur, ctx)))));
+              prev.push(fromInput(calculateFromTokens(toList(cb(cur, ctx)))));
             } else {
               prev.push(cur);
             }
@@ -525,7 +525,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         // evaluate resulting object
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object') {
           if (!isArray(ctx.cur.token[1])) {
-            ctx.cur.token[1] = toPlain(ctx.cur.token[1], true, x => {
+            ctx.cur.token[1] = plainValue(ctx.cur.token[1], true, x => {
               const subTree = cb(x, ctx);
 
               if (x.some(y => !isArray(y) && y.token[0] === 'expr')) {
