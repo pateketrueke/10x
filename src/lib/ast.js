@@ -1,5 +1,5 @@
 import {
-  hasNum, hasSep, hasTagName, hasPercent,
+  hasSep, hasTagName, hasPercent,
 } from './shared';
 
 import {
@@ -9,7 +9,6 @@ import {
 
 import LangErr from './error';
 import LangExpr from './expr';
-import RangeExpr from './range';
 
 export function fixStrings(tokens, split) {
   return tokens.reduce((prev, cur) => {
@@ -158,16 +157,16 @@ export function fixTree(ast, self) {
       let fixedOffset = 0;
 
       cur.token[1] = cur.token[1].split(/(#{[^{}]*?})/)
-        .reduce((prev, x) => {
+        .reduce((p, x) => {
           if (x.indexOf('#{') === 0 && x.substr(-1) === '}') {
-            prev.push(self.partial(x.substr(2, x.length - 3), cur, fixedOffset + 3).tree);
+            p.push(self.partial(x.substr(2, x.length - 3), cur, fixedOffset + 3).tree);
           } else {
-            prev.push(x);
+            p.push(x);
           }
 
           fixedOffset += x.length;
 
-          return prev;
+          return p;
         }, []);
       continue;
     }
@@ -500,7 +499,7 @@ export function toArguments(keys, values) {
 
 // FIXME: operate over tokens!!
 export function toInput(token, cb, z) {
-  console.log({token});
+  console.log({ token }, cb, z);
   // if (isArray(token[0])) {
   //   return token.map(x => toInput(x, cb, z));
   // }

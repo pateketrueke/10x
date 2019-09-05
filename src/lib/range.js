@@ -1,5 +1,5 @@
 import {
-  hasNum, hasChar,
+  hasChar,
 } from './shared';
 
 import {
@@ -73,11 +73,11 @@ export default class RangeExpr {
       return RangeExpr.fromIterator(value, cb);
     }
 
-    console.log('UNDEF_SEQ', {value});
+    console.log('UNDEF_SEQ', { value });
     return [];
   }
 
-  static *build(begin, end, i) {
+  static* build(begin, end, i) {
     yield begin;
     if (begin === end) return;
     yield* RangeExpr.build(begin + i, end, i);

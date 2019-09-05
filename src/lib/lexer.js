@@ -1,6 +1,10 @@
 import {
-  isInt, hasMonths, hasHours, hasKeyword, hasFmt, hasOp, hasSep, hasChar, hasNum, hasExpr,
+  hasMonths, hasHours, hasKeyword, hasFmt, hasOp, hasSep, hasChar, hasNum, hasExpr,
 } from './shared';
+
+import {
+  isInt,
+} from './utils';
 
 export function getTokensFrom(text, units, parentNode, fixedOffset) {
   let inSym = false;

@@ -1,6 +1,3 @@
-import LangErr from './error';
-import LangExpr from './expr';
-
 import {
   TIME_UNITS, CURRENCY_MAPPINGS, ALPHA_MAPPINGS,
 } from './convert';
@@ -42,8 +39,6 @@ const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\w*\b/i;
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
-export const isInt = x => /^-?(?!0)\d+(\.\d+)?$/.test(x);
-
 export const hasOp = x => OP_TYPES[x];
 export const hasDays = x => RE_DAYS.test(x);
 export const hasHours = x => RE_HOURS.test(x);
@@ -83,5 +78,3 @@ export const hasDatetime = x => {
   if (x && RE_HOURS.test(x)) return 'HOURS';
   if (x && RE_MONTHS.test(x)) return 'MONTHS';
 };
-
-// FIXME: add helpers!

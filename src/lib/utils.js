@@ -1,3 +1,4 @@
+export const isInt = x => /^-?(?!0)\d+(\.\d+)?$/.test(x);
 export const isArray = x => x instanceof Array;
 
 export const pad = (nth, length) => `     ${nth}`.substr(-length);

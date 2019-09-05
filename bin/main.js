@@ -68,6 +68,7 @@ if (!returnAsJSON) {
     calc, chalk, playBack, showDebugInfo,
   });
 } else {
+  const { out } = require('./utils');
   const fixedResults = calc.raw(calc.eval());
 
   if (returnAsJSON) {

@@ -2,11 +2,7 @@ import { getTokensFrom } from './lexer';
 import { transform } from './parser';
 
 import {
-  isInt,
-} from './shared';
-
-import {
-  isArray,
+  isInt, isArray,
 } from './utils';
 
 import {
@@ -179,7 +175,6 @@ export default class Solv {
       return {
         val: result,
         type: 'object',
-        format: fixedResult.join(separator),
         format: parentheses !== false
           ? `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`
           : fixedResult.join(separator),

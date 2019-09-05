@@ -1,10 +1,9 @@
 import {
-  isInt,
   hasExpr, hasPercent,
 } from './shared';
 
 import {
-  isArray,
+  isInt,
 } from './utils';
 
 import {

@@ -1,6 +1,6 @@
 import {
-  hasNum, hasMonths, hasOwnKeyword,
-  hasTimeUnit, hasExpr, hasChar, hasSep, hasOp,
+  hasMonths, hasOwnKeyword,
+  hasTimeUnit, hasExpr, hasChar, hasSep,
 } from './shared';
 
 import {
@@ -258,8 +258,8 @@ export function reduceFromLogic(cb, ctx, self) {
 
         // handle between lists and chunks
         const seq = !isArray(initialArgs[0])
-          ? RangeExpr.resolve(toInput(calculateFromTokens(toList(cb(initialArgs, ctx)))), x => cb(forBranch, ctx, x))
-          : RangeExpr.resolve(toList(initialArgs).reduce((p, c) => p.concat(toInput(c)), []), x => cb(forBranch, ctx, x));
+          ? RangeExpr.resolve(toInput(calculateFromTokens(toList(cb(initialArgs, ctx)))), y => cb(forBranch, ctx, y))
+          : RangeExpr.resolve(toList(initialArgs).reduce((p, c) => p.concat(toInput(c)), []), y => cb(forBranch, ctx, y));
 
         if (
           seq.length === 1
@@ -299,7 +299,6 @@ export function reduceFromFX(cb, ctx) {
   ) {
     let target = LangExpr.from(ctx.cur);
     let base = ctx.left;
-    let offset = 1;
 
     if (!base.token[0]) {
       base = LangExpr.from(['number', 0]);
@@ -485,15 +484,11 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
           ctx.ast.push(LangExpr.from(['expr', '*', 'mul']));
         }
+      } else if (isArray(ctx.cur[0])) {
+        fixedValue = ['object', cb(ctx.cur, ctx)];
       } else {
-        // keep arrays as-is
-        if (isArray(ctx.cur[0])) {
-          fixedValue = ['object', cb(ctx.cur, ctx)];
-        } else {
-          fixedValue = ['object', fixArgs(cb(ctx.cur, ctx)).reduce((p, c) => p.concat(c), [])];
-        }
+        fixedValue = ['object', fixArgs(cb(ctx.cur, ctx)).reduce((p, c) => p.concat(c), [])];
       }
-
       ctx.ast.push(LangExpr.from(fixedValue));
       continue;
     }
