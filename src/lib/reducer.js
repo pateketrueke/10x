@@ -1,6 +1,6 @@
 import {
   hasMonths, hasOwnKeyword,
-  hasTimeUnit, hasExpr, hasChar, hasSep,
+  hasTimeUnit, hasExpr, hasChar, hasSep, hasOp,
 } from './shared';
 
 import {
@@ -445,9 +445,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     return reduceFromAST(t, context, settings, subContext, Object.assign({}, ctx.env, subExpressions), memoizedInternals);
   };
 
-  // flag for later
-  let doMaths = 0;
-
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
     ctx.root = parentContext || {};
@@ -496,7 +493,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         // prepend multiplication if goes after units/numbers
         if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
           ctx.ast.push(Expr.from(['expr', '*', 'mul']));
-          doMaths++;
         }
       } else if (isArray(ctx.cur[0])) {
         fixedValue = ['object', cb(ctx.cur, ctx)];
@@ -514,7 +510,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       // append last-operator between consecutive unit-expressions
       if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
         ctx.ast.push(Expr.from(ctx.lastOp));
-        doMaths++;
       }
 
       try {
@@ -578,11 +573,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     if (isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
     else if (!['symbol', 'def'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
     else if (ctx.cur.token[0] === 'symbol' && typeof ctx.cur.token[1] !== 'string') ctx.ast.push(ctx.cur);
-  }
-
-  // solve partial maths
-  if (doMaths) {
-    return [Expr.value(ctx.ast)];
   }
 
   return ctx.ast;

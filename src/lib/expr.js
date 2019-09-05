@@ -3,6 +3,10 @@ import {
 } from './solver';
 
 import {
+  hasOp,
+} from './shared';
+
+import {
   toList,
   isArray,
 } from './utils';
@@ -25,6 +29,14 @@ export default class Expr {
     });
 
     this.token = token.slice();
+  }
+
+  static ok(output) {
+    if (output.some(x => !isArray(x) && x.token[0] === 'expr' && hasOp(x.token[1]))) {
+      return Expr.value(output);
+    }
+
+    return output;
   }
 
   static from(token, fromCallback, arg1, arg2, arg3) {
