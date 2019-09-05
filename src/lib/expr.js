@@ -46,7 +46,9 @@ export default class Expr {
   }
 
   static value(tokens) {
-    return !isArray(tokens[0]) ? Expr.from(calculateFromTokens(toList(tokens))) : tokens;
+    return !isArray(tokens[0])
+      ? Expr.from(calculateFromTokens(toList(tokens)))
+      : tokens;
   }
 
   static derive(value) {
