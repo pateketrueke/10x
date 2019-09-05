@@ -1,7 +1,11 @@
 import {
-  isInt, isArray,
+  isInt,
   hasExpr, hasPercent,
 } from './shared';
+
+import {
+  isArray,
+} from './utils';
 
 import {
   toNumber, toFraction,

@@ -1,13 +1,14 @@
 import {
-  isArray, toToken,
   hasNum, hasSep, hasTagName, hasPercent,
 } from './shared';
 
 import {
+  isArray,
   tokenize,
 } from './utils';
 
 import LangErr from './error';
+import LangExpr from './expr';
 import RangeExpr from './range';
 
 export function fixStrings(tokens, split) {
@@ -147,7 +148,7 @@ export function fixTree(ast, self) {
         && cur[0].token[0] === 'symbol'
         && ['number', 'string', 'unit'].includes(cur[1].token[0])
       ) {
-        tokens.splice(i, 1, toToken(['object', fixTokens(cur, true)]));
+        tokens.splice(i, 1, LangExpr.from(['object', fixTokens(cur, true)]));
         continue;
       }
     }
@@ -224,7 +225,7 @@ export function fixTree(ast, self) {
         const cutOffset = cutBody >= 0 ? cutBody : tokens.length - offset;
         const fixedTokens = tokens.splice(i, cutOffset + 1);
 
-        tokens.splice(i, 1, toToken(['fn', '$', {
+        tokens.splice(i, 1, LangExpr.from(['fn', '$', {
           args: fixArgs(fixedTokens.slice(0, offset), true),
           body: fixTree(fixedTokens.slice(offset + 1)),
         }]));
@@ -328,12 +329,12 @@ export function fixBinding(obj, name, alias, context) {
   // FIXME: this would lead to disasters?
   if (typeof target !== 'function') {
     return {
-      body: [toToken(tokenize(target))],
+      body: [LangExpr.from(tokenize(target))],
     };
   }
 
   return {
-    body: [toToken(['bind', [obj, name, target]])],
+    body: [LangExpr.from(['bind', [obj, name, target]])],
   };
 }
 
@@ -509,7 +510,7 @@ export function toInput(token, cb, z) {
   //   const fixedArgs = { ...z };
 
   //   return (...context) => {
-  //     const newArgs = toArguments(token[2].args, context.map(x => toToken(tokenize(x))));
+  //     const newArgs = toArguments(token[2].args, context.map(x => LangExpr.from(tokenize(x))));
 
   //     return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
   //   };

@@ -2,8 +2,12 @@ import { getTokensFrom } from './lexer';
 import { transform } from './parser';
 
 import {
-  isInt, isArray, toToken,
+  isInt,
 } from './shared';
+
+import {
+  isArray,
+} from './utils';
 
 import {
   fixArgs,
@@ -236,7 +240,7 @@ export default class Solv {
 
     return output
       .filter(x => x.length)
-      .reduce((p, c) => p.concat(!isArray(c[0]) ? toToken(calculateFromTokens(toList(c))) : c), []);
+      .reduce((p, c) => p.concat(!isArray(c[0]) ? LangExpr.from(calculateFromTokens(toList(c))) : c), []);
   }
 
   raw(tokens) {

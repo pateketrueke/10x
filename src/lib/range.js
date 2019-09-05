@@ -1,12 +1,13 @@
 import {
-  toToken,
-  isArray,
   hasNum, hasChar,
 } from './shared';
 
 import {
+  isArray,
   tokenize,
 } from './utils';
+
+import LangExpr from './expr';
 
 export default class RangeExpr {
   constructor(base, target, increment) {
@@ -53,7 +54,7 @@ export default class RangeExpr {
         ? String.fromCharCode(nextValue.value)
         : nextValue.value;
 
-      seq.push(...cb({ _: { body: [toToken(tokenize(fixedValue))] } }));
+      seq.push(...cb({ _: { body: [LangExpr.from(tokenize(fixedValue))] } }));
     }
 
     return seq;
@@ -61,7 +62,7 @@ export default class RangeExpr {
 
   static resolve(value, cb) {
     if (isArray(value)) {
-      return value.map(x => cb({ _: { body: [toToken(tokenize(x))] } }));
+      return value.map(x => cb({ _: { body: [LangExpr.from(tokenize(x))] } }));
     }
 
     if (typeof value === 'number') {

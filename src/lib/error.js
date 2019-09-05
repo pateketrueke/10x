@@ -33,7 +33,8 @@ export default class LangErr extends Error {
   }
 
   static build(e, src, lines = 2, filepath = null) {
-    if (e.offsets[0]) {
+    console.log(e)
+    if (e.offsets && e.offsets[0]) {
       const [[x1, y1], [x2, y2]] = e.offsets;
       const prefix = filepath ? `${filepath}:` : 'line ';
 

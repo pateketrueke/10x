@@ -1,5 +1,4 @@
 import {
-  isArray, toToken,
   hasNum, hasMonths, hasOwnKeyword,
   hasTimeUnit, hasExpr, hasChar, hasSep, hasOp,
 } from './shared';
@@ -9,6 +8,7 @@ import {
 } from './solver';
 
 import {
+  isArray,
   tokenize,
 } from './utils';
 
@@ -18,6 +18,7 @@ import {
 } from './ast';
 
 import LangErr from './error';
+import LangExpr from './expr';
 import RangeExpr from './range';
 
 export function reduceFromValue(token) {
@@ -88,9 +89,9 @@ export function reduceFromUnits(cb, ctx, self, convert) {
     const base = parseFloat(ctx.cur.token[1]);
     const subTree = fixArgs(cb(ctx.env[ctx.cur.token[2]].body, ctx), true);
 
-    ctx.cur = subTree.map(x => toToken(calculateFromTokens(toList(cb([
-      toToken(['number', base]),
-      toToken(['expr', '*', 'mul']),
+    ctx.cur = subTree.map(x => LangExpr.from(calculateFromTokens(toList(cb([
+      LangExpr.from(['number', base]),
+      LangExpr.from(['expr', '*', 'mul']),
     ].concat([x]), ctx)))));
     return;
   }
@@ -268,7 +269,7 @@ export function reduceFromLogic(cb, ctx, self) {
           ctx.cur = seq[0];
         } else {
           ctx.isDef = true;
-          ctx.cur = toToken(['object', cb(seq.reduce((p, c) => p.concat(c), []), ctx)]);
+          ctx.cur = LangExpr.from(['object', cb(seq.reduce((p, c) => p.concat(c), []), ctx)]);
         }
         return true;
       } else {
@@ -285,7 +286,7 @@ export function reduceFromFX(cb, ctx) {
     const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => toInput(x.token));
     const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
 
-    ctx.cur = toToken(tokenize(result));
+    ctx.cur = LangExpr.from(tokenize(result));
     return;
   }
 
@@ -296,12 +297,12 @@ export function reduceFromFX(cb, ctx) {
     && ctx.cur.token[0] === 'range'
     && ctx.right.token[0] !== 'symbol'
   ) {
-    let target = toToken(ctx.cur);
+    let target = LangExpr.from(ctx.cur);
     let base = ctx.left;
     let offset = 1;
 
     if (!base.token[0]) {
-      base = toToken(['number', 0]);
+      base = LangExpr.from(['number', 0]);
     } else {
       // drop token from left...
       ctx.tokens.splice(ctx.i - 1, 1);
@@ -309,7 +310,7 @@ export function reduceFromFX(cb, ctx) {
 
     // consume next token on untyped-ranges
     if (ctx.cur.token[1] === '..') {
-      target = toToken(ctx.right);
+      target = LangExpr.from(ctx.right);
       ctx.tokens.splice(ctx.i, 1);
     }
 
@@ -323,7 +324,7 @@ export function reduceFromFX(cb, ctx) {
     const [fixedBase, fixedTarget] = cb([base, target], ctx);
 
     // recompose tokens on-the-fly
-    ctx.cur = toToken(ctx.cur);
+    ctx.cur = LangExpr.from(ctx.cur);
     ctx.cur.token[1] = base.token[1] + ctx.cur.token[1] + (ctx.cur.token[1] === '..' ? target.token[1] : '');
     ctx.cur.token[2] = new RangeExpr(toInput(fixedBase), toInput(fixedTarget));
 
@@ -390,7 +391,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     }
 
     // resolve intermediate values
-    ctx.cur = toToken(calculateFromTokens(toList(ctx.cur)));
+    ctx.cur = LangExpr.from(calculateFromTokens(toList(ctx.cur)));
 
     // flag token for future bindings...
     if (Object.keys(locals).length > 0) {
@@ -405,9 +406,9 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       if (Array.isArray(inputValue)) {
         const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x));
 
-        ctx.cur = toToken(['object', fixedValues.map(x => (!isArray(x) ? toToken(tokenize(x)) : toToken(x)))]);
+        ctx.cur = LangExpr.from(['object', fixedValues.map(x => (!isArray(x) ? LangExpr.from(tokenize(x)) : LangExpr.from(x)))]);
       } else {
-        ctx.cur = toToken(tokenize(inputValue));
+        ctx.cur = LangExpr.from(tokenize(inputValue));
       }
       return;
     }
@@ -482,7 +483,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
         // prepend multiplication if goes after units/numbers
         if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
-          ctx.ast.push(toToken(['expr', '*', 'mul']));
+          ctx.ast.push(LangExpr.from(['expr', '*', 'mul']));
         }
       } else {
         // keep arrays as-is
@@ -493,7 +494,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         }
       }
 
-      ctx.ast.push(toToken(fixedValue));
+      ctx.ast.push(LangExpr.from(fixedValue));
       continue;
     }
 
@@ -503,7 +504,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
       // append last-operator between consecutive unit-expressions
       if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
-        ctx.ast.push(toToken(ctx.lastOp));
+        ctx.ast.push(LangExpr.from(ctx.lastOp));
       }
 
       try {
@@ -514,7 +515,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
         // handle interpolated strings
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
-          ctx.ast.push(toToken(['string', ctx.cur.token[1].reduce((prev, cur) => {
+          ctx.ast.push(LangExpr.from(['string', ctx.cur.token[1].reduce((prev, cur) => {
             if (isArray(cur)) {
               prev.push(toInput(calculateFromTokens(toList(cb(cur, ctx)))));
             } else {
@@ -533,7 +534,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
               const subTree = cb(x, ctx);
 
               if (x.some(y => !isArray(y) && y.token[0] === 'expr')) {
-                return toToken(calculateFromTokens(toList(subTree)));
+                return LangExpr.from(calculateFromTokens(toList(subTree)));
               }
 
               return subTree;

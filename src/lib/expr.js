@@ -1,3 +1,9 @@
+import {
+  isArray,
+} from './utils';
+
+import LangErr from './error';
+
 export default class LangExpr {
   constructor(info, token) {
     if (!token) {
@@ -14,13 +20,23 @@ export default class LangExpr {
     });
 
     this.token = token.slice();
+  }
 
-    // not needed anymore
-    delete this.content;
+  static from(token, fromCallback, arg1, arg2, arg3, arg4) {
+    if (isArray(token)) {
+      return new LangExpr({ token });
+    }
 
-    // shortcuts
-    Object.defineProperty(this, 'is', { get: () => this.token[0] });
-    Object.defineProperty(this, 'expr', { get: () => this.token[1] });
-    Object.defineProperty(this, 'value', { get: () => this.token[2] });
+    if (!(token instanceof LangExpr) && typeof fromCallback === 'function') {
+      const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
+
+      if (!retval) {
+        throw new LangErr(`Unexpected token \`${token.content}\``, token);
+      }
+
+      return new LangExpr(token, retval);
+    }
+
+    return new LangExpr(token);
   }
 }

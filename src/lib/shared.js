@@ -42,7 +42,6 @@ const RE_HOURS = /^(?:2[0-3]|[01]?[0-9])(?::?[0-5]?[0-9])*(?:\s*[ap]m)$/i;
 const RE_MONTHS = /^(?:jan|feb|mar|apr|mar|may|jun|jul|aug|sep|oct|nov|dec)\w*\b/i;
 const RE_NO_ALPHA = new RegExp(`^[^a-zA-Z${Object.keys(ALPHA_MAPPINGS).join('')}]*`, 'g');
 
-export const isArray = x => x instanceof Array;
 export const isInt = x => /^-?(?!0)\d+(\.\d+)?$/.test(x);
 
 export const hasOp = x => OP_TYPES[x];
@@ -86,21 +85,3 @@ export const hasDatetime = x => {
 };
 
 // FIXME: add helpers!
-
-export function toToken(token, fromCallback, arg1, arg2, arg3, arg4) {
-  if (isArray(token)) {
-    return new LangExpr({ token });
-  }
-
-  if (!(token instanceof LangExpr) && typeof fromCallback === 'function') {
-    const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
-
-    if (!retval) {
-      throw new LangErr(`Unexpected token \`${token.content}\``, token);
-    }
-
-    return new LangExpr(token, retval);
-  }
-
-  return new LangExpr(token);
-}

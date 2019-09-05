@@ -1,5 +1,4 @@
 import {
-  toToken,
   hasKeyword, hasDatetime,
   hasOp, hasSep, hasNum, hasChar, hasExpr,
 } from './shared';
@@ -8,6 +7,8 @@ import {
   buildTree,
   fixArgs, fixTree, fixStrings,
 } from './ast';
+
+import LangExpr from './expr';
 
 export function fromMarkdown(text) {
   // handle pre blocks
@@ -146,7 +147,7 @@ export function tokenize(input, units) {
 
     do { nextToken = input[++key]; } while (nextToken && nextToken.content === ' ');
 
-    const fixedToken = toToken(cur, fromSymbols, units, lastToken, nextToken && nextToken.content);
+    const fixedToken = LangExpr.from(cur, fromSymbols, units, lastToken, nextToken && nextToken.content);
 
     if (fixedToken.token[0] !== 'text') {
       lastToken = fixedToken;
@@ -268,7 +269,7 @@ export function transform(ctx, self) {
     const last = cur[cur.length - 1];
 
     // null-prefix to pair with previous nulls
-    prev.push(null, toToken({
+    prev.push(null, LangExpr.from({
       content: cur.reduce((p, c) => p + c.cur, ''),
       depth: cur.reduce((p, c) => p + c.depth, 0) / cur.length,
       begin: [cur[0].row, cur[0].col],
@@ -279,7 +280,7 @@ export function transform(ctx, self) {
   }, []));
 
   // copy all tokens to protect them!
-  const fixedAST = body.map(x => (x !== null ? toToken(x) : x));
+  const fixedAST = body.map(x => (x !== null ? LangExpr.from(x) : x));
 
   // FIXME: in order to properly highlight interpolated expressions we need
   // to touch the original tokens, just to split into sub-tokens...
