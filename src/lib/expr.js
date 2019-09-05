@@ -2,9 +2,9 @@ import {
   isArray,
 } from './utils';
 
-import LangErr from './error';
+import Err from './error';
 
-export default class LangExpr {
+export default class Expr {
   constructor(info, token) {
     if (!token) {
       token = info.token;
@@ -24,19 +24,19 @@ export default class LangExpr {
 
   static from(token, fromCallback, arg1, arg2, arg3) {
     if (isArray(token)) {
-      return new LangExpr({ token });
+      return new Expr({ token });
     }
 
-    if (!(token instanceof LangExpr) && typeof fromCallback === 'function') {
+    if (!(token instanceof Expr) && typeof fromCallback === 'function') {
       const retval = fromCallback(token.content, arg1, arg2, arg3);
 
       if (!retval) {
-        throw new LangErr(`Unexpected token \`${token.content}\``, token);
+        throw new Err(`Unexpected token \`${token.content}\``, token);
       }
 
-      return new LangExpr(token, retval);
+      return new Expr(token, retval);
     }
 
-    return new LangExpr(token);
+    return new Expr(token);
   }
 }

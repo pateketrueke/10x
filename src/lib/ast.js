@@ -7,8 +7,8 @@ import {
   tokenize,
 } from './utils';
 
-import LangErr from './error';
-import LangExpr from './expr';
+import Err from './error';
+import Expr from './expr';
 
 export function fixStrings(tokens, split) {
   return tokens.reduce((prev, cur) => {
@@ -147,7 +147,7 @@ export function fixTree(ast, self) {
         && cur[0].token[0] === 'symbol'
         && ['number', 'string', 'unit'].includes(cur[1].token[0])
       ) {
-        tokens.splice(i, 1, LangExpr.from(['object', fixTokens(cur, true)]));
+        tokens.splice(i, 1, Expr.from(['object', fixTokens(cur, true)]));
         continue;
       }
     }
@@ -224,7 +224,7 @@ export function fixTree(ast, self) {
         const cutOffset = cutBody >= 0 ? cutBody : tokens.length - offset;
         const fixedTokens = tokens.splice(i, cutOffset + 1);
 
-        tokens.splice(i, 1, LangExpr.from(['fn', '$', {
+        tokens.splice(i, 1, Expr.from(['fn', '$', {
           args: fixArgs(fixedTokens.slice(0, offset), true),
           body: fixTree(fixedTokens.slice(offset + 1)),
         }]));
@@ -328,12 +328,12 @@ export function fixBinding(obj, name, alias, context) {
   // FIXME: this would lead to disasters?
   if (typeof target !== 'function') {
     return {
-      body: [LangExpr.from(tokenize(target))],
+      body: [Expr.from(tokenize(target))],
     };
   }
 
   return {
-    body: [LangExpr.from(['bind', [obj, name, target]])],
+    body: [Expr.from(['bind', [obj, name, target]])],
   };
 }
 
@@ -363,7 +363,7 @@ export function buildTree(tokens) {
       }
     } else {
       if (!root) {
-        throw new LangErr('Unexpected end, missing `(`', tokens[i - 1]);
+        throw new Err('Unexpected end, missing `(`', tokens[i - 1]);
       }
 
       root.push(t);
@@ -374,7 +374,7 @@ export function buildTree(tokens) {
     const fixedOffset = offsets.pop();
     const fixedToken = fixedOffset.token[1];
 
-    throw new LangErr(`Missing terminator for \`${fixedToken}\``, fixedOffset);
+    throw new Err(`Missing terminator for \`${fixedToken}\``, fixedOffset);
   }
 
   return tree;
@@ -509,7 +509,7 @@ export function toInput(token, cb, z) {
   //   const fixedArgs = { ...z };
 
   //   return (...context) => {
-  //     const newArgs = toArguments(token[2].args, context.map(x => LangExpr.from(tokenize(x))));
+  //     const newArgs = toArguments(token[2].args, context.map(x => Expr.from(tokenize(x))));
 
   //     return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
   //   };

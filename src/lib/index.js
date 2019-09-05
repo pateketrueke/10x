@@ -10,8 +10,8 @@ import {
   toFraction, toNumber, toInput, toValue, toList,
 } from './ast';
 
-import LangErr from './error';
-import LangExpr from './expr';
+import Err from './error';
+import Expr from './expr';
 
 import { reduceFromAST } from './reducer';
 import { calculateFromTokens } from './solver';
@@ -73,7 +73,7 @@ export default class Solv {
     try {
       Object.assign(this, this.partial(opts.source));
     } catch (e) {
-      this.error = LangErr.build(e, opts.source, 2, this.filepath);
+      this.error = Err.build(e, opts.source, 2, this.filepath);
     }
   }
 
@@ -181,7 +181,7 @@ export default class Solv {
       };
     }
 
-    if (result instanceof LangExpr) {
+    if (result instanceof Expr) {
       if (isArray(result.token[0])) {
         return {
           val: result.token,
@@ -229,13 +229,13 @@ export default class Solv {
         if (ast) output.push(...fixArgs(cb(ast)));
       });
     } catch (e) {
-      this.error = LangErr.build(e, source || this.source, 2, this.filepath);
+      this.error = Err.build(e, source || this.source, 2, this.filepath);
       return [];
     }
 
     return output
       .filter(x => x.length)
-      .reduce((p, c) => p.concat(!isArray(c[0]) ? LangExpr.from(calculateFromTokens(toList(c))) : c), []);
+      .reduce((p, c) => p.concat(!isArray(c[0]) ? Expr.from(calculateFromTokens(toList(c))) : c), []);
   }
 
   raw(tokens) {

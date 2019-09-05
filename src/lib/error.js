@@ -5,7 +5,7 @@ import {
   pad,
 } from './utils';
 
-export default class LangErr extends Error {
+export default class Err extends Error {
   constructor(msg, ctx) {
     super(deindent(msg));
 

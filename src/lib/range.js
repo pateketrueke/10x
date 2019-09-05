@@ -7,9 +7,9 @@ import {
   tokenize,
 } from './utils';
 
-import LangExpr from './expr';
+import Expr from './expr';
 
-export default class RangeExpr {
+export default class Range {
   constructor(base, target, increment) {
     this.begin = base;
     this.end = typeof target === 'string'
@@ -38,7 +38,7 @@ export default class RangeExpr {
   }
 
   getIterator() {
-    return RangeExpr.build(this.begin, this.end, this.step);
+    return Range.build(this.begin, this.end, this.step);
   }
 
   toString() {
@@ -54,7 +54,7 @@ export default class RangeExpr {
         ? String.fromCharCode(nextValue.value)
         : nextValue.value;
 
-      seq.push(...cb({ _: { body: [LangExpr.from(tokenize(fixedValue))] } }));
+      seq.push(...cb({ _: { body: [Expr.from(tokenize(fixedValue))] } }));
     }
 
     return seq;
@@ -62,15 +62,15 @@ export default class RangeExpr {
 
   static resolve(value, cb) {
     if (isArray(value)) {
-      return value.map(x => cb({ _: { body: [LangExpr.from(tokenize(x))] } }));
+      return value.map(x => cb({ _: { body: [Expr.from(tokenize(x))] } }));
     }
 
     if (typeof value === 'number') {
-      value = new RangeExpr(1, value);
+      value = new Range(1, value);
     }
 
-    if (value instanceof RangeExpr) {
-      return RangeExpr.fromIterator(value, cb);
+    if (value instanceof Range) {
+      return Range.fromIterator(value, cb);
     }
 
     console.log('UNDEF_SEQ', { value });
@@ -80,6 +80,6 @@ export default class RangeExpr {
   static* build(begin, end, i) {
     yield begin;
     if (begin === end) return;
-    yield* RangeExpr.build(begin + i, end, i);
+    yield* Range.build(begin + i, end, i);
   }
 }
