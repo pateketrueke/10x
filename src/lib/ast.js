@@ -3,7 +3,8 @@ import {
 } from './shared';
 
 import {
-  isArray, toNumber, toProperty,
+  isArray,
+  toNumber, toProperty, toArguments,
 } from './utils';
 
 import Err from './error';

@@ -9,7 +9,7 @@ import {
 
 import {
   isArray,
-  toSlice, toNumber, toArguments,
+  toList, toSlice, toNumber, toArguments,
 } from './utils';
 
 import {
@@ -415,17 +415,14 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
     // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = fixValues(args, x => x.map(y => fromInput(y, (z, data) => cb(z, ctx, data), y._bound)), true);
-      console.log({inputArgs});
-      // const inputValue = ctx.cur.token[1][2](...inputArgs);
+      const inputArgs = fixValues(args, x => x.map(y => fromInput(y, y._bound, (z, data) => cb(z, ctx, data))), true);
+      const inputValue = ctx.cur.token[1][2](...inputArgs);
 
-      // if (Array.isArray(inputValue)) {
-      //   const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x));
-
-      //   ctx.cur = Expr.from(['object', fixedValues.map(x => (!isArray(x) ? Expr.derive(x) : Expr.from(x)))]);
-      // } else {
-      //   ctx.cur = Expr.derive(inputValue);
-      // }
+      if (isArray(inputValue)) {
+        ctx.cur = Expr.from(['object', cb(inputValue, ctx)]);
+      } else {
+        ctx.cur = Expr.derive(inputValue);
+      }
       return;
     }
 
