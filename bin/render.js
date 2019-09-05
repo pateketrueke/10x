@@ -50,7 +50,7 @@ module.exports = ({
   function flush() {
     values.forEach(x => {
       if (x instanceof Error) {
-        push(null, `${indent}${chalk.red(`^ ${x[showDebugInfo ? 'stack' : 'message'].trim()}`)}\n`);
+        push(null, `${chalk.red(`//! ${x[showDebugInfo ? 'stack' : 'message'].trim()}`)}\n`);
       } else {
         push(null, `${indent}${chalk.gray('//=>')} ${chalk.dim(calc.value(x, indent.length + 4, out, chalk.gray(', '), false).format)}\n`);
       }
