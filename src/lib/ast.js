@@ -3,7 +3,7 @@ import {
 } from './shared';
 
 import {
-  isArray,
+  isArray, toNumber,
 } from './utils';
 
 import Err from './error';
@@ -381,17 +381,20 @@ export function buildTree(tokens) {
 
 // FIXME: operate over tokens!!
 export function fromInput(token, cb, z) {
-  console.log({ token }, cb, z);
-  // if (isArray(token[0])) {
-  //   return token.map(x => fromInput(x, cb, z));
-  // }
+  if (token instanceof Expr) {
+    token = token.token;
+  }
+
+  if (isArray(token[0])) {
+    return token.map(x => fromInput(x, cb, z));
+  }
 
   // // handle lambda-calls as side-effects
   // if (token[0] === 'fn') {
   //   const fixedArgs = { ...z };
 
   //   return (...context) => {
-  //     const newArgs = toArguments(token[2].args, context.map(x => Expr.from(Expr.to(x))));
+  //     const newArgs = toArguments(token[2].args, context.map(x => Expr.derive(x)));
 
   //     return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
   //   };
@@ -409,19 +412,19 @@ export function fromInput(token, cb, z) {
   //   }
 
   //   Object.keys(token[1]).forEach(k => {
-  //     // const fixedTokens = isArray(token[1][k])
-  //     //   ? token[1][k].map(x => (isArray(x) ? fixArgs(x) : x))
-  //     //   : token[1][k];
+  //     const fixedTokens = isArray(token[1][k])
+  //       ? token[1][k].map(x => (isArray(x) ? fixArgs(x) : x))
+  //       : token[1][k];
 
-  //     // let fixedValue = cb && isArray(fixedTokens[0])
-  //     //   ? cb(fixedTokens)
-  //     //   : fixedTokens;
+  //     let fixedValue = cb && isArray(fixedTokens[0])
+  //       ? cb(fixedTokens)
+  //       : fixedTokens;
 
-  //     // if (isArray(fixedTokens[0])) {
-  //     //   fixedValue = fixedValue.reduce((p, x) => p.concat(cb ? cb(x) : x), [])[0];
-  //     // } else if (cb && isArray(fixedValue) && fixedValue.length === 1) {
-  //     //   fixedValue = fixedValue[0];
-  //     // }
+  //     if (isArray(fixedTokens[0])) {
+  //       fixedValue = fixedValue.reduce((p, x) => p.concat(cb ? cb(x) : x), [])[0];
+  //     } else if (cb && isArray(fixedValue) && fixedValue.length === 1) {
+  //       fixedValue = fixedValue[0];
+  //     }
 
   //     delete token[1][k];
 
@@ -429,13 +432,13 @@ export function fromInput(token, cb, z) {
   //   });
   // }
 
-  // // plain values
-  // let fixedValue = token[1];
+  // plain values
+  let fixedValue = token[1];
 
-  // if (token[0] === 'string') fixedValue = fixedValue.reduce((p, c) => p + c, '');
-  // if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
+  if (token[0] === 'string') fixedValue = fixedValue.reduce((p, c) => p + c, '');
+  if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
 
-  // return fixedValue;
+  return fixedValue;
 }
 
 export function plainValue(values, raw, cb) {

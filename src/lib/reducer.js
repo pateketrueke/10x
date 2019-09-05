@@ -240,7 +240,7 @@ export function reduceFromLogic(cb, ctx, self) {
           not = !not;
         }
 
-        const retval = fromInput(calculateFromTokens(toList(cb(test, ctx))));
+        const retval = fromInput(Expr.value(cb(test, ctx)));
 
         // evaluate respective branches
         if (not ? !retval : retval) {
@@ -258,7 +258,7 @@ export function reduceFromLogic(cb, ctx, self) {
 
         // handle between lists and chunks
         const seq = !isArray(initialArgs[0])
-          ? Range.resolve(fromInput(calculateFromTokens(toList(cb(initialArgs, ctx)))), y => cb(forBranch, ctx, y))
+          ? Range.resolve(fromInput(Expr.value(cb(initialArgs, ctx))), y => cb(forBranch, ctx, y))
           : Range.resolve(toList(initialArgs).reduce((p, c) => p.concat(fromInput(c)), []), y => cb(forBranch, ctx, y));
 
         if (
@@ -283,10 +283,11 @@ export function reduceFromLogic(cb, ctx, self) {
 export function reduceFromFX(cb, ctx) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
-    const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => fromInput(x.token));
-    const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
+    const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => fromInput(x));
+    console.log({lft,rgt,others});
+    // const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
 
-    ctx.cur = Expr.derive(result);
+    // ctx.cur = Expr.derive(result);
     return;
   }
 
@@ -512,7 +513,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
           ctx.ast.push(Expr.from(['string', ctx.cur.token[1].reduce((prev, cur) => {
             if (isArray(cur)) {
-              prev.push(fromInput(calculateFromTokens(toList(cb(cur, ctx)))));
+              prev.push(fromInput(Expr.value(cb(cur, ctx))));
             } else {
               prev.push(cur);
             }
