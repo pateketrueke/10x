@@ -95,7 +95,7 @@ export function evaluateComparison(op, left, right) {
       case '<': return left < right;
       case '>': return left > right;
       default:
-        throw new TypeError(`Incompatible types, ${left} ${op} ${right}`);
+        throw new TypeError(`Incompatible types, ${JSON.stringify(left)} ${op} ${JSON.stringify(right)}`);
     }
   }
 
@@ -104,7 +104,7 @@ export function evaluateComparison(op, left, right) {
       case '!~': return !left.includes(right);
       case '~=': return left.includes(right);
       default:
-        throw new TypeError(`Unable to check, ${left} ${op} ${right}`);
+        throw new TypeError(`Unable to filter, ${JSON.stringify(left)} ${op} ${JSON.stringify(right)}`);
     }
   }
 
@@ -112,7 +112,7 @@ export function evaluateComparison(op, left, right) {
     case '&&': return left && right;
     case '||': return left || right;
     default:
-      throw new TypeError(`Not implemented: ${left} ${op} ${right}`);
+      throw new TypeError(`Not implemented: ${JSON.stringify(left)} ${op} ${JSON.stringify(right)}`);
   }
 }
 

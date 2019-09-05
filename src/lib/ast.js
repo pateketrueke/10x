@@ -380,7 +380,6 @@ export function buildTree(tokens) {
   return tree;
 }
 
-// FIXME: operate over tokens!!
 export function fromInput(token, args, cb) {
   if (isArray(token)) {
     return token.map(x => fromInput(x, args, cb));

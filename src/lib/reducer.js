@@ -269,24 +269,20 @@ export function reduceFromLogic(cb, ctx, self) {
         }
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
-        console.log({forBranch});
-        // const initialArgs = cb(forBranch.shift(), ctx).reduce((p, c) => p.concat(c), []);
+        const initialArgs = cb(forBranch.shift(), ctx).reduce((p, c) => p.concat(c), []);
 
-        // // handle between lists and chunks
-        // const seq = !isArray(initialArgs[0])
-        //   ? Range.resolve(fromInput(Expr.value(cb(initialArgs, ctx))), y => cb(forBranch, ctx, y))
-        //   : Range.resolve(toList(initialArgs).reduce((p, c) => p.concat(fromInput(c)), []), y => cb(forBranch, ctx, y));
+        const seq = initialArgs.reduce((prev, cur) => {
+          if (isArray(cur.token[0])) {
+            prev.push(Range.resolve(cur.token.map(x => x[1]), y => cb(forBranch, ctx, y)));
+          } else {
+            prev.push(Range.resolve(prev.length ? [fromInput(cur)] : fromInput(cur), y => cb(forBranch, ctx, y)));
+          }
 
-        // if (
-        //   seq.length === 1
-        //   && !isArray(seq[0])
-        //   && seq[0].token[0] === 'object'
-        // ) {
-        //   ctx.cur = seq[0];
-        // } else {
-        //   ctx.isDef = true;
-        //   ctx.cur = Expr.from(['object', cb(seq.reduce((p, c) => p.concat(c), []), ctx)]);
-        // }
+          return prev;
+        }, []);
+
+        ctx.isDef = true;
+        ctx.cur = Expr.from(['object', seq.reduce((p, c) => p.concat(c), [])]);
         return true;
       } else {
         console.log('SYM_LOGIC', set);
