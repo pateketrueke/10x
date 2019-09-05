@@ -3,7 +3,7 @@ import {
 } from './shared';
 
 import {
-  isInt,
+  isInt, isArray,
   toNumber, toFraction,
 } from './utils';
 

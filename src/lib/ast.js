@@ -1,5 +1,5 @@
 import {
-  hasSep, hasTagName, hasPercent,
+  hasSep, hasTagName,
 } from './shared';
 
 import {
