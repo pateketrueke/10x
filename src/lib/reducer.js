@@ -240,10 +240,10 @@ export function reduceFromLogic(cb, ctx, self) {
           not = !not;
         }
 
-        const retval = fromInput(Expr.value(cb(test, ctx)));
+        const retval = Expr.value(cb(test.map(x => x.slice()), ctx));
 
         // evaluate respective branches
-        if (not ? !retval : retval) {
+        if (not ? !retval.token[1] : retval.token[1]) {
           ctx.ast.push(...cb(ifBranch, ctx));
           return true;
         }
@@ -560,6 +560,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     // skip definitions and symbols!
     if (isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
     else if (!['symbol', 'def'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
+    else if (ctx.cur.token[0] === 'symbol' && typeof ctx.cur.token[1] !== 'string') ctx.ast.push(ctx.cur);
   }
 
   return ctx.ast;
