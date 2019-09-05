@@ -273,9 +273,9 @@ export function reduceFromLogic(cb, ctx, self) {
 
         const seq = initialArgs.reduce((prev, cur) => {
           if (isArray(cur.token[0])) {
-            prev.push(Range.resolve(cur.token.map(x => x[1]), y => cb(forBranch, ctx, y)));
+            prev.push(...Range.resolve(cur.token.map(x => x[1]), y => cb(forBranch, ctx, y)));
           } else {
-            prev.push(Range.resolve(prev.length ? [fromInput(cur)] : fromInput(cur), y => cb(forBranch, ctx, y)));
+            prev.push(...Range.resolve(initialArgs.length > 1 ? [fromInput(cur)] : fromInput(cur), y => cb(forBranch, ctx, y)));
           }
 
           return prev;
@@ -560,7 +560,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
-        console.log(e);
         if (!(e instanceof Err)) {
           throw new Err(e.message, ctx);
         }

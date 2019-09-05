@@ -235,10 +235,10 @@ export default class Solv {
 
     return output
       .filter(x => x.length)
-      .reduce((p, c) => p.concat(Expr.value(c)), []);
+      .reduce((p, c) => p.concat(c), []);
   }
 
   raw(tokens) {
-    return tokens; // fromInput(tokens, x => this.raw(x));
+    return fromInput(tokens, null, x => this.raw(x));
   }
 }
