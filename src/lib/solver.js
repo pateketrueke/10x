@@ -86,19 +86,33 @@ export function calculateFromDate(op, left, right) {
 
 // handle basic conditions
 export function evaluateComparison(op, left, right) {
+  if (typeof left === typeof right) {
+    switch (op) {
+      case '!=': return left !== right;
+      case '==': return left === right;
+      case '<=': return left <= right;
+      case '>=': return left >= right;
+      case '<': return left < right;
+      case '>': return left > right;
+      default:
+        throw new TypeError(`Incompatible types, ${left} ${op} ${right}`);
+    }
+  }
+
+  if (typeof left === 'string' || isArray(left)) {
+    switch (op) {
+      case '!~': return !left.includes(right);
+      case '~=': return left.includes(right);
+      default:
+        throw new TypeError(`Unable to check, ${left} ${op} ${right}`);
+    }
+  }
+
   switch (op) {
-    case '!~': return !left.includes(right);
-    case '~=': return left.includes(right);
-    case '!=': return left !== right;
-    case '==': return left === right;
-    case '<=': return left <= right;
-    case '>=': return left >= right;
-    case '<': return left < right;
-    case '>': return left > right;
     case '&&': return left && right;
     case '||': return left || right;
     default:
-      throw new TypeError(`Not implemented: ${op}`);
+      throw new TypeError(`Not implemented: ${left} ${op} ${right}`);
   }
 }
 

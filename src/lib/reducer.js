@@ -284,10 +284,9 @@ export function reduceFromFX(cb, ctx) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
     const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => fromInput(x));
-    console.log({lft,rgt,others});
-    // const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
+    const result = evaluateComparison(ctx.cur.token[1], lft, typeof rgt === 'undefined' ? true : rgt, others);
 
-    // ctx.cur = Expr.derive(result);
+    ctx.cur = Expr.derive(result);
     return;
   }
 
