@@ -540,8 +540,9 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         // evaluate resulting object
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object') {
           if (!isArray(ctx.cur.token[1])) {
+            // FIXME: objects' evaluation...
             console.log('OBJ', ctx.cur.token[1]);
-            // ctx.cur.token[1] = plainValue(ctx.cur.token[1], true, x => Expr.value(cb(x, ctx)));
+            // ctx.cur.token[1] = fromInput(ctx.cur.token[1], null, x => Expr.value(cb(x, ctx)));
           }
 
           if (
