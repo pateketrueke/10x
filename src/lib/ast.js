@@ -4,7 +4,6 @@ import {
 
 import {
   isArray,
-  toNumber, toProperty, toArguments,
 } from './utils';
 
 import Err from './error';
@@ -92,7 +91,7 @@ export function fixArgs(values, flatten) {
   return stack;
 }
 
-export function fixTokens(ast, z) {
+export function fixTokens(ast, re) {
   if (!isArray(ast)) return ast;
 
   const target = ast[0].token[0] === 'symbol' ? {} : [];
@@ -104,7 +103,7 @@ export function fixTokens(ast, z) {
     if (!isArray(cur) && cur.token[0] === 'symbol') {
       keyName = cur.token[1];
     } else if (isArray(cur) || !(cur.token[0] === 'expr' && hasSep(cur.token[1]))) {
-      const fixedToken = z && isArray(cur) ? fixArgs(cur).reduce((p, c) => p.concat(c), []) : cur;
+      const fixedToken = re && isArray(cur) ? fixArgs(cur).reduce((p, c) => p.concat(c), []) : cur;
 
       if (!array && keyName) {
         prev[keyName] = prev[keyName] || (prev[keyName] = []);
@@ -120,8 +119,7 @@ export function fixTokens(ast, z) {
   }, target);
 }
 
-// FIXME: clean up this shit...
-export function fixChunk(tokens, i) {
+export function fixLeaf(tokens, i) {
   const offset = tokens.slice(i).findIndex(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k');
   const subTree = offset > 0 ? tokens.splice(i, offset) : tokens.splice(i);
 
@@ -156,6 +154,7 @@ export function fixTree(ast, self) {
     if (!isArray(cur) && cur.token[0] === 'string') {
       let fixedOffset = 0;
 
+      // FIXME: split on tokens for full-highlighting!
       cur.token[1] = cur.token[1].split(/(#{[^{}]*?})/)
         .reduce((p, x) => {
           if (x.indexOf('#{') === 0 && x.substr(-1) === '}') {
@@ -182,13 +181,13 @@ export function fixTree(ast, self) {
         // FIXME: more helpers
       } else if (cur.token[0] === 'expr' && cur.token[2] === 'equal') {
         Object.defineProperty(prev, '_body', { value: true });
-        subTree = fixChunk(tokens, i);
+        subTree = fixLeaf(tokens, i);
       }
 
       // FIXME: more helpers
       if (!isArray(next) && next.token[0] === 'expr' && next.token[2] === 'equal' && !prev._body) {
         Object.defineProperty(prev, '_body', { value: true });
-        subTree = fixChunk(tokens, i);
+        subTree = fixLeaf(tokens, i);
       }
 
       // discard token separator
@@ -246,6 +245,8 @@ export function fixValues(tokens, cb, y) {
       ? subTree[0]
       : subTree;
   }
+
+  // FIXME: add object support...
 
   const subTree = cb(tokens);
 
@@ -378,54 +379,4 @@ export function buildTree(tokens) {
   }
 
   return tree;
-}
-
-export function fromInput(token, args, cb) {
-  if (isArray(token)) {
-    return token.map(x => fromInput(x, args, cb));
-  }
-
-  if (token instanceof Expr) {
-    token = token.token;
-  }
-
-  // handle lambda-calls as side-effects
-  if (token[0] === 'fn') {
-    const fixedArgs = { ...args };
-
-    return (...context) => {
-      const newArgs = toArguments(token[2].args, context.map(x => Expr.derive(x)));
-
-      return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
-    };
-  }
-
-  // return range-expressions as is...
-  if (token[0] === 'range') {
-    return token[2];
-  }
-
-  // intermediate state for objects
-  if (token[0] === 'object') {
-    if (isArray(token[1])) {
-      return token[1].map(y => fromInput(y, args, cb));
-    }
-
-    Object.keys(token[1]).forEach(k => {
-      const value = fromInput(token[1][k], args, cb);
-      const key = toProperty(k);
-
-      delete token[1][k];
-
-      token[1][key] = value;
-    });
-  }
-
-  // plain values
-  let fixedValue = token[1];
-
-  if (token[0] === 'string') fixedValue = fixedValue.reduce((p, c) => p + c, '');
-  if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
-
-  return fixedValue;
 }

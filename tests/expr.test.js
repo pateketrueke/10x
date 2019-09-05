@@ -1,8 +1,8 @@
 import { expect } from 'chai';
-import LangExpr from '../src/lib/expr';
+import Expr from '../src/lib/expr';
 
-describe.only('LangExpr', () => {
+describe.only('Expr', () => {
   it('...', () => {
-    console.log(LangExpr.from(['number', '1.2']));
+    console.log(Expr.from(['number', '1.2']));
   });
 });

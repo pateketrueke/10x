@@ -7,8 +7,8 @@ import {
 } from './shared';
 
 import {
-  toList,
   isArray,
+  toList, toNumber, toProperty, toArguments,
 } from './utils';
 
 import Err from './error';
@@ -32,6 +32,7 @@ export default class Expr {
   }
 
   static ok(output) {
+    // FIXME: use helpers!!!
     if (output.some(x => !isArray(x) && x.token[0] === 'expr' && hasOp(x.token[1]))) {
       return Expr.value(output);
     }
@@ -55,6 +56,60 @@ export default class Expr {
     }
 
     return new Expr(token);
+  }
+
+  static input(token, args, cb) {
+    if (isArray(token)) {
+      return token.map(x => Expr.input(x, args, cb));
+    }
+
+    if (token instanceof Expr) {
+      token = token.token;
+    }
+
+    // handle lambda-calls as side-effects
+    if (token[0] === 'fn') {
+      const fixedArgs = { ...args };
+
+      return (...context) => {
+        const newArgs = toArguments(token[2].args, context.map(x => Expr.derive(x)));
+
+        return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
+      };
+    }
+
+    // return range-expressions as is...
+    if (token[0] === 'range') {
+      return token[2];
+    }
+
+    // intermediate state for objects
+    if (token[0] === 'object') {
+      if (isArray(token[1])) {
+        return token[1].map(y => Expr.input(y, args, cb));
+      }
+
+      Object.keys(token[1]).forEach(k => {
+        const value = Expr.input(token[1][k], args, cb);
+        const key = toProperty(k);
+
+        delete token[1][k];
+
+        token[1][key] = value;
+      });
+    }
+
+    // plain values
+    let fixedValue = token[1];
+
+    if (token[0] === 'string') fixedValue = fixedValue.reduce((p, c) => p + c, '');
+    if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
+
+    return fixedValue;
+  }
+
+  static plain(tokens) {
+    return Expr.input(Expr.value(tokens));
   }
 
   static value(tokens) {

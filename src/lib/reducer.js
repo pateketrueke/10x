@@ -1,6 +1,6 @@
 import {
   hasMonths, hasOwnKeyword,
-  hasTimeUnit, hasExpr, hasChar, hasSep, hasOp,
+  hasTimeUnit, hasExpr, hasChar, hasSep,
 } from './shared';
 
 import {
@@ -13,7 +13,6 @@ import {
 } from './utils';
 
 import {
-  fromInput,
   fixArgs, fixValues, fixTokens, fixBinding,
 } from './ast';
 
@@ -202,8 +201,8 @@ export function reduceFromImports(set, env, self) {
     }
   });
 
-  const importInfo = fromInput(set[':import']);
-  const fromInfo = fromInput(set[':from']);
+  const importInfo = Expr.input(set[':import']);
+  const fromInfo = Expr.input(set[':from']);
 
   // extend current context with resolved bindings
   importInfo.forEach(def => {
@@ -275,7 +274,7 @@ export function reduceFromLogic(cb, ctx, self) {
           if (isArray(cur.token[0])) {
             prev.push(...Range.resolve(cur.token.map(y => y[1]), z => cb(forBranch, ctx, z)));
           } else {
-            prev.push(...Range.resolve(initialArgs.length > 1 ? [fromInput(cur)] : fromInput(cur), y => cb(forBranch, ctx, y)));
+            prev.push(...Range.resolve(initialArgs.length > 1 ? [Expr.input(cur)] : Expr.input(cur), y => cb(forBranch, ctx, y)));
           }
 
           return prev;
@@ -295,7 +294,7 @@ export function reduceFromLogic(cb, ctx, self) {
 export function reduceFromFX(cb, ctx) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
-    const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => fromInput(x));
+    const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => Expr.input(x));
     const result = evaluateComparison(ctx.cur.token[1], lft, typeof rgt === 'undefined' ? true : rgt, others);
 
     ctx.cur = Expr.derive(result);
@@ -337,7 +336,7 @@ export function reduceFromFX(cb, ctx) {
     // recompose tokens on-the-fly
     ctx.cur = Expr.from(ctx.cur);
     ctx.cur.token[1] = base.token[1] + ctx.cur.token[1] + (ctx.cur.token[1] === '..' ? target.token[1] : '');
-    ctx.cur.token[2] = new Range(fromInput(fixedBase), fromInput(fixedTarget));
+    ctx.cur.token[2] = new Range(Expr.input(fixedBase), Expr.input(fixedTarget));
 
     ctx.cur.begin = base.begin || ctx.cur.begin;
     ctx.cur.end = target.end;
@@ -411,7 +410,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
     // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = fixValues(args, x => x.map(y => fromInput(y, y._bound, (z, data) => cb(z, ctx, data))), true);
+      const inputArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))), true);
       const inputValue = ctx.cur.token[1][2](...inputArgs);
 
       if (isArray(inputValue)) {
@@ -522,7 +521,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
           ctx.ast.push(Expr.from(['string', ctx.cur.token[1].reduce((prev, cur) => {
             if (isArray(cur)) {
-              prev.push(fromInput(Expr.value(cb(cur, ctx))));
+              prev.push(Expr.plain(cb(cur, ctx)));
             } else {
               prev.push(cur);
             }
@@ -537,7 +536,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           if (!isArray(ctx.cur.token[1])) {
             // FIXME: objects' evaluation...
             console.log('OBJ', ctx.cur.token[1]);
-            // ctx.cur.token[1] = fromInput(ctx.cur.token[1], null, x => Expr.value(cb(x, ctx)));
+            // ctx.cur.token[1] = Expr.input(ctx.cur.token[1], null, x => Expr.value(cb(x, ctx)));
           }
 
           if (
