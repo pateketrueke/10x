@@ -28,10 +28,6 @@ export default class Expr {
   }
 
   static from(token, fromCallback, arg1, arg2, arg3) {
-    if (isArray(token)) {
-      return new Expr({ token });
-    }
-
     if (!(token instanceof Expr) && typeof fromCallback === 'function') {
       const retval = fromCallback(token.content, arg1, arg2, arg3);
 
@@ -40,6 +36,10 @@ export default class Expr {
       }
 
       return new Expr(token, retval);
+    }
+
+    if (isArray(token)) {
+      return new Expr({ token });
     }
 
     return new Expr(token);
