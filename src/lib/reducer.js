@@ -240,7 +240,7 @@ export function reduceFromLogic(cb, ctx, self) {
           not = !not;
         }
 
-        const retval = Expr.value(cb(test.map(x => x.slice()), ctx));
+        const retval = Expr.value(cb(test, ctx));
 
         // evaluate respective branches
         if (not ? !retval.token[1] : retval.token[1]) {
@@ -363,7 +363,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     }
 
     const args = fixValues(call.args, x => cb(!isArray(x) ? [x] : x, ctx));
-    const key = def._memo && JSON.stringify([name, plainValue(args)]);
+    const key = def._memo && JSON.stringify([name, args]);
 
     // this helps to compute faster!
     if (key && memoizedInternals[key]) {
