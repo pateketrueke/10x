@@ -27,14 +27,6 @@ export default class Expr {
     this.token = token.slice();
   }
 
-  static to(value) {
-    if (value === null) return ['symbol', null];
-    if (value === true) return ['symbol', true];
-    if (value === false) return ['symbol', false];
-
-    return [typeof value, typeof value === 'string' ? [value] : value];
-  }
-
   static from(token, fromCallback, arg1, arg2, arg3) {
     if (isArray(token)) {
       return new Expr({ token });
@@ -55,5 +47,19 @@ export default class Expr {
 
   static value(tokens) {
     return !isArray(tokens[0]) ? Expr.from(calculateFromTokens(toList(tokens))) : tokens;
+  }
+
+  static derive(value) {
+    let token;
+
+    if (value === null) token = ['symbol', null];
+    if (value === true) token = ['symbol', true];
+    if (value === false) token = ['symbol', false];
+
+    if (typeof token === 'undefined') {
+      token = [typeof value, typeof value === 'string' ? [value] : value];
+    }
+
+    return Expr.from(token);
   }
 }

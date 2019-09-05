@@ -53,7 +53,7 @@ export default class Range {
         ? String.fromCharCode(nextValue.value)
         : nextValue.value;
 
-      seq.push(...cb({ _: { body: [Expr.from(Expr.to(fixedValue))] } }));
+      seq.push(...cb({ _: { body: [Expr.derive(fixedValue)] } }));
     }
 
     return seq;
@@ -61,7 +61,7 @@ export default class Range {
 
   static resolve(value, cb) {
     if (isArray(value)) {
-      return value.map(x => cb({ _: { body: [Expr.from(Expr.to(x))] } }));
+      return value.map(x => cb({ _: { body: [Expr.derive(x)] } }));
     }
 
     if (typeof value === 'number') {

@@ -286,7 +286,7 @@ export function reduceFromFX(cb, ctx) {
     const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => fromInput(x.token));
     const result = evaluateComparison(ctx.cur.token[1], lft, rgt || true, others);
 
-    ctx.cur = Expr.from(Expr.to(result));
+    ctx.cur = Expr.derive(result);
     return;
   }
 
@@ -405,9 +405,9 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       if (Array.isArray(inputValue)) {
         const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x));
 
-        ctx.cur = Expr.from(['object', fixedValues.map(x => (!isArray(x) ? Expr.from(Expr.to(x)) : Expr.from(x)))]);
+        ctx.cur = Expr.from(['object', fixedValues.map(x => (!isArray(x) ? Expr.derive(x) : Expr.from(x)))]);
       } else {
-        ctx.cur = Expr.from(Expr.to(inputValue));
+        ctx.cur = Expr.derive(inputValue);
       }
       return;
     }

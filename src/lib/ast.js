@@ -327,7 +327,7 @@ export function fixBinding(obj, name, alias, context) {
   // FIXME: this would lead to disasters?
   if (typeof target !== 'function') {
     return {
-      body: [Expr.from(Expr.to(target))],
+      body: [Expr.derive(target)],
     };
   }
 
