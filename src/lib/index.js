@@ -102,7 +102,6 @@ export default class Solv {
     return output;
   }
 
-  // FIXME: treat this way to hide parentheses as away of flatten all the formatted results..
   format(token, formatter) {
     if (token[0] === 'number') {
       token[1] = toNumber(token[1]);
