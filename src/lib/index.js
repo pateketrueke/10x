@@ -3,7 +3,7 @@ import { transform } from './parser';
 
 import {
   isInt, isArray,
-  toList, toFraction, toNumber, toValue,
+  toFraction, toNumber, toValue,
 } from './utils';
 
 import {
@@ -239,6 +239,6 @@ export default class Solv {
   }
 
   raw(tokens) {
-    return fromInput(toList(tokens), x => this.raw(x));
+    return tokens; // fromInput(tokens, x => this.raw(x));
   }
 }

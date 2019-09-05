@@ -3,7 +3,7 @@ import {
 } from './shared';
 
 import {
-  isArray, toNumber,
+  isArray, toNumber, toProperty,
 } from './utils';
 
 import Err from './error';
@@ -380,57 +380,46 @@ export function buildTree(tokens) {
 }
 
 // FIXME: operate over tokens!!
-export function fromInput(token, cb, z) {
+export function fromInput(token, args, cb) {
+  if (isArray(token)) {
+    return token.map(x => fromInput(x, args, cb));
+  }
+
   if (token instanceof Expr) {
     token = token.token;
   }
 
-  if (isArray(token[0])) {
-    return token.map(x => fromInput(x, cb, z));
+  // handle lambda-calls as side-effects
+  if (token[0] === 'fn') {
+    const fixedArgs = { ...args };
+
+    return (...context) => {
+      const newArgs = toArguments(token[2].args, context.map(x => Expr.derive(x)));
+
+      return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
+    };
   }
-
-  // // handle lambda-calls as side-effects
-  // if (token[0] === 'fn') {
-  //   const fixedArgs = { ...z };
-
-  //   return (...context) => {
-  //     const newArgs = toArguments(token[2].args, context.map(x => Expr.derive(x)));
-
-  //     return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
-  //   };
-  // }
 
   // return range-expressions as is...
   if (token[0] === 'range') {
     return token[2];
   }
 
-  // // intermediate state for objects
-  // if (token[0] === 'object') {
-  //   if (isArray(token[1])) {
-  //     return fixValues(token[1], x => x.map(y => fromInput(y, cb, z)), true);
-  //   }
+  // intermediate state for objects
+  if (token[0] === 'object') {
+    if (isArray(token[1])) {
+      return token[1].map(y => fromInput(y, args, cb));
+    }
 
-  //   Object.keys(token[1]).forEach(k => {
-  //     const fixedTokens = isArray(token[1][k])
-  //       ? token[1][k].map(x => (isArray(x) ? fixArgs(x) : x))
-  //       : token[1][k];
+    Object.keys(token[1]).forEach(k => {
+      const value = fromInput(token[1][k], args, cb);
+      const key = toProperty(k);
 
-  //     let fixedValue = cb && isArray(fixedTokens[0])
-  //       ? cb(fixedTokens)
-  //       : fixedTokens;
+      delete token[1][k];
 
-  //     if (isArray(fixedTokens[0])) {
-  //       fixedValue = fixedValue.reduce((p, x) => p.concat(cb ? cb(x) : x), [])[0];
-  //     } else if (cb && isArray(fixedValue) && fixedValue.length === 1) {
-  //       fixedValue = fixedValue[0];
-  //     }
-
-  //     delete token[1][k];
-
-  //     token[1][toProperty(k)] = fixedValue;
-  //   });
-  // }
+      token[1][key] = value;
+    });
+  }
 
   // plain values
   let fixedValue = token[1];
@@ -439,42 +428,4 @@ export function fromInput(token, cb, z) {
   if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
 
   return fixedValue;
-}
-
-export function plainValue(values, raw, cb) {
-  if (!cb) {
-    cb = x => x.map(y => fromInput(y));
-  }
-
-  if (isArray(values)) {
-    return cb(values.map(x => plainValue(x, raw, cb)));
-  }
-
-  if (!values || typeof values !== 'object') {
-    return values;
-  }
-
-  const copy = {};
-
-  Object.keys(values).forEach(key => {
-    if (raw) {
-      copy[key] = !isArray(values[key])
-        ? plainValue(values[key], raw, cb)
-        : cb(values[key]);
-      return;
-    }
-
-    const fixedValue = values[key].slice();
-
-    if (fixedValue[0] === 'object') {
-      fixedValue[1] = Object.keys(fixedValue[1]).reduce((prev, k) => {
-        prev[k] = cb(fixedValue[1][k]);
-        return prev;
-      }, {});
-    }
-
-    copy[key] = fixedValue;
-  });
-
-  return copy;
 }

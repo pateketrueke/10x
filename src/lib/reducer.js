@@ -9,11 +9,11 @@ import {
 
 import {
   isArray,
-  toSlice, toList, toNumber, toArguments,
+  toSlice, toNumber, toArguments,
 } from './utils';
 
 import {
-  plainValue, fromInput,
+  fromInput,
   fixArgs, fixValues, fixTokens, fixBinding,
 } from './ast';
 
@@ -159,12 +159,21 @@ export function reduceFromImports(set, env, self) {
 
   set[':import'].forEach(sub => {
     if (isArray(sub)) {
-      if (!sub[0].every(x => x.token[0] === 'unit')) {
-        throw new Error(`
-          Methods to :import should be units,
-            e.g. \`:import (a ...) :from "...";\`
-        `);
-      }
+      sub.forEach(x => {
+        if (!x.every(y => ['symbol', 'unit'].includes(y.token[0]))) {
+          throw new Error(`
+            Methods to :import should be units,
+              e.g. \`:import (a ...) :from "...";\`
+          `);
+        }
+
+        if (x[0].token[0] === 'symbol' && x.length > 2) {
+          throw new Error(`
+            Expecting only one alias per method to :import,
+              e.g. \`:import (..., :method alias) :from "...";\`
+          `);
+        }
+      });
     } else {
       const fixedKeys = Object.keys(sub.token[1]);
 
@@ -193,8 +202,8 @@ export function reduceFromImports(set, env, self) {
     }
   });
 
-  const importInfo = plainValue(set[':import']);
-  const fromInfo = plainValue(set[':from']);
+  const importInfo = fromInput(set[':import']);
+  const fromInfo = fromInput(set[':from']);
 
   // extend current context with resolved bindings
   importInfo.forEach(def => {
@@ -203,8 +212,14 @@ export function reduceFromImports(set, env, self) {
         env[def[k][0]] = fixBinding(fromInfo[0], k, def[k][0], self);
       });
     } else {
-      def.reduce((prev, cur) => prev.concat(cur), []).forEach(y => {
-        env[y] = fixBinding(fromInfo[0], y, null, self);
+      def.forEach(x => {
+        if (x[0].charAt() === ':') {
+          env[x[1]] = fixBinding(fromInfo[0], x[0].substr(1), x[1], self);
+        } else {
+          x.forEach(y => {
+            env[y] = fixBinding(fromInfo[0], y, null, self);
+          });
+        }
       });
     }
   });
@@ -254,23 +269,24 @@ export function reduceFromLogic(cb, ctx, self) {
         }
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
-        const initialArgs = cb(forBranch.shift(), ctx).reduce((p, c) => p.concat(c), []);
+        console.log({forBranch});
+        // const initialArgs = cb(forBranch.shift(), ctx).reduce((p, c) => p.concat(c), []);
 
-        // handle between lists and chunks
-        const seq = !isArray(initialArgs[0])
-          ? Range.resolve(fromInput(Expr.value(cb(initialArgs, ctx))), y => cb(forBranch, ctx, y))
-          : Range.resolve(toList(initialArgs).reduce((p, c) => p.concat(fromInput(c)), []), y => cb(forBranch, ctx, y));
+        // // handle between lists and chunks
+        // const seq = !isArray(initialArgs[0])
+        //   ? Range.resolve(fromInput(Expr.value(cb(initialArgs, ctx))), y => cb(forBranch, ctx, y))
+        //   : Range.resolve(toList(initialArgs).reduce((p, c) => p.concat(fromInput(c)), []), y => cb(forBranch, ctx, y));
 
-        if (
-          seq.length === 1
-          && !isArray(seq[0])
-          && seq[0].token[0] === 'object'
-        ) {
-          ctx.cur = seq[0];
-        } else {
-          ctx.isDef = true;
-          ctx.cur = Expr.from(['object', cb(seq.reduce((p, c) => p.concat(c), []), ctx)]);
-        }
+        // if (
+        //   seq.length === 1
+        //   && !isArray(seq[0])
+        //   && seq[0].token[0] === 'object'
+        // ) {
+        //   ctx.cur = seq[0];
+        // } else {
+        //   ctx.isDef = true;
+        //   ctx.cur = Expr.from(['object', cb(seq.reduce((p, c) => p.concat(c), []), ctx)]);
+        // }
         return true;
       } else {
         console.log('SYM_LOGIC', set);
@@ -400,15 +416,16 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
       const inputArgs = fixValues(args, x => x.map(y => fromInput(y, (z, data) => cb(z, ctx, data), y._bound)), true);
-      const inputValue = ctx.cur.token[1][2](...inputArgs);
+      console.log({inputArgs});
+      // const inputValue = ctx.cur.token[1][2](...inputArgs);
 
-      if (Array.isArray(inputValue)) {
-        const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x));
+      // if (Array.isArray(inputValue)) {
+      //   const fixedValues = inputValue.map(x => (isArray(x) ? calculateFromTokens(toList(x)) : x));
 
-        ctx.cur = Expr.from(['object', fixedValues.map(x => (!isArray(x) ? Expr.derive(x) : Expr.from(x)))]);
-      } else {
-        ctx.cur = Expr.derive(inputValue);
-      }
+      //   ctx.cur = Expr.from(['object', fixedValues.map(x => (!isArray(x) ? Expr.derive(x) : Expr.from(x)))]);
+      // } else {
+      //   ctx.cur = Expr.derive(inputValue);
+      // }
       return;
     }
 
@@ -509,23 +526,24 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         reduceFromUnits(cb, ctx, context, settings.convertFrom);
 
         // handle interpolated strings
-        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
-          ctx.ast.push(Expr.from(['string', ctx.cur.token[1].reduce((prev, cur) => {
-            if (isArray(cur)) {
-              prev.push(fromInput(Expr.value(cb(cur, ctx))));
-            } else {
-              prev.push(cur);
-            }
+        // if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
+        //   ctx.ast.push(Expr.from(['string', ctx.cur.token[1].reduce((prev, cur) => {
+        //     if (isArray(cur)) {
+        //       prev.push(fromInput(Expr.value(cb(cur, ctx))));
+        //     } else {
+        //       prev.push(cur);
+        //     }
 
-            return prev;
-          }, [])]));
-          continue;
-        }
+        //     return prev;
+        //   }, [])]));
+        //   continue;
+        // }
 
         // evaluate resulting object
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object') {
           if (!isArray(ctx.cur.token[1])) {
-            ctx.cur.token[1] = plainValue(ctx.cur.token[1], true, x => Expr.value(cb(x, ctx)));
+            console.log('OBJ',ctx.cur.token[1]);
+            // ctx.cur.token[1] = plainValue(ctx.cur.token[1], true, x => Expr.value(cb(x, ctx)));
           }
 
           if (
@@ -551,6 +569,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
+        console.log(e);
         if (!(e instanceof Err)) {
           throw new Err(e.message, ctx);
         }
