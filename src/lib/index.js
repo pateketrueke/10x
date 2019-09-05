@@ -3,11 +3,12 @@ import { transform } from './parser';
 
 import {
   isInt, isArray,
+  toList, toFraction, toNumber, toValue,
 } from './utils';
 
 import {
   fixArgs,
-  toFraction, toNumber, toInput, toValue, toList,
+  toInput,
 } from './ast';
 
 import Err from './error';
@@ -235,7 +236,7 @@ export default class Solv {
 
     return output
       .filter(x => x.length)
-      .reduce((p, c) => p.concat(!isArray(c[0]) ? Expr.from(calculateFromTokens(toList(c))) : c), []);
+      .reduce((p, c) => p.concat(Expr.value(c)), []);
   }
 
   raw(tokens) {

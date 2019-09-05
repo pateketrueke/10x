@@ -9,11 +9,12 @@ import {
 
 import {
   isArray,
+  toSlice, toList, toNumber, toArguments,
 } from './utils';
 
 import {
+  toPlain, toInput,
   fixArgs, fixValues, fixTokens, fixBinding,
-  toSlice, toList, toPlain, toInput, toNumber, toArguments,
 } from './ast';
 
 import Err from './error';

@@ -4,11 +4,8 @@ import {
 
 import {
   isInt,
-} from './utils';
-
-import {
   toNumber, toFraction,
-} from './ast';
+} from './utils';
 
 export function calculateFromMS(diff) {
   const hourTime = 1000 * 60;

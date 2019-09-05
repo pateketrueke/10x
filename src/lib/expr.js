@@ -1,4 +1,9 @@
 import {
+  calculateFromTokens,
+} from './solver';
+
+import {
+  toList,
   isArray,
 } from './utils';
 
@@ -46,5 +51,9 @@ export default class Expr {
     }
 
     return new Expr(token);
+  }
+
+  static value(tokens) {
+    return !isArray(tokens[0]) ? Expr.from(calculateFromTokens(toList(tokens))) : tokens;
   }
 }
