@@ -523,18 +523,18 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         reduceFromUnits(cb, ctx, context, settings.convertFrom);
 
         // handle interpolated strings
-        // if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
-        //   ctx.ast.push(Expr.from(['string', ctx.cur.token[1].reduce((prev, cur) => {
-        //     if (isArray(cur)) {
-        //       prev.push(fromInput(Expr.value(cb(cur, ctx))));
-        //     } else {
-        //       prev.push(cur);
-        //     }
+        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
+          ctx.ast.push(Expr.from(['string', ctx.cur.token[1].reduce((prev, cur) => {
+            if (isArray(cur)) {
+              prev.push(fromInput(Expr.value(cb(cur, ctx))));
+            } else {
+              prev.push(cur);
+            }
 
-        //     return prev;
-        //   }, [])]));
-        //   continue;
-        // }
+            return prev;
+          }, [])]));
+          continue;
+        }
 
         // evaluate resulting object
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object') {
