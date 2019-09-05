@@ -10,7 +10,3 @@ export const deindent = (text, length) => {
 
   return text.split('\n').map(x => repeat(' ', length || 0) + x.substr(tabs.length)).join('\n').trim();
 };
-
-export const tokenize = value => {
-  return [typeof value, typeof value === 'string' ? [value] : value];
-};

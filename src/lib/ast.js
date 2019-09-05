@@ -4,7 +4,6 @@ import {
 
 import {
   isArray,
-  tokenize,
 } from './utils';
 
 import Err from './error';
@@ -328,7 +327,7 @@ export function fixBinding(obj, name, alias, context) {
   // FIXME: this would lead to disasters?
   if (typeof target !== 'function') {
     return {
-      body: [Expr.from(tokenize(target))],
+      body: [Expr.from(Expr.to(target))],
     };
   }
 
@@ -509,7 +508,7 @@ export function toInput(token, cb, z) {
   //   const fixedArgs = { ...z };
 
   //   return (...context) => {
-  //     const newArgs = toArguments(token[2].args, context.map(x => Expr.from(tokenize(x))));
+  //     const newArgs = toArguments(token[2].args, context.map(x => Expr.from(Expr.to(x))));
 
   //     return cb(token[2].body.slice(), Object.assign(fixedArgs, newArgs));
   //   };

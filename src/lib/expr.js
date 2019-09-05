@@ -22,6 +22,14 @@ export default class Expr {
     this.token = token.slice();
   }
 
+  static to(value) {
+    if (value === null) return ['symbol', null];
+    if (value === true) return ['symbol', true];
+    if (value === false) return ['symbol', false];
+
+    return [typeof value, typeof value === 'string' ? [value] : value];
+  }
+
   static from(token, fromCallback, arg1, arg2, arg3) {
     if (isArray(token)) {
       return new Expr({ token });
