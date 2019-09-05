@@ -89,10 +89,10 @@ export function reduceFromUnits(cb, ctx, self, convert) {
     const base = parseFloat(ctx.cur.token[1]);
     const subTree = fixArgs(cb(ctx.env[ctx.cur.token[2]].body, ctx), true);
 
-    ctx.cur = subTree.map(x => Expr.from(calculateFromTokens(toList(cb([
+    ctx.cur = subTree.map(x => Expr.value(cb([
       Expr.from(['number', base]),
       Expr.from(['expr', '*', 'mul']),
-    ].concat([x]), ctx)))));
+    ].concat([x]), ctx)));
     return;
   }
 
@@ -390,7 +390,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     }
 
     // resolve intermediate values
-    ctx.cur = Expr.from(calculateFromTokens(toList(ctx.cur)));
+    ctx.cur = Expr.value(ctx.cur);
 
     // flag token for future bindings...
     if (Object.keys(locals).length > 0) {
@@ -529,7 +529,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
               const subTree = cb(x, ctx);
 
               if (x.some(y => !isArray(y) && y.token[0] === 'expr')) {
-                return Expr.from(calculateFromTokens(toList(subTree)));
+                return Expr.value(subTree);
               }
 
               return subTree;
