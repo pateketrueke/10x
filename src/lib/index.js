@@ -15,7 +15,6 @@ import Err from './error';
 import Expr from './expr';
 
 import { reduceFromAST } from './reducer';
-import { calculateFromTokens } from './solver';
 
 import {
   convertFrom,
