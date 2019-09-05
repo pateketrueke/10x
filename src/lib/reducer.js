@@ -549,10 +549,8 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
             }
 
             ctx.ast.pop();
-
-            // FIXME: not working anymore...
-            // ctx.ast.push(...ctx.cur.token[1]);
-            // continue;
+            ctx.ast.push(...ctx.cur.token[1]);
+            continue;
           }
         }
 
