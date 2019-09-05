@@ -22,13 +22,13 @@ export default class LangExpr {
     this.token = token.slice();
   }
 
-  static from(token, fromCallback, arg1, arg2, arg3, arg4) {
+  static from(token, fromCallback, arg1, arg2, arg3) {
     if (isArray(token)) {
       return new LangExpr({ token });
     }
 
     if (!(token instanceof LangExpr) && typeof fromCallback === 'function') {
-      const retval = fromCallback(token.content, arg1, arg2, arg3, arg4);
+      const retval = fromCallback(token.content, arg1, arg2, arg3);
 
       if (!retval) {
         throw new LangErr(`Unexpected token \`${token.content}\``, token);
