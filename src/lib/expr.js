@@ -8,7 +8,7 @@ import {
 
 import {
   isInt, isArray,
-  toList, toValue, toNumber, toProperty, toArguments,
+  toList, toValue, toNumber, toFraction, toProperty, toArguments,
 } from './utils';
 
 import Err from './error';
