@@ -41,11 +41,15 @@ export function fixArgs(values, flatten) {
       return x;
     }));
 
-    return values.reduce((p, c) => {
+    values = values.reduce((p, c) => {
       while (c.length === 1) c = c[0];
       p.push(c);
       return p;
     }, stack);
+
+    return values.length === 1 && isArray(values[0])
+      ? values[0]
+      : values;
   }
 
   // break values into single arguments
@@ -237,33 +241,24 @@ export function fixTree(ast, self) {
   return tokens;
 }
 
-export function fixValues(tokens, cb, y) {
-  if (isArray(tokens[0])) {
-    const subTree = tokens.map(x => fixValues(x, cb, y));
 
-    return y && subTree.length === 1
-      ? subTree[0]
-      : subTree;
+export function fixValues(tokens, cb) {
+  if (isArray(tokens)) {
+    // continue iterating if no Expr are found...
+    if (!tokens.some(x => x instanceof Expr)) {
+      return tokens.map(x => fixValues(x, cb));
+    }
+
+    return cb(tokens);
   }
 
-  if (!isArray(tokens) && typeof tokens === 'object') {
+  if (!(tokens instanceof Expr)) {
     Object.keys(tokens).forEach(key => {
-      tokens[key] = fixValues(tokens[key], cb, y);
+      tokens[key] = fixValues(tokens[key], cb);
     });
-
-    return tokens;
   }
 
-  const subTree = cb(tokens);
-
-  if (y
-    && Array.isArray(subTree)
-    && subTree.length === 1 && typeof subTree[0] !== 'string'
-  ) {
-    return subTree[0];
-  }
-
-  return subTree;
+  return tokens;
 }
 
 export function fixBinding(obj, name, alias, context) {

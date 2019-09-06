@@ -373,7 +373,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       throw new Error(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`);
     }
 
-    const args = fixValues(call.args, x => cb(!isArray(x) ? [x] : x, ctx));
+    const args = fixValues(cb(call.args, ctx), x => cb(x, ctx));
     const key = def._memo && JSON.stringify([name, args]);
 
     // this helps to compute faster!
@@ -410,22 +410,13 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
     // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))), true);
-      const inputValue = ctx.cur.token[1][2](...(isArray(inputArgs) ? inputArgs : [inputArgs]));
+      const inputArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))));
+      const inputValue = fixValues(ctx.cur.token[1][2](...inputArgs), Expr.value);
 
-      // FIXME: here's a conflict between different kind of results, from external bindings we MUST convert-in
-      // but from internal definitions it's OK to just solve and such...
-      if (isArray(inputValue)) {
-        ctx.cur = Expr.from(['object', inputValue.map(x => {
-          // FIXME: make sure all returned values are compliant, add tests!!
-          if (isArray(x) && x[0] instanceof Expr) {
-            return Expr.value(cb(x, ctx));
-          }
-
-          return Expr.derive(x);
-        })]);
+      if (isArray(inputValue) && !(inputValue[0] instanceof Expr)) {
+        ctx.cur = Expr.from(['object', Expr.derive(inputValue)]);
       } else {
-        ctx.cur = Expr.derive(inputValue);
+        ctx.cur = Expr.from(['object', inputValue]);
       }
       return;
     }
@@ -454,6 +445,11 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     return reduceFromAST(t, context, settings, subContext, Object.assign({}, ctx.env, subExpressions), memoizedInternals);
   };
 
+  // if (tokens[0] === 'def') {
+  //   console.log({tokens});
+  //   process.stdout.write(new Error().stack);
+  // }
+
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
     ctx.root = parentContext || {};
@@ -471,16 +467,16 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     if (isArray(ctx.cur)) {
       let fixedValue;
 
-      // handle plain arrays
-      if (
-        ctx.root.cur
-        && !isArray(ctx.root.cur)
-        && ctx.root.cur.token[0] === 'object'
-      ) {
-        ctx.isDef = true;
-        ctx.ast.push(cb(ctx.cur, ctx));
-        continue;
-      }
+      // // handle plain arrays
+      // // if (
+      // //   ctx.root.cur
+      // //   && !isArray(ctx.root.cur)
+      // //   && ctx.root.cur.token[0] === 'object'
+      // // ) {
+      // //   ctx.isDef = true;
+      // //   ctx.ast.push(cb(ctx.cur, ctx));
+      // //   continue;
+      // // }
 
       // return unique leafs!
       if (
@@ -492,23 +488,34 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         continue;
       }
 
-      // evaluate simple lists only (no separators)
-      if (
-        !isArray(ctx.cur[0])
-        && !ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))
-      ) {
-        fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
+      // if (ctx.cur.length > 1 && ctx.cur[0] instanceof Expr) {
+      //   ctx.ast.push(Expr.from(['object', cb(fixArgs(ctx.cur, true), ctx)]));
+      // } else {
+      //   ctx.ast.push(ctx.cur.length === 1 ? ctx.cur[0] : ctx.cur);
+      // }
 
-        // prepend multiplication if goes after units/numbers
-        if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
-          ctx.ast.push(Expr.from(['expr', '*', 'mul']));
-        }
-      } else if (isArray(ctx.cur[0])) {
-        fixedValue = ['object', cb(ctx.cur, ctx).map(x => x.length === 1 ? x[0] : x)];
+      // // evaluate simple lists only (no separators)
+      // if (
+      //   !isArray(ctx.cur[0])
+      //   && !ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))
+      // ) {
+      //   fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
+
+      //   // prepend multiplication if goes after units/numbers
+      //   if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
+      //     ctx.ast.push(Expr.from(['expr', '*', 'mul']));
+      //   }
+      // } else if (isArray(ctx.cur[0])) {
+      //   fixedValue = ['object', cb(ctx.cur, ctx).map(x => x.length === 1 ? x[0] : x)];
+      // } else {
+      //   fixedValue = ['object', fixArgs(cb(ctx.cur, ctx)).reduce((p, c) => p.concat(c), [])];
+      // }
+      // ctx.ast.push(Expr.from(fixedValue));
+      if (isArray(ctx.cur[0])) {
+        ctx.ast.push(ctx.cur.reduce((p, c) => p.concat(c), []));
       } else {
-        fixedValue = ['object', fixArgs(cb(ctx.cur, ctx)).reduce((p, c) => p.concat(c), [])];
+        ctx.ast.push(Expr.from(['object', fixArgs(ctx.cur, true)]));
       }
-      ctx.ast.push(Expr.from(fixedValue));
       continue;
     }
 
@@ -516,10 +523,10 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       // flag well-known definitions, as they are open...
       if (ctx.root.isDef || ['object', 'def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
-      // append last-operator between consecutive unit-expressions
-      if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
-        ctx.ast.push(Expr.from(ctx.lastOp));
-      }
+      // // append last-operator between consecutive unit-expressions
+      // if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+      //   ctx.ast.push(Expr.from(ctx.lastOp));
+      // }
 
       try {
         reduceFromLogic(cb, ctx, context);
@@ -528,46 +535,48 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         reduceFromUnits(cb, ctx, context, settings.convertFrom);
 
         // handle interpolated strings
-        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
-          ctx.ast.push(Expr.from(['string', ...ctx.cur.token.slice(1).reduce((prev, cur) => {
-            if (isArray(cur)) {
-              prev.push(Expr.plain(cb(cur, ctx)));
-            } else {
-              prev.push(cur);
-            }
+        // if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
+        //   ctx.ast.push(Expr.from(['string', ...ctx.cur.token.slice(1).reduce((prev, cur) => {
+        //     if (isArray(cur)) {
+        //       prev.push(Expr.plain(cb(cur, ctx)));
+        //     } else {
+        //       prev.push(cur);
+        //     }
 
-            return prev;
-          }, [])]));
-          continue;
-        }
+        //     return prev;
+        //   }, [])]));
+        //   continue;
+        // }
 
         // evaluate resulting object
-        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object') {
-          if (!isArray(ctx.cur.token[1])) {
-            ctx.cur.token[1] = fixValues(ctx.cur.token[1], x => Expr.ok(cb(x, ctx)), true);
-          }
+        // if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object') {
+        //   if (!isArray(ctx.cur.token[1])) {
+        //     console.log('OBJ');
+        //     ctx.cur.token[1] = fixValues(ctx.cur.token[1], x => Expr.ok(cb(x, ctx)), true);
+        //   }
 
-          if (
-            !isArray(ctx.cur)
-            && ctx.cur.token[0] === 'object'
-            && ctx.left.token[0] === 'range' && ctx.left.token[1] === '..'
-          ) {
-            if (!isArray(ctx.cur.token[1])) {
-              throw new Error(`Expecting sequence to unwind, given ${ctx.cur.token[1]}`);
-            }
+        //   if (
+        //     !isArray(ctx.cur)
+        //     && ctx.cur.token[0] === 'object'
+        //     && ctx.left.token[0] === 'range' && ctx.left.token[1] === '..'
+        //   ) {
+        //     if (!isArray(ctx.cur.token[1])) {
+        //       throw new Error(`Expecting sequence to unwind, given ${ctx.cur.token[1]}`);
+        //     }
 
-            ctx.ast.pop();
-            ctx.ast.push(...ctx.cur.token[1]);
-            continue;
-          }
-        }
+        //     ctx.ast.pop();
+        //     ctx.ast.push(...ctx.cur.token[1]);
+        //     continue;
+        //   }
+        // }
 
         // unwind ranges that were left untouched...
-        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'range' && ctx.cur.token[2]) {
-          ctx.ast.push(Range.resolve(ctx.cur.token[2], x => x._.body));
-          continue;
-        }
+        // if (!isArray(ctx.cur) && ctx.cur.token[0] === 'range' && ctx.cur.token[2]) {
+        //   ctx.ast.push(Range.resolve(ctx.cur.token[2], x => x._.body));
+        //   continue;
+        // }
       } catch (e) {
+        console.log(e)
         if (!(e instanceof Err)) {
           throw new Err(e, ctx);
         }
@@ -577,9 +586,11 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     }
 
     // skip definitions and symbols!
-    if (isArray(ctx.cur)) ctx.ast.push(...ctx.cur);
-    else if (!['symbol', 'def'].includes(ctx.cur.token[0])) ctx.ast.push(ctx.cur);
-    else if (ctx.cur.token[0] === 'symbol' && typeof ctx.cur.token[1] !== 'string') ctx.ast.push(ctx.cur);
+    if (!isArray(ctx.cur)) {
+      ctx.ast.push(ctx.cur);
+    } else {
+      ctx.ast.push(...ctx.cur);
+    }
   }
 
   return ctx.ast;

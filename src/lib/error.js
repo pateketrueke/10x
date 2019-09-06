@@ -55,10 +55,6 @@ export default class Err extends Error {
         }
         return prev;
       }, []).join('\n')}\n`;
-
-      if (e._stack) {
-        e.stack += `---\n${e._stack}`;
-      }
     }
 
     return e;
