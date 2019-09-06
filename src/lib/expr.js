@@ -34,11 +34,7 @@ export default class Expr {
   static ok(output) {
     // FIXME: use helpers!!!
     if (output.some(x => !isArray(x) && x.token[0] === 'expr' && hasOp(x.token[1]))) {
-      return Expr.value(output);
-    }
-
-    if (output.length === 1) {
-      return output[0];
+      return [Expr.value(output)];
     }
 
     return output;
