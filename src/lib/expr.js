@@ -8,7 +8,7 @@ import {
 
 import {
   isArray,
-  toList, toNumber, toProperty, toArguments,
+  toList, toValue, toNumber, toProperty, toArguments,
 } from './utils';
 
 import Err from './error';
@@ -130,5 +130,66 @@ export default class Expr {
     }
 
     return Expr.from(token);
+  }
+
+  static resolve(token, formatter, inflections) {
+    if (token[0] === 'number') {
+      token[1] = toNumber(token[1]);
+    }
+
+    if (
+      token[2]
+      && token[0] === 'number'
+      && !(isInt(token[1]) || token[1] instanceof Date)
+    ) {
+      // remove trailing words from units
+      token[1] = String(token[1]).replace(/[\sa-z/-]+$/ig, '');
+    }
+
+    let fixedValue = toValue(token);
+    let fixedUnit = token[2];
+
+    // adjust unit-fractions
+    if (typeof fixedUnit === 'string' && fixedUnit.indexOf('fr-') === 0) {
+      fixedValue = toFraction(fixedValue);
+      fixedUnit = fixedUnit.split('fr-')[1];
+    }
+
+    // add thousand separators
+    if (token[0] === 'number' && isInt(fixedValue)) {
+      fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    if (
+      fixedUnit
+      && !(['datetime', 'x-fraction'].includes(fixedUnit) || token[1] instanceof Date)
+    ) {
+      // apply well-known inflections
+      if (fixedUnit.length === 1 && inflections[fixedUnit]) {
+        const [one, many] = inflections[fixedUnit];
+        const base = parseFloat(fixedValue);
+
+        if (base === 1.0 && one) fixedUnit = one;
+        if (base !== 1.0 && many) fixedUnit = many;
+      }
+
+      if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
+        fixedValue += ` ${fixedUnit}`;
+      }
+    }
+
+    let formattedValue = typeof fixedValue !== 'string'
+      ? JSON.stringify(fixedValue)
+      : fixedValue;
+
+    if (typeof formatter === 'function') {
+      formattedValue = formatter(token[0], formattedValue);
+    }
+
+    return {
+      val: token[1],
+      type: token[0],
+      format: formattedValue,
+    };
   }
 }

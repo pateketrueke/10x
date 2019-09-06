@@ -2,8 +2,7 @@ import { getTokensFrom } from './lexer';
 import { transform } from './parser';
 
 import {
-  isInt, isArray,
-  toFraction, toNumber, toValue,
+  isArray,
 } from './utils';
 
 import {
@@ -101,67 +100,6 @@ export default class Solv {
     return output;
   }
 
-  format(token, formatter) {
-    if (token[0] === 'number') {
-      token[1] = toNumber(token[1]);
-    }
-
-    if (
-      token[2]
-      && token[0] === 'number'
-      && !(isInt(token[1]) || token[1] instanceof Date)
-    ) {
-      // remove trailing words from units
-      token[1] = String(token[1]).replace(/[\sa-z/-]+$/ig, '');
-    }
-
-    let fixedValue = toValue(token);
-    let fixedUnit = token[2];
-
-    // adjust unit-fractions
-    if (typeof fixedUnit === 'string' && fixedUnit.indexOf('fr-') === 0) {
-      fixedValue = toFraction(fixedValue);
-      fixedUnit = fixedUnit.split('fr-')[1];
-    }
-
-    // add thousand separators
-    if (token[0] === 'number' && isInt(fixedValue)) {
-      fixedValue = fixedValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
-
-    if (
-      fixedUnit
-      && !(['datetime', 'x-fraction'].includes(fixedUnit) || token[1] instanceof Date)
-    ) {
-      // apply well-known inflections
-      if (fixedUnit.length === 1 && this.inflections[fixedUnit]) {
-        const [one, many] = this.inflections[fixedUnit];
-        const base = parseFloat(fixedValue);
-
-        if (base === 1.0 && one) fixedUnit = one;
-        if (base !== 1.0 && many) fixedUnit = many;
-      }
-
-      if (fixedUnit !== 'fr' && !fixedValue.includes(fixedUnit)) {
-        fixedValue += ` ${fixedUnit}`;
-      }
-    }
-
-    let formattedValue = typeof fixedValue !== 'string'
-      ? JSON.stringify(fixedValue)
-      : fixedValue;
-
-    if (typeof formatter === 'function') {
-      formattedValue = formatter(token[0], formattedValue);
-    }
-
-    return {
-      val: token[1],
-      type: token[0],
-      format: formattedValue,
-    };
-  }
-
   value(result, indent, formatter, separator, parentheses) {
     if (!result) {
       return null;
@@ -184,21 +122,15 @@ export default class Solv {
         return {
           val: result.token,
           type: 'object',
-          format: result.token.map(x => this.format(x)).join(separator),
+          format: result.token.map(x => Expr.resolve(x, formatter, this.inflections)).join(separator),
         };
       }
 
       if (result.token[0] === 'object') {
-        const fixedObject = this.value(result.token[1], indent, formatter, separator).format;
-
-        return {
-          val: result.token[1],
-          type: result.token[0],
-          format: fixedObject,
-        };
+        return this.value(result.token[1], indent, formatter, separator);
       }
 
-      return this.format(result.token, formatter);
+      return Expr.resolve(result.token, formatter, this.inflections);
     }
 
     const tabs = Array.from({ length: indent + 3 }).join(' ');
