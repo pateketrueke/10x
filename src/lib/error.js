@@ -7,8 +7,16 @@ import {
 
 export default class Err extends Error {
   constructor(msg, ctx) {
+    let stack;
+
+    if (msg instanceof Error) {
+      stack = msg.stack;
+      msg = msg.message;
+    }
+
     super(deindent(msg));
 
+    this._stack = stack;
     this.target = undefined;
     this.offsets = undefined;
 
@@ -47,6 +55,10 @@ export default class Err extends Error {
         }
         return prev;
       }, []).join('\n')}\n`;
+
+      if (e._stack) {
+        e.stack += `---\n${e._stack}`;
+      }
     }
 
     return e;

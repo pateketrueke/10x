@@ -411,7 +411,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
       const inputArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))), true);
-      const inputValue = ctx.cur.token[1][2](...inputArgs);
+      const inputValue = ctx.cur.token[1][2](...(isArray(inputArgs) ? inputArgs : [inputArgs]));
 
       // FIXME: here's a conflict between different kind of results, from external bindings we MUST convert-in
       // but from internal definitions it's OK to just solve and such...
@@ -571,7 +571,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         }
       } catch (e) {
         if (!(e instanceof Err)) {
-          throw new Err(e.message, ctx);
+          throw new Err(e, ctx);
         }
 
         throw e;
