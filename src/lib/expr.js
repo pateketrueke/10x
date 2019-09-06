@@ -119,6 +119,12 @@ export default class Expr {
   }
 
   static derive(value) {
+    if (isArray(value)) {
+      return value.map(x => Expr.derive(x));
+    }
+
+    // FIXME: add object support?
+
     let token;
 
     if (value === null) token = ['symbol', null];

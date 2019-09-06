@@ -413,8 +413,17 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       const inputArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))), true);
       const inputValue = ctx.cur.token[1][2](...inputArgs);
 
+      // FIXME: here's a conflict between different kind of results, from external bindings we MUST convert-in
+      // but from internal definitions it's OK to just solve and such...
       if (isArray(inputValue)) {
-        ctx.cur = Expr.from(['object', cb(inputValue, ctx)]);
+        ctx.cur = Expr.from(['object', inputValue.map(x => {
+          // FIXME: make sure all returned values are compliant, add tests!!
+          if (isArray(x) && x[0] instanceof Expr) {
+            return Expr.value(cb(x, ctx));
+          }
+
+          return Expr.derive(x);
+        })]);
       } else {
         ctx.cur = Expr.derive(inputValue);
       }
@@ -495,7 +504,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           ctx.ast.push(Expr.from(['expr', '*', 'mul']));
         }
       } else if (isArray(ctx.cur[0])) {
-        fixedValue = ['object', cb(ctx.cur, ctx)];
+        fixedValue = ['object', cb(ctx.cur, ctx).map(x => x.length === 1 ? x[0] : x)];
       } else {
         fixedValue = ['object', fixArgs(cb(ctx.cur, ctx)).reduce((p, c) => p.concat(c), [])];
       }
