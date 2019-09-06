@@ -37,6 +37,10 @@ export default class Expr {
       return Expr.value(output);
     }
 
+    if (output.length === 1) {
+      return output[0];
+    }
+
     return output;
   }
 

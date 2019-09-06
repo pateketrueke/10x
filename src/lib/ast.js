@@ -246,7 +246,13 @@ export function fixValues(tokens, cb, y) {
       : subTree;
   }
 
-  // FIXME: add object support...
+  if (!isArray(tokens) && typeof tokens === 'object') {
+    Object.keys(tokens).forEach(key => {
+      tokens[key] = fixValues(tokens[key], cb, y);
+    });
+
+    return tokens;
+  }
 
   const subTree = cb(tokens);
 
