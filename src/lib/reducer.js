@@ -445,11 +445,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     return reduceFromAST(t, context, settings, subContext, Object.assign({}, ctx.env, subExpressions), memoizedInternals);
   };
 
-  // if (tokens[0] === 'def') {
-  //   console.log({tokens});
-  //   process.stdout.write(new Error().stack);
-  // }
-
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
     ctx.root = parentContext || {};
@@ -467,54 +462,13 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     if (isArray(ctx.cur)) {
       let fixedValue;
 
-      // // handle plain arrays
-      // // if (
-      // //   ctx.root.cur
-      // //   && !isArray(ctx.root.cur)
-      // //   && ctx.root.cur.token[0] === 'object'
-      // // ) {
-      // //   ctx.isDef = true;
-      // //   ctx.ast.push(cb(ctx.cur, ctx));
-      // //   continue;
-      // // }
-
-      // return unique leafs!
-      if (
-        !isArray(ctx.cur[0])
-        && ctx.cur.length === 1
-        && !['def', 'unit', 'range'].includes(ctx.cur[0].token[0])
-      ) {
-        ctx.ast.push(ctx.cur);
-        continue;
-      }
-
-      // if (ctx.cur.length > 1 && ctx.cur[0] instanceof Expr) {
-      //   ctx.ast.push(Expr.from(['object', cb(fixArgs(ctx.cur, true), ctx)]));
-      // } else {
-      //   ctx.ast.push(ctx.cur.length === 1 ? ctx.cur[0] : ctx.cur);
-      // }
-
-      // // evaluate simple lists only (no separators)
-      // if (
-      //   !isArray(ctx.cur[0])
-      //   && !ctx.cur.some(x => !isArray(x) && x.token[0] === 'expr' && hasSep(x.token[1]))
-      // ) {
-      //   fixedValue = calculateFromTokens(toList(cb(ctx.cur, ctx)));
-
-      //   // prepend multiplication if goes after units/numbers
-      //   if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
-      //     ctx.ast.push(Expr.from(['expr', '*', 'mul']));
-      //   }
-      // } else if (isArray(ctx.cur[0])) {
-      //   fixedValue = ['object', cb(ctx.cur, ctx).map(x => x.length === 1 ? x[0] : x)];
-      // } else {
-      //   fixedValue = ['object', fixArgs(cb(ctx.cur, ctx)).reduce((p, c) => p.concat(c), [])];
-      // }
-      // ctx.ast.push(Expr.from(fixedValue));
-      if (isArray(ctx.cur[0])) {
-        ctx.ast.push(ctx.cur.reduce((p, c) => p.concat(c), []));
-      } else {
+      // evaluate simple lists only (no separators)
+      if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
+        ctx.ast.push(Expr.from(['expr', '*', 'mul']), Expr.value(cb(ctx.cur, ctx)));
+      } else if (!isArray(ctx.cur[0])) {
         ctx.ast.push(Expr.from(['object', fixArgs(ctx.cur, true)]));
+      } else {
+        ctx.ast.push(ctx.cur.reduce((p, c) => p.concat(c), []));
       }
       continue;
     }
@@ -523,10 +477,10 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       // flag well-known definitions, as they are open...
       if (ctx.root.isDef || ['object', 'def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
-      // // append last-operator between consecutive unit-expressions
-      // if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
-      //   ctx.ast.push(Expr.from(ctx.lastOp));
-      // }
+      // append last-operator between consecutive unit-expressions
+      if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+        ctx.ast.push(Expr.from(ctx.lastOp));
+      }
 
       try {
         reduceFromLogic(cb, ctx, context);
