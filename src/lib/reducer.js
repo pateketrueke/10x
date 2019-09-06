@@ -258,12 +258,12 @@ export function reduceFromLogic(cb, ctx, self) {
 
         // evaluate respective branches
         if (not ? !retval.token[1] : retval.token[1]) {
-          ctx.ast.push(...ifBranch);
+          ctx.ast.push(...cb(ifBranch, ctx));
           return true;
         }
 
         if (orBranch) {
-          ctx.ast.push(...orBranch);
+          ctx.ast.push(...cb(orBranch, ctx));
           return true;
         }
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
