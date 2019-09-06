@@ -458,38 +458,28 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     // handle anonymous sub-expressions
     if (isArray(ctx.cur)) {
-      // console.log('>>>',ctx.cur);
+      if (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fx') {
+        ctx.ast.push(...ctx.cur);
+        continue;
+      }
 
-      // let fixedValue = Expr.value(ctx.cur);
+      let fixedValue = Expr.ok(fixArgs(cb(ctx.cur, ctx), true));
 
-      // if (fixedValue instanceof Expr) {
-      //   ctx.ast.push(fixedValue);
-      // } else {
-      //   console.log({fixedValue});
-      // }
+      if (fixedValue instanceof Expr) {
+        ctx.ast.push(fixedValue);
+      } else {
+        if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
+          ctx.ast.push(Expr.from(['expr', '*', 'mul']));
+        }
 
+        // skip single leafs
+        if (fixedValue.length === 1) {
+          ctx.ast.push(fixedValue[0]);
+          continue;
+        }
 
-      // // if (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fx') {
-      // //   ctx.ast.push(...ctx.cur);
-      // //   continue;
-      // // }
-
-      // // const fixedValue = fixArgs(cb(ctx.cur, ctx), true);
-
-      // // // skip single leafs
-      // // if (fixedValue.length === 1) {
-      // //   ctx.ast.push(fixedValue[0]);
-      // //   continue;
-      // // }
-
-      // // if (!fixedValue.some(x => !isArray(x) && x.token[0] === 'expr')) {
-      // //   ctx.ast.push(Expr.from(['object', fixedValue]));
-      // // } else if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
-      // //   ctx.ast.push(Expr.from(['expr', '*', 'mul']), Expr.value(fixedValue));
-      // // } else {
-      // //   ctx.ast.push(fixedValue);
-      // // }
-      ctx.ast.push(Expr.value(ctx.cur));
+        ctx.ast.push(Expr.from(['object', fixedValue]));
+      }
       continue;
     }
 
