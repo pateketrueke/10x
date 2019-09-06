@@ -155,7 +155,7 @@ export function fixTree(ast, self) {
       let fixedOffset = 0;
 
       // FIXME: split on tokens for full-highlighting!
-      cur.token[1] = cur.token[1].split(/(#{[^{}]*?})/)
+      cur.token.splice(1, 1, ...cur.token[1].split(/(#{[^{}]*?})/)
         .reduce((p, x) => {
           if (x.indexOf('#{') === 0 && x.substr(-1) === '}') {
             p.push(self.partial(x.substr(2, x.length - 3), cur, fixedOffset + 3).tree);
@@ -166,7 +166,7 @@ export function fixTree(ast, self) {
           fixedOffset += x.length;
 
           return p;
-        }, []);
+        }, []));
       continue;
     }
 

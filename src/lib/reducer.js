@@ -434,6 +434,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     tokens,
     ast: [],
     env: parentExpressions,
+    isDef: null,
     isDate: null,
     lastUnit: null,
     lastOp: ['expr', '+', 'plus'],
@@ -519,7 +520,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
         // handle interpolated strings
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
-          ctx.ast.push(Expr.from(['string', ctx.cur.token[1].reduce((prev, cur) => {
+          ctx.ast.push(Expr.from(['string', ...ctx.cur.token.slice(1).reduce((prev, cur) => {
             if (isArray(cur)) {
               prev.push(Expr.plain(cb(cur, ctx)));
             } else {

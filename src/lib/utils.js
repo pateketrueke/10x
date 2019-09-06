@@ -88,7 +88,7 @@ export function toValue(token) {
   }
 
   if (token[0] === 'string') {
-    return JSON.stringify(token[1].join(''));
+    return JSON.stringify(token.slice(1).join(''));
   }
 
   if (token[0] === 'number' && value instanceof Date) {

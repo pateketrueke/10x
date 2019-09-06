@@ -102,7 +102,7 @@ export default class Expr {
     // plain values
     let fixedValue = token[1];
 
-    if (token[0] === 'string') fixedValue = fixedValue.reduce((p, c) => p + c, '');
+    if (token[0] === 'string') fixedValue = token.slice(1).reduce((p, c) => p + c, '');
     if (token[0] === 'number') fixedValue = parseFloat(toNumber(fixedValue));
 
     return fixedValue;
@@ -126,7 +126,7 @@ export default class Expr {
     if (value === false) token = ['symbol', false];
 
     if (typeof token === 'undefined') {
-      token = [typeof value, typeof value === 'string' ? [value] : value];
+      token = [typeof value, value];
     }
 
     return Expr.from(token);
