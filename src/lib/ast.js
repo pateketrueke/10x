@@ -162,7 +162,9 @@ export function fixTree(ast, self) {
       cur.token.splice(1, 1, ...cur.token[1].split(/(#{[^{}]*?})/)
         .reduce((p, x) => {
           if (x.indexOf('#{') === 0 && x.substr(-1) === '}') {
-            p.push(self.partial(x.substr(2, x.length - 3), cur, fixedOffset + 3).tree);
+            // FIXME: too much depth!!
+            // p.push(self.partial(`((${x.substr(2, x.length - 3)}))`, cur, fixedOffset + 3).tree[0][0][0]);
+            p.push(['FIXME']);
           } else {
             p.push(x);
           }

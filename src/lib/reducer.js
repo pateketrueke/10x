@@ -268,20 +268,22 @@ export function reduceFromLogic(cb, ctx, self) {
         }
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
         const forBranch = set[':each'] || set[':loop'] || set[':repeat'];
-        const initialArgs = cb(forBranch.shift(), ctx).reduce((p, c) => p.concat(c), []);
+        const initialArgs = cb(forBranch.shift(), ctx);
 
-        const seq = initialArgs.reduce((prev, cur) => {
-          if (isArray(cur.token[0])) {
-            prev.push(...Range.resolve(cur.token.map(y => y[1]), z => cb(forBranch, ctx, z)));
+        const seq = initialArgs.reduce((prev, cur, i) => {
+          const it = Expr.input(cur);
+
+          if (isArray(it)) {
+            prev.push(...Range.resolve(it, y => cb(forBranch, ctx, y)));
           } else {
-            prev.push(...Range.resolve(initialArgs.length > 1 ? [Expr.input(cur)] : Expr.input(cur), y => cb(forBranch, ctx, y)));
+            prev.push(Range.resolve(typeof it === 'number' && i > 0 ? [it] : it, y => cb(forBranch, ctx, y)));
           }
 
           return prev;
         }, []);
 
         ctx.isDef = true;
-        ctx.cur = Expr.from(['object', seq.reduce((p, c) => p.concat(c), [])]);
+        ctx.cur = Expr.from(['object', seq]);
         return true;
       } else {
         console.log('SYM_LOGIC', set);
@@ -410,13 +412,13 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
 
     // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
-      const inputArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))));
-      const inputValue = fixValues(ctx.cur.token[1][2](...inputArgs), Expr.value);
+      const fixedArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))));
+      const fixedValue = fixValues(ctx.cur.token[1][2](...fixedArgs), Expr.value);
 
-      if (isArray(inputValue) && !(inputValue[0] instanceof Expr)) {
-        ctx.cur = Expr.from(['object', Expr.derive(inputValue)]);
+      if (isArray(fixedValue) && !(fixedValue[0] instanceof Expr)) {
+        ctx.cur = Expr.from(['object', Expr.derive(fixedValue)]);
       } else {
-        ctx.cur = Expr.from(['object', inputValue]);
+        ctx.cur = Expr.from(['object', fixedValue]);
       }
       return;
     }
@@ -448,6 +450,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
   // iterate all tokens to produce a new AST
   for (let i = 0; i < tokens.length; i += 1) {
     ctx.root = parentContext || {};
+    ctx.isDef = ctx.root.isDef || ctx.isDef;
 
     // shared context
     ctx.i = i;
@@ -460,25 +463,31 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     // handle anonymous sub-expressions
     if (isArray(ctx.cur)) {
-      let fixedValue;
+      let fixedValue = fixArgs(cb(ctx.cur, ctx), true);
 
-      // evaluate simple lists only (no separators)
-      if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
-        ctx.ast.push(Expr.from(['expr', '*', 'mul']), Expr.value(cb(ctx.cur, ctx)));
-      } else if (!isArray(ctx.cur[0])) {
-        ctx.ast.push(Expr.from(['object', fixArgs(ctx.cur, true)]));
+      // skip single leafs
+      if (fixedValue.length === 1) {
+        ctx.ast.push(fixedValue[0]);
+        continue;
+      }
+
+      if (!fixedValue.some(x => !isArray(x) && x.token[0] === 'expr')) {
+        ctx.ast.push(Expr.from(['object', fixedValue]));
+      } else if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
+        ctx.ast.push(Expr.from(['expr', '*', 'mul']), Expr.value(fixedValue));
       } else {
-        ctx.ast.push(ctx.cur.reduce((p, c) => p.concat(c), []));
+        ctx.ast.push(fixedValue);
       }
       continue;
     }
 
     if (!isArray(ctx.left)) {
       // flag well-known definitions, as they are open...
-      if (ctx.root.isDef || ['object', 'def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
+      if (['object', 'def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
       // append last-operator between consecutive unit-expressions
       if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+        // console.log(ctx);
         ctx.ast.push(Expr.from(ctx.lastOp));
       }
 
