@@ -8,7 +8,7 @@ module.exports = ({
 
   const buffer = [];
 
-  let didFlush = false;
+  let mayFlush = false;
   let indent = '';
   let values = [];
 
@@ -56,7 +56,6 @@ module.exports = ({
       }
     });
 
-    didFlush = true;
     indent = '';
     values = [];
   }
@@ -80,7 +79,10 @@ module.exports = ({
       }
 
       // but output results after any newline
-      if (values.length && node.token[0] === 'text' && node.token[1].includes('\n')) flush();
+      if (node.token[0] === 'text' && node.token[1].includes('\n')) {
+        if (values.length) flush();
+        mayFlush = true;
+      }
     }
   }
 
@@ -88,7 +90,7 @@ module.exports = ({
   while (calc.tree.length) peek();
 
   if (values.length) {
-    if (!didFlush) push(null, '\n');
+    if (!mayFlush) push(null, '\n');
     flush();
   }
 

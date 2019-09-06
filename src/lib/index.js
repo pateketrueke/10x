@@ -2,6 +2,7 @@ import { getTokensFrom } from './lexer';
 import { transform } from './parser';
 
 import {
+  repeat,
   isArray,
 } from './utils';
 
@@ -113,7 +114,7 @@ export default class Solv {
         type: 'object',
         format: parentheses !== false
           ? `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`
-          : fixedResult.join(separator),
+          : fixedResult.join(`${separator.trim()}\n${repeat(' ', indent + 2)}`),
       };
     }
 
@@ -133,7 +134,7 @@ export default class Solv {
       return Expr.resolve(result.token, formatter, this.inflections);
     }
 
-    const tabs = Array.from({ length: indent + 3 }).join(' ');
+    const tabs = repeat(' ', indent + 3);
     const out = [];
 
     Object.keys(result).forEach((key, i) => {

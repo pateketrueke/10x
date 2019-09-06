@@ -7,7 +7,7 @@ import {
 } from './shared';
 
 import {
-  isArray,
+  isInt, isArray,
   toList, toValue, toNumber, toProperty, toArguments,
 } from './utils';
 
