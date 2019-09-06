@@ -254,16 +254,16 @@ export function reduceFromLogic(cb, ctx, self) {
           not = !not;
         }
 
-        const retval = Expr.value(cb(test, ctx));
+        const retval = Expr.value(cb(test[0].slice(), ctx));
 
         // evaluate respective branches
         if (not ? !retval.token[1] : retval.token[1]) {
-          ctx.ast.push(...cb(ifBranch, ctx));
+          ctx.ast.push(...ifBranch);
           return true;
         }
 
         if (orBranch) {
-          ctx.ast.push(...cb(orBranch, ctx));
+          ctx.ast.push(...orBranch);
           return true;
         }
       } else if (set[':each'] || set[':loop'] || set[':repeat']) {
@@ -463,6 +463,11 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     // handle anonymous sub-expressions
     if (isArray(ctx.cur)) {
+      if (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fx') {
+        ctx.ast.push(...ctx.cur);
+        continue;
+      }
+
       let fixedValue = fixArgs(cb(ctx.cur, ctx), true);
 
       // skip single leafs
@@ -550,7 +555,18 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     // skip definitions and symbols!
     if (!isArray(ctx.cur)) {
-      ctx.ast.push(ctx.cur);
+      if (
+        // keep non-string symbols...
+        (ctx.cur.token[0] === 'symbol' && typeof ctx.cur.token[1] !== 'string')
+
+        // keep most values and such...
+        || (['expr', 'number', 'string', 'object'].includes(ctx.cur.token[0]))
+
+        // keep definition calls only...
+        || (ctx.cur.token[0] === 'def' && !ctx.cur._body)
+      ) {
+        ctx.ast.push(ctx.cur);
+      }
     } else {
       ctx.ast.push(...ctx.cur);
     }
