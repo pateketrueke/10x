@@ -5,6 +5,11 @@ Local functions can be achieved too:
 sum(a, b)=a + b;
 sum(1, 2);
 
+Also, lambdas are supported!
+
+mul=x -> y -> x * y;
+mul(2, 3);
+
 ## Matching
 
 Use :if, :else, :not, :unless and :otherwise to do comparisons.
