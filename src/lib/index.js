@@ -164,9 +164,7 @@ export default class Solv {
       return [];
     }
 
-    return output
-      .filter(x => x.length)
-      .reduce((p, c) => p.concat(Expr.ok(c)), []);
+    return output;
   }
 
   raw(tokens) {

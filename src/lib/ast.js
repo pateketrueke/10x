@@ -30,27 +30,10 @@ export function fixStrings(tokens, split) {
 }
 
 export function fixArgs(values, flatten) {
+  let isSplit = false;
   let offset = 0;
 
   const stack = [];
-
-  // FIXME: also, a pattern...
-  if (flatten === true) {
-    values = fixArgs(values.map(x => {
-      while (x.length === 1) x = x[0];
-      return x;
-    }));
-
-    values = values.reduce((p, c) => {
-      while (c.length === 1) c = c[0];
-      p.push(c);
-      return p;
-    }, stack);
-
-    return values.length === 1 && isArray(values[0])
-      ? values[0]
-      : values;
-  }
 
   // break values into single arguments
   for (let i = 0; i < values.length; i += 1) {
@@ -66,6 +49,7 @@ export function fixArgs(values, flatten) {
           ? cur === null
           : (cur.token[0] === 'expr' && ';,'.includes(cur.token[1]))
       ) {
+        isSplit = true;
         last.pop();
         offset++;
       }
@@ -90,6 +74,10 @@ export function fixArgs(values, flatten) {
 
       return prev;
     }, []);
+  }
+
+  if (isSplit) {
+    return stack.reduce((prev, cur) => prev.concat(cur), []);
   }
 
   return stack;

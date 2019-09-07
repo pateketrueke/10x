@@ -459,26 +459,20 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     // handle anonymous sub-expressions
     if (isArray(ctx.cur)) {
       if (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fx') {
-        ctx.ast.push(...ctx.cur);
+        ctx.ast.push(...fixArgs(ctx.cur));
         continue;
       }
 
-      const fixedValue = Expr.ok(fixArgs(cb(ctx.cur, ctx), true));
+      const fixedValue = fixArgs(cb(ctx.cur, ctx));
 
-      if (fixedValue instanceof Expr) {
-        ctx.ast.push(fixedValue);
+      if (
+        !ctx.isDef
+        && !isArray(ctx.left)
+        && ['unit', 'number'].includes(ctx.left.token[0])
+      ) {
+        ctx.ast.push(Expr.from(['expr', '*', 'mul']), ...fixedValue);
       } else {
-        if (!ctx.isDef && !isArray(ctx.left) && ['unit', 'number'].includes(ctx.left.token[0])) {
-          ctx.ast.push(Expr.from(['expr', '*', 'mul']));
-        }
-
-        // skip single leafs
-        if (fixedValue.length === 1) {
-          ctx.ast.push(fixedValue[0]);
-          continue;
-        }
-
-        ctx.ast.push(Expr.from(['object', fixedValue]));
+        ctx.ast.push(Expr.from(['object', fixedValue.reduce((prev, cur) => prev.concat(cur), [])]));
       }
       continue;
     }
