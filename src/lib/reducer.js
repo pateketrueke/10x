@@ -394,7 +394,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       throw new Error(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`);
     }
 
-    const args = cb(call.args, ctx);
+    const args = fixValues(cb(call.args, ctx), x => cb(x, ctx));
     const key = def._memo && JSON.stringify([name, args]);
 
     // this helps to compute faster!
@@ -434,8 +434,8 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       const fixedArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))));
       const fixedValue = ctx.cur.token[1][2](...fixedArgs);
 
-      if (isArray(fixedValue) && !(fixedValue[0] instanceof Expr)) {
-        ctx.ast.push(Expr.from(['object', Expr.derive(fixedValue)]));
+      if (isArray(fixedValue)) {
+        ctx.ast.push(Expr.from(['object', fixedValue.reduce((p, c) => p.concat(Expr.ok(c)), [])]));
       } else {
         ctx.ast.push(Expr.derive(fixedValue));
       }

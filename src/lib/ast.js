@@ -75,7 +75,11 @@ export function fixArgs(values, flatten) {
   }
 
   if (flatten === true) {
-    return stack.reduce((prev, cur) => prev.concat(cur), []);
+    return stack.reduce((prev, cur) => {
+      while (cur.length === 1) cur = cur[0];
+      prev.push(cur);
+      return prev;
+    }, []);
   }
 
   return stack;

@@ -17,3 +17,9 @@ Foreign bindings are also supported, e.g.
 :import (concat, :to-upper-case caps) :from "String";
 
 concat("foo", caps("bar"));
+
+Lambdas are supported arguments too:
+
+:import (map) :from "Array";
+
+map((1, 2, 3), mul(2));

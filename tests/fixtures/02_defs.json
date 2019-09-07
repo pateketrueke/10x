@@ -3,6 +3,11 @@
   "results": [
     3,
     6,
-    "fooBAR"
+    "fooBAR",
+    [
+      2,
+      4,
+      6
+    ]
   ]
 }
