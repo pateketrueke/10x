@@ -16,7 +16,7 @@ You can group expressions within parentheses, e.g. 1 + (2 + 3) / 4 5
 
 Same rules applies for numbers inside parentheses and lists, e.g. (1 2 3)
 
-Lists can be mixed, as they aways evaluate expressions inside:
+Lists can be mixed, as they always evaluate expressions inside:
 
 a) (1, 2, 3), 3/2
 b) 1 2 / 3, 4 * 5 / 1.5 as fr

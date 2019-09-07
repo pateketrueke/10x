@@ -12,7 +12,7 @@ Converting between units is also possible: 3 inches as cm
 
 Define and use your own units: x=1.2; 3x
 
-Scope is also possible within parentheses, e.g.
+Scope is also possible within parentheses:
 
 (x=1.5; 3x)
 2x

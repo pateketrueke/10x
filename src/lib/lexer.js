@@ -222,7 +222,7 @@ export function getTokensFrom(text, units, parentNode, fixedOffset) {
       || (depth && oldScore && (hasSep(value) || hasChar(value)))
 
       // definitions
-      || ('(='.includes(value) && oldScore)
+      || ('(='.includes(value) && oldScore > 1)
 
       // side-effects
       || (hasOp(nextChar) && value === '(')

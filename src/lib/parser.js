@@ -248,6 +248,7 @@ export function transform(ctx, self) {
 
     // disable depth by blocks...
     if (open && token.cur === ';') open = false;
+    if (!open && token.cur === '(') open = true;
 
     // just append tokens!
     subTree.push(token);
