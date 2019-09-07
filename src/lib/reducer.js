@@ -86,12 +86,12 @@ export function reduceFromUnits(cb, ctx, self, convert) {
     }
 
     const base = parseFloat(ctx.cur.token[1]);
-    const subTree = fixArgs(cb(ctx.env[ctx.cur.token[2]].body, ctx), true);
+    const subTree = cb(ctx.env[ctx.cur.token[2]].body, ctx);
 
     ctx.cur = subTree.map(x => Expr.value(cb([
       Expr.from(['number', base]),
       Expr.from(['expr', '*', 'mul']),
-    ].concat([x]), ctx)));
+    ].concat(x), ctx)));
     return;
   }
 
@@ -113,21 +113,25 @@ export function reduceFromUnits(cb, ctx, self, convert) {
       ctx.left.token[1] = convert(parseFloat(toNumber(ctx.left.token[1])), ctx.left.token[2], 's');
       ctx.left.token[2] = 's';
     }
+
+    ctx.tokens.splice(ctx.i, 2);
+    return false;
   }
 
-  if (ctx.cur.token[0] === 'number') {
+  if (ctx.isDate && ctx.cur.token[0] === 'number') {
     // convert time-expressions into seconds
-    if (ctx.isDate && hasTimeUnit(ctx.cur.token[2])) {
+    if (hasTimeUnit(ctx.cur.token[2])) {
       ctx.cur.token[1] = convert(parseFloat(toNumber(ctx.cur.token[1])), ctx.cur.token[2], 's');
       ctx.cur.token[2] = 's';
     }
 
     // convert between units
-    // if (ctx.lastUnit && ctx.cur.token[2] && ctx.lastUnit !== ctx.cur.token[2]) {
-    //   console.log(ctx.left, ctx);
-    //   // ctx.cur.token[1] = convert(parseFloat(toNumber(ctx.cur.token[1])), ctx.cur.token[2], ctx.lastUnit);
-    //   // ctx.cur.token[2] = ctx.lastUnit;
-    // }
+    if (ctx.lastUnit && ctx.cur.token[2] && ctx.lastUnit !== ctx.cur.token[2]) {
+      // FIXME: date/time stuff...
+      console.log(ctx.left, ctx);
+      // ctx.cur.token[1] = convert(parseFloat(toNumber(ctx.cur.token[1])), ctx.cur.token[2], ctx.lastUnit);
+      // ctx.cur.token[2] = ctx.lastUnit;
+    }
 
     // save initial unit
     if (ctx.cur.token[2] && !ctx.lastUnit) ctx.lastUnit = ctx.cur.token[2];
@@ -359,8 +363,9 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
         throw new Error(`Cannot override built-in unit \`${name}\``);
       }
 
-      ctx.env[name] = { ...call, _memo: ctx.cur._memo };
-      return;
+      ctx.env[name] = { ...call };
+      Object.defineProperty(ctx.env[name], '_memo', { value: ctx.cur._memo });
+      return false;
     }
 
     // side-effects will operate on previous values
@@ -488,10 +493,12 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       }
 
       try {
-        reduceFromLogic(cb, ctx, context);
-        reduceFromFX(cb, ctx);
-        reduceFromDefs(cb, ctx, context, memoizedInternals);
-        reduceFromUnits(cb, ctx, context, settings.convertFrom);
+        if ([
+          reduceFromLogic(cb, ctx, context),
+          reduceFromFX(cb, ctx),
+          reduceFromDefs(cb, ctx, context, memoizedInternals),
+          reduceFromUnits(cb, ctx, context, settings.convertFrom),
+        ].some(x => x === false)) continue;
 
         // handle interpolated strings
         // if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {

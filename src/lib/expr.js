@@ -34,8 +34,7 @@ export default class Expr {
   static ok(output) {
     if (isArray(output)) {
       output = output
-        .reduce((prev, cur) => prev.concat(Expr.ok(cur)), [])
-        .filter(x => isArray(x) || !['symbol', 'def'].includes(x.token[0]));
+        .reduce((prev, cur) => prev.concat(Expr.ok(cur)), []);
 
       // FIXME: use helpers!!!
       if (output.some(x => !isArray(x) && x.token[0] === 'expr' && hasOp(x.token[1]))) {

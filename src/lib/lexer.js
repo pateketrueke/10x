@@ -109,6 +109,7 @@ export function getTokensFrom(text, units, parentNode, fixedOffset) {
       || hasOp(last + cur)
 
       // keep numbers and words
+      || (last === '-' && cur === '.' && hasNum(next))
       || (last === ':' && (hasNum(cur) || hasChar(cur)))
       || (hasNum(last) && ':.'.includes(cur) && hasNum(next))
       || ((hasNum(last) || '-.'.includes(last)) && hasNum(cur))

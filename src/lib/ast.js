@@ -192,7 +192,7 @@ export function fixTree(ast, self) {
       // flag definition for memoization
       if (prev.token[1].substr(-1) === '!') {
         prev.token[1] = prev.token[1].replace('!', '');
-        prev._memo = true;
+        Object.defineProperty(prev, '_memo', { value: true });
       }
 
       // update token definition
