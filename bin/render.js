@@ -52,7 +52,13 @@ module.exports = ({
       if (x instanceof Error) {
         push(null, `${chalk.red(`//! ${x[showDebugInfo ? 'stack' : 'message'].trim()}`)}\n`);
       } else {
-        push(null, `${indent}${chalk.gray('//=>')} ${chalk.dim(calc.value(x, indent.length + 4, out, chalk.gray(', '), false).format)}\n`);
+        const results = calc.value(x, indent.length + 4, out, chalk.gray(', '), false).format;
+
+        if (x[0].token[0] === 'error') {
+          push(null, `${chalk.red(`//! ${results}`)}\n`);
+        } else {
+          push(null, `${indent}${chalk.gray('//=>')} ${chalk.dim(results)}\n`);
+        }
       }
     });
 

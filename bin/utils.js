@@ -31,6 +31,8 @@ function out(type, text) {
       return chalk.italic.white(text);
     case 'b':
       return chalk.bold(text);
+    case 'error':
+      return chalk.red(text);
     case 'expr':
     case 'fx':
     default:

@@ -231,7 +231,7 @@ export function reduceFromLogic(cb, ctx, self) {
     const symbol = subTree.shift();
 
     // handle multiple branches
-    fixArgs(subTree, false).some(x => {
+    return !fixArgs(subTree, false).some(x => {
       const set = fixTokens([symbol].concat(x));
 
       // handle foreign-imports
@@ -284,6 +284,20 @@ export function reduceFromLogic(cb, ctx, self) {
 
         ctx.isDef = true;
         ctx.cur = Expr.from(['object', seq]);
+        return true;
+      } else if (set[':try'] || set[':catch']) {
+        const tryBranch = set[':try'] || set[':catch'];
+        const catchBranch = set[':try'] && set[':catch'];
+
+        try {
+          ctx.ast.push(...cb(tryBranch, ctx));
+        } catch (e) {
+          if (catchBranch) {
+            ctx.ast.push(...cb(catchBranch, ctx));
+          } else if (set[':try']) {
+            ctx.ast.push(Expr.from(['error', e.message]));
+          }
+        }
         return true;
       } else {
         console.log('SYM_LOGIC', set);
@@ -542,7 +556,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         //   continue;
         // }
       } catch (e) {
-        console.log(e);
+        // console.log(e);
 
         if (!(e instanceof Err)) {
           throw new Err(e, ctx);
