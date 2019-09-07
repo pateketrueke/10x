@@ -542,45 +542,18 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         ].some(x => x === false)) continue;
 
         // handle interpolated strings
-        // if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
-        //   ctx.ast.push(Expr.from(['string', ...ctx.cur.token.slice(1).reduce((prev, cur) => {
-        //     if (isArray(cur)) {
-        //       prev.push(Expr.plain(cb(cur, ctx)));
-        //     } else {
-        //       prev.push(cur);
-        //     }
+        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
+          ctx.ast.push(Expr.from(['string', ...ctx.cur.token.slice(1).reduce((prev, cur) => {
+            if (isArray(cur)) {
+              prev.push(cur);
+              // prev.push(Expr.plain(cb(cur, ctx)));
+            } else {
+              prev.push(cur);
+            }
 
-        //     return prev;
-        //   }, [])]));
-        //   continue;
-        // }
-
-        // evaluate resulting object
-        // if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object') {
-        //   if (!isArray(ctx.cur.token[1])) {
-        //     console.log('OBJ');
-        //     ctx.cur.token[1] = fixValues(ctx.cur.token[1], x => Expr.ok(cb(x, ctx)), true);
-        //   }
-
-        //   if (
-        //     !isArray(ctx.cur)
-        //     && ctx.cur.token[0] === 'object'
-        //     && ctx.left.token[0] === 'range' && ctx.left.token[1] === '..'
-        //   ) {
-        //     if (!isArray(ctx.cur.token[1])) {
-        //       throw new Error(`Expecting sequence to unwind, given ${ctx.cur.token[1]}`);
-        //     }
-
-        //     ctx.ast.pop();
-        //     ctx.ast.push(...ctx.cur.token[1]);
-        //     continue;
-        //   }
-        // }
-
-        // unwind ranges that were left untouched...
-        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'range' && ctx.cur.token[2]) {
-          // ctx.ast.push(Range.resolve(ctx.cur.token[2], x => x._.body));
-          // continue;
+            return prev;
+          }, [])]));
+          continue;
         }
       } catch (e) {
         // console.log(e);
