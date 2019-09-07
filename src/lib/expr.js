@@ -127,7 +127,7 @@ export default class Expr {
   }
 
   static plain(tokens) {
-    return Expr.input(Expr.value(tokens));
+    return Expr.input(Expr.ok(tokens));
   }
 
   static value(tokens) {

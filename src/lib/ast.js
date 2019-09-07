@@ -146,20 +146,19 @@ export function fixTree(ast, self) {
 
     // sub-tokenize strings
     if (!isArray(cur) && cur.token[0] === 'string') {
-      // let fixedOffset = 0;
+      let fixedOffset = 0;
 
       // FIXME: split on tokens for full-highlighting!
       cur.token.splice(1, 1, ...cur.token[1].split(/(#{[^{}]*?})/)
         .reduce((p, x) => {
           if (x.indexOf('#{') === 0 && x.substr(-1) === '}') {
             // FIXME: too much depth!!
-            // p.push(self.partial(`((${x.substr(2, x.length - 3)}))`, cur, fixedOffset + 3).tree[0][0][0]);
-            p.push(['FIXME']);
+            p.push(self.partial(`((${x.substr(2, x.length - 3)}))`, cur, fixedOffset + 3).tree[0][0][0]);
           } else {
             p.push(x);
           }
 
-          // fixedOffset += x.length;
+          fixedOffset += x.length;
 
           return p;
         }, []));
