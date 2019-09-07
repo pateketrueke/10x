@@ -1,0 +1,19 @@
+{
+  "error": null,
+  "results": [
+    3,
+    "lower",
+    "Completely true",
+    "Falsey",
+    "UNKNOWN",
+    "NOPE",
+    "OK",
+    -1,
+    "Missing definition to call `undef`",
+    {
+      "foo": [
+        "bar"
+      ]
+    }
+  ]
+}
