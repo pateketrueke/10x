@@ -320,46 +320,47 @@ export function reduceFromFX(cb, ctx) {
   // handle ranges...
   if (
     !ctx.cur.token[2]
-    && !isArray(ctx.right)
     && ctx.cur.token[0] === 'range'
-    && ctx.right.token[0] !== 'symbol'
   ) {
-    let target = Expr.from(ctx.cur);
-    let base = ctx.left;
+    if (ctx.left.token[0] || ctx.right.token[0]) {
+      console.log(ctx.left, ctx.right, '?');
+      // let target = Expr.from(ctx.cur);
+      // let base = ctx.left;
 
-    if (!base.token[0]) {
-      base = Expr.from(['number', 0]);
-    } else {
-      // drop token from left...
-      ctx.tokens.splice(ctx.i - 1, 1);
+      // if (!base.token[0]) {
+      //   base = Expr.from(['number', 0]);
+      // } else {
+      //   // drop token from left...
+      //   ctx.tokens.splice(ctx.i - 1, 1);
+      // }
+
+      // // consume next token on untyped-ranges
+      // if (ctx.cur.token[1] === '..') {
+      //   target = Expr.from(ctx.right);
+      //   ctx.tokens.splice(ctx.i, 1);
+      // }
+
+      // if (target.token[0] === 'range') {
+      //   target.token[0] = 'number';
+      //   target.token[1] = target.token[1].substr(2);
+      // }
+
+      // // mock AST
+      // ctx.isDef = true;
+
+      // const [fixedBase, fixedTarget] = cb([base, target], ctx);
+      // const fixedToken = Expr.from(ctx.cur);
+
+      // // recompose tokens on-the-fly
+      // fixedToken.token[1] = base.token[1] + ctx.cur.token[1] + (ctx.cur.token[1] === '..' ? target.token[1] : '');
+      // fixedToken.token[2] = new Range(Expr.input(fixedBase), Expr.input(fixedTarget));
+
+      // fixedToken.begin = base.begin || fixedToken.begin;
+      // fixedToken.end = target.end;
+
+      // ctx.ast.pop();
+      // ctx.ast.push(fixedToken);
     }
-
-    // consume next token on untyped-ranges
-    if (ctx.cur.token[1] === '..') {
-      target = Expr.from(ctx.right);
-      ctx.tokens.splice(ctx.i, 1);
-    }
-
-    if (target.token[0] === 'range') {
-      target.token[0] = 'number';
-      target.token[1] = target.token[1].substr(2);
-    }
-
-    // mock AST
-    ctx.isDef = true;
-
-    const [fixedBase, fixedTarget] = cb([base, target], ctx);
-    const fixedToken = Expr.from(ctx.cur);
-
-    // recompose tokens on-the-fly
-    fixedToken.token[1] = base.token[1] + ctx.cur.token[1] + (ctx.cur.token[1] === '..' ? target.token[1] : '');
-    fixedToken.token[2] = new Range(Expr.input(fixedBase), Expr.input(fixedTarget));
-
-    fixedToken.begin = base.begin || fixedToken.begin;
-    fixedToken.end = target.end;
-
-    ctx.ast.pop();
-    ctx.ast.push(fixedToken);
     return false;
   }
 }
@@ -482,14 +483,16 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     // handle anonymous sub-expressions
     if (isArray(ctx.cur)) {
+      // unwind and keep side-effects as is
       if (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fx') {
         ctx.ast.push(...fixArgs(ctx.cur));
         continue;
       }
 
+      // evaluate the current node
       let fixedValue = fixArgs(cb(ctx.cur, ctx));
 
-      // FIXME: fibonacci is not working!
+      // handle multiplication, e.g. `2(3)`
       if (
         !ctx.isDef
         && !isArray(ctx.left)
@@ -497,26 +500,39 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       ) {
         ctx.ast.push(Expr.from(['expr', '*', 'mul']), ...fixedValue);
       } else {
+        // flatten intermediate AST to simplify validations
         fixedValue = fixedValue.reduce((prev, cur) => prev.concat(cur), []);
 
+        // we're not inside a def-call...
         if (!ctx.isDef) {
           if (
+            // handle multiple results
             fixedValue.length > 1
+
+            // or nested-values (unknown)
             || !(fixedValue[0] instanceof Expr)
+
+            // or anything that is not a range!
             || fixedValue[0].token[0] !== 'range'
           ) {
+            // keep list-like values as objects
             ctx.ast.push(Expr.from(['object', fixedValue]));
           } else {
+            // otherwise, just unwind and continue
             ctx.ast.push(...fixedValue);
           }
         } else if (fixedValue[0].token === 'range') {
+          // ranges
           ctx.ast.push(...fixedValue);
         } else {
+          // evaluate reulting maths...
           fixedValue = Expr.ok(fixedValue);
 
+          // just one result? unwind it...
           if (fixedValue.length === 1) {
             ctx.ast.push(...fixedValue);
           } else {
+            // otherwise, just keep as object...
             ctx.ast.push(Expr.from(['object', fixedValue]));
           }
         }
@@ -555,8 +571,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
-        // console.log(e);
-
         if (!(e instanceof Err)) {
           throw new Err(e, ctx);
         }
@@ -571,6 +585,26 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     } else {
       ctx.ast.push(...ctx.cur);
     }
+  }
+
+  // unwind if AST starts with `..[object]`
+  console.log(ctx.ast)
+  if (
+    ctx.ast[0] && !isArray(ctx.ast[0])
+    && ctx.ast[0].token[0] === 'range' && ctx.ast[0].token[1] === '..'
+  ) {
+    ctx.ast.shift();
+
+    if (
+      !ctx.ast[0]
+      || !isArray(ctx.ast[0].token[1])
+      || ctx.ast[0].token[0] !== 'object'
+    ) {
+      throw new Error(`Expecting an object list to unwind, given \`${Expr.plain(ctx.ast[0].token[1])}\``);
+    }
+
+    // make sure we're unwinding from lists!
+    ctx.ast.splice(0, 1, ctx.ast[0].token[1]);
   }
 
   return ctx.ast;
