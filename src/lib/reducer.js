@@ -300,8 +300,7 @@ export function reduceFromLogic(cb, ctx, self) {
         }
         return true;
       } else if (Object.keys(set).length) {
-        // FIXME: try user-logic before fallbacking to tuples?
-        ctx.ast.push(Expr.from(['object', fixValues(set)]))
+        console.log('USER_LOGIC', fixValues(set));
         return true;
       }
       return false;

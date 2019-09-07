@@ -9,11 +9,6 @@
     "NOPE",
     "OK",
     -1,
-    "Missing definition to call `undef`",
-    {
-      "foo": [
-        "bar"
-      ]
-    }
+    "Missing definition to call `undef`"
   ]
 }

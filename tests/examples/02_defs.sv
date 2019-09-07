@@ -33,6 +33,8 @@ testMatch(:true);
 
 ## Loops
 
+:loop (3) _;
+
 ## Errors
 
 :try sum() :catch -1;
@@ -40,5 +42,3 @@ testMatch(:true);
 :try undef();
 
 :catch undef();
-
-:foo (:bar);
