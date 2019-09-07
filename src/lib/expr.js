@@ -126,20 +126,20 @@ export default class Expr {
     return fixedValue;
   }
 
-  static merge(tokens) {
-    let fixedAST = Expr.input(tokens);
-
-    while (fixedAST.length === 1) fixedAST = fixedAST[0];
-
-    return Expr.derive(fixedAST.reduce((p, c) => p.concat(c), []));
-  }
-
   static plain(tokens) {
     return Expr.input(Expr.ok(tokens));
   }
 
   static value(tokens) {
     return Expr.from(calculateFromTokens(toList(tokens)));
+  }
+
+  static merge(tokens) {
+    let fixedAST = Expr.input(tokens);
+
+    while (fixedAST.length === 1) fixedAST = fixedAST[0];
+
+    return Expr.derive(fixedAST.reduce((p, c) => p.concat(c), []));
   }
 
   static derive(value) {
