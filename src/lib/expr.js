@@ -32,12 +32,14 @@ export default class Expr {
   }
 
   static ok(output) {
+    const fixedOutput = output.filter(x => isArray(x) || !['symbol', 'def'].includes(x.token[0]));
+
     // FIXME: use helpers!!!
-    if (output.some(x => !isArray(x) && x.token[0] === 'expr' && hasOp(x.token[1]))) {
-      return [Expr.value(output)];
+    if (fixedOutput.some(x => !isArray(x) && x.token[0] === 'expr' && hasOp(x.token[1]))) {
+      return [Expr.value(fixedOutput)];
     }
 
-    return output;
+    return fixedOutput;
   }
 
   static from(token, fromCallback, arg1, arg2, arg3) {

@@ -370,7 +370,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       throw new Error(`Missing ${def ? 'arguments' : 'definition'} to call \`${name}\``);
     }
 
-    const args = Expr.ok(fixValues(cb(call.args, ctx), x => cb(x, ctx)));
+    const args = fixValues(cb(call.args, ctx), x => cb(x, ctx));
     const key = def._memo && JSON.stringify([name, args]);
 
     // this helps to compute faster!
@@ -463,7 +463,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         continue;
       }
 
-      let fixedValue = Expr.ok(fixArgs(cb(ctx.cur, ctx), true));
+      const fixedValue = Expr.ok(fixArgs(cb(ctx.cur, ctx), true));
 
       if (fixedValue instanceof Expr) {
         ctx.ast.push(fixedValue);
@@ -489,7 +489,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
       // append last-operator between consecutive unit-expressions
       if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
-        // console.log(ctx);
         ctx.ast.push(Expr.from(ctx.lastOp));
       }
 
@@ -552,18 +551,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
     // skip definitions and symbols!
     if (!isArray(ctx.cur)) {
-      if (
-        // keep non-string symbols...
-        (ctx.cur.token[0] === 'symbol' && typeof ctx.cur.token[1] !== 'string')
-
-        // keep most values and such...
-        || (['expr', 'number', 'string', 'object'].includes(ctx.cur.token[0]))
-
-        // keep definition calls only...
-        || (ctx.cur.token[0] === 'def' && !ctx.cur._body)
-      ) {
-        ctx.ast.push(ctx.cur);
-      }
+      ctx.ast.push(ctx.cur);
     } else {
       ctx.ast.push(...ctx.cur);
     }
