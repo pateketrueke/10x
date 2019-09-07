@@ -144,7 +144,7 @@ export function fixTree(ast, self) {
 
     // sub-tokenize strings
     if (!isArray(cur) && cur.token[0] === 'string') {
-      let fixedOffset = 0;
+      // let fixedOffset = 0;
 
       // FIXME: split on tokens for full-highlighting!
       cur.token.splice(1, 1, ...cur.token[1].split(/(#{[^{}]*?})/)
@@ -157,7 +157,7 @@ export function fixTree(ast, self) {
             p.push(x);
           }
 
-          fixedOffset += x.length;
+          // fixedOffset += x.length;
 
           return p;
         }, []));

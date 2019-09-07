@@ -1,15 +1,15 @@
 import {
   hasMonths, hasOwnKeyword,
-  hasTimeUnit, hasExpr, hasChar, hasSep,
+  hasTimeUnit, hasExpr, hasChar,
 } from './shared';
 
 import {
-  evaluateComparison, calculateFromTokens,
+  evaluateComparison,
 } from './solver';
 
 import {
   isArray,
-  toList, toSlice, toNumber, toFraction, toArguments,
+  toSlice, toNumber, toFraction, toArguments,
 } from './utils';
 
 import {
@@ -537,7 +537,8 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         //   continue;
         // }
       } catch (e) {
-        console.log(e)
+        console.log(e);
+
         if (!(e instanceof Err)) {
           throw new Err(e, ctx);
         }
