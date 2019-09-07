@@ -254,7 +254,8 @@ export function reduceFromLogic(cb, ctx, self) {
           not = !not;
         }
 
-        const retval = Expr.value(cb(test[0].slice(), ctx));
+        const args = test.reduce((p, c) => p.concat(c), []);
+        const retval = Expr.value(cb(args, ctx));
 
         // evaluate respective branches
         if (not ? !retval.token[1] : retval.token[1]) {
@@ -271,13 +272,7 @@ export function reduceFromLogic(cb, ctx, self) {
         const initialArgs = cb(forBranch.shift(), ctx);
 
         const seq = initialArgs.reduce((prev, cur) => {
-          const it = Expr.input(cur);
-
-          if (isArray(it)) {
-            prev.push(...Range.resolve(it, y => Expr.ok(cb(forBranch, ctx, y))));
-          } else {
-            prev.push(...Range.resolve(initialArgs.length === 1 ? it : [it], y => Expr.ok(cb(forBranch, ctx, y))));
-          }
+          prev.push(...Range.resolve(Expr.input(cur), y => Expr.ok(cb(forBranch, ctx, y))));
 
           return prev;
         }, []);
@@ -310,7 +305,7 @@ export function reduceFromLogic(cb, ctx, self) {
 export function reduceFromFX(cb, ctx) {
   // handle logical expressions
   if (ctx.cur.token[0] === 'fx') {
-    const [lft, rgt, ...others] = cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx).map(x => Expr.input(x));
+    const [lft, rgt, ...others] = Expr.input(cb(toSlice(ctx.i, ctx.tokens, ctx.endOffset).slice(1), ctx));
     const result = evaluateComparison(ctx.cur.token[1], lft, typeof rgt === 'undefined' ? true : rgt, others);
 
     ctx.cur = Expr.derive(result);
@@ -322,8 +317,14 @@ export function reduceFromFX(cb, ctx) {
     !ctx.cur.token[2]
     && ctx.cur.token[0] === 'range'
   ) {
-    if (!(ctx.left.token[0] || ctx.right.token[0]) && ctx.cur.token[1] === '..') {
-      throw new Error('Range has not given boundaries');
+    if (ctx.cur.token[1] === '..') {
+      if (!(ctx.left.token[0] || ctx.right.token[0])) {
+        throw new Error('Range has not given boundaries');
+      }
+
+      if (!['number', 'object', 'string', 'unit'].includes(ctx.right.token[0])) {
+        throw new Error(`Invalid range value, given \`${ctx.right.token[0]}\``);
+      }
     }
 
     let target = Expr.from(ctx.cur);
@@ -543,6 +544,13 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         }
       }
       continue;
+    } else if (
+      ctx.ast.length === 1
+      && ctx.cur.token[0] === 'range'
+      && ctx.ast[0].token[0] === 'object'
+    ) {
+      ctx.ast.splice(0, 1, Expr.merge(ctx.ast));
+      continue;
     }
 
     if (!isArray(ctx.left)) {
@@ -576,6 +584,8 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
+        // console.log(e);
+
         if (!(e instanceof Err)) {
           throw new Err(e, ctx);
         }
@@ -590,25 +600,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
     } else {
       ctx.ast.push(...ctx.cur);
     }
-  }
-
-  // unwind if AST starts with `..[object]`
-  if (
-    ctx.ast[0] && !isArray(ctx.ast[0])
-    && ctx.ast[0].token[0] === 'range' && ctx.ast[0].token[1] === '..'
-  ) {
-    ctx.ast.shift();
-
-    if (
-      !ctx.ast[0]
-      || !isArray(ctx.ast[0].token[1])
-      || ctx.ast[0].token[0] !== 'object'
-    ) {
-      throw new Error(`Expecting an object list to unwind, given \`${Expr.plain(ctx.ast[0].token[1])}\``);
-    }
-
-    // make sure we're unwinding from lists!
-    ctx.ast.splice(0, 1, ctx.ast[0].token[1]);
   }
 
   return ctx.ast;

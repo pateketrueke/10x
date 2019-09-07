@@ -56,8 +56,8 @@ export function fromSymbols(text, units, leftToken, rightToken) {
     return ['comment', text];
   }
 
-  // handle white-space
-  if (' \n'.includes(text)) {
+  // handle white-space (and stop from dots...)
+  if (' \n'.includes(text) || text.indexOf('...') === 0) {
     return ['text', text];
   }
 
