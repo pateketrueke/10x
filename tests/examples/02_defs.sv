@@ -29,7 +29,13 @@ testMatch(:true);
 
 ## Loops
 
+Sequencing is done by iterating on lists:
+
 :loop (3, 4, 5) _ * 2;
+
+Or ranges, like `n..m`, e.g.
+
+:loop (1..3) _ / 2;
 
 ## Errors
 

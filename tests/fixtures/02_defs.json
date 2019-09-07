@@ -13,6 +13,11 @@
       8,
       10
     ],
+    [
+      0.5,
+      1,
+      1.5
+    ],
     -1,
     "Missing definition to call `undef`"
   ]
