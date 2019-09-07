@@ -145,14 +145,16 @@ export function getTokensFrom(text, units, parentNode, fixedOffset) {
     const lastValue = (prev[prev.length - 1] || {}).cur;
     const value = x.map(t => t.cur).join('');
 
-    let score = 0;
-
-    // keep expresions and units together, e.g. `3 weeks as days`
+    // handle common sigils around units/numbers, e.g. `a) ` or `1. `
     if (
-      (hasExpr(olderValue) && hasKeyword(value, units))
-      || (hasNum(olderValue) && hasExpr(value))
+      !depth
+      && value === ')'
+      && (!olderValue || olderValue === '\n')
+      && (hasNum(lastValue) || hasChar(lastValue))
     ) {
-      score += 2;
+      // console.log({oldestValue,olderValue,lastValue,value});
+      prev[prev.length - 1].cur += value;
+      return prev;
     }
 
     // keep long-format dates, e.g. `Jun 10, 1987`
@@ -176,6 +178,16 @@ export function getTokensFrom(text, units, parentNode, fixedOffset) {
       prev[prev.length - 2].cur += lastValue + value;
       prev.pop();
       return prev;
+    }
+
+    let score = 0;
+
+    // keep expresions and units together, e.g. `3 weeks as days`
+    if (
+      (hasExpr(olderValue) && hasKeyword(value, units))
+      || (hasNum(olderValue) && hasExpr(value))
+    ) {
+      score += 2;
     }
 
     const nextChar = ((tokens[i + 1] || [])[0] || {}).cur;
@@ -211,7 +223,7 @@ export function getTokensFrom(text, units, parentNode, fixedOffset) {
       || (depth && oldScore && (hasSep(value) || hasChar(value)))
 
       // definitions
-      || ('(='.includes(value) && oldScore)
+      || ('(='.includes(value))
 
       // side-effects
       || (hasOp(nextChar) && value === '(')
