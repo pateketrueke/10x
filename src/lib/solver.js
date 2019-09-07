@@ -103,17 +103,18 @@ export function evaluateComparison(op, left, right) {
     switch (op) {
       case '!~': return !left.includes(right);
       case '~=': return left.includes(right);
-      default:
-        throw new TypeError(`Unable to filter, ${JSON.stringify(left)} ${op} ${JSON.stringify(right)}`);
+      default: break;
     }
   }
 
   switch (op) {
     case '&&': return left && right;
     case '||': return left || right;
-    default:
-      throw new TypeError(`Not implemented: ${JSON.stringify(left)} ${op} ${JSON.stringify(right)}`);
+    default: break;
   }
+
+  // FIXME: what to do then?
+  // throw new TypeError(`Not implemented: ${JSON.stringify(left)} ${op} ${JSON.stringify(right)}`);
 }
 
 // handle basic arithmetic

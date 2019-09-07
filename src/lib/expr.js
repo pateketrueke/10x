@@ -35,7 +35,9 @@ export default class Expr {
     if (isArray(output)) {
       while (output.length === 1 && isArray(output[0])) output = output[0];
 
-      output = output.reduce((p, c) => p.concat(Expr.ok(c)), []);
+      output = output
+        .reduce((p, c) => p.concat(Expr.ok(c)), [])
+        .filter(x => !isArray(x) && x.token[0] !== 'symbol');
 
       // FIXME: use helpers!!!
       if (output.some(x => !isArray(x) && x.token[0] === 'expr' && hasOp(x.token[1]))) {
@@ -45,7 +47,11 @@ export default class Expr {
       return output;
     }
 
-    if (output.token[0] === 'object' && output.token[1].some(x => !isArray(x) && x.token[0] === 'expr')) {
+    if (
+      output.token[0] === 'object'
+      && isArray(output.token[1])
+      && output.token[1].some(x => !isArray(x) && x.token[0] === 'expr')
+    ) {
       return Expr.ok(output.token[1]);
     }
 
@@ -109,6 +115,10 @@ export default class Expr {
 
         token[1][key] = value;
       });
+    }
+
+    if (token[0] === 'symbol') {
+      return typeof token[1] === 'string' ? toProperty(token[1]) : token[1];
     }
 
     // plain values

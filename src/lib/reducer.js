@@ -299,8 +299,10 @@ export function reduceFromLogic(cb, ctx, self) {
           }
         }
         return true;
-      } else {
-        console.log('SYM_LOGIC', set);
+      } else if (Object.keys(set).length) {
+        // FIXME: try user-logic before fallbacking to tuples?
+        ctx.ast.push(Expr.from(['object', fixValues(set)]))
+        return true;
       }
       return false;
     });
