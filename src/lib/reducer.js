@@ -371,6 +371,11 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       throw new Error(`Missing ${def ? 'arguments' : 'definition'} to call \`${name}\``);
     }
 
+    // FIXME: improve error objects and such...
+    if (def.args && def.args.length !== call.args.length && def.body[0][0] !== 'fn') {
+      throw new Error(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`);
+    }
+
     const args = fixValues(cb(call.args, ctx), x => cb(x, ctx));
     const key = def._memo && JSON.stringify([name, args]);
 
