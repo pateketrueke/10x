@@ -5,10 +5,6 @@ Local functions can be achieved too:
 sum(a, b)=a + b;
 sum(1, 2);
 
-# Logic handling
-
-Only three kind of logical support is implemented.
-
 ## Matching
 
 Use :if, :else, :not, :unless and :otherwise to do comparisons.
@@ -33,12 +29,18 @@ testMatch(:true);
 
 ## Loops
 
-:loop (3) _;
+:loop (3, 4, 5) _ * 2;
 
 ## Errors
 
+Use :try and/or :catch to handle possible failures:
+
 :try sum() :catch -1;
 
+If you omit :catch a message will be shown:
+
 :try undef();
+
+Or hide any message with :catch, e.g.
 
 :catch undef();

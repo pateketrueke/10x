@@ -8,6 +8,11 @@
     "UNKNOWN",
     "NOPE",
     "OK",
+    [
+      6,
+      8,
+      10
+    ],
     -1,
     "Missing definition to call `undef`"
   ]

@@ -282,8 +282,7 @@ export function reduceFromLogic(cb, ctx, self) {
           return prev;
         }, []);
 
-        ctx.isDef = true;
-        ctx.cur = Expr.from(['object', seq]);
+        ctx.ast.push(Expr.from(['object', seq.reduce((p, c) => p.concat(Expr.ok(c)), [])]));
         return true;
       } else if (set[':try'] || set[':catch']) {
         const tryBranch = set[':try'] || set[':catch'];
