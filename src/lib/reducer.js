@@ -322,45 +322,50 @@ export function reduceFromFX(cb, ctx) {
     !ctx.cur.token[2]
     && ctx.cur.token[0] === 'range'
   ) {
-    if (ctx.left.token[0] || ctx.right.token[0]) {
-      console.log(ctx.left, ctx.right, '?');
-      // let target = Expr.from(ctx.cur);
-      // let base = ctx.left;
-
-      // if (!base.token[0]) {
-      //   base = Expr.from(['number', 0]);
-      // } else {
-      //   // drop token from left...
-      //   ctx.tokens.splice(ctx.i - 1, 1);
-      // }
-
-      // // consume next token on untyped-ranges
-      // if (ctx.cur.token[1] === '..') {
-      //   target = Expr.from(ctx.right);
-      //   ctx.tokens.splice(ctx.i, 1);
-      // }
-
-      // if (target.token[0] === 'range') {
-      //   target.token[0] = 'number';
-      //   target.token[1] = target.token[1].substr(2);
-      // }
-
-      // // mock AST
-      // ctx.isDef = true;
-
-      // const [fixedBase, fixedTarget] = cb([base, target], ctx);
-      // const fixedToken = Expr.from(ctx.cur);
-
-      // // recompose tokens on-the-fly
-      // fixedToken.token[1] = base.token[1] + ctx.cur.token[1] + (ctx.cur.token[1] === '..' ? target.token[1] : '');
-      // fixedToken.token[2] = new Range(Expr.input(fixedBase), Expr.input(fixedTarget));
-
-      // fixedToken.begin = base.begin || fixedToken.begin;
-      // fixedToken.end = target.end;
-
-      // ctx.ast.pop();
-      // ctx.ast.push(fixedToken);
+    if (!(ctx.left.token[0] || ctx.right.token[0]) && ctx.cur.token[1] === '..') {
+      throw new Error('Range has not given boundaries');
     }
+
+    let target = Expr.from(ctx.cur);
+    let base = ctx.left;
+
+    if (!base.token[0]) {
+      base = Expr.from(['number', 0]);
+    } else {
+      // drop token from left...
+      ctx.tokens.splice(ctx.i - 1, 1);
+    }
+
+    // consume next token on untyped-ranges
+    if (ctx.cur.token[1] === '..') {
+      target = Expr.from(ctx.right);
+      ctx.tokens.splice(ctx.i, 1);
+    }
+
+    if (!target.token[0]) {
+      target = Expr.from(['number', 0]);
+    }
+
+    if (target.token[0] === 'range') {
+      target.token[0] = 'number';
+      target.token[1] = target.token[1].substr(2);
+    }
+
+    // mock AST
+    ctx.isDef = true;
+
+    const [fixedBase, fixedTarget] = cb([base, target], ctx);
+    const fixedToken = Expr.from(ctx.cur);
+
+    // recompose tokens on-the-fly
+    fixedToken.token[1] = base.token[1] + ctx.cur.token[1] + (ctx.cur.token[1] === '..' ? target.token[1] : '');
+    fixedToken.token[2] = new Range(Expr.input(fixedBase), Expr.input(fixedTarget));
+
+    fixedToken.begin = base.begin || fixedToken.begin;
+    fixedToken.end = target.end;
+
+    ctx.ast.pop();
+    ctx.ast.push(fixedToken);
     return false;
   }
 }
@@ -588,7 +593,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
   }
 
   // unwind if AST starts with `..[object]`
-  console.log(ctx.ast)
   if (
     ctx.ast[0] && !isArray(ctx.ast[0])
     && ctx.ast[0].token[0] === 'range' && ctx.ast[0].token[1] === '..'

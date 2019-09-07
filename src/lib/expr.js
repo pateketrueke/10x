@@ -171,7 +171,7 @@ export default class Expr {
     }
 
     let fixedValue = toValue(token);
-    let fixedUnit = token[2];
+    let fixedUnit = typeof token[2] === 'string' && token[2];
 
     // adjust unit-fractions
     if (fixedUnit && (fixedUnit.indexOf('fr-') === 0 || fixedUnit === 'x-fraction')) {
