@@ -145,14 +145,13 @@ export function getTokensFrom(text, units, parentNode, fixedOffset) {
     const lastValue = (prev[prev.length - 1] || {}).cur;
     const value = x.map(t => t.cur).join('');
 
-    // handle common sigils around units/numbers, e.g. `a) ` or `1. `
+    // handle common sigils around units/numbers, e.g. `a)`
     if (
       !depth
       && value === ')'
       && (!olderValue || olderValue === '\n')
       && (hasNum(lastValue) || hasChar(lastValue))
     ) {
-      // console.log({oldestValue,olderValue,lastValue,value});
       prev[prev.length - 1].cur += value;
       return prev;
     }
@@ -223,7 +222,7 @@ export function getTokensFrom(text, units, parentNode, fixedOffset) {
       || (depth && oldScore && (hasSep(value) || hasChar(value)))
 
       // definitions
-      || ('(='.includes(value))
+      || ('(='.includes(value) && oldScore)
 
       // side-effects
       || (hasOp(nextChar) && value === '(')

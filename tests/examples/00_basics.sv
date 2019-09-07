@@ -8,9 +8,14 @@ Fractions are supported too, e.g. 1.5 as frac
 
 Common units can be used after numbers, e.g. 3 inches, 5mm
 
+Converting between units is also possible: 3 inches as cm
+
 Define and use your own units: x=1.2; 3x
 
-Converting between units is also possible: 3 inches as cm
+Scope is also possible within parentheses, e.g.
+
+(x=1.5; 3x)
+2x
 
 # Lists
 
