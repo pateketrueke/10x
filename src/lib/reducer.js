@@ -489,6 +489,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
       let fixedValue = fixArgs(cb(ctx.cur, ctx));
 
+      // FIXME: fibonacci is not working!
       if (
         !ctx.isDef
         && !isArray(ctx.left)
@@ -498,14 +499,16 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       } else {
         fixedValue = fixedValue.reduce((prev, cur) => prev.concat(cur), []);
 
-        if (
-          fixedValue.length > 1
-          || !(fixedValue[0] instanceof Expr)
-          || fixedValue[0].token[0] !== 'range'
-        ) {
-          ctx.ast.push(Expr.from(['object', fixedValue]));
-        } else {
+        if (fixedValue[0].token === 'range') {
           ctx.ast.push(...fixedValue);
+        } else {
+          fixedValue = Expr.ok(fixedValue);
+
+          if (fixedValue.length === 1) {
+            ctx.ast.push(...fixedValue);
+          } else {
+            ctx.ast.push(Expr.from(['object', fixedValue]));
+          }
         }
       }
       continue;
