@@ -499,17 +499,29 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       } else {
         fixedValue = fixedValue.reduce((prev, cur) => prev.concat(cur), []);
 
-        if (fixedValue[0].token === 'range') {
-          ctx.ast.push(...fixedValue);
-        } else {
-          fixedValue = Expr.ok(fixedValue);
+        // FIXME: fibonacci is not working with this code!!!
 
-          if (fixedValue.length === 1) {
-            ctx.ast.push(...fixedValue);
-          } else {
-            ctx.ast.push(Expr.from(['object', fixedValue]));
-          }
+        if (
+          fixedValue.length > 1
+          || !(fixedValue[0] instanceof Expr)
+          || fixedValue[0].token[0] !== 'range'
+        ) {
+          ctx.ast.push(Expr.from(['object', fixedValue]));
+        } else {
+          ctx.ast.push(...fixedValue);
         }
+
+        // if (fixedValue[0].token === 'range') {
+        //   ctx.ast.push(...fixedValue);
+        // } else {
+        //   fixedValue = Expr.ok(fixedValue);
+
+        //   if (fixedValue.length === 1) {
+        //     ctx.ast.push(...fixedValue);
+        //   } else {
+        //     ctx.ast.push(Expr.from(['object', fixedValue]));
+        //   }
+        // }
       }
       continue;
     }
