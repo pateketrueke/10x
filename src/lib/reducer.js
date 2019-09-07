@@ -509,17 +509,15 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           } else {
             ctx.ast.push(...fixedValue);
           }
+        } else if (fixedValue[0].token === 'range') {
+          ctx.ast.push(...fixedValue);
         } else {
-          if (fixedValue[0].token === 'range') {
+          fixedValue = Expr.ok(fixedValue);
+
+          if (fixedValue.length === 1) {
             ctx.ast.push(...fixedValue);
           } else {
-            fixedValue = Expr.ok(fixedValue);
-
-            if (fixedValue.length === 1) {
-              ctx.ast.push(...fixedValue);
-            } else {
-              ctx.ast.push(Expr.from(['object', fixedValue]));
-            }
+            ctx.ast.push(Expr.from(['object', fixedValue]));
           }
         }
       }
