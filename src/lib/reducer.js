@@ -123,10 +123,11 @@ export function reduceFromUnits(cb, ctx, self, convert) {
     }
 
     // convert between units
-    if (ctx.lastUnit && ctx.cur.token[2] && ctx.lastUnit !== ctx.cur.token[2]) {
-      ctx.cur.token[1] = convert(parseFloat(toNumber(ctx.cur.token[1])), ctx.cur.token[2], ctx.lastUnit);
-      ctx.cur.token[2] = ctx.lastUnit;
-    }
+    // if (ctx.lastUnit && ctx.cur.token[2] && ctx.lastUnit !== ctx.cur.token[2]) {
+    //   console.log(ctx.left, ctx);
+    //   // ctx.cur.token[1] = convert(parseFloat(toNumber(ctx.cur.token[1])), ctx.cur.token[2], ctx.lastUnit);
+    //   // ctx.cur.token[2] = ctx.lastUnit;
+    // }
 
     // save initial unit
     if (ctx.cur.token[2] && !ctx.lastUnit) ctx.lastUnit = ctx.cur.token[2];
