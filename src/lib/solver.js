@@ -167,19 +167,6 @@ export function operateExpression(ops, expr) {
         } else {
           result = evaluateExpression(cur[1], parseFloat(toNumber(prev[1])), parseFloat(toNumber(next[1])));
         }
-
-        // escape unit-fractions for later
-        if (next[0] === 'unit' && (next[2] === 'fr' || next[1] === 'fr')) {
-          prev[2] = `fr-${prev[2].indexOf('fr') === 0 ? 'fr' : prev[2]}`;
-          result = toFraction(result);
-          next[2] = undefined;
-        }
-
-        // fixed-unit as result from fractions
-        if (prev[2] === 'x-fraction') {
-          prev[2] = undefined;
-          next[2] = undefined;
-        }
       }
 
       // cleanup result tokens to avoid too much garbage...

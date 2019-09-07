@@ -163,7 +163,7 @@ export default class Expr {
     let fixedUnit = token[2];
 
     // adjust unit-fractions
-    if (typeof fixedUnit === 'string' && fixedUnit.indexOf('fr-') === 0) {
+    if (fixedUnit && (fixedUnit.indexOf('fr-') === 0 || fixedUnit === 'x-fraction')) {
       fixedValue = toFraction(fixedValue);
       fixedUnit = fixedUnit.split('fr-')[1];
     }

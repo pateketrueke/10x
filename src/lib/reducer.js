@@ -9,7 +9,7 @@ import {
 
 import {
   isArray,
-  toList, toSlice, toNumber, toArguments,
+  toList, toSlice, toNumber, toFraction, toArguments,
 } from './utils';
 
 import {
@@ -112,25 +112,20 @@ export function reduceFromUnits(cb, ctx, self, convert) {
     } else if (hasTimeUnit(ctx.left.token[2])) {
       ctx.left.token[1] = convert(parseFloat(toNumber(ctx.left.token[1])), ctx.left.token[2], 's');
       ctx.left.token[2] = 's';
+    } else if (fixedUnit === 'fr') {
+      ctx.left.token[1] = toFraction(ctx.left.token[1]);
+      ctx.left.token[2] = ctx.left.token[2] ? `fr-${ctx.left.token[2]}` : 'x-fraction';
     }
 
     ctx.tokens.splice(ctx.i, 2);
     return false;
   }
 
-  if (ctx.isDate && ctx.cur.token[0] === 'number') {
+  if (ctx.cur.token[0] === 'number') {
     // convert time-expressions into seconds
-    if (hasTimeUnit(ctx.cur.token[2])) {
+    if (ctx.isDate && hasTimeUnit(ctx.cur.token[2])) {
       ctx.cur.token[1] = convert(parseFloat(toNumber(ctx.cur.token[1])), ctx.cur.token[2], 's');
       ctx.cur.token[2] = 's';
-    }
-
-    // convert between units
-    if (ctx.lastUnit && ctx.cur.token[2] && ctx.lastUnit !== ctx.cur.token[2]) {
-      // FIXME: date/time stuff...
-      console.log(ctx.left, ctx);
-      // ctx.cur.token[1] = convert(parseFloat(toNumber(ctx.cur.token[1])), ctx.cur.token[2], ctx.lastUnit);
-      // ctx.cur.token[2] = ctx.lastUnit;
     }
 
     // save initial unit
