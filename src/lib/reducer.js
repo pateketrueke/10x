@@ -9,7 +9,7 @@ import {
 
 import {
   isArray,
-  toSlice, toNumber, toFraction, toArguments,
+  toSlice, toNumber, toFraction, toProperty, toArguments,
 } from './utils';
 
 import {
@@ -213,7 +213,7 @@ export function reduceFromImports(set, env, self) {
     } else {
       def.forEach(x => {
         if (x[0].charAt() === ':') {
-          env[x[1]] = fixBinding(fromInfo[0], x[0].substr(1), x[1], self);
+          env[x[1]] = fixBinding(fromInfo[0], toProperty(x[0]), x[1], self);
         } else {
           x.forEach(y => {
             env[y] = fixBinding(fromInfo[0], y, null, self);
@@ -394,7 +394,7 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       throw new Error(`Expecting \`${name}.#${def.args.length}\` args, given #${call.args.length}`);
     }
 
-    const args = fixValues(cb(call.args, ctx), x => cb(x, ctx));
+    const args = cb(call.args, ctx);
     const key = def._memo && JSON.stringify([name, args]);
 
     // this helps to compute faster!
@@ -432,14 +432,14 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
     // forward arguments to bindings, from the past!
     if (ctx.cur.token[0] === 'bind') {
       const fixedArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))));
-      const fixedValue = fixValues(ctx.cur.token[1][2](...fixedArgs), Expr.value);
+      const fixedValue = ctx.cur.token[1][2](...fixedArgs);
 
       if (isArray(fixedValue) && !(fixedValue[0] instanceof Expr)) {
-        ctx.cur = Expr.from(['object', Expr.derive(fixedValue)]);
+        ctx.ast.push(Expr.from(['object', Expr.derive(fixedValue)]));
       } else {
-        ctx.cur = Expr.from(['object', fixedValue]);
+        ctx.ast.push(Expr.derive(fixedValue));
       }
-      return;
+      return false;
     }
 
     // skip memoization from non scalar-values

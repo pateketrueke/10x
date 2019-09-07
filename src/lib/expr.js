@@ -117,10 +117,6 @@ export default class Expr {
       });
     }
 
-    if (token[0] === 'symbol') {
-      return typeof token[1] === 'string' ? toProperty(token[1]) : token[1];
-    }
-
     // plain values
     let fixedValue = token[1];
 
