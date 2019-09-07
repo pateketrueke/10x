@@ -33,8 +33,9 @@ export default class Expr {
 
   static ok(output) {
     if (isArray(output)) {
-      output = output
-        .reduce((prev, cur) => prev.concat(Expr.ok(cur)), []);
+      while (output.length === 1 && isArray(output[0])) output = output[0];
+
+      output = output.reduce((p, c) => p.concat(Expr.ok(c)), []);
 
       // FIXME: use helpers!!!
       if (output.some(x => !isArray(x) && x.token[0] === 'expr' && hasOp(x.token[1]))) {
@@ -42,6 +43,10 @@ export default class Expr {
       }
 
       return output;
+    }
+
+    if (output.token[0] === 'object' && output.token[1].some(x => !isArray(x) && x.token[0] === 'expr')) {
+      return Expr.ok(output.token[1]);
     }
 
     return output;
