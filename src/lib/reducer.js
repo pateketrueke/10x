@@ -117,7 +117,7 @@ export function reduceFromUnits(cb, ctx, self, convert) {
       ctx.left.token[2] = ctx.left.token[2] ? `fr-${ctx.left.token[2]}` : 'x-fraction';
     }
 
-    ctx.tokens.splice(ctx.i, 2);
+    ctx.tokens.splice(ctx.i, 1);
     return false;
   }
 

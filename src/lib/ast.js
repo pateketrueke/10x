@@ -30,7 +30,6 @@ export function fixStrings(tokens, split) {
 }
 
 export function fixArgs(values, flatten) {
-  let isSplit = false;
   let offset = 0;
 
   const stack = [];
@@ -49,9 +48,8 @@ export function fixArgs(values, flatten) {
           ? cur === null
           : (cur.token[0] === 'expr' && ';,'.includes(cur.token[1]))
       ) {
-        isSplit = true;
         last.pop();
-        offset++;
+        if (last.length) offset++;
       }
     } else if (flatten !== false) {
       last.push(...fixArgs(cur, flatten));
@@ -74,10 +72,6 @@ export function fixArgs(values, flatten) {
 
       return prev;
     }, []);
-  }
-
-  if (isSplit) {
-    return stack.reduce((prev, cur) => prev.concat(cur), []);
   }
 
   return stack;
