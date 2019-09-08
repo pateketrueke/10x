@@ -60,7 +60,9 @@ export default class Expr {
   }
 
   static map(value, cb) {
-    return Range.resolve(value.token[0] === 'range' ? value.token[2] : Expr.input(value), cb);
+    return !isArray(value)
+      ? Range.resolve(value.token[0] === 'range' ? value.token[2] : Expr.input(value), cb)
+      : value.map(x => Expr.map(x, cb));
   }
 
   static from(token, fromCallback, arg1, arg2, arg3) {

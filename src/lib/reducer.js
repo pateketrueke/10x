@@ -272,7 +272,7 @@ export function reduceFromLogic(cb, ctx, self) {
         const initialArgs = cb(forBranch.shift(), ctx);
 
         const seq = initialArgs.reduce((prev, cur) => {
-          prev.push(...Range.map(cur, y => Expr.ok(cb(forBranch, ctx, { _: { body: [Expr.derive(y)] } }))));
+          prev.push(...Expr.map(cur, y => Expr.ok(cb(forBranch, ctx, { _: { body: [Expr.derive(y)] } }))));
 
           return prev;
         }, []);
@@ -592,7 +592,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         }
 
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
-          const nextValue = cb(fixArgs(ctx.right), ctx).map(x => Range.map(x, y => [Expr.derive(y)]));
+          const nextValue = cb(fixArgs(ctx.right), ctx).map(x => Expr.map(x, y => [Expr.derive(y)]));
           const nextAST = nextValue.reduce((p, c) => p.concat(c), []);
 
           ctx.tokens.splice(ctx.i + 1, 1);
