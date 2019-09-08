@@ -153,7 +153,7 @@ export function fixTree(ast, self) {
         .reduce((p, x) => {
           if (x.indexOf('#{') === 0 && x.substr(-1) === '}') {
             // FIXME: too much depth!!
-            p.push(self.partial(`((${x.substr(2, x.length - 3)}))`, cur, fixedOffset + 3).tree[0][0][0]);
+            p.push(self.partial(`((${x.substr(2, x.length - 3)}))`, cur, fixedOffset + 1).tree[0][0][0]);
           } else {
             p.push(x);
           }
