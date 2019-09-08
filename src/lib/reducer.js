@@ -313,18 +313,29 @@ export function reduceFromFX(cb, ctx) {
   }
 
   // handle ranges...
-  if (
-    !ctx.cur.token[2]
-    && ctx.cur.token[0] === 'range'
-  ) {
+  if (!isArray(ctx.right) && !ctx.cur.token[2] && ctx.cur.token[0] === 'range') {
     if (ctx.cur.token[1] === '..') {
       if (!(ctx.left.token[0] || ctx.right.token[0])) {
         throw new Error('Range has not given boundaries');
       }
 
-      if (!['number', 'object', 'string', 'unit'].includes(ctx.right.token[0])) {
+      if (
+        ctx.right.token[0]
+        && !['number', 'string', 'object'].includes(ctx.right.token[0])
+      ) {
         throw new Error(`Invalid range value, given \`${ctx.right.token[0]}\``);
       }
+    }
+
+    if (!['number', 'string', 'object'].includes(ctx.left.token[0])) {
+      throw new Error(`Cannot unwind from \`${ctx.left.token[0]}\``);
+    }
+
+    // merge objects
+    if (ctx.left.token[0] === 'object' && ctx.right.token[0] === 'object') {
+      Object.assign(ctx.left.token[1], ctx.right.token[1]);
+      ctx.tokens.splice(ctx.i, 2);
+      return;
     }
 
     let target = Expr.from(ctx.cur);
@@ -531,7 +542,8 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           }
         } else if (fixedValue[0].token === 'range') {
           // ranges
-          ctx.ast.push(...fixedValue);
+          console.log('UNWIND RANGE');
+          // ctx.ast.push(...fixedValue);
         } else {
           // evaluate reulting maths...
           fixedValue = Expr.ok(fixedValue);
@@ -546,39 +558,6 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         }
       }
       continue;
-    } else if (ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
-      // merge given objects
-      if (!isArray(ctx.left) && ctx.left.token[0] === 'object' && ctx.right.token[0] === 'object') {
-        Object.assign(ctx.left.token[1], ctx.right.token[1]);
-        ctx.tokens.splice(ctx.i, 2);
-        continue;
-      }
-
-      // merge lists
-      if (isArray(ctx.left) && isArray(ctx.right)) {
-        ctx.ast.pop();
-        ctx.tokens.splice(ctx.i, 2);
-        ctx.ast.push(cb(ctx.left.concat(Expr.from(['expr', ',', 'or']), ctx.right), ctx));
-        continue;
-      }
-
-      // unwind from lists
-      if (
-        ctx.ast.length === 1
-        && ctx.cur.token[0] === 'range'
-        && ctx.ast[0].token[0] === 'object'
-      ) {
-        ctx.ast.splice(0, 1, Expr.merge(ctx.ast));
-        continue;
-      }
-
-      // unwind next argument...
-      if (isArray(ctx.right) && !ctx.left.token[0]) {
-        ctx.ast.pop();
-        tokens.splice(i + 1, 1);
-        ctx.ast.push(...cb(ctx.right, ctx));
-        continue;
-      }
     }
 
     if (!isArray(ctx.left)) {
@@ -611,6 +590,15 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           }, [])]));
           continue;
         }
+
+        if (ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
+          const nextValue = Expr.input(cb(fixArgs(ctx.right), ctx)).map(x => Range.resolve(x, y => y._.body));
+          const nextAST = nextValue.reduce((p, c) => p.concat(c), []);
+
+          ctx.tokens.splice(ctx.i + 1, 1);
+          ctx.ast.push(nextAST);
+          continue;
+        }
       } catch (e) {
         // console.log(e);
 
@@ -619,6 +607,23 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         }
 
         throw e;
+      }
+    } else {
+      // merge lists
+      if (isArray(ctx.right)) {
+        ctx.tokens.splice(ctx.i, 2);
+        ctx.ast[ctx.ast.length - 1].token[1].push(...fixArgs(cb(ctx.right, ctx), true));
+        continue;
+      }
+
+      // unwind lists
+      if (!ctx.right.token[0]) {
+        if (ctx.ast[ctx.ast.length - 1].token[0] !== 'object') {
+          throw new Error(`Cannot unwind \`${ctx.ast[ctx.ast.length - 1].token[0]}\``);
+        }
+
+        ctx.ast.push(ctx.ast.pop().token[1]);
+        continue;
       }
     }
 
