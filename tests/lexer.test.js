@@ -16,7 +16,7 @@ describe('Lexer', () => {
       expect(getTokensFrom('123 456').length).to.eql(3);
       expect(getTokensFrom('3- 3').length).to.eql(4);
       expect(getTokensFrom('3.-3').length).to.eql(3);
-      expect(getTokensFrom('3-.3').length).to.eql(3);
+      expect(getTokensFrom('3-.3').length).to.eql(2);
       expect(getTokensFrom('3-3').length).to.eql(2);
     });
 

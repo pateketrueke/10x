@@ -5,7 +5,7 @@ import Solv from '../src/lib';
 
 const fixtures = readdirSync(`${__dirname}/fixtures`);
 
-describe.only('Integration', () => {
+describe('Integration', () => {
   fixtures.forEach(file => {
     it(file.replace('.json', '.sv'), () => {
       const expected = JSON.parse(readFileSync(`${__dirname}/fixtures/${file}`).toString()).results;
