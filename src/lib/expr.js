@@ -82,9 +82,16 @@ export default class Expr {
       return token.map(x => Expr.input(x, args, cb));
     }
 
-    if (token instanceof Expr) {
-      token = token.token;
+    if (!(token instanceof Expr)) {
+      throw new Error(`Unexpected token, given \`${token}\``);
     }
+
+    if (typeof args === 'function') {
+      cb = args;
+      args = undefined;
+    }
+
+    token = token.token;
 
     // handle lambda-calls as side-effects
     if (token[0] === 'fn') {
@@ -99,7 +106,7 @@ export default class Expr {
 
     // return range-expressions as is...
     if (token[0] === 'range') {
-      return Range.resolve(token[2], x => Expr.input(x._.body));
+      return Range.resolve(token[2]);
     }
 
     // intermediate state for objects

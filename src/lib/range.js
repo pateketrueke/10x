@@ -6,8 +6,6 @@ import {
   isArray,
 } from './utils';
 
-import Expr from './expr';
-
 export default class Range {
   constructor(base, target, increment) {
     this.begin = base;
@@ -44,24 +42,13 @@ export default class Range {
     return [this.begin, this.end].join('');
   }
 
-  static fromIterator(value, cb) {
-    const it = value.getIterator();
-    const seq = [];
-
-    for (let nextValue = it.next(); nextValue.done !== true; nextValue = it.next()) {
-      const fixedValue = value.alpha
-        ? String.fromCharCode(nextValue.value)
-        : nextValue.value;
-
-      seq.push(...cb({ _: { body: [Expr.derive(fixedValue)] } }));
+  static resolve(value, cb) {
+    if (!cb) {
+      cb = x => x;
     }
 
-    return seq;
-  }
-
-  static resolve(value, cb) {
     if (isArray(value)) {
-      return value.map(x => cb({ _: { body: [Expr.derive(x)] } }));
+      return value.map(x => cb(x));
     }
 
     if (typeof value === 'number') {
@@ -69,7 +56,18 @@ export default class Range {
     }
 
     if (value instanceof Range) {
-      return Range.fromIterator(value, cb);
+      const it = value.getIterator();
+      const seq = [];
+
+      for (let nextValue = it.next(); nextValue.done !== true; nextValue = it.next()) {
+        const fixedValue = value.alpha
+          ? String.fromCharCode(nextValue.value)
+          : nextValue.value;
+
+        seq.push(...cb(fixedValue));
+      }
+
+      return seq;
     }
 
     console.log('UNDEF_SEQ', { value });
