@@ -59,6 +59,10 @@ export default class Expr {
     return output;
   }
 
+  static map(value, cb) {
+    return Range.resolve(value.token[0] === 'range' ? value.token[2] : Expr.input(value), cb);
+  }
+
   static from(token, fromCallback, arg1, arg2, arg3) {
     if (!(token instanceof Expr) && typeof fromCallback === 'function') {
       const retval = fromCallback(token.content, arg1, arg2, arg3);
