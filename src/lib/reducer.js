@@ -488,89 +488,89 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
   };
 
   // iterate all tokens to produce a new AST
-  for (let i = 0; i < tokens.length; i += 1) {
-    ctx.root = parentContext || {};
-    ctx.isDef = ctx.root.isDef || ctx.isDef;
+  try {
+    for (let i = 0; i < tokens.length; i += 1) {
+      ctx.root = parentContext || {};
+      ctx.isDef = ctx.root.isDef || ctx.isDef;
 
-    // shared context
-    ctx.i = i;
-    ctx.cur = tokens[i];
-    ctx.left = tokens[i - 1] || { token: [] };
-    ctx.right = tokens[i + 1] || { token: [] };
+      // shared context
+      ctx.i = i;
+      ctx.cur = tokens[i];
+      ctx.left = tokens[i - 1] || { token: [] };
+      ctx.right = tokens[i + 1] || { token: [] };
 
-    // store nearest offset to cut right before delimiters!
-    ctx.endOffset = tokens.findIndex(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k') - i;
+      // store nearest offset to cut right before delimiters!
+      ctx.endOffset = tokens.findIndex(x => !isArray(x) && x.token[0] === 'expr' && x.token[2] === 'k') - i;
 
-    // handle anonymous sub-expressions
-    if (isArray(ctx.cur)) {
-      // unwind and keep side-effects as is
-      if (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fx') {
-        ctx.ast.push(...fixArgs(ctx.cur));
+      // handle anonymous sub-expressions
+      if (isArray(ctx.cur)) {
+        // unwind and keep side-effects as is
+        if (!isArray(ctx.cur[0]) && ctx.cur[0].token[0] === 'fx') {
+          ctx.ast.push(...fixArgs(ctx.cur));
+          continue;
+        }
+
+        // evaluate the current node
+        let fixedValue = fixArgs(cb(ctx.cur, ctx));
+
+        // handle multiplication, e.g. `2(3)`
+        if (
+          !ctx.isDef
+          && !isArray(ctx.left)
+          && ['unit', 'number'].includes(ctx.left.token[0])
+        ) {
+          ctx.ast.push(Expr.from(['expr', '*', 'mul']), ...fixedValue);
+        } else {
+          // flatten intermediate AST to simplify validations
+          fixedValue = fixedValue.reduce((prev, cur) => prev.concat(cur), []);
+
+          // we're not inside a def-call...
+          if (!ctx.isDef) {
+            if (
+              // handle multiple results
+              fixedValue.length > 1
+
+              // or nested-values (unknown)
+              || !(fixedValue[0] instanceof Expr)
+
+              // or anything that is not a range!
+              || fixedValue[0].token[0] !== 'range'
+            ) {
+              // keep list-like values as objects
+              ctx.ast.push(Expr.from(['object', fixedValue]));
+            } else {
+              // otherwise, just unwind and continue
+              ctx.ast.push(...fixedValue);
+            }
+          } else if (fixedValue[0].token === 'range') {
+            // ranges
+            console.log('UNWIND RANGE');
+            // ctx.ast.push(...fixedValue);
+          } else {
+            // evaluate reulting maths...
+            fixedValue = Expr.ok(fixedValue);
+
+            // just one result? unwind it...
+            if (fixedValue.length === 1) {
+              ctx.ast.push(...fixedValue);
+            } else {
+              // otherwise, just keep as object...
+              ctx.ast.push(Expr.from(['object', fixedValue]));
+            }
+          }
+        }
         continue;
       }
 
-      // evaluate the current node
-      let fixedValue = fixArgs(cb(ctx.cur, ctx));
+      if (!isArray(ctx.left)) {
+        // flag well-known definitions, as they are open...
+        if (['object', 'def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
 
-      // handle multiplication, e.g. `2(3)`
-      if (
-        !ctx.isDef
-        && !isArray(ctx.left)
-        && ['unit', 'number'].includes(ctx.left.token[0])
-      ) {
-        ctx.ast.push(Expr.from(['expr', '*', 'mul']), ...fixedValue);
-      } else {
-        // flatten intermediate AST to simplify validations
-        fixedValue = fixedValue.reduce((prev, cur) => prev.concat(cur), []);
-
-        // we're not inside a def-call...
-        if (!ctx.isDef) {
-          if (
-            // handle multiple results
-            fixedValue.length > 1
-
-            // or nested-values (unknown)
-            || !(fixedValue[0] instanceof Expr)
-
-            // or anything that is not a range!
-            || fixedValue[0].token[0] !== 'range'
-          ) {
-            // keep list-like values as objects
-            ctx.ast.push(Expr.from(['object', fixedValue]));
-          } else {
-            // otherwise, just unwind and continue
-            ctx.ast.push(...fixedValue);
-          }
-        } else if (fixedValue[0].token === 'range') {
-          // ranges
-          console.log('UNWIND RANGE');
-          // ctx.ast.push(...fixedValue);
-        } else {
-          // evaluate reulting maths...
-          fixedValue = Expr.ok(fixedValue);
-
-          // just one result? unwind it...
-          if (fixedValue.length === 1) {
-            ctx.ast.push(...fixedValue);
-          } else {
-            // otherwise, just keep as object...
-            ctx.ast.push(Expr.from(['object', fixedValue]));
-          }
+        // append last-operator between consecutive unit-expressions
+        if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
+          ctx.ast.push(Expr.from(ctx.lastOp));
         }
-      }
-      continue;
-    }
 
-    if (!isArray(ctx.left)) {
-      // flag well-known definitions, as they are open...
-      if (['object', 'def', 'fx'].includes(ctx.cur.token[0])) ctx.isDef = true;
-
-      // append last-operator between consecutive unit-expressions
-      if (!ctx.isDef && ctx.left.token[0] === 'number' && ctx.cur.token[0] === 'number') {
-        ctx.ast.push(Expr.from(ctx.lastOp));
-      }
-
-      try {
         if ([
           reduceFromLogic(cb, ctx, context),
           reduceFromFX(cb, ctx),
@@ -593,47 +593,49 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         }
 
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
-          const nextValue = Expr.input(cb(fixArgs(ctx.right), ctx)).map(x => Range.resolve(x, y => [Expr.derive(y)]));
+          const nextValue = cb(fixArgs(ctx.right), ctx).map(x =>
+              Range.resolve(x.token[0] === 'range' ? x.token[2] : Expr.input(x), y => [Expr.derive(y)]));
+
           const nextAST = nextValue.reduce((p, c) => p.concat(c), []);
 
           ctx.tokens.splice(ctx.i + 1, 1);
           ctx.ast.push(nextAST);
           continue;
         }
-      } catch (e) {
-        // console.log(e);
-
-        if (!(e instanceof Err)) {
-          throw new Err(e, ctx);
+      } else if (ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
+        // merge lists
+        if (isArray(ctx.right)) {
+          ctx.tokens.splice(ctx.i, 2);
+          ctx.ast[ctx.ast.length - 1].token[1].push(...fixArgs(cb(ctx.right, ctx), true));
+          continue;
         }
 
-        throw e;
-      }
-    } else if (ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
-      // merge lists
-      if (isArray(ctx.right)) {
-        ctx.tokens.splice(ctx.i, 2);
-        ctx.ast[ctx.ast.length - 1].token[1].push(...fixArgs(cb(ctx.right, ctx), true));
-        continue;
-      }
+        // unwind lists
+        if (!ctx.right.token[0]) {
+          if (ctx.ast[ctx.ast.length - 1].token[0] !== 'object') {
+            throw new Error(`Cannot unwind from \`${ctx.ast[ctx.ast.length - 1].token[0]}\``);
+          }
 
-      // unwind lists
-      if (!ctx.right.token[0]) {
-        if (ctx.ast[ctx.ast.length - 1].token[0] !== 'object') {
-          throw new Error(`Cannot unwind \`${ctx.ast[ctx.ast.length - 1].token[0]}\``);
+          ctx.ast.push(ctx.ast.pop().token[1]);
+          continue;
         }
+      }
 
-        ctx.ast.push(ctx.ast.pop().token[1]);
-        continue;
+      // skip definitions and symbols!
+      if (!isArray(ctx.cur)) {
+        ctx.ast.push(ctx.cur);
+      } else {
+        ctx.ast.push(...ctx.cur);
       }
     }
+  } catch (e) {
+    // console.log(e);
 
-    // skip definitions and symbols!
-    if (!isArray(ctx.cur)) {
-      ctx.ast.push(ctx.cur);
-    } else {
-      ctx.ast.push(...ctx.cur);
+    if (!(e instanceof Err)) {
+      throw new Err(e, ctx);
     }
+
+    throw e;
   }
 
   return ctx.ast;
