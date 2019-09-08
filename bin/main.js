@@ -71,21 +71,15 @@ if (!returnAsJSON) {
   const { out } = require('./utils');
   const fixedResults = calc.raw(calc.eval());
 
-  if (returnAsJSON) {
-    process.stdout.write(JSON.stringify({
-      error: returnRawJSON ? JSON.stringify(calc.error) : calc.error,
-      results: returnRawJSON ? JSON.stringify(fixedResults) : fixedResults,
-    }));
-  } else {
-    fixedResults.forEach(x => {
-      process.stderr.write(`${chalk.gray('//=>')} ${calc.value(x, 4, out, chalk.gray(', '), false).format}\n`);
-    });
-  }
-
-  if (calc.error && !returnAsJSON) {
+  if (calc.error) {
     process.stderr.write(chalk.red(calc.error.stack));
     process.exit(1);
   }
+
+  process.stdout.write(JSON.stringify({
+    error: returnRawJSON ? JSON.stringify(calc.error) : calc.error,
+    results: returnRawJSON ? JSON.stringify(fixedResults) : fixedResults,
+  }));
 }
 
 if (sharedFile) {

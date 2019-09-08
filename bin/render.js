@@ -52,7 +52,8 @@ module.exports = ({
       if (x instanceof Error) {
         push(null, `${chalk.red(`//! ${x[showDebugInfo ? 'stack' : 'message'].trim()}`)}\n`);
       } else {
-        const results = calc.value(x, indent.length + 4, out, chalk.gray(', '), false).format;
+        const fixedOffset = Array.isArray(x[0]) || x[0].token[0] === 'object' ? 4 : 5;
+        const results = calc.value(x, indent.length + fixedOffset, out, chalk.gray(', '), false).format;
 
         if (x[0].token[0] === 'error') {
           push(null, `${chalk.red(`//! ${results}`)}\n`);
