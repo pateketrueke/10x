@@ -10,6 +10,28 @@ Also, lambdas are supported!
 mul=x -> y -> x * y;
 mul(2, 3);
 
+# Recursion
+
+Recursive functions are supported as well:
+
+fact(n)=
+  :if (< n 1) 1
+  :else n * fact(n - 1);
+
+fact(5);
+
+# Memoization
+
+Add an exclamation mark right after a definition to memoize its input/output, e.g.
+
+fib!(n)=
+  :if (< n 2) 1, (< n 1) 0
+  :else fib(n - 1) + fib(n - 2);
+
+fib(99);
+
+> This technique is powerful but has its own limits, be careful.
+
 # Bindings
 
 Foreign bindings are also supported, e.g.
