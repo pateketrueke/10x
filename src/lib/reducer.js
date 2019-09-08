@@ -600,7 +600,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
-        console.log(e);
+        // console.log(e);
 
         if (!(e instanceof Err)) {
           throw new Err(e, ctx);
@@ -608,7 +608,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
 
         throw e;
       }
-    } else {
+    } else if (ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
       // merge lists
       if (isArray(ctx.right)) {
         ctx.tokens.splice(ctx.i, 2);
