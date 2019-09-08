@@ -135,11 +135,13 @@ export default class Expr {
   }
 
   static merge(tokens) {
-    let fixedAST = Expr.input(tokens);
+    while (tokens.length === 1 && isArray(tokens[0])) tokens = tokens[0];
 
-    while (fixedAST.length === 1) fixedAST = fixedAST[0];
+    if (tokens[0].token[0] === 'object') {
+      return tokens[0].token[1];
+    }
 
-    return Expr.derive(fixedAST.reduce((p, c) => p.concat(c), []));
+    return tokens;
   }
 
   static derive(value) {

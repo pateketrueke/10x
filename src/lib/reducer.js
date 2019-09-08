@@ -555,10 +555,10 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
       }
 
       // merge lists
-      if ((isArray(ctx.left) && ctx.left.length) || isArray(ctx.right)) {
+      if (isArray(ctx.left) && isArray(ctx.right)) {
         ctx.ast.pop();
-        ctx.tokens.splice(ctx.i, 1);
-        ctx.ast.push(ctx.left.concat(Expr.from(['expr', ',', 'or']), ctx.right));
+        ctx.tokens.splice(ctx.i, 2);
+        ctx.ast.push(cb(ctx.left.concat(Expr.from(['expr', ',', 'or']), ctx.right), ctx));
         continue;
       }
 
@@ -569,6 +569,14 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         && ctx.ast[0].token[0] === 'object'
       ) {
         ctx.ast.splice(0, 1, Expr.merge(ctx.ast));
+        continue;
+      }
+
+      // unwind next argument...
+      if (isArray(ctx.right) && !ctx.left.token[0]) {
+        ctx.ast.pop();
+        tokens.splice(i + 1, 1);
+        ctx.ast.push(...cb(ctx.right, ctx));
         continue;
       }
     }
