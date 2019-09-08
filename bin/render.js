@@ -23,7 +23,7 @@ module.exports = ({
     if (calc.error) {
       values.push(calc.error);
 
-      if (calc.error.target.begin) {
+      if (calc.error.target && calc.error.target.begin) {
         indent = Array.from({ length: calc.error.target.begin[1] + 1 }).join(' ');
       }
     }

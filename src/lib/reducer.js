@@ -544,23 +544,30 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         }
       }
       continue;
-    } else if (ctx.cur.token[0] === 'range') {
-      // FIXME: validate on-the-fly!
-      if (ctx.cur.token[1] === '..') {
-        if (isArray(ctx.left) && isArray(ctx.right)) {
-          ctx.ast.pop();
-          ctx.tokens.splice(ctx.i, 1);
-          ctx.ast.push(ctx.left.concat(Expr.from(['expr', ',', 'or']), ctx.right));
-          continue;
-        }
+    } else if (ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
+      // merge given objects
+      if (!isArray(ctx.left) && ctx.left.token[0] === 'object' && ctx.right.token[0] === 'object') {
+        Object.assign(ctx.left.token[1], ctx.right.token[1]);
+        ctx.tokens.splice(ctx.i, 2);
+        continue;
+      }
 
-        if (ctx.left.token[0] === 'object' && ctx.right.token[0] === 'object') {
-          Object.assign(ctx.left.token[1], ctx.right.token[1]);
-          ctx.tokens.splice(ctx.i, 2);
-          continue;
-        }
+      // merge lists
+      if ((isArray(ctx.left) && ctx.left.length) || isArray(ctx.right)) {
+        ctx.ast.pop();
+        ctx.tokens.splice(ctx.i, 1);
+        ctx.ast.push(ctx.left.concat(Expr.from(['expr', ',', 'or']), ctx.right));
+        continue;
+      }
 
-        throw new Error(`Cannot merge ${ctx.left.token[0]} and ${ctx.right.token[0]}`);
+      // unwind from lists
+      if (
+        ctx.ast.length === 1
+        && ctx.cur.token[0] === 'range'
+        && ctx.ast[0].token[0] === 'object'
+      ) {
+        ctx.ast.splice(0, 1, Expr.merge(ctx.ast));
+        continue;
       }
     }
 
