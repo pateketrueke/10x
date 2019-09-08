@@ -441,10 +441,12 @@ export function reduceFromDefs(cb, ctx, self, memoizedInternals) {
       const fixedArgs = fixValues(args, x => x.map(y => Expr.input(y, y._bound, (z, data) => cb(z, ctx, data))));
       const fixedValue = ctx.cur.token[1][2](...fixedArgs);
 
-      if (isArray(fixedValue)) {
-        ctx.ast.push(Expr.from(['object', fixedValue.reduce((p, c) => p.concat(Expr.ok(c)), [])]));
-      } else {
-        ctx.ast.push(Expr.derive(fixedValue));
+      if (typeof fixedValue !== 'undefined') {
+        if (isArray(fixedValue)) {
+          ctx.ast.push(Expr.from(['object', fixedValue.reduce((p, c) => p.concat(Expr.ok(c)), [])]));
+        } else {
+          ctx.ast.push(Expr.derive(fixedValue));
+        }
       }
       return false;
     }
