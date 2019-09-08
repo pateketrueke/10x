@@ -591,7 +591,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
 
-        if (ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
+        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
           const nextValue = Expr.input(cb(fixArgs(ctx.right), ctx)).map(x => Range.resolve(x, y => y._.body));
           const nextAST = nextValue.reduce((p, c) => p.concat(c), []);
 
@@ -600,7 +600,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
       } catch (e) {
-        // console.log(e);
+        console.log(e);
 
         if (!(e instanceof Err)) {
           throw new Err(e, ctx);
