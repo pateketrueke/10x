@@ -5,7 +5,7 @@ function out(type, text) {
     case null:
       return text;
     case 'blockquote':
-      return chalk.bold.whiteBright(text);
+      return chalk.dim(text);
     case 'comment':
       return chalk.gray(text);
     case 'symbol':
