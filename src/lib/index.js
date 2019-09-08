@@ -114,7 +114,7 @@ export default class Solv {
         type: 'object',
         format: parentheses !== false
           ? `${formatter('open', '(')}${fixedResult.join(separator)}${formatter('close', ')')}`
-          : fixedResult.join(`${separator.trim()}\n${repeat(' ', indent + 2)}`),
+          : fixedResult.join(`${separator.trim()}\n${repeat(' ', indent + 1)}`),
       };
     }
 
