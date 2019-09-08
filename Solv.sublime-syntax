@@ -76,10 +76,6 @@ contexts:
     - match: "(?<=[)]|\\d|[a-zA-Z_#'\\u00C0-\\u00FF])\\s*([-<!=|>~]{2}|[-+*=/<&>])"
       scope: keyword.other
 
-    # units and numbers
-    - match: "-?[\\w.]*\\d([-:_.]\\d)*\\w*%?|(?<=\\d)(\\s?[a-zA-Z_][-/a-zA-Z_#']*)?"
-      scope: constant
-
     # unit calls
     - match: "(?<=\\b|^)\\s*(?!:)\\w[-\\w#'!\\u00C0-\\u00FF]*(?=[(=])"
       scope: entity.name.function
@@ -87,6 +83,10 @@ contexts:
     # all symbols
     - match: '((?<!:):([a-zA-Z_][a-zA-Z\d_-]*|[\d.-]+)\b|\b_\b)'
       scope: keyword.control
+
+    # units and numbers
+    - match: "-?[\\w.]*\\d([-:_.]\\d)*\\w*%?"
+      scope: constant
 
     # headings
     - match: '^#.*$'
