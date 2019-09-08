@@ -12,6 +12,7 @@ import {
 } from './utils';
 
 import Err from './error';
+import Range from './range';
 
 export default class Expr {
   constructor(info, token) {
@@ -98,7 +99,7 @@ export default class Expr {
 
     // return range-expressions as is...
     if (token[0] === 'range') {
-      return token[2];
+      return Range.resolve(token[2], x => Expr.input(x._.body));
     }
 
     // intermediate state for objects
