@@ -3,21 +3,23 @@ import { transform } from '../src/lib/parser';
 import { getTokensFrom } from '../src/lib/lexer';
 import { DEFAULT_MAPPINGS } from '../src/lib/convert';
 
-describe('Parser', () => {
-  const tree = sample => transform({ input: getTokensFrom(sample, { units: DEFAULT_MAPPINGS }) }, { units: DEFAULT_MAPPINGS }).tree;
+const tree = (sample, customUnits) => {
+  const units = { ...DEFAULT_MAPPINGS, ...customUnits };
+  const context = { input: getTokensFrom(sample, units) };
 
-  describe('tokenization', () => {
-    it('should produce fixed tokens', () => {
-      expect(tree('x=1.2;')).to.eql([
-        [
-          {
-            token: ['def', 'x', {
-              args: null,
-              body: [{ token: ['number', '1.2'] }]
-            }],
-          },
-        ],
-      ]);
-    });
+  return transform(context, { units }).tree;
+}
+
+describe('Parser', () => {
+  it('should produce fixed tokens from well-known units', () => {
+    expect(tree('1 cm')).to.eql([[{ token: ['number', '1 cm', 'cm'] }]]);
+  });
+
+  it('should omit unknown units from produced tokens', () => {
+    expect(tree('1 foo')).to.eql([[{ token: ['number', '1'] }]]);
+  });
+
+  it('should use custom units from produced tokens', () => {
+    expect(tree('1 foo', { foo: 'x' })).to.eql([[{ token: ['number', '1 foo', 'x'] }]]);
   });
 });
