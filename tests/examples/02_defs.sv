@@ -26,9 +26,12 @@ Add an exclamation mark right after a definition to memoize its input/output, e.
 
 fib!(n)=
   :if (< n 2) 1, (< n 1) 0
-  :else fib(n - 1) + fib(n - 2);
+  :else (fib(n - 1) + fib(n - 2));
 
-fib(99);
+// self-references are possible too!
+:import (:fib F) :from "./02_defs.sv";
+
+F(99);
 
 > This technique is powerful but has its own limits, be careful.
 
