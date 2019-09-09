@@ -223,7 +223,7 @@ export function fixValues(tokens, cb = (x => x)) {
     Object.keys(tokens).forEach(key => {
       tokens[key] = fixValues(tokens[key], cb);
 
-      while (tokens[key].length === 1 && isArray(tokens[key][0])) {
+      while (isArray(tokens[key]) && tokens[key].length === 1) {
         tokens[key] = tokens[key][0];
       }
     });

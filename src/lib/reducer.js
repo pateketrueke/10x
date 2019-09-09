@@ -591,6 +591,11 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
           continue;
         }
 
+        // evaluate intermediate values from objects
+        if (!isArray(ctx.cur) && ctx.cur.token[0] === 'object' && !isArray(ctx.cur.token[1])) {
+          fixValues(ctx.cur.token[1], x => fixArgs(cb(x, ctx), true));
+        }
+
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'range' && ctx.cur.token[1] === '..') {
           const nextValue = cb(fixArgs(ctx.right), ctx).map(x => Expr.map(x, y => [Expr.derive(y)]));
           const nextAST = nextValue.reduce((p, c) => p.concat(c), []);
