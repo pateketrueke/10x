@@ -294,7 +294,7 @@ export function reduceFromLogic(cb, ctx, self) {
         }
         return true;
       } else if (Object.keys(set).length) {
-        console.log('USER_LOGIC', fixValues(set));
+        console.log('USER_LOGIC', { set });
         return true;
       }
       return false;

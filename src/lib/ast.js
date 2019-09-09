@@ -60,14 +60,6 @@ export function fixArgs(values, flatten) {
 
   if (flatten === null) {
     return stack.reduce((prev, cur) => {
-      const firstValue = cur.findIndex(x => x.token[0] !== 'text');
-
-      // prepend non values
-      if (firstValue > 0) {
-        prev.push(cur.slice(0, firstValue), cur.slice(firstValue));
-        return prev;
-      }
-
       prev.push(fixStrings(cur, false));
 
       return prev;
@@ -85,32 +77,19 @@ export function fixArgs(values, flatten) {
   return stack;
 }
 
-export function fixTokens(ast, re) {
-  if (!isArray(ast)) return ast;
-
-  const target = ast[0].token[0] === 'symbol' ? {} : [];
-  const array = isArray(target);
-
+export function fixTokens(ast) {
   let keyName;
 
   return ast.reduce((prev, cur) => {
     if (!isArray(cur) && cur.token[0] === 'symbol') {
       keyName = cur.token[1];
     } else if (isArray(cur) || !(cur.token[0] === 'expr' && hasSep(cur.token[1]))) {
-      const fixedToken = re && isArray(cur) ? fixArgs(cur).reduce((p, c) => p.concat(c), []) : cur;
-
-      if (!array && keyName) {
-        prev[keyName] = prev[keyName] || (prev[keyName] = []);
-        prev[keyName].push(fixedToken);
-      }
-
-      if (array) {
-        prev.push(fixedToken);
-      }
+      prev[keyName] = prev[keyName] || (prev[keyName] = []);
+      prev[keyName].push(cur);
     }
 
     return prev;
-  }, target);
+  }, {});
 }
 
 export function fixLeaf(tokens, i) {
@@ -174,7 +153,7 @@ export function fixTree(ast, self) {
         Object.defineProperty(prev, '_args', { value: true });
         tokens.splice(i, 1);
         // FIXME: more helpers
-      } else if (cur.token[0] === 'expr' && cur.token[2] === 'equal') {
+      } else {
         Object.defineProperty(prev, '_body', { value: true });
         subTree = fixLeaf(tokens, i);
       }
@@ -232,15 +211,12 @@ export function fixTree(ast, self) {
   return tokens;
 }
 
-
 export function fixValues(tokens, cb = (x => x)) {
   if (isArray(tokens)) {
-    // continue iterating if no Expr are found...
-    if (!tokens.some(x => x instanceof Expr)) {
-      return tokens.map(x => fixValues(x, cb));
-    }
+    // iterate tokens until we not longer have lists...
+    if (!tokens.some(x => isArray(x))) return cb(tokens)
 
-    return cb(tokens);
+    return tokens.map(x => fixValues(x, cb));
   }
 
   if (!(tokens instanceof Expr)) {
@@ -307,6 +283,10 @@ export function fixBinding(obj, name, alias, context) {
                   if (!isArray(y) && y.token[0] === 'def' && y.token[1] === name && alias) y.token[1] = alias;
                   return y;
                 }));
+
+                if (node._memo) {
+                  Object.defineProperty(node.token[2], '_memo', { value: true });
+                }
 
                 return node.token[2];
               }
