@@ -581,7 +581,7 @@ export function reduceFromAST(tokens, context, settings, parentContext, parentEx
         if (!isArray(ctx.cur) && ctx.cur.token[0] === 'string') {
           ctx.ast.push(Expr.from(['string', ...ctx.cur.token.slice(1).reduce((prev, cur) => {
             if (isArray(cur)) {
-              prev.push(Expr.plain(cb(cur, ctx)));
+              prev.push(...Expr.plain(fixArgs(cb(cur, ctx), true)));
             } else {
               prev.push(cur);
             }
