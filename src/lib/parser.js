@@ -158,22 +158,6 @@ export function tokenize(input, units) {
   }, []);
 }
 
-export function normalize(subTree) {
-  // FIXME: helper
-  const nonOps = subTree.filter(x => !(hasSep(x.cur) || ' \n'.includes(x.cur)));
-
-  if (nonOps.length) {
-    // FIXME: helper
-    const avg = nonOps.reduce((prev, cur) => prev + cur.score, 0) / nonOps.length;
-
-    if (avg < 2) {
-      delete subTree._fixed;
-    }
-  } else {
-    delete subTree._fixed;
-  }
-}
-
 export function transform(ctx, self) {
   const chunks = [];
 
@@ -200,39 +184,24 @@ export function transform(ctx, self) {
 
       // enable depth by blocks, just for symbols before groups...
       if (token.cur.charAt() === ':' && '(!'.includes(nextToken.cur)) {
-        if (!subTree._fixed && subTree.length) {
-          chunks[++inc] = [token];
-          chunks[inc]._fixed = true;
-        } else {
-          subTree._fixed = true;
-          subTree.push(token);
-        }
+        subTree._fixed = true;
+        subTree.push(token);
         open = true;
         continue;
       }
 
       // split on first high-ranked token
       if (subTree.length && !subTree._fixed) {
-        if (subTree[0].score >= 1.5 || (';(='.includes(token.cur) && subTree.length === 1)) {
-          subTree._fixed = true;
-          subTree.push(token);
-          continue;
-        }
-
         chunks[++inc] = [token];
 
         // keep formatting separated
         if (token.score < 1) inc++;
         else chunks[inc]._fixed = true;
-
-        // break on non-regular tokens!
-        if ('":'.includes(token.cur.charAt()) && (nextToken.score < 2 || nextToken.score > 3)) inc++;
         continue;
       }
       // break on any non-white space
     } else if (!' \n'.includes(token.cur) && subTree._fixed) {
       chunks[++inc] = [token];
-      normalize(subTree);
       open = false;
       continue;
     }
