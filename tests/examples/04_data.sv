@@ -23,4 +23,11 @@ By using symbols, you can create tuples from lists, e.g. (:key "value")
 
 Those can be merged to, be they cannot be unwinded!
 
-(:foo "bar") .. (:baz "buzz")
+(:foo "bar") .. (:baz "buzz");
+
+Tuples can be nested, e.g.
+
+pkg=(:name "solv-lang" :version "1.2");
+deps=(:k "undef", :dependencies (:chalk "^2.4.2" :wargs "^0.8.2"));
+
+(pkg)..(deps);

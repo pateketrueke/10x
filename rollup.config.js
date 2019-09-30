@@ -14,7 +14,7 @@ function makeEntry(input, output, liveReload) {
     plugins: [
       json(),
       svelte({
-        dev: !production,
+        // dev: !production,
         css: css => {
           css.write('public/bundle.css');
         }
@@ -22,16 +22,17 @@ function makeEntry(input, output, liveReload) {
       resolve({ browser: true }),
       commonjs(),
       liveReload && livereload('public'),
-      production && terser()
+      // production && terser()
     ],
     watch: {
       clearScreen: false,
     },
-    external: ['convert-units', 'currency-symbol.js'],
+    // external: ['convert-units', 'currency-symbol.js'],
   };
 }
 
 export default [
-  makeEntry('src/lib/index.js', { format: 'cjs', file: 'dist/lib.js' }, false),
+  // makeEntry('src/lib/index.js', { format: 'cjs', file: 'dist/lib.js' }, false),
+  makeEntry('src/lib/index.js', { format: 'es', file: 'dist/lib.es.js' }, false),
   // makeEntry('src/main.js', { format: 'iife', file: 'public/bundle.js' }, !production),
 ];

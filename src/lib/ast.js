@@ -245,55 +245,55 @@ export function fixBinding(obj, name, alias, context) {
       target = Function.prototype.call.bind(global[obj].prototype[name]);
       break;
     default: {
-      // FIXME: for browser usage, decouple this...
-      const fs = require('fs');
-      const path = require('path');
+      // // FIXME: for browser usage, decouple this...
+      // const fs = require('fs');
+      // const path = require('path');
 
-      const srcDir = context.filepath
-        ? path.dirname(context.filepath)
-        : process.cwd();
+      // const srcDir = context.filepath
+      //   ? path.dirname(context.filepath)
+      //   : process.cwd();
 
-      const srcFile = path.resolve(srcDir, obj);
+      // const srcFile = path.resolve(srcDir, obj);
 
-      // FIXME: cache this shit... also, disable for browser!! (or replace...)
-      if (fs.existsSync(srcFile)) {
-        if (srcFile.indexOf('.js') === srcFile.length - 3) {
-          let def = require(srcFile);
+      // // FIXME: cache this shit... also, disable for browser!! (or replace...)
+      // if (fs.existsSync(srcFile)) {
+      //   if (srcFile.indexOf('') === srcFile.length - 3) {
+      //     let def = require(srcFile);
 
-          // normalize default-exported functions
-          def = typeof def === 'function'
-            ? { default: def }
-            : def;
+      //     // normalize default-exported functions
+      //     def = typeof def === 'function'
+      //       ? { default: def }
+      //       : def;
 
-          if (def) {
-            target = def[name];
-          }
-        } else {
-          const ast = context.include(fs.readFileSync(srcFile).toString(), srcFile).tree;
+      //     if (def) {
+      //       target = def[name];
+      //     }
+      //   } else {
+      //     const ast = context.include(fs.readFileSync(srcFile).toString(), srcFile).tree;
 
-          for (let i = 0; i < ast.length; i += 1) {
-            const subTree = ast[i];
+      //     for (let i = 0; i < ast.length; i += 1) {
+      //       const subTree = ast[i];
 
-            for (let j = 0; j < subTree.length; j += 1) {
-              const node = subTree[j];
+      //       for (let j = 0; j < subTree.length; j += 1) {
+      //         const node = subTree[j];
 
-              if (!isArray(node) && node.token[0] === 'def' && node.token[1] === name && node._body) {
-                // rename matching definition if it's aliased!
-                fixValues(node.token[2].body, x => x.map(y => {
-                  if (!isArray(y) && y.token[0] === 'def' && y.token[1] === name && alias) y.token[1] = alias;
-                  return y;
-                }));
+      //         if (!isArray(node) && node.token[0] === 'def' && node.token[1] === name && node._body) {
+      //           // rename matching definition if it's aliased!
+      //           fixValues(node.token[2].body, x => x.map(y => {
+      //             if (!isArray(y) && y.token[0] === 'def' && y.token[1] === name && alias) y.token[1] = alias;
+      //             return y;
+      //           }));
 
-                if (node._memo) {
-                  Object.defineProperty(node.token[2], '_memo', { value: true });
-                }
+      //           if (node._memo) {
+      //             Object.defineProperty(node.token[2], '_memo', { value: true });
+      //           }
 
-                return node.token[2];
-              }
-            }
-          }
-        }
-      }
+      //           return node.token[2];
+      //         }
+      //       }
+      //     }
+      //   }
+      // }
 
       if (!target) {
         throw new Error(`Missing \`${name}\` binding from \`${obj}\``);

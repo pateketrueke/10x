@@ -64,7 +64,9 @@ export default class Range {
           ? String.fromCharCode(nextValue.value)
           : nextValue.value;
 
-        seq.push(...cb(fixedValue));
+        const newValue = cb(fixedValue);
+
+        seq.push(...(!isArray(newValue) ? [newValue] : newValue));
       }
 
       return seq;
