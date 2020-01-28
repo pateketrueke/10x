@@ -1,0 +1,77 @@
+{
+  "name": "10x",
+  "version": "0.0.0",
+  "bin": {
+    "10x": "bin/cli"
+  },
+  "scripts": {
+    "dev": "tarima watch",
+    "watch": "npm run mocha -- -w 'tests/*.test.js'",
+    "build": "tarima -qfe $NODE_ENV",
+    "mocha": "NODE_ENV=test _mocha --exit --recursive --watch-extensions x,js,json -r esm -bR spec",
+    "pretest": "eslint tests *.js src/lib",
+    "test": "npm run test:unit --",
+    "test:ci": "npm run test:coverage -- -r lcov",
+    "test:unit": "TZ=UTC npm run mocha -- -r esm --colors 'tests/*.test.js'",
+    "test:coverage": "npm run coverage -- npm run test:unit && npm run report --",
+    "codecov": "codecov --file=coverage/lcov.info -e TRAVIS_NODE_VERSION",
+    "coverage": "nyc -x '**/tests/**' -x '**/*.test.js' --",
+    "report": "nyc report"
+  },
+  "tarima": {
+    "from": "src",
+    "serve": "dist",
+    "output": "dist",
+    "ignore": [
+      "**/lib/**",
+      "{eval,util}.js"
+    ],
+    "rename": [
+      "**/src/**:{fullpath/1}"
+    ],
+    "bundle": [
+      "**/main.*.js"
+    ],
+    "bundleOptions": {
+      "extensions": {
+        "esm": false,
+        "umd": false,
+        "cjs": false
+      },
+      "rollup": {
+        "plugins": [
+          "rollup-plugin-commonjs",
+          "rollup-plugin-node-resolve"
+        ]
+      }
+    }
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "codecov": "^3.5.0",
+    "eslint": "^6.0.1",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.18.1",
+    "esm": "^3.2.25",
+    "mocha": "^6.2.0",
+    "nyc": "^15.0.0",
+    "rollup": "^1.29.1",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "stdout-stderr": "^0.1.13",
+    "tarima": "^4.6.3"
+  },
+  "dependencies": {
+    "chalk": "^3.0.0",
+    "convert-units": "^2.3.4",
+    "currency-symbol.js": "^1.0.0",
+    "fs-extra": "^9.0.0",
+    "mock-stdin": "^1.0.0",
+    "prompt-sync": "^4.2.0",
+    "prompt-sync-history": "^1.0.1",
+    "prompts": "^2.3.1",
+    "testdouble": "^3.13.1",
+    "timekeeper": "^2.2.0",
+    "wargs": "^0.9.0"
+  }
+}

@@ -1,0 +1,10 @@
+*.log
+*.todo
+.tarima
+.DS_Store
+dist
+coverage
+.nyc_output
+node_modules
+public/bundle.*
+currencies*.json

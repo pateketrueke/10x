@@ -1,0 +1,252 @@
+%YAML 1.2
+---
+# See http://www.sublimetext.com/docs/3/syntax.html
+name: 10x
+
+file_extensions:
+  - x
+
+scope: source.text.10x
+
+contexts:
+  main:
+    - include: 10xml
+    - include: 10xrs
+
+  10xml:
+    - include: 10xra
+    - include: 10xrc
+    - include: 10xrb
+
+  10xra:
+    # text paragraphs
+    - match: '^\w(?=[a-zA-Z\s]*(?:[);:.,]?\s+\w|$))'
+      scope: text
+      push:
+        - clear_scopes: 1
+        - meta_scope: text
+        - include: 10xmd
+        - match: '$'
+          pop: true
+
+    # list items, blockquotes and headings
+    - match: '^(?:\s*(?:[-+*]|\d+\.)|>|#+)\s+'
+      scope: support.constant
+      push:
+        - clear_scopes: 1
+        - meta_scope: text
+        - include: 10xmd
+        - match: '$'
+          pop: true
+
+    # foot-links
+    - match: '^\s*\[\S+\]:\s+'
+      scope: comment
+      push:
+        - match: '$'
+          pop: true
+
+    # code blocks
+    - match: '^```'
+      scope: comment
+      push:
+        - meta_scope: text
+        - match: '```'
+          scope: comment
+          pop: true
+
+  10xrb:
+    - include: 10xmd
+
+    # code, bold or italics
+    - match: '^`\w+'
+      scope: string
+      push:
+        - match: '`'
+          scope: string
+          pop: true
+
+    - match: '^([_*]{2})\w+'
+      scope: keyword
+      push:
+        - match: '\1'
+          scope: keyword
+          pop: true
+
+    - match: '^([_*])\w+'
+      scope: keyword.control
+      push:
+        - match: '\1'
+          scope: keyword.control
+          pop: true
+
+  10xmdl:
+    # markup tags
+    - match: '<([a-zA-Z_]+)'
+      scope: string
+      push:
+        - meta_scope: string
+        - include: 10xmlT
+
+  10xmd:
+    # code tags
+    - match: '`[^`]+?`'
+      scope: string
+
+    # bold tags
+    - match: '([_*]{2})[^*_]+?\1'
+      scope: keyword
+
+    # italic tags
+    - match: '([_*])[^*_]+?\1'
+      scope: keyword.control
+
+    # inline-links and images
+    - match: '(?<=\])\['
+      scope: punctuation.definition.comment
+      push:
+        - meta_scope: comment.line
+        - match: '\]'
+          scope: punctuation.definition.comment
+          pop: true
+
+    - match: '(?<=\])\('
+      scope: punctuation.definition.comment
+      push:
+        - meta_scope: comment.line
+        - match: '\)'
+          scope: punctuation.definition.comment
+          pop: true
+
+    - match: '(?<!\])!?\['
+      scope: punctuation.definition.comment
+      push:
+        - meta_scope: text
+        - match: '[^\[\]]+'
+        - match: '\]'
+          scope: punctuation.definition.comment
+          pop: true
+
+  10xmlT:
+    - include: 10xmlI
+
+    # recursion
+    - match: '<([a-zA-Z_]+)'
+      scope: string
+      push:
+        - include: 10xmlT
+
+    # self-close
+    - match: '\/>'
+      pop: true
+
+    # end
+    - match: '<\/\1>'
+      pop: true
+
+  10xmlI:
+    # interpolated values
+    - match: '#\{'
+      push:
+        - clear_scopes: 1
+        - include: scope:source.text.10x
+        - match: '\}'
+          pop: true
+
+    # placeholders
+    - match: '\{'
+      push:
+        - clear_scopes: 1
+        - include: 10xmlI
+        - meta_scope: comment
+        - match: '\}'
+          pop: true
+
+    # sequence escapes
+    - match: '\\.'
+      scope: constant.character.escape
+
+  10xrs:
+    # numbers
+    - match: '\b(?:-?(?:\d[\d_]*)?\d\.)(?:\d[\d_]*)\w*\b'
+      scope: constant
+
+    - match: '\b(?:-?\d[\d_]*|\.\d[\d_]*)\w*\b'
+      scope: constant
+
+    # operators
+    - match: '(?:<=|=>|\|>|->|[-+]?=|--|\+\+|[-+*/%<>!?|$~])'
+      scope: support.constant
+
+    # symbols
+    - match: '(?<!:):(?:[a-zA-Z_][\w-]*|[\d.-]+)\??\b'
+      scope: keyword.control
+
+  10xrc:
+    # string blocks
+    - match: '"""'
+      scope: string
+      push:
+        - meta_scope: string
+        - include: 10xmlI
+        - match: '"""'
+          scope: string
+          pop: true
+
+    # strings
+    - match: '(?!\\)"'
+      scope: string
+      push:
+        - include: 10xmlI
+        - meta_scope: string
+        - match: '"'
+          pop: true
+
+    # regexp
+    - match: '/(?!/)(?=.*/)'
+      scope: string
+      push:
+        - meta_scope: string
+
+        # sequence escapes
+        - match: '\\.'
+          scope: constant.character.escape
+
+        - match: '(?!\\)/[igmu]{,4}'
+          pop: true
+
+    # blocks
+    - match: '\('
+      scope: punctuation.definition.comment
+      push:
+        - clear_scopes: 1
+        - include: scope:source.text.10x
+        - match: '\)'
+          scope: punctuation.definition.comment
+          pop: true
+
+    # ranges
+    - match: '\['
+      scope: punctuation.definition.comment
+      push:
+        - clear_scopes: 1
+        - include: scope:source.text.10x
+        - match: '\]'
+          scope: punctuation.definition.comment
+          pop: true
+
+    # comments
+    - match: '/\*'
+      scope: comment.block
+      push:
+        - meta_scope: comment.block
+        - match: '\*/'
+          pop: true
+
+    # comments (multiline)
+    - match: '(?!:)//'
+      scope: comment.line
+      push:
+        - meta_scope: comment.line
+        - match: '$'
+          pop: true
