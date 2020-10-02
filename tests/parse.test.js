@@ -4,15 +4,96 @@ import { expect } from 'chai';
 
 import Expr from '../src/lib/tree/expr';
 import Parser from '../src/lib/tree/parser';
+import Scanner from '../src/lib/tree/scanner';
+
+import { deindent } from '../src/lib/helpers';
 
 import {
   LESS, EXACT_EQ, GREATER_EQ, MINUS, SOME, EVERY, PLUS, MUL, DIV, DOT, OR,
-  EOL, TEXT, CODE, BLOCKQUOTE, COMMA, STRING, OPEN, CLOSE, RANGE, REGEX, LITERAL,
+  EOL, TEXT, CODE, BLOCKQUOTE, COMMA, STRING, TUPLE, OPEN, CLOSE, RANGE, REGEX, LITERAL,
 } from '../src/lib/tree/symbols';
 
 /* global describe, it */
 
 describe('Parser', () => {
+  it('should keep text and white-space', () => {
+    expect(Parser.getAST('1 ?')).to.eql([Expr.value(1), Expr.from(SOME)]);
+  });
+
+  it('should parse regex-expressions', () => {
+    expect(Parser.getAST('/x/')).to.eql([Expr.from(REGEX, /x/)]);
+  });
+
+  it('should parse markup tags', () => {
+    expect(Parser.getAST(deindent(`
+      <div (title) class="static #{dyn}">
+        Hello #{name}!
+      </div>
+    `))).to.eql([Expr.from(STRING, [
+      Expr.value('<div (title) class="static '),
+      Expr.from(PLUS),
+      Expr.body([Expr.local('dyn')]),
+      Expr.from(PLUS),
+      Expr.value('">\n  Hello '),
+      Expr.from(PLUS),
+      Expr.body([Expr.local('name')]),
+      Expr.from(PLUS),
+      Expr.value('!\n</div>'),
+    ])]);
+  });
+
+  it('should parse markdown tags', () => {
+    expect(Parser.getAST('> x `y`', true)[0].body).to.eql([
+      Expr.from(TEXT, {
+        buffer: ['x ', [CODE, '`', 'y']],
+        kind: BLOCKQUOTE,
+      }),
+    ]);
+  });
+
+  it('should sum consecutive numbers', () => {
+    expect(Parser.getAST('1 2 3')).to.eql([
+      Expr.value(1),
+      Expr.from(PLUS),
+      Expr.value(2),
+      Expr.from(PLUS),
+      Expr.value(3),
+    ]);
+  });
+
+  it('should multiply number groups', () => {
+    expect(Parser.getAST('1(2)')).to.eql([
+      Expr.value(1),
+      Expr.from(MUL),
+      Expr.tuple([Expr.value(2)]),
+    ]);
+  });
+
+  it('should skip units by default', () => {
+    expect(Parser.getAST('1cm')).to.eql([Expr.value(1), Expr.from(MUL), Expr.local('cm')]);
+  });
+
+  it('should parse tuples out from parentheses', () => {
+    expect(Parser.getAST('(1,2)')).to.eql([Expr.tuple([Expr.value(1), Expr.from(COMMA), Expr.value(2)])]);
+  });
+
+  it('should parse blocks from arrows or braces', () => {
+    expect(Parser.getAST('->')).to.eql([Expr.block()]);
+    expect(Parser.getAST('{x}')).to.eql([Expr.block({ args: [Expr.local('x')] })]);
+    expect(Parser.getAST('a{b}')).to.eql(Parser.getAST('a->b'));
+    expect(Parser.getAST('x=y->y*2;')).to.eql(Parser.getAST('x=y{y*2};'));
+    expect(Parser.getAST('sum=a,b{a+b}')).to.eql(Parser.getAST('sum=a,b->a+b'));
+  });
+
+  it('should keep nested trees', () => {
+    expect(Parser.getAST('(((x=(1;42))))')).to.eql([
+      Expr.tuple([Expr.tuple([Expr.tuple([Expr.block({
+        body: [Expr.tuple([Expr.value(1), Expr.from(EOL), Expr.value(42)])],
+        name: 'x',
+      })])])]),
+    ]);
+  });
+
   it('should allow to parse raw-statements', () => {
     expect(Parser.getAST('1..3,\na,b;(j+"m\nn";\nk);x;\ny _z_', true)).to.eql([
       {
@@ -54,95 +135,24 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should keep text and white-space', () => {
-    expect(Parser.getAST('1 ?')).to.eql([Expr.value(1), Expr.from(SOME)]);
-  });
-
-  it('should parse regex-expressions', () => {
-    expect(Parser.getAST('/x/')).to.eql([Expr.from(REGEX, /x/)]);
-  });
-
-  it('should parse markup tags', () => {
-    expect(Parser.getAST(`
-      <div (title) class="static #{dyn}">
-        Hello #{name}!
-      </div>
-    `)).to.eql([Expr.from(STRING, [
-      Expr.value('<div (title) class="static '),
-      Expr.from(PLUS),
-      Expr.body([Expr.local('dyn')]),
-      Expr.from(PLUS),
-      Expr.value('">\n        Hello '),
-      Expr.from(PLUS),
-      Expr.body([Expr.local('name')]),
-      Expr.from(PLUS),
-      Expr.value('!\n      </div>'),
-    ])]);
-  });
-
-  it('should parse markdown tags', () => {
-    expect(Parser.getAST('> x `y`', true)[0].body).to.eql([
-      Expr.from(TEXT, {
-        buffer: ['x ', [CODE, '`', 'y']],
-        kind: BLOCKQUOTE,
-      }),
-    ]);
-  });
-
-  it('should sum consecutive numbers', () => {
-    expect(Parser.getAST('; 1 2 3')).to.eql([
-      Expr.from(EOL),
-      Expr.value(1),
-      Expr.from(PLUS),
-      Expr.value(2),
-      Expr.from(PLUS),
-      Expr.value(3),
-    ]);
-  });
-
-  it('should multiply number groups', () => {
-    expect(Parser.getAST('1(2)')).to.eql([
-      Expr.value(1),
-      Expr.from(MUL),
-      Expr.group([Expr.value(2)]),
-    ]);
-  });
-
-  it('should skip units by default', () => {
-    expect(Parser.getAST('1cm')).to.eql([Expr.value(1), Expr.from(MUL), Expr.local('cm')]);
-  });
-
-  it('should keep nested trees', () => {
-    expect(Parser.getAST('(((x=(1;42))))')).to.eql([
-      Expr.group([Expr.group([Expr.group([Expr.block({
-        body: [Expr.group([Expr.value(1), Expr.from(EOL), Expr.value(42)])],
-        name: 'x',
-      })])])]),
-    ]);
-  });
-
   it('should allow simple AST-transformations', () => {
     expect(Parser.getAST(`
       :template ++ (a -> :let a = a + 1);
       a++, ++b
     `)).to.eql([
-      Expr.group([
+      Expr.body([
         Expr.local('a'),
-        Expr.let([Expr.body([
-          Expr.block({
-            body: [Expr.local('a'), Expr.from(PLUS), Expr.value(1)],
-            name: 'a',
-          }),
-        ])]),
+        Expr.let([Expr.block({
+          body: [Expr.local('a'), Expr.from(PLUS), Expr.value(1)],
+          name: 'a',
+        })]),
       ]),
       Expr.from(COMMA),
-      Expr.group([
-        Expr.let([Expr.body([
-          Expr.block({
-            body: [Expr.local('b'), Expr.from(PLUS), Expr.value(1)],
-            name: 'b',
-          }),
-        ])]),
+      Expr.body([
+        Expr.let([Expr.block({
+          body: [Expr.local('b'), Expr.from(PLUS), Expr.value(1)],
+          name: 'b',
+        })]),
         Expr.local('b'),
       ]),
     ]);
@@ -151,27 +161,25 @@ describe('Parser', () => {
       :template += (a, b -> :let a = a + b);
       x.i += (2 / 5)
     `)).to.eql([
-      Expr.group([
+      Expr.body([
         Expr.map({
           let: Expr.body([
-            Expr.body([
-              Expr.local('x'),
-              Expr.from(DOT),
-              Expr.block({
-                body: [
-                  Expr.local('x'),
-                  Expr.from(DOT),
-                  Expr.local('i'),
-                  Expr.from(PLUS),
-                  Expr.group([
-                    Expr.value(2),
-                    Expr.from(DIV),
-                    Expr.value(5),
-                  ]),
-                ],
-                name: 'i',
-              }),
-            ]),
+            Expr.local('x'),
+            Expr.from(DOT),
+            Expr.block({
+              body: [
+                Expr.local('x'),
+                Expr.from(DOT),
+                Expr.local('i'),
+                Expr.from(PLUS),
+                Expr.tuple([
+                  Expr.value(2),
+                  Expr.from(DIV),
+                  Expr.value(5),
+                ]),
+              ],
+              name: 'i',
+            }),
           ]),
         }),
       ]),
@@ -185,7 +193,7 @@ describe('Parser', () => {
       1 ++! 2;
       1 +++ 2;
     `)).to.eql([
-      Expr.group([Expr.array([Expr.value(1), Expr.from(COMMA), Expr.value(2)])]),
+      Expr.body([Expr.array([Expr.value(1), Expr.from(COMMA), Expr.value(2)])]),
       Expr.from(EOL),
       Expr.value(1),
       Expr.from(PLUS),
@@ -208,7 +216,7 @@ describe('Parser', () => {
     it('should parse range arguments', () => {
       expect(Parser.getAST('x(y,..)')).to.eql([
         Expr.local('x'),
-        Expr.group([
+        Expr.tuple([
           Expr.local('y'),
           Expr.from(COMMA),
           Expr.from(LITERAL, '..'),
@@ -217,7 +225,7 @@ describe('Parser', () => {
 
       expect(Parser.getAST('x(..,y)')).to.eql([
         Expr.local('x'),
-        Expr.group([
+        Expr.tuple([
           Expr.from(LITERAL, '..'),
           Expr.from(COMMA),
           Expr.local('y'),
@@ -255,16 +263,16 @@ describe('Parser', () => {
     it('should parse anonymous blocks', () => {
       expect(Parser.getAST('f(->)')).to.eql([
         Expr.local('f'),
-        Expr.group([Expr.block()]),
+        Expr.tuple([Expr.block()]),
       ]);
     });
 
     it('should parse function-calls', () => {
       expect(Parser.getAST('a()(1)()')).to.eql([
         Expr.local('a'),
-        Expr.group([]),
-        Expr.group([Expr.value(1)]),
-        Expr.group([]),
+        Expr.tuple([]),
+        Expr.tuple([Expr.value(1)]),
+        Expr.tuple([]),
       ]);
     });
 
@@ -280,14 +288,14 @@ describe('Parser', () => {
       const input = [Expr.value(5), Expr.from(COMMA), Expr.value(6)];
 
       expect(Parser.getAST(';a, b -> a + b')).to.eql([Expr.from(EOL), call]);
-      expect(Parser.getAST('(a, b -> a + b)')).to.eql([Expr.group([call])]);
-      expect(Parser.getAST('(a, b -> a + b)(5, 6)')).to.eql([Expr.group([call]), Expr.group(input)]);
-      expect(Parser.getAST('(a, b -> (a + b)(5, 6))')).to.eql([Expr.group([
+      expect(Parser.getAST('(a, b -> a + b)')).to.eql([Expr.tuple([call])]);
+      expect(Parser.getAST('(a, b -> a + b)(5, 6)')).to.eql([Expr.tuple([call]), Expr.tuple(input)]);
+      expect(Parser.getAST('(a, b -> (a + b)(5, 6))')).to.eql([Expr.tuple([
         Expr.block({
           args,
           body: [
-            Expr.group(body),
-            Expr.group(input),
+            Expr.tuple(body),
+            Expr.tuple(input),
           ],
         }),
       ])]);
@@ -302,21 +310,21 @@ describe('Parser', () => {
     });
 
     it('should parse logical expressions', () => {
-      expect(Parser.getAST('(< 1 2)')).to.eql([Expr.group([
+      expect(Parser.getAST('(< 1 2)')).to.eql([Expr.tuple([
         Expr.from(LESS, [Expr.value(1), Expr.value(2)]),
       ])]);
 
-      expect(Parser.getAST('(? a b c)')).to.eql([Expr.group([
+      expect(Parser.getAST('(? a b c)')).to.eql([Expr.tuple([
         Expr.from(SOME, [Expr.local('a'), Expr.local('b'), Expr.local('c')]),
       ])]);
 
-      expect(Parser.getAST('($ x y z)')).to.eql([Expr.group([
+      expect(Parser.getAST('($ x y z)')).to.eql([Expr.tuple([
         Expr.from(EVERY, [Expr.local('x'), Expr.local('y'), Expr.local('z')]),
       ])]);
 
-      expect(Parser.getAST('(== 1 ((1 / 3) * 3))')).to.eql([Expr.group([
-        Expr.from(EXACT_EQ, [Expr.value(1), Expr.group([
-          Expr.group([Expr.value(1), Expr.from(DIV), Expr.value(3)]),
+      expect(Parser.getAST('(== 1 ((1 / 3) * 3))')).to.eql([Expr.tuple([
+        Expr.from(EXACT_EQ, [Expr.value(1), Expr.tuple([
+          Expr.tuple([Expr.value(1), Expr.from(DIV), Expr.value(3)]),
           Expr.from(MUL),
           Expr.value(3),
         ])]),
@@ -328,10 +336,10 @@ describe('Parser', () => {
         Expr.map({
           if: Expr.stmt([
             Expr.block({
-              body: [Expr.group([Expr.from(LESS, [Expr.local('n'), Expr.value(2)])]), Expr.value(1)],
+              body: [Expr.tuple([Expr.from(LESS, [Expr.local('n'), Expr.value(2)])]), Expr.value(1)],
             }),
             Expr.block({
-              body: [Expr.group([Expr.from(LESS, [Expr.local('n'), Expr.value(1)])]), Expr.value(0)],
+              body: [Expr.tuple([Expr.from(LESS, [Expr.local('n'), Expr.value(1)])]), Expr.value(0)],
             }),
           ]),
         }),
@@ -340,19 +348,17 @@ describe('Parser', () => {
 
     it('should parse assignments too', () => {
       expect(Parser.getAST(':let\n(a = 1)')).to.eql([Expr.map({
-        let: Expr.group({
-          body: [Expr.stmt([Expr.block({
-            body: [Expr.value(1)],
-            name: 'a',
-          })])],
-        }),
+        let: Expr.stmt([Expr.block({
+          body: [Expr.value(1)],
+          name: 'a',
+        })]),
       })]);
 
       expect(Parser.getAST(':while (>= n-- 0)\ntemp = a')).to.eql([Expr.map({
         while: Expr.stmt([
           Expr.block({
             body: [
-              Expr.group([Expr.from(GREATER_EQ, [Expr.local('n'), Expr.from(MINUS, '-'), Expr.from(MINUS, '-'), Expr.value(0)])]),
+              Expr.tuple([Expr.from(GREATER_EQ, [Expr.local('n'), Expr.from(MINUS, '-'), Expr.from(MINUS, '-'), Expr.value(0)])]),
               Expr.block({ body: [Expr.local('a')], name: 'temp' }),
             ],
           }),
@@ -382,7 +388,7 @@ describe('Parser', () => {
         Expr.from(PLUS),
         Expr.body([
           Expr.local('is_divisible'),
-          Expr.group({ args: [Expr.value(3), Expr.from(COMMA), Expr.value(2)] }),
+          Expr.tuple([Expr.value(3), Expr.from(COMMA), Expr.value(2)]),
           Expr.from(SOME),
           Expr.value('YES'),
           Expr.from(OR),
@@ -502,7 +508,7 @@ describe('Parser', () => {
         }),
       ]);
 
-      expect(Parser.getAST('(:key 42)')).to.eql([Expr.group([Expr.map({
+      expect(Parser.getAST('(:key 42)')).to.eql([Expr.tuple([Expr.map({
         key: Expr.body([Expr.value(42)]),
       })])]);
     });
@@ -552,7 +558,7 @@ describe('Parser', () => {
       expect(Parser.getAST(':key (:value 42)')).to.eql([
         Expr.map({
           key: Expr.body([Expr.body([
-            Expr.group([Expr.map({
+            Expr.tuple([Expr.map({
               value: Expr.body([Expr.value(42)]),
             })]),
           ])]),
@@ -562,7 +568,7 @@ describe('Parser', () => {
 
     it('should parse lists, blocks and mappings', () => {
       expect(Parser.getAST('[(:key "value" 42) :other :finish]')).to.eql([Expr.array([
-        Expr.group([Expr.map({
+        Expr.tuple([Expr.map({
           key: Expr.body([Expr.body([Expr.value('value'), Expr.value(42)])]),
         })]),
         Expr.symbol(':other'),
@@ -578,7 +584,7 @@ describe('Parser', () => {
       ])]);
 
       expect(Parser.getAST('[(:key "value" 42), :other, :finish]')).to.eql([Expr.array([
-        Expr.group([Expr.map({
+        Expr.tuple([Expr.map({
           key: Expr.body([Expr.body([Expr.value('value'), Expr.value(42)])]),
         })]),
         Expr.from(COMMA),
@@ -588,7 +594,7 @@ describe('Parser', () => {
       ])]);
 
       expect(Parser.getAST('[(:key "value" 42), :other, :finish]')).to.eql([Expr.array([
-        Expr.group([
+        Expr.tuple([
           Expr.map({
             key: Expr.body([Expr.body([Expr.value('value'), Expr.value(42)])]),
           }),

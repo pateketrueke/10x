@@ -2,21 +2,21 @@
 
 import {
   COMMENT, COMMENT_MULTI, CODE, BOLD, ITALIC, BLOCKQUOTE, HEADING, OL_ITEM, UL_ITEM, REF,
-  TEXT, OPEN, CLOSE, COMMA, BEGIN, DONE, EOF, EOL,
+  TEXT, OPEN, CLOSE, COMMA, BEGIN, START, DONE, EOF, EOL, FINISH,
   MINUS, PLUS, MUL, DIV, MOD, DOT, OR, SOME, EVERY,
-  PIPE, BLOCK, RANGE, REGEX, SYMBOL, LITERAL, NUMBER, STRING, NOT_EQ,
+  PIPE, BLOCK, TUPLE, RANGE, REGEX, SYMBOL, LITERAL, NUMBER, STRING, NOT_EQ,
   NOT, LIKE, EXACT_EQ, EQUAL, LESS_EQ, LESS, GREATER_EQ, GREATER,
   CONTROL_TYPES, SYMBOL_TYPES,
 } from './tree/symbols';
 
 const LOGIC_TYPES = [LESS, LESS_EQ, GREATER, GREATER_EQ, EXACT_EQ, NOT_EQ, NOT, LIKE, EQUAL, SOME, EVERY];
-const RESULT_TYPES = [NUMBER, STRING, SYMBOL, LITERAL, BLOCK, RANGE, REGEX];
-const INVOKE_TYPES = [EOL, COMMA, BLOCK, RANGE, LITERAL];
+const RESULT_TYPES = [NUMBER, STRING, SYMBOL, LITERAL, BLOCK, TUPLE, RANGE, REGEX];
+const INVOKE_TYPES = [EOL, COMMA, TUPLE, RANGE, LITERAL];
 const COMMENT_TYPES = [COMMENT, COMMENT_MULTI];
 
 const MATH_TYPES = [EQUAL, MINUS, PLUS, MUL, DIV, PIPE, MOD, SOME, LIKE, NOT, OR];
-const END_TYPES = [OR, EOF, EOL, COMMA, DONE, CLOSE, PIPE];
-const LIST_TYPES = [BEGIN, DONE, OPEN, CLOSE];
+const END_TYPES = [OR, EOF, EOL, COMMA, DONE, CLOSE, PIPE, FINISH];
+const LIST_TYPES = [BEGIN, DONE, OPEN, CLOSE, START, FINISH];
 const SCALAR_TYPES = [NUMBER, STRING];
 
 const RE_SLICING = /^:(-?\d+)?(\.\.|-)?(?:(-?\d+))?$/;
@@ -69,8 +69,11 @@ export function isString(t) { return t && t.type === STRING; }
 export function isComma(t) { return t && t.type === COMMA; }
 export function isEqual(t) { return t && t.type === EQUAL; }
 export function isBlock(t) { return t && t.type === BLOCK; }
+export function isTuple(t) { return t && t.type === TUPLE; }
 export function isRange(t) { return t && t.type === RANGE; }
 export function isBegin(t) { return t && t.type === BEGIN; }
+export function isStart(t) { return t && t.type === START; }
+export function isFinish(t) { return t && t.type === FINISH; }
 export function isSome(t) { return t && t.type === SOME; }
 export function isEvery(t) { return t && t.type === EVERY; }
 export function isDone(t) { return t && t.type === DONE; }
@@ -97,7 +100,7 @@ export function isMath(t) { return t && MATH_TYPES.includes(t.type); }
 export function isList(t) { return t && LIST_TYPES.includes(t.type); }
 export function isEnd(t) { return t && END_TYPES.includes(t.type); }
 
-export function isCall(t) { return t && (t.type === PIPE || (t.type === BLOCK && !t.value.body && t.value.args)); }
+export function isCall(t) { return t && (t.type === PIPE || (t.type === TUPLE && !t.value.body && t.value.args)); }
 export function isMixed(t, ...o) { return t && t.type === LITERAL && t.value && o.includes(typeof t.value); }
 export function isPlain(t) { return t && Object.prototype.toString.call(t) === '[object Object]'; }
 export function isObject(t) { return t && t.type === LITERAL && (t.isObject || isMixed(t, 'object')); }
@@ -356,6 +359,8 @@ export function debug(err, source, noInfo, callback, colorizeToken = (_, x) => x
 
 export function literal(t) {
   switch (t.type) {
+    case START: return '{';
+    case FINISH: return '}';
     case OPEN: return '(';
     case CLOSE: return ')';
     case COMMA: return ',';
@@ -439,15 +444,15 @@ export function getSeparator(_, o, p, c, n, dx) {
   if (
     // add white-space on first statement after blocks, e.g. `(...) x` OR `(...) (...)`
     (dx === 'Stmt'
-      && ((!o && isBlock(p) && !isBlock(c))
-      || (isBlock(p) && isBlock(c) && !c.isStatement && c.isRaw)))
+      && ((!o && isTuple(p) && !isTuple(c))
+      || (isTuple(p) && isTuple(c) && !c.isStatement && c.isRaw)))
 
     // add white-space after token delimiters, e.g. `; x` OR `, x`
     || (isEOL(p) && !isText(c) && !isEOF(c))
     || (isComma(p) && !isText(c))
 
     // add white-space before blocks, e.g. `=> (...)`
-    || (isOperator(p) && isBlock(c))
+    || (isOperator(p) && isTuple(c))
 
     // add white-space around single-operators, e.g. `n - 1`
     || (o
@@ -461,7 +466,7 @@ export function getSeparator(_, o, p, c, n, dx) {
     || (isData(p) && !isLiteral(p) && isOperator(c))
 
     // add white-space between blocks and operators, e.g. `f() + g()`
-    || ((isBlock(p) && isOperator(c)) || (isBlock(o) && isOperator(p)))
+    || ((isTuple(p) && isOperator(c)) || (isTuple(o) && isOperator(p)))
 
     // skip adding white-space if operators are duplicated, e.g. `a++ b` OR `1 --c`
     || (isLiteral(_) && isOperator(o) && isOperator(p) && !isData(n))
@@ -470,8 +475,8 @@ export function getSeparator(_, o, p, c, n, dx) {
 
   if (
     // add commas between blocks or after blocks, e.g. `x = 1, y`
-    ((isBlock(p) && isBlock(c))
-    || (isBlock(p) && isData(c)))
+    ((isTuple(p) && isTuple(c))
+    || (isTuple(p) && isData(c)))
 
     // add commas betwen values, but not after ranges, e.g. `a, b`
     || (isData(p) && isData(c) && (!isRange(p) || !isSymbol(c)))
@@ -598,7 +603,7 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
             continue;
           }
 
-          if (isBlock(cur) && !cur.hasArgs) {
+          if (isTuple(cur) && !cur.hasArgs) {
             if (prev && prev.type === PLUS) buffer.pop();
 
             cur.tokenInfo.kind = '';
@@ -626,8 +631,8 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
       return chunk;
     }
 
-    if (isBlock(token)) {
-      if (typeof token.value === 'string') return colorize(BLOCK);
+    if (isTuple(token)) {
+      if (typeof token.value === 'string') return colorize(TUPLE);
 
       let block = '';
       let args = '';
@@ -646,7 +651,7 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
       if (!block) {
         block = args;
       } else if (args) {
-        block = `${args} ${colorize(BLOCK)} ${block}`;
+        block = `${args} ${colorize(TUPLE)} ${block}`;
       }
 
       if (token.hasArgs && token.getArg(0) && token.getArg(0).isExpression) {

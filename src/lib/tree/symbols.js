@@ -17,6 +17,8 @@ export const CLOSE = Symbol('CLOSE');
 export const COMMA = Symbol('COMMA');
 export const BEGIN = Symbol('BEGIN');
 export const DONE = Symbol('DONE');
+export const START = Symbol('START');
+export const FINISH = Symbol('FINISH');
 
 export const MINUS = Symbol('MINUS');
 export const PLUS = Symbol('PLUS');
@@ -27,9 +29,11 @@ export const MOD = Symbol('MOD');
 export const OR = Symbol('OR');
 export const DOT = Symbol('DOT');
 export const PIPE = Symbol('PIPE');
-export const BLOCK = Symbol('BLOCK');
 export const RANGE = Symbol('RANGE');
 export const SPREAD = Symbol('SPREAD');
+
+export const TUPLE = Symbol('TUPLE');
+export const BLOCK = Symbol('BLOCK');
 
 export const SOME = Symbol('SOME');
 export const EVERY = Symbol('EVERY');

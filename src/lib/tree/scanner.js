@@ -1,8 +1,8 @@
 import {
   EOF, EOL, TEXT, HEADING, BLOCKQUOTE, OL_ITEM, UL_ITEM, REF,
-  OPEN, CLOSE, COMMA, BEGIN, DONE, CODE,
+  OPEN, CLOSE, COMMA, BEGIN, DONE, CODE, START, FINISH,
   MINUS, PLUS, MUL, DIV, MOD,
-  OR, DOT, PIPE, BLOCK, RANGE, SOME, EVERY,
+  OR, DOT, PIPE, TUPLE, BLOCK, RANGE, SOME, EVERY,
   REGEX, SYMBOL, LITERAL, NUMBER, STRING,
   NOT, LIKE, EQUAL, NOT_EQ, EXACT_EQ,
   LESS, LESS_EQ, GREATER, GREATER_EQ,
@@ -224,6 +224,8 @@ export default class Scanner {
     ) return;
 
     switch (char) {
+      case '{': this.addToken(START); break;
+      case '}': this.addToken(FINISH); break;
       case '(': this.addToken(OPEN); break;
       case ')': this.addToken(CLOSE); break;
       case ',': this.addToken(COMMA); break;

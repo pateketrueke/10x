@@ -2,13 +2,13 @@ import Expr from './expr';
 import Scanner from './scanner';
 
 import {
-  CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME,
+  CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, START, FINISH, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, TUPLE, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME,
 } from './symbols';
 
 import {
   Token, check, raise, assert, hasBreaks, hasStatements, isStatement, isSpecial, isComment, isRange, isSlice, isComma, isNumber,
-  isString, isSymbol, isLogic, isUnit, isSome, isOpen, isClose, isBegin, isDone, isBlock, isText, isCode,
-  isRef, isLiteral, isList, isEqual, isMath, isNot, isEnd, isEOF, isEOL,
+  isString, isSymbol, isLogic, isUnit, isSome, isOpen, isClose, isBegin, isStart, isDone, isTuple, isText, isCode,
+  isRef, isLiteral, isList, isBlock, isEqual, isMath, isNot, isFinish, isEnd, isEOF, isEOL,
 } from '../helpers';
 
 export default class Parser {
@@ -142,7 +142,7 @@ export default class Parser {
     }
 
     // bind if spread-operator if found!
-    if (isLiteral(body[0]) && isBlock(body[1])) {
+    if (isLiteral(body[0]) && isTuple(body[1])) {
       const args = body[1].getArgs();
 
       if (args.some(x => isLiteral(x, '..'))) {
@@ -156,15 +156,15 @@ export default class Parser {
 
     // identify blocks without arguments...
     Object.defineProperty(node.value, 'plain', {
-      value: isBlock(body[0]) && !body[0].hasArgs,
+      value: isTuple(body[0]) && !body[0].hasArgs,
     });
 
     return node;
   }
 
-  expression() {
-    const [, ...tail] = this.statement();
-    const body = this.subTree(tail);
+  expression(keepHead) {
+    const [head, ...tail] = this.statement();
+    const body = this.subTree(keepHead ? [head].concat(tail) : tail);
 
     return body;
   }
@@ -184,6 +184,16 @@ export default class Parser {
     // break on call-expressions
     if (isOpen(token) || isBegin(token)) this.depth++;
     if (isClose(token) || isDone(token)) this.depth--;
+    if (isStart(token)) {
+      this.offset++;
+      this.depth++;
+      return true;
+    }
+
+    if (isFinish(token) && this.depth === 1) {
+      this.depth = 0;
+      return true;
+    }
 
     if (this.depth > 0) return false;
 
@@ -263,7 +273,7 @@ export default class Parser {
       let leaf = root;
 
       if (leaf instanceof Expr) {
-        leaf = isBlock(leaf) ? leaf.value.args : leaf.valueOf();
+        leaf = isTuple(leaf) ? leaf.value.args : leaf.valueOf();
       }
 
       return leaf;
@@ -293,7 +303,7 @@ export default class Parser {
       let target;
 
       if (root instanceof Expr) {
-        if (isBlock(root)) {
+        if (isTuple(root) || isBlock(root)) {
           target = root.value.args || root.value.body;
         } else {
           target = root.value;
@@ -340,7 +350,7 @@ export default class Parser {
 
       if (isRange(token)) {
         // keep first/last-range argument for varargs, e.g. `fn(x,..)` OR `[..,x]`
-        if (prev && [OPEN, BEGIN, COMMA].includes(prev.type) && [CLOSE, DONE, COMMA, BLOCK].includes(curToken.type)) {
+        if (prev && [OPEN, BEGIN, COMMA].includes(prev.type) && [CLOSE, DONE, COMMA, TUPLE].includes(curToken.type)) {
           push(Expr.from(LITERAL, '..', tokenInfo));
           continue;
         }
@@ -386,14 +396,14 @@ export default class Parser {
 
           if (this.template.args.length === 1) {
             if (left.some(isLiteral) && right.length) {
-              push(Expr.group([...left, ...Expr.mix(this.template, left, [])], tokenInfo), ...right);
+              push(Expr.body([...left, ...Expr.mix(this.template, left, [])], tokenInfo), ...right);
             } else if (!left.length) {
-              push(Expr.group([...Expr.mix(this.template, Expr.cut(right), []), ...right], tokenInfo));
+              push(Expr.body([...Expr.mix(this.template, Expr.cut(right), []), ...right], tokenInfo));
             } else {
-              push(Expr.group([...left, ...Expr.mix(this.template, left, [])], tokenInfo));
+              push(Expr.body([...left, ...Expr.mix(this.template, left, [])], tokenInfo));
             }
           } else {
-            push(Expr.group([...Expr.mix(this.template, left, right)], tokenInfo));
+            push(Expr.body([...Expr.mix(this.template, left, right)], tokenInfo));
           }
           this.template = null;
         }
@@ -410,14 +420,35 @@ export default class Parser {
       if (isLiteral(token)) {
         // parse local definitions, e.g. `x =`
         if (isEqual(curToken)) {
-          push(Expr.callable(this.definition(token), tokenInfo));
+          if (!this.has(START)) {
+            push(Expr.callable(this.definition(token), tokenInfo));
+          } else {
+            offsets.push(START);
+
+            const args = Expr.args(this.expression());
+            const body = this.statement();
+
+            push(Expr.callable({
+              type: BLOCK,
+              value: {
+                name: token.value,
+                body: [Expr.callable({
+                  type: BLOCK,
+                  value: { args, body },
+                }, tokenInfo)],
+              }
+            }, tokenInfo));
+          }
           continue;
         }
 
-        // parse local functions, e.g. `a ->` OR `n, m ->`
-        if ((isComma(curToken) || isBlock(curToken)) && this.has(BLOCK)) {
+        // parse local functions, e.g. `a ->` OR `n, m ->` OR `a { b }`
+        if (
+          ((isComma(curToken) || isBlock(curToken)) && this.has(BLOCK))
+          || ((isComma(curToken) || isStart(curToken)) && this.has(FINISH))
+        ) {
           const args = Expr.args([Expr.from(token)].concat(this.statement([BLOCK])));
-          const body = this.expression();
+          const body = this.expression(this.has(FINISH));
 
           // fix spread withih arguments
           args.forEach(x => {
@@ -425,6 +456,11 @@ export default class Parser {
 
             assert(Array.isArray(x) ? x[0] : x, true, LITERAL);
           });
+
+          // keeps the stack
+          if (this.has(FINISH)) {
+            offsets.push(START);
+          }
 
           push(Expr.callable({
             type: BLOCK,
@@ -463,16 +499,18 @@ export default class Parser {
       }
 
       if (isList(token)) {
-        if (isOpen(token) || isBegin(token)) {
+        if (isOpen(token) || isBegin(token) || isStart(token)) {
           let leaf;
 
           // keep blocks from interpolation safe!
           if (token.value === '#{') {
             leaf = Expr.body([], tokenInfo);
+          } else if (isOpen(token)) {
+            leaf = Expr.tuple([], tokenInfo);
+          } else if (isBegin(token)) {
+            leaf = Expr.array([], tokenInfo);
           } else {
-            leaf = isOpen(token)
-              ? Expr.block({ args: [] }, tokenInfo, true)
-              : Expr.array([], tokenInfo);
+            leaf = Expr.block({ args: [] }, tokenInfo);
           }
 
           push(leaf);
@@ -483,7 +521,12 @@ export default class Parser {
           const start = offsets[offsets.length - 1];
 
           if (!start) {
-            raise(`Expecting \`${isClose(token) ? '(' : '['}\` before \`${token.value}\``, tokenInfo);
+            let fixedToken;
+            if (isClose(token)) fixedToken = '(';
+            if (isDone(token)) fixedToken = '[';
+            if (isFinish(token)) fixedToken = '{';
+
+            raise(`Expecting \`${fixedToken}\` before \`${token.value}\``, tokenInfo);
           }
 
           if (isOpen(start) && !isClose(token)) {
@@ -494,7 +537,11 @@ export default class Parser {
             raise(`Expecting \`]\` but found \`${token.value}\``, tokenInfo);
           }
 
-          root = stack.pop();
+          if (isStart(start) && !isFinish(token)) {
+            raise(`Expecting \`}\` but found \`${token.value}\``, tokenInfo);
+          }
+
+          root = stack.pop() || root;
           offsets.pop();
         }
       } else if (!(isText(token) || isCode(token) || isRef(token))) {
@@ -523,7 +570,12 @@ export default class Parser {
       const lastToken = offsets[offsets.length - 1];
       const { value, line, col } = this.current.tokenInfo || this.current;
 
-      raise(`Expecting \`${isOpen(lastToken) ? ')' : ']'}\``, { line, col: col + value.length });
+      let fixedToken;
+      if (isOpen(lastToken)) fixedToken = ')';
+      if (isBegin(lastToken)) fixedToken = ']';
+      if (isStart(lastToken)) fixedToken = '}';
+
+      raise(`Expecting \`${fixedToken}\``, { line, col: col + value.length });
     }
 
     return tree;
@@ -592,7 +644,7 @@ export default class Parser {
       // reduce depth
       while (
         body.length === 1
-        && isBlock(body[0])
+        && isTuple(body[0])
         && !body[0].isCallable
         && !(body[0].getArg(0) && body[0].getArg(0).isExpression)
         && (
@@ -607,7 +659,7 @@ export default class Parser {
 
       // validate and transform conditions and statements
       if (name === ':if' || (name === ':while' && !hasConditional)) {
-        if (!isBlock(body[0])) {
+        if (!isTuple(body[0])) {
           if (!isClose(lastToken)) {
             raise(`Missing block before \`${lastToken}\``, lastToken.tokenInfo);
           } else {
@@ -619,8 +671,8 @@ export default class Parser {
       }
 
       // append non-blocks
-      if (isBlock(body[0]) || body.length > 1) {
-        if (body.some(isBlock)) {
+      if (isTuple(body[0]) || body.length > 1) {
+        if (body.some(isTuple)) {
           target[prop].push(Expr.body(body, tokenInfo));
         } else {
           target[prop].push(Expr.stmt(body, { ...tokenInfo, kind: 'raw' }));

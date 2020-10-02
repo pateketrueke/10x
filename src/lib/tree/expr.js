@@ -2,7 +2,7 @@ import Convert from 'convert-units';
 
 import {
   TEXT, UL_ITEM, OL_ITEM, HEADING, BLOCKQUOTE,
-  FFI, BLOCK, RANGE, NUMBER, STRING, LITERAL, SYMBOL,
+  FFI, BLOCK, TUPLE, RANGE, NUMBER, STRING, LITERAL, SYMBOL,
 } from './symbols';
 
 import {
@@ -35,6 +35,7 @@ export default class Expr {
 
   get isFFI() { return this.type === FFI; }
   get isBlock() { return this.type === BLOCK; }
+  get isTuple() { return this.type === TUPLE; }
   get isRange() { return this.type === RANGE; }
   get isNumber() { return this.type === NUMBER; }
   get isString() { return this.type === STRING; }
@@ -440,7 +441,7 @@ export default class Expr {
 
         return [
           Expr.local(mixed.getName(), mixed.tokenInfo),
-          Expr.block({ args: Expr.value(args).valueOf() }, mixed.tokenInfo),
+          Expr.tuple(Expr.value(args).valueOf(), mixed.tokenInfo),
         ];
       };
     }
@@ -564,12 +565,6 @@ export default class Expr {
     return Expr.from(SYMBOL, name + (optional ? '?' : ''), tokenInfo);
   }
 
-  static group(values, tokenInfo) {
-    return !Array.isArray(values)
-      ? Expr.block(values, tokenInfo, true)
-      : Expr.block({ args: values }, tokenInfo, true);
-  }
-
   static range(begin, end, tokenInfo) {
     if (!begin.length && !end.length) check(tokenInfo, 'values', 'around');
     if (!begin.length) check(tokenInfo, 'value', 'before');
@@ -578,13 +573,15 @@ export default class Expr {
     return Expr.from(RANGE, { begin, end }, tokenInfo);
   }
 
-  static block(params, tokenInfo, rawDefinition) {
-    if (rawDefinition) {
-      tokenInfo = tokenInfo || {};
-      tokenInfo.kind = 'raw';
-    }
-
+  static block(params, tokenInfo) {
     return Expr.from(BLOCK, params || {}, tokenInfo);
+  }
+
+  static tuple(values, tokenInfo) {
+    tokenInfo = tokenInfo || {};
+    tokenInfo.kind = 'raw';
+
+    return Expr.from(TUPLE, { args: values }, tokenInfo);
   }
 
   static unsafe(target, label, raw) {

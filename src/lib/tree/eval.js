@@ -8,15 +8,15 @@ import Expr from './expr';
 import Range from '../range';
 
 import {
-  EOL, COMMA, MINUS, PLUS, MUL, DIV, MOD, BLOCK, RANGE, LITERAL, NUMBER, STRING, SYMBOL,
+  EOL, COMMA, MINUS, PLUS, MUL, DIV, MOD, BLOCK, TUPLE, RANGE, LITERAL, NUMBER, STRING, SYMBOL,
   EQUAL, LESS_EQ, LESS, GREATER_EQ, GREATER, NOT, LIKE, NOT_EQ, EXACT_EQ, FFI,
   DERIVE_METHODS,
 } from './symbols';
 
 import {
   argv, only, raise, check, assert, hasDiff, hasIn, serialize,
-  isInvokable, isComment, isObject, isLiteral, isScalar, isResult, isString, isNumber, isSymbol, isLogic, isData, isUnit,
-  isMixed, isPlain, isRange, isSlice, isArray, isSome, isEvery, isBlock, isComma, isPipe, isMath, isNot, isMod, isEnd, isDot, isEOL, isOR,
+  isInvokable, isComment, isObject, isLiteral, isScalar, isResult, isString, isNumber, isSymbol, isLogic, isData, isUnit, isBlock,
+  isMixed, isPlain, isRange, isSlice, isArray, isSome, isEvery, isTuple, isComma, isPipe, isMath, isNot, isMod, isEnd, isDot, isEOL, isOR,
 } from '../helpers';
 
 export default class Eval {
@@ -102,7 +102,7 @@ export default class Eval {
       && isResult(this.ctx)
       && !isEnd(this.olderToken())
     ) {
-      if (isBlock(this.ctx)) {
+      if (isTuple(this.ctx)) {
         const [head, ...tail] = await Eval.do(this.ctx.getArgs(), this.env, 'Fn', false, this.ctx.tokenInfo);
         const args = [older, Expr.from(COMMA), head];
 
@@ -122,12 +122,12 @@ export default class Eval {
       if (!isData(prev)) check(this.ctx, 'value', 'before');
       if (!next || !isInvokable(next)) check(this.ctx, 'callable', 'after');
 
-      assert(next, true, LITERAL, BLOCK);
+      assert(next, true, LITERAL, TUPLE);
 
       const nextToken = this.expr[this.offset + 2];
 
-      let nextArgs = isBlock(nextToken) ? nextToken.getArgs() : null;
-      let cutOffset = isBlock(nextToken) ? 2 : 1;
+      let nextArgs = isTuple(nextToken) ? nextToken.getArgs() : null;
+      let cutOffset = isTuple(nextToken) ? 2 : 1;
       let fixedBody = [];
 
       // eat whole expression before block-calls, e.g. `x |> a.b.c()`
@@ -135,7 +135,7 @@ export default class Eval {
         const { body, offset } = Expr.chunk(this.expr, this.offset + 1, true);
 
         cutOffset = offset;
-        nextArgs = isBlock(body[body.length - 1]) ? body.pop().getArgs() : null;
+        nextArgs = isTuple(body[body.length - 1]) ? body.pop().getArgs() : null;
         fixedBody = body.concat(Expr.block({ args: [prev].concat(nextArgs ? Expr.from(COMMA) : [], nextArgs || []) }, next.tokenInfo));
       } else {
         fixedBody = [next, Expr.block({ args: [prev, Expr.from(COMMA)].concat(nextArgs || []) }, next.tokenInfo)];
@@ -147,7 +147,7 @@ export default class Eval {
     }
 
     // evaluate context-in-literals, e.g. `fn % :n 2`
-    if (isBlock(prev) && isMod(this.ctx) && next.isObject) {
+    if (isTuple(prev) && isMod(this.ctx) && next.isObject) {
       this.discard().append(...await Eval.do(prev.getBody(), Env.create(next.valueOf()), '%', false, this.ctx.tokenInfo)).move();
       return true;
     }
@@ -182,7 +182,7 @@ export default class Eval {
         check(prev || this.ctx, 'map', prev ? null : 'before');
       }
 
-      if (!(isLiteral(next) || (isBlock(next) && next.value.name))) {
+      if (!(isLiteral(next) || (isTuple(next) && next.value.name))) {
         if (!next) {
           check(this.ctx, LITERAL, 'after');
         } else {
@@ -210,7 +210,7 @@ export default class Eval {
       // handle method-calls, e.g. `foo.bar()`
       const newToken = this.newerToken();
 
-      if (typeof map[key] === 'function' && isBlock(newToken) && newToken.hasArgs) {
+      if (typeof map[key] === 'function' && isTuple(newToken) && newToken.hasArgs) {
         const fixedArgs = await Eval.do(newToken.getArgs(), this.env, 'Args', false, this.ctx.tokenInfo);
         const result = await map[key](...Expr.plain(fixedArgs, this.convert, `<${key}>`));
 
@@ -225,7 +225,7 @@ export default class Eval {
       }
 
       // extract or convert from resolved value, otherwise update props, e.g. `foo.bar = 42`
-      if (!isBlock(next)) {
+      if (!isTuple(next)) {
         if (map[key] instanceof Expr) {
           this.discard().append(...await Eval.do(map[key].getBody(), this.env, `:${key}`, false, this.ctx.tokenInfo)).move();
         } else {
@@ -293,7 +293,7 @@ export default class Eval {
       // && i
       && !target.body[0].isCallable
       && !target.body[0].hasArgs
-      && isBlock(next)
+      && isTuple(next)
       && !next.hasBody
       && !target.args
     ) {
@@ -301,7 +301,7 @@ export default class Eval {
     }
 
     // consume and merge next arguments into range-literals!
-    if (isBlock(next) && target.args && target.args.some(x => isLiteral(x, '..'))) {
+    if (isTuple(next) && target.args && target.args.some(x => isLiteral(x, '..'))) {
       const newToken = Expr.callable({ type: BLOCK, value: target }, this.ctx.tokenInfo).clone();
 
       Expr.sub(newToken.value.body, { '..': [Expr.body(next.getArgs(), this.ctx.tokenInfo)] });
@@ -377,7 +377,7 @@ export default class Eval {
         let result;
 
         // spread arguments if not block is given... e.g. `f((1, 2))`
-        if (!(this.ctx.getArg(0) && this.ctx.getArg(0).isBlock)) {
+        if (!(this.ctx.getArg(0) && this.ctx.getArg(0).isTuple)) {
           result = await prev.value.target(...fixedArgs);
         } else {
           result = await prev.value.target(fixedArgs);
@@ -514,13 +514,13 @@ export default class Eval {
         }
 
         // extend current scope with any given locals (not perfectly!)
-        if (target.body.some(x => isBlock(x) && x.isRaw)) {
+        if (target.body.some(x => isTuple(x) && x.isRaw)) {
           if (this.descriptor === 'Eval' || this.descriptor === 'Fn') {
             this.env = new Env(this.env);
           }
 
           ctx = this.env;
-          clean = target.body.length === 1 && isBlock(target.body[0]);
+          clean = target.body.length === 1 && isTuple(target.body[0]);
         }
 
         // make sure we fulfill the arguments!
@@ -617,7 +617,7 @@ export default class Eval {
 
     // expand expressions into symbols, e.g. `:(...)` OR `:"#{...}"`
     if (isSymbol(this.ctx) && this.ctx.value === ':') {
-      if (isBlock(next) || (isString(next) && typeof next.value !== 'string')) {
+      if (isTuple(next) || (isString(next) && typeof next.value !== 'string')) {
         let [head] = await Eval.do(next.getArgs() || next.valueOf(), this.env, 'Sym', false, this.ctx.tokenInfo);
 
         if (!isScalar(head)) {
@@ -748,11 +748,11 @@ export default class Eval {
         let isHead = subTree.length === 1;
 
         if (isHead) {
-          if (isObject(subTree[0]) || !(isBlock(body[0]) || isRange(body[0]))) {
+          if (isObject(subTree[0]) || !(isTuple(body[0]) || isRange(body[0]))) {
             check(body[0], 'block or list');
           }
 
-          isHead = isBlock(subTree[0]) || isRange(subTree[0]);
+          isHead = isTuple(subTree[0]) || isRange(subTree[0]);
         }
 
         let inc = 0;
@@ -816,8 +816,8 @@ export default class Eval {
         || await this.evalInfixCalls()
 
         // blocks are expressions, conditions, etc.
-        || (isBlock(this.ctx) && await this.evalBlocks())
         || (this.ctx.isExpression && await this.evalLogic())
+        || ((isBlock(this.ctx) || isTuple(this.ctx)) && await this.evalBlocks())
 
         // evaluate scalar literals from environment, not calls! (placeholder returns its identity)
         || (isLiteral(this.ctx) && typeof this.ctx.value === 'string' && this.ctx.value !== '_' && await this.evalLiterals())
@@ -979,7 +979,7 @@ export default class Eval {
 
     // discard target if next element is executable
     if (isLiteral(body[0])) {
-      target = isBlock(body[1]) || isLiteral(body[1]) ? body.shift() : body[0];
+      target = isTuple(body[1]) || isLiteral(body[1]) ? body.shift() : body[0];
 
       // evaluate strings as functions, e.g. `:loop (...) x "y: #{x * 2}"`
       if (isString(body[1]) && Array.isArray(body[1].value)) {
@@ -988,7 +988,7 @@ export default class Eval {
     }
 
     // extract details from block-definition
-    if (isBlock(body[0]) && body[0].isCallable) {
+    if (isTuple(body[0]) && body[0].isCallable) {
       target = body[0].getArg(0);
       body = body[0].getBody();
     }
@@ -1058,8 +1058,8 @@ export default class Eval {
         let args;
 
         // evaluate body after range, e.g. `:loop (...) x` where `x` will be also a placeholder
-        if (isBlock(body[i])) {
-          if (isBlock(body[i].head())) {
+        if (isTuple(body[i])) {
+          if (isTuple(body[i].head())) {
             const [head, ...tail] = body[i].getBody();
 
             range = [head];
@@ -1083,7 +1083,7 @@ export default class Eval {
     if (value.match instanceof Expr.MatchStatement) {
       const fixedMatches = value.match.clone().getBody();
       const fixedBody = value.match.head().value.body;
-      const fixedArgs = isBlock(fixedBody[0]) ? fixedBody[0].getArgs() : [fixedBody[0]];
+      const fixedArgs = isTuple(fixedBody[0]) ? fixedBody[0].getArgs() : [fixedBody[0]];
       const [input] = await Eval.do(fixedArgs, environment, 'Expr', true, parentTokenInfo);
 
       // drop initial value from the input-stack!
@@ -1092,14 +1092,14 @@ export default class Eval {
       let found;
 
       for (let i = 0, c = fixedMatches.length; i < c; i++) {
-        const [head, ...body] = isBlock(fixedMatches[i]) ? fixedMatches[i].getBody() : [fixedMatches[i]];
+        const [head, ...body] = isTuple(fixedMatches[i]) ? fixedMatches[i].getBody() : [fixedMatches[i]];
 
         if (!body.length) {
           check(head, 'statement', 'after');
         }
 
         // evaluate partial logical-expressions, e.g. `(< a b)`
-        if (isBlock(head) && isLogic(head.getArg(0))) {
+        if (isTuple(head) && isLogic(head.getArg(0))) {
           const [kind, ...others] = head.getArgs();
           const newBody = Expr.expression({ type: kind.type, value: [input].concat(others) }, parentTokenInfo);
           const [result] = await Eval.do([newBody], environment, 'Expr', true, parentTokenInfo);
@@ -1180,7 +1180,7 @@ export default class Eval {
             const subBody = value.rescue.getBody();
 
             for (let i = 0, c = subBody.length; !isDone && i < c; i++) {
-              let fixedBody = isBlock(subBody[i]) ? subBody[i].getBody() : [subBody[i]];
+              let fixedBody = isTuple(subBody[i]) ? subBody[i].getBody() : [subBody[i]];
               let newBody = [];
               let head = [];
 
@@ -1199,7 +1199,7 @@ export default class Eval {
               }
 
               // normalize conditions for check and retry
-              if (isBlock(fixedBody[0]) && fixedBody[0].hasArgs) {
+              if (isTuple(fixedBody[0]) && fixedBody[0].hasArgs) {
                 head = fixedBody[0].getArgs(0);
                 newBody = fixedBody.slice(1);
 
@@ -1218,7 +1218,7 @@ export default class Eval {
               }
 
               // append any non-block value
-              if (!isDone && !isBlock(fixedBody[0])) {
+              if (!isDone && !isTuple(fixedBody[0])) {
                 subTree.push(...await Eval.do(fixedBody, environment, 'Rescue', true, parentTokenInfo));
                 isDone = true;
               }
