@@ -122,7 +122,7 @@ export default class Eval {
       if (!isData(prev)) check(this.ctx, 'value', 'before');
       if (!next || !isInvokable(next)) check(this.ctx, 'callable', 'after');
 
-      assert(next, true, LITERAL, TUPLE);
+      assert(next, true, LITERAL, BLOCK);
 
       const nextToken = this.expr[this.offset + 2];
 

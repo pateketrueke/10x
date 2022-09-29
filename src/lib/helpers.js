@@ -561,6 +561,13 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
       return `${colorize(token.type)} ${serialize(token.value, shorten, colorize, 'Expr')}`;
     }
 
+    if (token.isCallable) {
+      const args = serialize(token.value.args, true, colorize, 'Args');
+      const body = serialize(token.value.body, true, colorize, 'Body');
+
+      return `${args} -> ${body}`;
+    }
+
     if (isRef(token)) {
       const chunk = (token.isRaw && token.value.href) || token.value.alt || token.value.href;
 

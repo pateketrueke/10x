@@ -323,7 +323,7 @@ describe('Eval', () => {
     });
 
     it('should apply values through pipe-operator', async () => {
-      // expect(await run('4|>n->n*2')).to.eql([Expr.value(8)]);
+      expect(await run('4|>n->n*2')).to.eql([Expr.value(8)]);
       expect(await run('fn=->42;0|>fn|>fn|>fn|>fn')).to.eql([Expr.value(42)]);
       expect(await run('sum=a->b->a+b; -3 |> sum(5) + 4 |> sum(9)')).to.eql([Expr.value(15)]);
       expect(await run('sum=a->b->a+b; twice = n -> n |> sum(n); twice(3)')).to.eql([Expr.value(6)]);

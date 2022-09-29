@@ -383,7 +383,8 @@ describe('Errors', () => {
 
       it('should fail if following value is not compatible', async () => {
         await failWith(run('1 |>'), 'Expecting callable after `|>` at line 1:3');
-        await failWith(run('1 |> [2]'), 'Expecting literal or tuple but found `[..]` at line 1:6');
+        await failWith(run('1 |> [2]'), 'Expecting literal or block but found `[..]` at line 1:6');
+        await failWith(run('1 |> (42)'), 'Expecting literal or block but found `(42)` at line 1:6');
       });
     });
 
