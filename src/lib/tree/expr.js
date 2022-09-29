@@ -163,14 +163,20 @@ export default class Expr {
     } else if (isBlock(body)) {
       if (body.value.args) body.value.args = Expr.sub(body.getArgs(), params);
       if (body.value.body) body.value.body = Expr.sub(body.getBody(), params);
+    } else if (isTuple(body)) {
+      if (body.value.args) body.value.args = Expr.sub(body.getArgs(), params);
+    // } else {
+    //   console.log(body, params);
     }
 
     return body;
   }
 
   static mix(tpl, ...others) {
+    // console.log('---');
+    // console.log(tpl, others);
     return Expr.sub(copy(tpl.body), tpl.args.reduce((prev, cur, i) => {
-      prev[cur.value] = others[i];
+      prev[cur.value] = copy(others[i]);
       return prev;
     }, {}));
   }

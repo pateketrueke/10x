@@ -417,52 +417,52 @@ describe('Eval', () => {
       expect(await run('(= (:foo "bar") (:foo "bar" :x "y"))')).to.eql([Expr.value(true)]);
     });
 
-    it.skip('should allow to rewrite syntax with templates', async () => {
+    it.only('should allow to rewrite syntax with templates', async () => {
+      // expect(await run(`
+      //   :template
+      //     ~ (a -> :let a = a + 1);
+
+      //   x = 1;
+      //   y = -1;
+
+      //   1, ~y;
+      // `)).to.eql([Expr.value(1), Expr.value(0)]);
+
+      // expect(await run(`
+      //   :template += (a, b -> :let a = a + b);
+      //   :template *= (a, b -> :let a = a * b);
+
+      //   i = 0; i += 2; i *= 3; i
+      // `)).to.eql([Expr.value(6)]);
+
+      // expect(await run(`
+      //   :template
+      //     >> (a, b -> a + b),
+      //     fun (a -> "Fun: #{a}");
+
+      //   fun("osoms");
+      //   2 >> 4;
+      // `)).to.eql([Expr.value('Fun: osoms'), Expr.value(6)]);
+
       expect(await run(`
         :template
-          ~ (a -> :let a = a + 1);
+          <> (a, b -> (!= a b));
 
-        x = 1;
-        y = -1;
-
-        1, ~y;
-      `)).to.eql([Expr.value(1), Expr.value(0)]);
-
-      expect(await run(`
-        :template += (a, b -> :let a = a + b);
-        :template *= (a, b -> :let a = a * b);
-
-        i = 0; i += 2; i *= 3; i
-      `)).to.eql([Expr.value(6)]);
-
-      expect(await run(`
-        :template
-          >> (a, b -> a + b),
-          fun (a -> "Fun: #{a}");
-
-        fun("osoms");
-        2 >> 4;
-      `)).to.eql([Expr.value('Fun: osoms'), Expr.value(6)]);
-
-      expect(await run(`
-        :template
-          <=> (a, b -> (!= a b));
-
-        [:if (1 <=> 2) 42; 2 <=> 2; (<= 1 2)]
+        [:if (1 <> 2) 42; 3 <> 3; (<> 4 5)]
       `)).to.eql([Expr.array([Expr.value(42), Expr.value(false), Expr.value(true)])]);
 
-      expect(await run(`
-        :template
-          /= (a, b -> :let a = a / b);
+      // expect(await run(`
+      //   :template
+      //     /= (a, b -> :let a = a / b);
 
-        j = :k 42; j.k /= 2; j.k
-      `)).to.eql([Expr.value(21)]);
+      //   j = :k 42; j.k /= 2; j.k
+      // `)).to.eql([Expr.value(21)]);
 
-      expect(await run(`
-        :template ++ (a -> :let a = a + 1);
-        c = :d 42; d = 0;
-        a = 0; b = 0; a++, ++b, ++c.d, (> ++d 0)
-      `)).to.eql([Expr.value(0), Expr.value(1), Expr.value(43), Expr.value(true)]);
+      // expect(await run(`
+      //   :template ++ (a -> :let a = a + 1);
+      //   c = :d 42; d = 0;
+      //   a = 0; b = 0; a++, ++b, ++c.d, (> ++d 0)
+      // `)).to.eql([Expr.value(0), Expr.value(1), Expr.value(43), Expr.value(true)]);
     });
 
     it('should let you mutate definitions', async () => {
