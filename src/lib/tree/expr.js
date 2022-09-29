@@ -11,7 +11,7 @@ import {
 
 import {
   Token, copy, check, format, assert, literal, serialize,
-  isLiteral, isSymbol, isResult, isPlain, isRange, isBlock, isComma, isDigit, isCall, isEnd,
+  isLiteral, isSymbol, isResult, isPlain, isRange, isBlock, isTuple, isComma, isDigit, isCall, isEnd,
 } from '../helpers';
 
 export default class Expr {
@@ -42,7 +42,7 @@ export default class Expr {
   get isSymbol() { return this.type === SYMBOL; }
 
   get isScalar() { return this.isNumber || this.isString || this.isSymbol; }
-  get isIterable() { return this.isString || this.isBlock || this.isRange; }
+  get isIterable() { return this.isString || this.isTuple || this.isRange; }
 
   get isObject() { return this instanceof Expr.Object; }
   get isFunction() { return this instanceof Expr.Function; }

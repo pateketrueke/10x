@@ -122,7 +122,7 @@ export function inspect(calls) {
       prefix += `${pivot} `;
     }
 
-    const value = serialize(tokens, true, colorize, type);
+    const value = serialize(tokens, null, colorize, type);
     const indent = `             ${type} `.substr(-15);
 
     print(indent, prefix, value, '\n');

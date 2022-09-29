@@ -421,7 +421,30 @@ export default class Parser {
         // parse local definitions, e.g. `x =`
         if (isEqual(curToken)) {
           if (!this.has(START)) {
-            push(Expr.callable(this.definition(token), tokenInfo));
+            const expr = this.definition(token);
+
+            // rewrite callable if the body includes it, e.g. `a=fn(1,..)`
+            if (expr.value.args
+              && expr.value.args.some(x => isLiteral(x, '..'))
+              && isLiteral(expr.value.body[0])
+              && isTuple(expr.value.body[1])
+            ) {
+              push(Expr.callable({
+                type: BLOCK,
+                value: {
+                  name: token.value,
+                  body: [Expr.callable({
+                    type: BLOCK,
+                    value: {
+                      args: null,
+                      body: expr.value.body,
+                    },
+                  }, tokenInfo)],
+                }
+              }, tokenInfo));
+            } else {
+              push(Expr.callable(expr, tokenInfo));
+            }
           } else {
             offsets.push(START);
 

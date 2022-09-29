@@ -147,7 +147,7 @@ export default class Eval {
     }
 
     // evaluate context-in-literals, e.g. `fn % :n 2`
-    if (isTuple(prev) && isMod(this.ctx) && next.isObject) {
+    if (isBlock(prev) && isMod(this.ctx) && next.isObject) {
       this.discard().append(...await Eval.do(prev.getBody(), Env.create(next.valueOf()), '%', false, this.ctx.tokenInfo)).move();
       return true;
     }
@@ -182,7 +182,7 @@ export default class Eval {
         check(prev || this.ctx, 'map', prev ? null : 'before');
       }
 
-      if (!(isLiteral(next) || (isTuple(next) && next.value.name))) {
+      if (!(isLiteral(next) || (isBlock(next) && next.value.name))) {
         if (!next) {
           check(this.ctx, LITERAL, 'after');
         } else {
@@ -225,7 +225,7 @@ export default class Eval {
       }
 
       // extract or convert from resolved value, otherwise update props, e.g. `foo.bar = 42`
-      if (!isTuple(next)) {
+      if (!isTuple(next) && !isBlock(next)) {
         if (map[key] instanceof Expr) {
           this.discard().append(...await Eval.do(map[key].getBody(), this.env, `:${key}`, false, this.ctx.tokenInfo)).move();
         } else {
@@ -290,7 +290,6 @@ export default class Eval {
 
     if (
       !isLiteral(target.body[0])
-      // && i
       && !target.body[0].isCallable
       && !target.body[0].hasArgs
       && isTuple(next)
@@ -300,8 +299,32 @@ export default class Eval {
       if (target.body[0].type !== FFI) raise(`Unexpected call to \`${this.ctx}\``);
     }
 
+    // invoke definitions with `..` args
+    if (
+      isTuple(next)
+      && target.body[0].isCallable
+      && target.body[0].value.args === null
+    ) {
+      const body = target.body[0].value.body[1].value.args.slice();
+      const offset = body.findIndex(x => isLiteral(x, '..'));
+
+      body.splice(offset, 1, ...next.value.args);
+
+      const input = await Eval.do([
+        target.body[0].value.body[0],
+        Expr.from(TUPLE, { args: body }, this.ctx.tokenInfo),
+      ], this.env, 'Lit', false, this.ctx.tokenInfo);
+
+      this.append(...input).move();
+      return true;
+    }
+
     // consume and merge next arguments into range-literals!
-    if (isTuple(next) && target.args && target.args.some(x => isLiteral(x, '..'))) {
+    if (
+      isTuple(next)
+      && target.args
+      && target.args.some(x => isLiteral(x, '..'))
+    ) {
       const newToken = Expr.callable({ type: BLOCK, value: target }, this.ctx.tokenInfo).clone();
 
       Expr.sub(newToken.value.body, { '..': [Expr.body(next.getArgs(), this.ctx.tokenInfo)] });
@@ -1083,7 +1106,7 @@ export default class Eval {
     if (value.match instanceof Expr.MatchStatement) {
       const fixedMatches = value.match.clone().getBody();
       const fixedBody = value.match.head().value.body;
-      const fixedArgs = isTuple(fixedBody[0]) ? fixedBody[0].getArgs() : [fixedBody[0]];
+      const fixedArgs = isBlock(fixedBody[0]) ? fixedBody[0].getArgs() : [fixedBody[0]];
       const [input] = await Eval.do(fixedArgs, environment, 'Expr', true, parentTokenInfo);
 
       // drop initial value from the input-stack!
@@ -1092,14 +1115,14 @@ export default class Eval {
       let found;
 
       for (let i = 0, c = fixedMatches.length; i < c; i++) {
-        const [head, ...body] = isTuple(fixedMatches[i]) ? fixedMatches[i].getBody() : [fixedMatches[i]];
+        const [head, ...body] = isBlock(fixedMatches[i]) ? fixedMatches[i].getBody() : [fixedMatches[i]];
 
         if (!body.length) {
           check(head, 'statement', 'after');
         }
 
         // evaluate partial logical-expressions, e.g. `(< a b)`
-        if (isTuple(head) && isLogic(head.getArg(0))) {
+        if (isBlock(head) && isLogic(head.getArg(0))) {
           const [kind, ...others] = head.getArgs();
           const newBody = Expr.expression({ type: kind.type, value: [input].concat(others) }, parentTokenInfo);
           const [result] = await Eval.do([newBody], environment, 'Expr', true, parentTokenInfo);

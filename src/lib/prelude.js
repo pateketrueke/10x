@@ -212,9 +212,8 @@ export function format(str, ...args) {
     let prefix = '';
     let suffix = '';
 
-
     if (type === '?') value = serialize(value);
-    else if (isBlock(value)) value = value.toString();
+    else if (isBlock(value) || isTuple(value)) value = value.toString();
     else if (precision && (isUnit(value) || isNumber(value))) {
       const fix = precision.substr(1);
 
