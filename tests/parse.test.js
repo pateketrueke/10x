@@ -10,8 +10,6 @@ import {
   EOL, TEXT, CODE, BLOCKQUOTE, COMMA, STRING, OPEN, CLOSE, RANGE, REGEX, LITERAL,
 } from '../src/lib/tree/symbols';
 
-/* global describe, it */
-
 describe('Parser', () => {
   it('should allow to parse raw-statements', () => {
     expect(Parser.getAST('1..3,\na,b;(j+"m\nn";\nk);x;\ny _z_', true)).to.eql([

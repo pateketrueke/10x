@@ -28,8 +28,6 @@ import Scanner from '../src/lib/tree/scanner';
 
 tk.freeze(1577858400000);
 
-/* global describe, beforeEach, afterEach, it */
-
 function stringify(source, ctx) {
   return new Scanner(source).scanTokens().map(x => serialize.call(ctx, x)).join('');
 }
@@ -715,7 +713,7 @@ describe('Integration', () => {
     });
 
     it('should keep markdown formatting', () => {
-      expect(stringify(example('markdown.x'))).to.eql(example('markdown.x'));
+      expect(stringify(example('markdown.md'))).to.eql(example('markdown.md'));
     });
 
     it('should order sibling items in ordered lists', () => {

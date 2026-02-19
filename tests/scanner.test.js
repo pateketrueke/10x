@@ -7,8 +7,6 @@ import {
   STRING, PLUS, OPEN, LITERAL, CLOSE, TEXT, EQUAL, REF,
 } from '../src/lib/tree/symbols';
 
-/* global describe, it */
-
 describe('Scanner', () => {
   const getTokens = (source, raw) => {
     const scanner = new Scanner(source);

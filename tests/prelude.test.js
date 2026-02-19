@@ -11,8 +11,6 @@ import { serialize, deindent } from '../src/lib/helpers';
 import Env from '../src/lib/tree/env';
 import Expr from '../src/lib/tree/expr';
 
-/* global describe, it */
-
 describe('Prelude', () => {
   describe('equals(a, b, weak)', () => {
     it('should fail on invalid input', async () => {

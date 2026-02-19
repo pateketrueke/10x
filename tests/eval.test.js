@@ -7,8 +7,6 @@ import Range from '../src/lib/range';
 
 import { RANGE, LITERAL } from '../src/lib/tree/symbols';
 
-/* global describe, it */
-
 describe('Eval', () => {
   describe('Basics', () => {
     it('should operate simple math', async () => {
@@ -791,12 +789,12 @@ describe('Eval', () => {
 
       Env.resolve = source => ({
         './example.js': require('./fixtures/example'),
-        './other.x': env,
+        './other.md': env,
       })[source];
 
       expect(await run(`
         :import wait, twice :from "./example.js";
-        :import sum, thrice :from "./other.x";
+        :import sum, thrice :from "./other.md";
 
         twice(21);
         thrice(9);
@@ -815,11 +813,11 @@ describe('Eval', () => {
       `, env);
 
       Env.resolve = source => ({
-        './other.x': env,
+        './other.md': env,
       })[source];
 
       expect(await run(`
-        :import (:s sum) :from "./other.x";
+        :import (:s sum) :from "./other.md";
 
         fix=sum(3);
         fix(5);

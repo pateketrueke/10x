@@ -1,18 +1,18 @@
 ci: src deps
 	@npm run pretest
-	@INFO=true npm run test:coverage -- -r html
+	@TZ=UTC bun test --coverage tests/
 
 eval: src deps
-	@node -r esm bin/cli -- "$(code)"
+	@node bin/cli -- "$(code)"
 
 repl: src deps
-	@node -r esm bin/cli --repl
+	@node bin/cli
 
 build: src deps
-	@npm run build
+	@bun run build.js
 
 dev: src deps
-	@npm run watch
+	@bun test --watch
 
 deps: package*.json
-	@(((ls node_modules | grep .) > /dev/null 2>&1) || npm i) || true
+	@(((ls node_modules | grep .) > /dev/null 2>&1) || bun install) || true

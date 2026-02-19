@@ -3,6 +3,10 @@
 .tarima
 .DS_Store
 dist
+.claude
+.journal
+TASKS.md
+CLAUDE.md
 coverage
 .nyc_output
 node_modules

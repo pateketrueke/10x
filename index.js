@@ -107,7 +107,7 @@ function cli() {
   let code = '';
 
   if (file) {
-    file += !file.includes('.') ? '.x' : '';
+    file += !file.includes('.') ? '.md' : '';
     code += fs.readFileSync(file).toString();
   }
 

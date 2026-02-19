@@ -14,8 +14,6 @@ import Env from '../src/lib/tree/env';
 import { execute as run } from '../src/lib';
 import { deindent, serialize } from '../src/lib/helpers';
 
-/* global describe, it */
-
 process.argv = [null, null, 'a', 'X=Y', 'M:N', '-b', '--c', '--', 'd', 'e'];
 
 require('../lib/shared')({ Env });

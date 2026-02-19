@@ -10,8 +10,6 @@ import Eval from '../src/lib/tree/eval';
 import Expr from '../src/lib/tree/expr';
 import Range from '../src/lib/range';
 
-/* global describe, beforeEach, afterEach, it */
-
 describe('Errors', () => {
   describe('Eval', () => {
     it('should fail on invalid input', async () => {
@@ -231,10 +229,10 @@ describe('Errors', () => {
         await run(':module "Test" :export (:undef ok);', env);
 
         Env.resolve = source => ({
-          './other.x': env,
+          './other.md': env,
         })[source];
 
-        await failWith(run(':import (:s sum) :from "./other.x";'), 'Local `s` not exported (Test/s:sum) at line 1:1');
+        await failWith(run(':import (:s sum) :from "./other.md";'), 'Local `s` not exported (Test/s:sum) at line 1:1');
       });
 
       it('should report failures from foreign-calls', async () => {
