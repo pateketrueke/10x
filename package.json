@@ -1,14 +1,15 @@
 {
   "name": "10x",
   "version": "0.0.0",
+  "type": "module",
   "bin": {
     "10x": "bin/cli"
   },
   "scripts": {
     "dev": "bun run build && bun --watch run index.js",
     "watch": "bun test --watch tests/",
-    "build": "bun build src/main.esm.js --outdir=dist --format=esm --naming=[name].js --external=fs --external=os --external=tty --external=path --external=chalk --external=convert-units --external=currency-symbol.js",
-    "pretest": "eslint tests *.js src/lib",
+    "build": "bun build src/main.js --outfile=dist/main.js --format=esm --external=fs --external=os --external=tty --external=path",
+    "pretest": "eslint tests src/lib",
     "test": "bun test tests/",
     "test:unit": "TZ=UTC bun test tests/",
     "test:ci": "TZ=UTC bun test --coverage tests/"

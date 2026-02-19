@@ -14,9 +14,11 @@ import Env from '../src/lib/tree/env';
 import { execute as run } from '../src/lib';
 import { deindent, serialize } from '../src/lib/helpers';
 
+import shared from '../lib/shared.js';
+
 process.argv = [null, null, 'a', 'X=Y', 'M:N', '-b', '--c', '--', 'd', 'e'];
 
-require('../lib/shared')({ Env });
+shared({ Env }, process.argv.slice(2));
 
 describe('Shared', () => {
   describe('Proc', () => {

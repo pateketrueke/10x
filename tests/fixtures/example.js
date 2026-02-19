@@ -1,2 +1,3 @@
-module.exports.twice = n => n * 2;
-module.exports.wait = ms => new Promise(ok => setTimeout(ok, ms));
+export const twice = n => n * 2;
+
+export const wait = ms => new Promise(ok => setTimeout(ok, ms));
