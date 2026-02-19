@@ -3,7 +3,7 @@
 import { expect } from 'chai';
 import { failWith } from './helpers';
 import { execute as run } from '../src/lib';
-import { useCurrencies } from '../src/lib/builtins';
+import { CURRENCY_EXCHANGES, useCurrencies } from '../src/lib/builtins';
 
 import Env from '../src/lib/tree/env';
 import Eval from '../src/lib/tree/eval';
@@ -142,6 +142,7 @@ describe('Errors', () => {
 
   describe('Units', () => {
     beforeEach(() => {
+      Object.keys(CURRENCY_EXCHANGES).forEach(k => delete CURRENCY_EXCHANGES[k]);
       Env.register = () => ({
         mod() {
           throw new Error('FIXME');

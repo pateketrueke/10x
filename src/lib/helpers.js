@@ -330,8 +330,8 @@ export function debug(err, source, noInfo, callback, colorizeToken = (_, x) => x
   if (err.prevToken) {
     const { line, col } = err.prevToken.tokenInfo;
 
-    err.col = typeof err.col !== 'undefined' ? err.col : col;
-    err.line = typeof err.line !== 'undefined' ? err.line : line;
+    if (line !== err.line) err.line = line;
+    if (col !== err.col) err.col = col;
     err.stack += `\n  at \`${err.prevToken}\` at line ${line + 1}:${col + 1}`;
   }
 
