@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "bun run build && bun --watch run index.js",
     "watch": "bun test --watch tests/",
-    "build": "bun build src/main.js --outfile=dist/main.js --format=esm --external=fs --external=os --external=tty --external=path",
+    "build": "bun build src/main.js --outfile=dist/main.js --format=esm --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;'",
     "pretest": "eslint tests src/lib",
     "test": "bun test tests/",
     "test:unit": "TZ=UTC bun test tests/",

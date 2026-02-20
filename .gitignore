@@ -6,7 +6,7 @@ dist
 .claude
 .journal
 TASKS.md
-CLAUDE.md
+AGENTS.md
 coverage
 .nyc_output
 node_modules

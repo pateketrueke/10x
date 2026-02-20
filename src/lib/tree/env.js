@@ -123,7 +123,7 @@ export default class Env {
       let env;
 
       if (isGlobal) {
-        env = global[source];
+        env = globalThis[source];
       } else if (shared[source]) {
         env = shared[source];
       } else {
