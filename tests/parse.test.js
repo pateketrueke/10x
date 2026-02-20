@@ -3,6 +3,7 @@
 import { expect } from 'chai';
 
 import Expr from '../src/lib/tree/expr';
+import Env from '../src/lib/tree/env';
 import Parser from '../src/lib/tree/parser';
 
 import {
@@ -107,7 +108,14 @@ describe('Parser', () => {
   });
 
   it('should skip units by default', () => {
-    expect(Parser.getAST('1cm')).to.eql([Expr.value(1), Expr.from(MUL), Expr.local('cm')]);
+    const register = Env.register;
+
+    try {
+      Env.register = () => null;
+      expect(Parser.getAST('1cm')).to.eql([Expr.value(1), Expr.from(MUL), Expr.local('cm')]);
+    } finally {
+      Env.register = register;
+    }
   });
 
   it('should keep nested trees', () => {
