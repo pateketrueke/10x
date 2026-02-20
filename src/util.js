@@ -1,9 +1,6 @@
-/* istanbul ignore file */
 
 import chalk from 'chalk';
 
-import Env from './lib/tree/env';
-import Expr from './lib/tree/expr';
 import Parser from './lib/tree/parser';
 
 import { execute } from './lib';
