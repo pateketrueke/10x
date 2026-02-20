@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10x demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Berkeley Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 14px;
+      background: #0f0f0f;
+      color: #d4d4d4;
+      height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      grid-template-columns: 1fr;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 10px 16px;
+      border-bottom: 1px solid #222;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #888;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      font-size: 11px;
+      color: #555;
+      margin-left: auto;
+      transition: color .15s;
+    }
+    .status.ok   { color: #4ec9b0; }
+    .status.err  { color: #f48771; }
+    .status.busy { color: #dcdcaa; }
+
+    main {
+      overflow: auto;
+    }
+
+    tenx-editor {
+      display: block;
+      min-height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>10x</h1>
+  <span class="status" id="status">loading…</span>
+</header>
+
+<main>
+  <tenx-editor id="editor">fib = n ->
+  :if (< n 2) 1
+  :else fib(n - 1) + fib(n - 2);
+
+fib(10);
+fib(15);</tenx-editor>
+</main>
+
+<script type="module">
+  import './editor.js';
+
+  const editor = document.getElementById('editor');
+  const status = document.getElementById('status');
+
+  editor.addEventListener('change', e => {
+    const { results } = e.detail;
+    const count = results.filter(r => r !== undefined).length;
+    status.className = 'status ok';
+    status.textContent = `${count} result${count === 1 ? '' : 's'}`;
+  });
+
+  editor.addEventListener('error', e => {
+    status.className = 'status err';
+    status.textContent = e.detail.error?.message?.split('\n')[0] ?? 'error';
+  });
+
+  // warm up the evaluator
+  try {
+    const { execute } = await import('../dist/main.js');
+    await execute('1');
+    status.className = 'status ok';
+    status.textContent = 'ready';
+  } catch {
+    status.className = 'status err';
+    status.textContent = 'failed to load';
+  }
+</script>
+
+</body>
+</html>
