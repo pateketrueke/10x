@@ -1,142 +1,266 @@
 
 # 10x
 
-> ...slower than Javascript!
+> ...slower than JavaScript!
 
-## Why I'm doing this?
+A toy programming language written in JavaScript, with a markdown-native syntax — source files are `.md` files, so code blocks are optional and most text is just text.
 
-I want to build a language from scratch but I don't know C or anything low-level, so I picked Javascript as the environment for this such tiny language. :bomb:
+## Why?
 
-Achievements unlocked:
+I wanted to build a language from scratch without knowing C or anything low-level, so I picked JavaScript as the host environment. It has built-in unit conversions, fractions, ranges, and a few other ideas I wanted to play with.
 
-- Markdown-friendly, so I don't have to explicitly use block-fences to denote actual code!
-- Built-in unit conversions, so I can play around with expressions like `5cm - 1.5in`
+## Getting Started
 
-### Syntax/features overview
+**Requirements:** [Bun](https://bun.sh) and Node.js.
 
-- Literals can hold any value, depending on its value they can be invoked
-- We can consider only four basic types: `string`, `number`, `symbol` and `range`
-- Other abstractions are built on top of them, like object-mappings or logical-structures
-- There are few delimiters, like comma and semicolon; also grouping parentheses and brackets
+```sh
+bun install
+```
 
-We can start with a new literal definition for `sum`:
+### REPL
 
-  sum = a -> b -> a + b;
-  sum(2, 3);
+```sh
+make repl
+# or: node bin/cli
+```
 
-> The result is `5`
+### Evaluate a snippet
 
-**Blocks** are denoted by using the arrow-operator (`->`), literals on the left-side are the expected arguments, any statements on the right-side before semicolon (`;`) are the function's body.
+```sh
+make eval code="1 + 2"
+```
 
-> Arguments can also be separated by commas, e.g.  `sum = a, b -> a + b;`
+### Run a file
 
-Parentheses will create a new context using the available arguments from its _callee_,
-e.g. `(2, 3) => (a, b -> a + b)` &mdash; values `2` and `3` are bound to `a` and `b` respectively.
+```sh
+node bin/cli examples/fib_loop.md
+```
 
-Declared blocks with only two arguments can be invoked as infix-operators, e.g.
+### Browser demo
 
-  adds = a, b -> a + b;
-  3 adds 5;
+```sh
+make demo   # builds and serves at http://localhost:3131
+```
 
-> The result is `8`
+### Tests
 
-**Literals** without arguments are invoked right-away, if they're prefixed by a number its result is then multiplied by that, e.g.
+```sh
+bun test tests/
+```
 
-  x = 42;
-  3x;
+---
 
-> The result is `126`
+## Language Reference
 
-**Numbers** can be declared with or without decimals, even `.1` is a valid number.
+10x has four basic types: `string`, `number`, `symbol`, and `range`. Everything else is built on top of them.
 
-Consecutive numbers are added, and any number followed by parentheses is multiplied, e.g.
+Statements are separated by semicolons (`;`). Source files are Markdown — prose, headings, and fenced code blocks are ignored; only indented blocks and inline expressions are evaluated.
 
-  1 2 3 (4 5);
+### Blocks (functions)
 
-> The result is `30`
+The arrow operator (`->`) defines a block. Literals on the left are arguments; everything to the right (before `;`) is the body.
 
-Fractions are preserved if they're expressed as `1/3` &mdash; positive integers with no spaces between its components.
+```
+sum = a -> b -> a + b;
+sum(2, 3);
+```
 
-  1/2;
-  1 /2;
-  1 / 2;
+> Result: `5`
 
-> The result is `1/2, 0.5, 0.5`
+Arguments can also be comma-separated:
 
-**Units** are special literals used to enclose numeric values that can be converted, say you want to known the result of `5 cm to inches`, etc.
+```
+sum = a, b -> a + b;
+```
 
-To enable such expression, we need to know that units can be converted, e.g. `(5cm).to(:in)` &mdash; so the next part is implementing the `to` infix operator as `to = a, b -> a.to(b);` to finally make it work!
+A block with exactly two arguments can be used as an infix operator:
 
-**Strings** are all delimited by double-quotes, they can also be RegExp or HTML tags, e.g.
+```
+adds = a, b -> a + b;
+3 adds 5;
+```
 
-  "Hello World";
-  /test/i;
-  <b>I am just markup</b>;
+> Result: `8`
 
-> The result is `"Hello World", /test/i, <b>I am just markup</b>`
+Parentheses create a new context and bind values positionally:
 
-Interpolation can be used only on html and regular strings, e.g. `<p>#{value}</p>` &mdash; new lines are allowed within, escape sequences for `\r\n\t` may work too.
+```
+(2, 3) => (a, b -> a + b)
+```
 
-Regular expressions does not accept any spaces or new lines, use `\s` or `\n` respectively.
+### Numbers
 
-**Symbols** are used for `null`, `true` and `false` values, as keys for object-mappings, etc. &mdash; when used as single values they'll behave as if they were strings.
+Decimals, leading-dot, consecutive addition, and parenthesized multiplication all work:
 
-Also you can create symbols on the fly by using parentheses or string-interpolation, e.g.
+```
+.5;
+1 2 3 (4 5);
+```
 
-  :(3 - 2), :"test-#{:key}";
+> Results: `0.5`, `30`
 
-> The result is `:1, :test-key`
+Fractions are preserved when written as `1/3` (no spaces):
 
-**Maps** can be declared by mixing named-symbols (`:k`) as keys followed by one ore more values, otherwise they'll remain as single symbol tokens, e.g.
+```
+1/2;
+1 /2;
+1 / 2;
+```
 
-  user =
-    :name "John", "Doe",
-    :email "john@doe.com";
+> Results: `1/2`, `0.5`, `0.5`
 
-  :if (:on) "#{[user.name].join(" ")} <#{user.email}>";
+A literal (identifier) prefixed by a number is multiplied by that number:
 
-> The result is `"John Doe <john@doe.com>"`
+```
+x = 42;
+3x;
+```
 
-Those will not capture anything after short-circuit expressions like `:x y | 0` &mdash; to include them as value you must add parentheses.
+> Result: `126`
 
-Values can be accessed through the dot-operator (`.`) and named symbols, e.g.
+### Units
 
-  user.name;
-  [user]:email;
+Units are special literals that wrap numeric values and support conversion:
 
-> The result is `"John", "Doe", "john@doe.com"`
+```
+to = a, b -> a.to(b);
+5cm to :in;
+```
 
-Later is preferred for dynamic access, e.g. `[user]:(logged_in ? :name | :email)"`
+> Result: `~1.969 in`
 
-**Ranges** or lists can be expressed as `[` followed by any other values, ending with a `]` delimiter, listed items can contain any value or expression, e.g.
+### Strings
 
-  [0, [(< 1 2), (:three 3)]]
+Strings use double-quotes. Regular expressions and HTML tags are also string-like values:
 
-> The result if `[0, [:on, (:three 3)]]`
+```
+"Hello World";
+/test/i;
+<b>I am just markup</b>;
+```
 
-We can produce lazy sets of values through the range-operator, e.g. `a..b` &mdash; where each component should evaluate to a number or single-character string.
+> Results: `"Hello World"`, `/test/i`, `<b>I am just markup</b>`
 
-They'll be evaluated through symbols, below we're going to use `:` to expand the range contents into a new fixed list of values.
+Interpolation works in strings and HTML with `#{expr}`:
 
-  [1..3, "a".."c"]:
+```
+name = "World";
+"Hello #{name}!";
+<p>Hello #{name}!</p>;
+```
 
-> The result is `1, 2, 3, "a", "b", "c"`
+Regular expressions don't allow spaces or newlines — use `\s` and `\n` instead.
 
-Named symbols including ranges (`:1..3`), slices (`:1-3`) and offsets (`:1`) are used to configure and access any given list, e.g. `[1, 2, 3]:1` &mdash; returns `2` as the access was by offset.
+### Symbols
 
-Available rules:
+Symbols are prefixed with `:`. They behave like strings when used as values, and are used as keys in maps and for control flow:
 
-- `:` &mdash; evaluates any range within lists
-- `:1` &mdash; access list-item by numeric offset
-- `::2` &mdash; get all values with a `2` step between
-- `:1..2` &mdash; access only `2` list-items by offset `1`
-- `:1-2` and `:1:2` &mdash; take `1` value with a `2` step between
-- `::1` &mdash; default take/step values; access list-item by numeric offset
-- `::1..2` &mdash; default take/step values; access only `2` list-items by offset `1`
-- `:1-2:1..3` or `:1:2:1..3` &mdash; combined rules, in order: `take, step, offset, length`
+```
+:hello;
+:(3 - 2);
+:\"test-#{:key}\";
+```
 
-Any block as direct child will be unpacked with all its nested blocks flattened, e.g.
+> Results: `:hello`, `:1`, `:test-key`
 
-  [(1..3, "a".."c", (4, (5)))];
+Built-in symbols: `:true`, `:false`, `:null`, `:on`, `:off`.
 
-> The result is `[[1, 2, 3], ["a", "b", "c"], 4, 5]`
+### Maps
+
+Mix named symbols (`:key`) with values to build a map:
+
+```
+user =
+  :name "John", "Doe",
+  :email "john@doe.com";
+```
+
+Access values with the dot operator or bracket notation:
+
+```
+user.name;
+[user]:email;
+```
+
+> Results: `"John"`, `"Doe"`, `"john@doe.com"`
+
+Bracket notation is preferred for dynamic key access:
+
+```
+[user]:(logged_in ? :name | :email)
+```
+
+### Ranges and Lists
+
+Lists use `[` and `]`. Items can be any value or expression:
+
+```
+[0, [(< 1 2), (:three 3)]]
+```
+
+> Result: `[0, [:on, (:three 3)]]`
+
+Ranges are lazy sequences using `..`:
+
+```
+[1..3, "a".."c"]:
+```
+
+> Result: `1, 2, 3, "a", "b", "c"`
+
+Named symbol selectors configure list access:
+
+| Selector      | Meaning                                         |
+|---------------|-------------------------------------------------|
+| `:`           | Expand any ranges within the list               |
+| `:1`          | Access item at offset 1                         |
+| `::2`         | All values with step 2                          |
+| `:1..2`       | 2 items starting at offset 1                    |
+| `:1-2`        | Take 1, step 2                                  |
+| `:1-2:1..3`   | Combined: `take, step, offset, length`          |
+
+Direct block children are flattened:
+
+```
+[(1..3, "a".."c", (4, (5)))];
+```
+
+> Result: `[[1, 2, 3], ["a", "b", "c"], 4, 5]`
+
+### Control Flow
+
+```
+:if (:on) "yes" "no";
+:while (condition) body;
+:let x = 1;
+:return value;
+```
+
+Short-circuit operators: `|` (or), `&` (and), `?` (ternary-like).
+
+### Templates and Imports
+
+Extend operators with `:template`:
+
+```
+:template ++ (a, b -> a.concat(b));
+```
+
+Import from built-in modules:
+
+```
+:import concat :from "Array";
+```
+
+---
+
+## Examples
+
+See the [`examples/`](examples/) directory:
+
+- [`fib_loop.md`](examples/fib_loop.md) — Fibonacci with mutable loop state
+- [`fib_memo.md`](examples/fib_memo.md) — Fibonacci with memoization
+- [`concat.md`](examples/concat.md) — Custom operator + import
+- [`markdown.md`](examples/markdown.md) — Prose mixed with code
+- [`prompt.md`](examples/prompt.md) — Interactive input
+- [`stdin.md`](examples/stdin.md) — Reading from stdin
