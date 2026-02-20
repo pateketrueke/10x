@@ -32,23 +32,29 @@ export async function evaluate(tokens, environment, enabledDetail) {
 }
 
 export async function execute(code, environment, enabledDetail) {
-  execute.failure = null;
-  execute.value = null;
-  execute.info = {};
+  let failure = null;
+  let value = null;
+  let info = {};
 
   try {
-    const { result, error, info } = await evaluate(Parser.getAST(code, undefined, environment), environment, enabledDetail);
+    const res = await evaluate(Parser.getAST(code, undefined, environment), environment, enabledDetail);
 
-    execute.failure = error;
-    execute.value = result;
-    execute.info = info;
+    failure = res.error;
+    value = res.result;
+    info = res.info;
   } catch (e) {
-    execute.failure = execute.failure || e;
+    failure = failure || e;
   }
 
-  if (execute.failure && !environment) {
-    throw execute.failure;
+  // Expose on function object for backward compat with CLI callers (src/util.js)
+  // Note: these are NOT safe for concurrent browser use — read the returned value instead
+  execute.failure = failure;
+  execute.value = value;
+  execute.info = info;
+
+  if (failure && !environment) {
+    throw failure;
   }
 
-  return execute.value;
+  return value;
 }

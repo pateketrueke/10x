@@ -22,34 +22,26 @@ async function prelude() {
 
   await useCurrencies({
     key: `${__dirname}/currencies-${new Date().toISOString().substr(0, 13)}.json`,
-    read: require,
+    read: path => JSON.parse(fs.readFileSync(path, 'utf8')),
     write: fs.writeFileSync,
     exists: fs.existsSync,
-    resolve: () => new Promise((done, reject) => {
+    resolve: async () => {
       const sources = [
         'https://api.exchangeratesapi.io/latest',
         'https://api.exchangerate-api.com/v4/latest/EUR',
       ];
 
-      let offset = 0;
-
-      function retry() {
-        if (offset >= sources.length) {
-          reject(new Error('Failed to fetch currency info'));
+      for (const url of sources) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) return res.json();
+        } catch (_) {
+          // try next source
         }
-
-        const url = sources[offset++];
-
-        require('https').get(url, resp => {
-          let data = '';
-
-          resp.on('data', chunk => { data += chunk; });
-          resp.on('end', () => done(JSON.parse(data)));
-        }).on('err', retry);
       }
 
-      retry();
-    }),
+      throw new Error('Failed to fetch currency info');
+    },
   });
 
   process.stderr.write('\r\x1b[K');
