@@ -5,6 +5,7 @@
     "node": true
   },
   "globals": {
+    "globalThis": "readonly",
     "Bun": "readonly",
     "describe": "readonly",
     "it": "readonly",
