@@ -7,8 +7,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: tacoss/nodejs@master
-        env:
-          BROWSER: chromium:headless
+
+      - name: Bun setup
+        uses: antongolub/action-setup-bun@v1
         with:
-          args: ci
+          bun-version: 1.3.6
+
+      - run: make ci
+
+      # FIXME: add later once demo is done
+      # - uses: tacoss/nodejs@master
+      #   env:
+      #     BROWSER: chromium:headless
+      #   with:
+      #     args: make ci
