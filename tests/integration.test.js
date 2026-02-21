@@ -227,8 +227,8 @@ describe('Integration', () => {
         expect(await run(`
           :import (:default Frac) :from "Frac".
           Frac.from(12).
-          Frac.from(.5).
-          Frac.from(.005).
+          Frac.from(0.5).
+          Frac.from(0.005).
         `)).to.eql([Expr.value(12), Expr.frac(1, 2), Expr.frac(1, 200)]);
 
         expect(await run(':import (:default fr) :from "Frac".\nfr(1, 2)')).to.eql([Expr.frac(1, 2)]);

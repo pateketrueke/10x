@@ -236,8 +236,6 @@ export default class Scanner {
       case '.':
         if (this.isMatch('.')) {
           this.addToken(RANGE);
-        } else if (isDigit(this.peekToken())) {
-          this.parseNumber();
         } else if (this.peek() === '\n' || this.isDone()) {
           this.addToken(EOL);
         } else {
@@ -246,9 +244,7 @@ export default class Scanner {
         break;
 
       case '-':
-        if (this.peek() === '.' && isDigit(this.peekNext()) && this.isMatch('.')) {
-          this.parseNumber();
-        } else if (this.isMatch('>')) {
+        if (this.isMatch('>')) {
           this.addToken(BLOCK);
         } else {
           this.addToken(MINUS);
@@ -388,14 +384,21 @@ export default class Scanner {
       while (isDigit(this.peek())) this.nextToken();
     }
 
-    // keep fractions together, e.g. `1/2`
+    // keep fractions together, e.g. `1/2` (but NOT 2/0.5 which is division, not fraction)
+    // Only treat as fraction if denominator has no decimal point
     if (this.peek() === '/' && isDigit(this.peekNext())) {
-      this.nextToken();
-      while (isDigit(this.peek())) this.nextToken();
+      let i = this.offset + 1;
+      while (i < this.chars.length && isDigit(this.chars[i])) i++;
+      if (i < this.chars.length && this.chars[i] === '.') {
+        // There's a decimal point - don't treat as fraction, let it be division
+      } else {
+        this.nextToken();
+        while (isDigit(this.peek())) this.nextToken();
 
-      const [left, right] = this.getCurrent().split('/');
+        const [left, right] = this.getCurrent().split('/');
 
-      value = new Expr.Frac(parseFloat(left), parseFloat(right));
+        value = new Expr.Frac(parseFloat(left), parseFloat(right));
+      }
     }
 
     // expand possible units, e.g. `1m` OR `2 cm`

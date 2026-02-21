@@ -52,8 +52,6 @@ describe('Scanner', () => {
     expect(getTokens('1')).to.eql(['1']);
     expect(getTokens('1.3')).to.eql(['1.3']);
 
-    expect(getTokens('.3')).to.eql(['.3']);
-    expect(getTokens('-.3')).to.eql(['-.3']);
     expect(getTokens('-0.3')).to.eql(['-', '0.3']);
   });
 

@@ -20,10 +20,10 @@ describe('Eval', () => {
     it('should operate on fractions', async () => {
       expect(await run('1/2 + 1')).to.eql([Expr.value((1 / 2) + 1)]);
       expect(await run('1/2 + 1')).to.eql([Expr.value((1 / 2) + 1)]);
-      expect(await run('1/3 - .1')).to.eql([Expr.value((1 / 3) - 0.1)]);
+      expect(await run('1/3 - 0.1')).to.eql([Expr.value((1 / 3) - 0.1)]);
       expect(await run('1/2 * 3')).to.eql([Expr.value((1 / 2) * 3)]);
       expect(await run('1/3 / 2')).to.eql([Expr.value((1 / 3) / 2)]);
-      expect(await run('1/3 % .3')).to.eql([Expr.value((1 / 3) % 0.3)]);
+      expect(await run('1/3 % 0.3')).to.eql([Expr.value((1 / 3) % 0.3)]);
 
       expect(await run('1/2 + 3/4')).to.eql([Expr.frac(5, 4)]);
       expect(await run('3/4 - 1/2')).to.eql([Expr.frac(1, 4)]);
@@ -379,7 +379,7 @@ describe('Eval', () => {
       expect(await run('(!= 1 "1")')).to.eql([Expr.value(true)]);
       expect(await run('(<= 1 2)')).to.eql([Expr.value(true)]);
       expect(await run('(> 1 2)')).to.eql([Expr.value(false)]);
-      expect(await run('(> 1 (2/.5))')).to.eql([Expr.value(false)]);
+      expect(await run('(> 1 (2/0.5))')).to.eql([Expr.value(false)]);
       expect(await run('(= 4 % 2 0)')).to.eql([Expr.value(true)]);
       expect(await run('(? (5 - 5) (0 -1) 3)')).to.eql([Expr.value(true)]);
       expect(await run('($ (5 - 5) (0 -1) 3)')).to.eql([Expr.value(false)]);
