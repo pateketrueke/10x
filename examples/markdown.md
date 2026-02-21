@@ -1,4 +1,4 @@
-<div />
+<div></div>
 
 ### Hello _world_
 

@@ -717,6 +717,22 @@ describe('Integration', () => {
       expect(stringify(example('markdown.md'))).to.eql(example('markdown.md'));
     });
 
+    it('should run concat.md example', async () => {
+      expect(await run(example('concat.md'))).to.eql([Expr.array([1, 2, 4, 5, 6, 7, 8, 9].map(Expr.value))]);
+    });
+
+    it('should run fib_loop.md example', async () => {
+      const result = await run(example('fib_loop.md'));
+      expect(result.map(r => r.value)).to.eql([
+        '1', '1', '2', '3', '5', '8', '13', '21', '34', '55',
+        '89', '144', '233', '377', '610', '987', '1597', '2584', '4181', '6765', '10946',
+      ]);
+    });
+
+    it('should run fib_memo.md example', async () => {
+      expect(await run(example('fib_memo.md'))).to.eql([Expr.value(10946)]);
+    });
+
     it('should order sibling items in ordered lists', () => {
       expect(stringify(deindent(`
         1. a
