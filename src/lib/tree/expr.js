@@ -2,7 +2,7 @@ import Convert from 'convert-units';
 
 import {
   TEXT, UL_ITEM, OL_ITEM, HEADING, BLOCKQUOTE,
-  FFI, BLOCK, RANGE, NUMBER, STRING, LITERAL, SYMBOL,
+  FFI, BLOCK, RANGE, NUMBER, STRING, LITERAL, SYMBOL, EOL,
 } from './symbols';
 
 import {
@@ -52,6 +52,7 @@ export default class Expr {
   get isExpression() { return this instanceof Expr.Expression; }
 
   toString() {
+    if (this.type === EOL) return '.\n';
     return serialize(this, true);
   }
 

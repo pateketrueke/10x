@@ -29,6 +29,7 @@ export default class Scanner {
     this.start = 0;
     this.line = 0;
     this.col = 0;
+    this.afterEOL = null; // tracks newlines since last EOL: null=not tracking, n=count
 
     if (tokenInfo) {
       this.line = tokenInfo.line;
@@ -187,14 +188,16 @@ export default class Scanner {
 
     if (this.col === 1) {
       // extract link references, e.g. `[1]: ...`
-      if (char === '[' && this.parseRef(this.col)) return;
+      // skip in code context (line immediately following an EOL)
+      if (this.afterEOL !== 1 && char === '[' && this.parseRef(this.col)) return;
 
       // extract markdown block-tags, e.g. `#...` OR `>...`, etc.
       if (char === '#' && this.parseBlock(char)) return;
       if (char === '>' && this.peek() === ' ' && this.parseBlock(char)) return;
 
       // prevent text-phrases to be parsed as tokens, e.g. `a b` OR `A, b`, etc.
-      if ((isAlphaNumeric(char) || char === '*') && this.parseText(char)) return;
+      // skip prose detection on the line immediately following an EOL (code context)
+      if (this.afterEOL !== 1 && (isAlphaNumeric(char) || char === '*') && this.parseText(char)) return;
 
       // extract code-blocks, e.g. ````\n...\n````
       if (char === '`' && char === this.peek() && char === this.peekNext() && this.parseFence(char)) return;
@@ -235,13 +238,15 @@ export default class Scanner {
           this.addToken(RANGE);
         } else if (isDigit(this.peekToken())) {
           this.parseNumber();
+        } else if (this.peek() === '\n' || this.isDone()) {
+          this.addToken(EOL);
         } else {
           this.addToken(DOT);
         }
         break;
 
       case '-':
-        if (this.isMatch('.') && isDigit(this.peekToken())) {
+        if (this.peek() === '.' && isDigit(this.peekNext()) && this.isMatch('.')) {
           this.parseNumber();
         } else if (this.isMatch('>')) {
           this.addToken(BLOCK);
@@ -256,7 +261,7 @@ export default class Scanner {
       case '!': this.addToken(this.isMatch('=') ? NOT_EQ : NOT); break;
       case '=': this.addToken(this.isMatch('=') ? EXACT_EQ : EQUAL); break;
 
-      case ';': this.addToken(EOL); break;
+
       case '%': this.addToken(MOD); break;
       case '~': this.addToken(LIKE); break;
       case '?': this.addToken(SOME); break;
@@ -295,6 +300,7 @@ export default class Scanner {
         this.pushToken(char);
         this.col = 0;
         this.line++;
+        if (this.afterEOL !== null) this.afterEOL++;
         break;
 
       case '"': this.parseString(); break;
@@ -329,6 +335,7 @@ export default class Scanner {
     };
 
     this.tokens.push(new Token(type, value, literal, tokenInfo));
+    this.afterEOL = type === EOL ? 0 : null;
   }
 
   nextToken(nth = 1) {
@@ -847,6 +854,8 @@ export default class Scanner {
     while (!this.isDone()) {
       const cur = this.peek();
 
+      // stop at '.' followed by newline or EOF — that's an EOL token, not part of symbol
+      if (cur === '.' && (this.peekNext() === '\n' || this.offset + 1 >= this.chars.length)) break;
       if (cur === '/' || isAlphaNumeric(cur, true)) this.nextToken();
       else break;
     }

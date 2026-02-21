@@ -24,12 +24,12 @@ describe('Shared', () => {
   describe('Proc', () => {
     it('cwd() and chdir(p)', async () => {
       const result = await run(deindent(`
-        :import cwd, chdir :from "Proc";
-        is = a, b -> (== a b);
+        :import cwd, chdir :from "Proc".
+        is = a, b -> (== a b).
 
         cwd() is "${process.cwd()}"
-        chdir("..");
-        cwd() is "${path.dirname(process.cwd())}";
+        chdir("..").
+        cwd() is "${path.dirname(process.cwd())}".
       `));
 
       expect(serialize(result)).to.eql(':on, :on');
@@ -41,15 +41,15 @@ describe('Shared', () => {
       process.env.TEXT = '';
 
       const result = await run(deindent(`
-        :import getenv, setenv, unsetenv :from "Proc";
-        is = a, b -> (== a b);
+        :import getenv, setenv, unsetenv :from "Proc".
+        is = a, b -> (== a b).
 
-        unsetenv(:FIXED);
-        getenv(:FIXED) | 1;
-        getenv(:TEXT) is "";
-        setenv(:TEXT, 42);
-        getenv(:TEXT) is "42";
-        getenv(:TRUTH) is "${process.env.TRUTH}";
+        unsetenv(:FIXED).
+        getenv(:FIXED) | 1.
+        getenv(:TEXT) is "".
+        setenv(:TEXT, 42).
+        getenv(:TEXT) is "42".
+        getenv(:TRUTH) is "${process.env.TRUTH}".
       `));
 
       expect(serialize(result)).to.eql('1, :on, :on, :on');
@@ -57,12 +57,12 @@ describe('Shared', () => {
 
     it('homedir() and tmpdir()', async () => {
       const result = await run(deindent(`
-        :import homedir, tmpdir :from "Proc";
-        is = a, b -> (== a b);
-        isin = a, b -> (~ b a);
+        :import homedir, tmpdir :from "Proc".
+        is = a, b -> (== a b).
+        isin = a, b -> (~ b a).
 
-        homedir() is "${process.env.HOME}";
-        tmpdir() isin "${process.env.TMPDIR}";
+        homedir() is "${process.env.HOME}".
+        tmpdir() isin "${process.env.TMPDIR}".
       `));
 
       expect(serialize(result)).to.eql(`:on, :${process.env.CI ? 'off' : 'on'}`);
@@ -72,9 +72,9 @@ describe('Shared', () => {
       td.replace(process, 'exit', td.func());
 
       await run(deindent(`
-        :import exit, wait :from "Proc";
-        wait(100);
-        exit();
+        :import exit, wait :from "Proc".
+        wait(100).
+        exit().
       `));
 
       expect(td.explain(process.exit).callCount).to.eql(1);
@@ -84,8 +84,8 @@ describe('Shared', () => {
 
     it('getopts(...) — returns input from argv', async () => {
       const result = await run(deindent(`
-        :import getopts :from "Proc";
-        getopts();
+        :import getopts :from "Proc".
+        getopts().
       `));
 
       const flags = ':data (:X "Y"), :flags (:b :on, :c :on)';
@@ -108,7 +108,7 @@ describe('Shared', () => {
           process.stdin.isTTY = true;
         });
 
-        const result = await run(':import input :from "IO";input();input()');
+        const result = await run(':import input :from "IO".\ninput().\ninput()');
 
         expect(serialize(result)).to.eql('"OK\n", :nil');
       });
@@ -131,12 +131,12 @@ describe('Shared', () => {
         });
 
         const result = await run(deindent(`
-          :import input :from "IO";
-          input(:type :text, :name :a, :message "A?");
+          :import input :from "IO".
+          input(:type :text, :name :a, :message "A?").
           input(
             (:type :text, :name :b, :message "B?"),
             (:type :number, :name :c, :message "C?"),
-          );
+          ).
         `));
 
         stdout.stop();
@@ -152,7 +152,7 @@ describe('Shared', () => {
       it('puts(...) — will print to the stdout', async () => {
         stdout.start();
 
-        await run(':import puts :from "IO";puts("OK\n")');
+        await run(':import puts :from "IO".\nputs("OK\n")');
 
         stdout.stop();
         expect(stdout.output).to.eql('OK\n');
@@ -161,7 +161,7 @@ describe('Shared', () => {
       it('err(...) — will print to the stderr', async () => {
         stderr.start();
 
-        await run(':import err :from "IO";err("ERR\n")');
+        await run(':import err :from "IO".\nerr("ERR\n")');
 
         stderr.stop();
         expect(stderr.output).to.eql('ERR\n');
@@ -172,9 +172,9 @@ describe('Shared', () => {
   describe('Fs', () => {
     it('should allow to read filesystem', async () => {
       const result = await run(deindent(`
-        :import read :from "Fs";
-        :rescue read("im_not_exists");
-        read("${__filename}");
+        :import read :from "Fs".
+        :rescue read("im_not_exists").
+        read("${__filename}").
       `));
 
       expect(result.length).to.eql(1);

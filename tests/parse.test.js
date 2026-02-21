@@ -13,7 +13,7 @@ import {
 
 describe('Parser', () => {
   it('should allow to parse raw-statements', () => {
-    expect(Parser.getAST('1..3,\na,b;(j+"m\nn";\nk);x;\ny _z_', true)).to.eql([
+    expect(Parser.getAST('1..3,\na,b.\n(j+"m\nn".\n\nk).\nx.\n\ny _z_', true)).to.eql([
       {
         body: [
           Expr.value(1),
@@ -30,25 +30,26 @@ describe('Parser', () => {
       },
       {
         body: [
+          Expr.from(TEXT, '\n'),
           Expr.from(OPEN),
           Expr.local('j'),
           Expr.from(PLUS),
           Expr.value('m\nn'),
           Expr.from(EOL),
-          Expr.from(TEXT, '\n'),
+          Expr.from(TEXT, '\n\n'),
           Expr.local('k'),
           Expr.from(CLOSE),
           Expr.from(EOL),
         ],
-        lines: [1, 2, 3],
+        lines: [2, 3, 4, 5],
       },
       {
-        body: [Expr.local('x'), Expr.from(EOL)],
-        lines: [3],
+        body: [Expr.from(TEXT, '\n'), Expr.local('x'), Expr.from(EOL)],
+        lines: [6],
       },
       {
-        body: [Expr.from(TEXT, '\n'), Expr.text('y _z_')],
-        lines: [4],
+        body: [Expr.from(TEXT, '\n\n'), Expr.text('y _z_')],
+        lines: [7, 8],
       },
     ]);
   });
@@ -89,7 +90,7 @@ describe('Parser', () => {
   });
 
   it('should sum consecutive numbers', () => {
-    expect(Parser.getAST('; 1 2 3')).to.eql([
+    expect(Parser.getAST('.\n1 2 3')).to.eql([
       Expr.from(EOL),
       Expr.value(1),
       Expr.from(PLUS),
@@ -119,7 +120,7 @@ describe('Parser', () => {
   });
 
   it('should keep nested trees', () => {
-    expect(Parser.getAST('(((x=(1;42))))')).to.eql([
+    expect(Parser.getAST('(((x=(1.\n42))))')).to.eql([
       Expr.group([Expr.group([Expr.group([Expr.block({
         body: [Expr.group([Expr.value(1), Expr.from(EOL), Expr.value(42)])],
         name: 'x',
@@ -129,7 +130,7 @@ describe('Parser', () => {
 
   it('should allow simple AST-transformations', () => {
     expect(Parser.getAST(`
-      :template ++ (a -> :let a = a + 1);
+      :template ++ (a -> :let a = a + 1).
       a++, ++b
     `)).to.eql([
       Expr.group([
@@ -154,7 +155,7 @@ describe('Parser', () => {
     ]);
 
     expect(Parser.getAST(`
-      :template += (a, b -> :let a = a + b);
+      :template += (a, b -> :let a = a + b).
       x.i += (2 / 5)
     `)).to.eql([
       Expr.group([
@@ -186,10 +187,10 @@ describe('Parser', () => {
     expect(Parser.getAST(`
       :template
         ++! (a, b -> [a, b]),
-        ++? (a..b);
+        ++? (a..b).
 
-      1 ++! 2;
-      1 +++ 2;
+      1 ++! 2.
+      1 +++ 2.
     `)).to.eql([
       Expr.group([Expr.array([Expr.value(1), Expr.from(COMMA), Expr.value(2)])]),
       Expr.from(EOL),
@@ -242,7 +243,7 @@ describe('Parser', () => {
     });
 
     it('should parse multiple arguments', () => {
-      expect(Parser.getAST(';a, b -> a + b')).to.eql([
+      expect(Parser.getAST('.\na, b -> a + b')).to.eql([
         Expr.from(EOL),
         Expr.block({
           args: [Expr.local('a'), Expr.local('b')],
@@ -285,7 +286,7 @@ describe('Parser', () => {
       const call = Expr.block({ args, body });
       const input = [Expr.value(5), Expr.from(COMMA), Expr.value(6)];
 
-      expect(Parser.getAST(';a, b -> a + b')).to.eql([Expr.from(EOL), call]);
+      expect(Parser.getAST('.\na, b -> a + b')).to.eql([Expr.from(EOL), call]);
       expect(Parser.getAST('(a, b -> a + b)')).to.eql([Expr.group([call])]);
       expect(Parser.getAST('(a, b -> a + b)(5, 6)')).to.eql([Expr.group([call]), Expr.group(input)]);
       expect(Parser.getAST('(a, b -> (a + b)(5, 6))')).to.eql([Expr.group([
@@ -373,7 +374,7 @@ describe('Parser', () => {
     });
 
     it('should parse multiple definitions', () => {
-      expect(Parser.getAST('a=1;b=2')).to.eql([
+      expect(Parser.getAST('a=1.\nb=2')).to.eql([
         Expr.block({ body: [Expr.value(1)], name: 'a' }),
         Expr.from(EOL),
         Expr.block({ body: [Expr.value(2)], name: 'b' }),

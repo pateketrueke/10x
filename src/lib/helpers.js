@@ -332,7 +332,7 @@ export function debug(err, source, noInfo, callback, colorizeToken = (_, x) => x
 
     if (line !== err.line) err.line = line;
     if (col !== err.col) err.col = col;
-    err.stack += `\n  at \`${err.prevToken}\` at line ${line + 1}:${col + 1}`;
+    err.stack += `\n  at \`${serialize(err.prevToken, true)}\` at line ${line + 1}:${col + 1}`;
   }
 
   source = typeof callback === 'function' ? callback(source) : source;
@@ -361,7 +361,7 @@ export function literal(t) {
     case COMMA: return ',';
     case BEGIN: return '[';
     case DONE: return ']';
-    case EOL: return ';';
+    case EOL: return '.';
     case DOT: return '.';
     case MINUS: return '-';
     case PLUS: return '+';
@@ -442,8 +442,7 @@ export function getSeparator(_, o, p, c, n, dx) {
       && ((!o && isBlock(p) && !isBlock(c))
       || (isBlock(p) && isBlock(c) && !c.isStatement && c.isRaw)))
 
-    // add white-space after token delimiters, e.g. `; x` OR `, x`
-    || (isEOL(p) && !isText(c) && !isEOF(c))
+    // add white-space after token delimiters, e.g. `. x` OR `, x`
     || (isComma(p) && !isText(c))
 
     // add white-space before blocks, e.g. `=> (...)`
@@ -510,6 +509,7 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
     }
 
     let prevData = null;
+    const hasText = token.some(isText);
 
     return token.reduce((prev, cur, i) => {
       const sep = getSeparator(prevData, token[i - 2], token[i - 1], cur, token[i + 1], descriptor);
@@ -522,7 +522,7 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
       if (isEOL(cur) || isComma(cur)) prevData = null;
       if (isData(cur)) prevData = cur;
 
-      prev.push(result);
+      prev.push(isEOL(cur) && !hasText ? `${result}\n` : result);
       return prev;
     }, []).join('');
   }

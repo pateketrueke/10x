@@ -651,6 +651,6 @@ export default class Parser {
   }
 
   static sub(source, environment) {
-    return Parser.getAST(`;${source}`, false, environment).slice(1);
+    return Parser.getAST(`.\n${source}`, false, environment).slice(1);
   }
 }

@@ -119,8 +119,8 @@ describe('Errors', () => {
         await failWith(run('[ ( a ]'), 'Expecting `)` but found `]` at line 1:7');
         await failWith(run('\n( [ a )'), 'Expecting `]` but found `)` at line 2:7');
 
-        await failWith(run('  ( [4, [5, [6]] ) ];'), 'Expecting `]` but found `)` at line 1:18');
-        await failWith(run('\n  [ (4, (5, (6)) ] );'), 'Expecting `)` but found `]` at line 2:18');
+        await failWith(run('  ( [4, [5, [6]] ) ].\n'), 'Expecting `]` but found `)` at line 1:18');
+        await failWith(run('\n  [ (4, (5, (6)) ] ).\n'), 'Expecting `)` but found `]` at line 2:18');
       });
     });
   });
@@ -162,7 +162,7 @@ describe('Errors', () => {
       Env.register = Expr.Unit.from;
       Env.resolve = source => ({ Unit: Expr.unit })[source];
 
-      await failWith(run(':import to :from "Unit"; 1000USD to :UNDEF'), 'Unsupported USD currency');
+      await failWith(run(':import to :from "Unit".\n1000USD to :UNDEF'), 'Unsupported USD currency');
 
       await useCurrencies({
         key: 'x',
@@ -177,30 +177,30 @@ describe('Errors', () => {
         resolve: () => null,
       }, '2020-01-01');
 
-      await failWith(run(':import to :from "Unit"; 1000 EUR to :UNDEF'), 'Unsupported UNDEF currency');
+      await failWith(run(':import to :from "Unit".\n1000 EUR to :UNDEF'), 'Unsupported UNDEF currency');
     });
 
     it('should fail if symbols cannot resolve to units', async () => {
       Env.register = Expr.Unit.from;
 
       await failWith(run('15*:x'), 'Expecting number but found `:x` at line 1:4');
-      await failWith(run('x=:nil; 2*x'), 'Expecting number but found `:nil` at line 1:3');
+      await failWith(run('x=:nil.\n2*x'), 'Expecting number but found `:nil` at line 1:3');
     });
   });
 
   describe('Runtime', () => {
     describe('SYMBOL', () => {
       it('should fail on invalid module/export statements', async () => {
-        await failWith(run(':module 2;'), 'Unexpected `2` at line 1:9');
-        await failWith(run(':export :nil;'), 'Unexpected `:nil` at line 1:9');
-        await failWith(run(':export sum;:export sum;'), 'Export for `sum` already exists at line 1:1');
-        await failWith(run(':module "Test";:module "Other";'), 'Module name `Test` is already set at line 1:16');
+        await failWith(run(':module 2.\n'), 'Unexpected `2` at line 1:9');
+        await failWith(run(':export :nil.\n'), 'Unexpected `:nil` at line 1:9');
+        await failWith(run(':export sum.\n:export sum.\n'), 'Export for `sum` already exists at line 2:1');
+        await failWith(run(':module "Test".\n:module "Other".\n'), 'Module name `Test` is already set at line 2:1');
       });
 
       it('should fail on invalid import/from statements', async () => {
-        await failWith(run(':from 42;'), 'Unexpected `:from` at line 1:1');
-        await failWith(run(':import stuff;'), 'Missing `:from` for `:import` at line 1:1');
-        await failWith(run(':import (:x foo, bar) :from "Array","Bar";'), 'Unexpected `"..."` at line 1:37');
+        await failWith(run(':from 42.\n'), 'Unexpected `:from` at line 1:1');
+        await failWith(run(':import stuff.\n'), 'Missing `:from` for `:import` at line 1:1');
+        await failWith(run(':import (:x foo, bar) :from "Array","Bar".\n'), 'Unexpected `"..."` at line 1:37');
         await failWith(run(':import foo :from "im_not_exists"'), 'Could not load `foo` at line 1:9 (im_not_exists/foo)');
 
         await failWith(run(':import (:nil) :from "Test"'), 'Unexpected `:nil` at line 1:10');
@@ -227,13 +227,13 @@ describe('Errors', () => {
       it('should fail on missing export definitions', async () => {
         const env = new Env();
 
-        await run(':module "Test" :export (:undef ok);', env);
+        await run(':module "Test" :export (:undef ok).\n', env);
 
         Env.resolve = source => ({
           './other.md': env,
         })[source];
 
-        await failWith(run(':import (:s sum) :from "./other.md";'), 'Local `s` not exported (Test/s:sum) at line 1:1');
+        await failWith(run(':import (:s sum) :from "./other.md".\n'), 'Local `s` not exported (Test/s:sum) at line 1:10');
       });
 
       it('should report failures from foreign-calls', async () => {
@@ -241,11 +241,11 @@ describe('Errors', () => {
           Fun: { test: fn => fn(), fail: fn => fn([], false) },
         })[source];
 
-        await failWith(run(':import test :from "Fun";sum=a,b->a+b;test(sum)'),
-          'Missing arguments to call `sum` at line 1:43');
+        await failWith(run(':import test :from "Fun".\nsum=a,b->a+b.\ntest(sum)'),
+          'Missing arguments to call `sum` at line 3:5');
 
-        await failWith(run(':import fail :from "Fun";sum=a,b->a+b;fail(sum)'),
-          'Expecting string, number or symbol but found `[..]` at line 1:43');
+        await failWith(run(':import fail :from "Fun".\nsum=a,b->a+b.\nfail(sum)'),
+          'Expecting string, number or symbol but found `[..]` at line 3:5');
       });
 
       it('should report failures on sub-expressions', async () => {
@@ -303,11 +303,11 @@ describe('Errors', () => {
       });
 
       it("should fail on definitions' calls", async () => {
-        await failWith(run('x=1;x()'), 'Unexpected call to `x` at line 1:5');
+        await failWith(run('x=1.\nx()'), 'Unexpected call to `x` at line 2:1');
       });
 
       it('should fail on recursion of locals', async () => {
-        await failWith(run('a=1.5 * a; a'), 'Unexpected reference to `a` at line 1:9');
+        await failWith(run('a=1.5 * a.\na'), 'Unexpected reference to `a` at line 1:9');
       });
     });
 
@@ -350,15 +350,15 @@ describe('Errors', () => {
 
     describe('BLOCK', () => {
       it('should fail on missing arguments', async () => {
-        await failWith(run('sum=a,b->a+b; sum();'), 'Missing arguments to call `sum` at line 1:18');
-        await failWith(run('sum=a->b->a+b;sum(5)()'), 'Missing argument `b` to call `sum` at line 1:21');
-        await failWith(run('test=a,b,c->a+b+c;fix=test(_,"B",_);fix("X")'), 'Missing argument `c` to call `test` at line 1:40');
+        await failWith(run('sum=a,b->a+b.\nsum().\n'), 'Missing arguments to call `sum` at line 2:4');
+        await failWith(run('sum=a->b->a+b.\nsum(5)()'), 'Missing argument `b` to call `sum` at line 2:7');
+        await failWith(run('test=a,b,c->a+b+c.\nfix=test(_,"B",_).\nfix("X")'), 'Missing argument `c` to call `test` at line 3:4');
       });
 
       it('should fail on too many arguments', async () => {
-        await failWith(run('test=a->a; test(1, 2, 3)'), 'Unexpected argument `2` to call `test` at line 1:16');
-        await failWith(run('sum=a->b->a+b; add5=sum(5); add5(3, 4)'), 'Unexpected argument `4` to call `sum` at line 1:33');
-        await failWith(run('test=a,b,c->a+b+c;fix=test(_,"B",_);fix("X","Y","Z")'), 'Unexpected argument `"..."` to call `test` at line 1:40');
+        await failWith(run('test=a->a.\ntest(1, 2, 3)'), 'Unexpected argument `2` to call `test` at line 2:5');
+        await failWith(run('sum=a->b->a+b.\nadd5=sum(5).\nadd5(3, 4)'), 'Unexpected argument `4` to call `sum` at line 3:5');
+        await failWith(run('test=a,b,c->a+b+c.\nfix=test(_,"B",_).\nfix("X","Y","Z")'), 'Unexpected argument `"..."` to call `test` at line 3:4');
       });
 
       it('should fail if non-callable is invoked', async () => {
@@ -366,7 +366,7 @@ describe('Errors', () => {
         await failWith(run('42()'), 'Expecting callable but found `42` at line 1:1');
         await failWith(run('|>()'), 'Expecting value before `|>` at line 1:1');
         await failWith(run('"x"()'), 'Expecting callable but found `"..."` at line 1:1');
-        await failWith(run('f=n->n+; f(1)(2)(3)'), 'Expecting callable but found `2` at line 1:15');
+        await failWith(run('f=n->n+.\nf(1)(2)(3)'), 'Expecting callable but found `2` at line 2:6');
       });
 
       it('should fail on invalid conditionals', async () => {
@@ -388,13 +388,13 @@ describe('Errors', () => {
 
     describe('DOT', () => {
       it('should fail if previous value is not a mapping', async () => {
-        await failWith(run('.'), 'Expecting map before `.` at line 1:1');
+        await failWith(run('. '), 'Expecting map before `.` at line 1:1');
         await failWith(run('1.foo'), 'Expecting map but found `1` at line 1:1');
-        await failWith(run('noop=x,y->x*y;1.noop'), 'Unexpected call to `noop` at line 1:16');
+        await failWith(run('noop=x,y->x*y.\n1.noop'), 'Unexpected call to `noop` at line 2:2');
       });
 
       it('should fail if following value is not a literal', async () => {
-        await failWith(run('(:truth 42).'), 'Expecting literal after `.` at line 1:12');
+        await failWith(run('(:truth 42). '), 'Expecting literal after `.` at line 1:12');
         await failWith(run('(:truth 42).[]'), 'Expecting literal but found `[..]` at line 1:13');
       });
 

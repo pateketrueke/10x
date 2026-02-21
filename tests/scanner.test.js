@@ -79,7 +79,7 @@ describe('Scanner', () => {
 
   it('can scan regexps', () => {
     expect(getTokens('/x/')).to.eql(['/x/']);
-    expect(getTokens('/x/;')).to.eql(['/x/', ';']);
+    expect(getTokens('/x/.\n')).to.eql(['/x/', '.', '\n']);
     expect(getTokens('/x\\/y/')).to.eql(['/x\\/y/']);
     expect(getTokens('/x\\/y/ig')).to.eql(['/x\\/y/gi']);
     expect(getTokens('/x/i.x(y)')).to.eql(['/x/i', '.', 'x', '(', 'y', ')']);

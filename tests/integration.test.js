@@ -134,15 +134,15 @@ describe('Integration', () => {
     const b = new Env();
 
     await run(`
-      :from "Prelude" :import check, items;
-      :from "IO" :import puts;
+      :from "Prelude" :import check, items.
+      :from "IO" :import puts.
 
       test = desc, block -> (
-        output = block() | :nil;
-        failed = (? output :nil);
-        puts("# #{failed ? "not ok" | "ok"} — #{desc}\n");
-        :if (failed) puts("  - ", items(output).join("\n  - "), "\n");
-      );
+        output = block() | :nil.
+        failed = (? output :nil).
+        puts("# #{failed ? "not ok" | "ok"} — #{desc}\n").
+        :if (failed) puts("  - ", items(output).join("\n  - "), "\n").
+      ).
     `, b);
 
     a.defn('proxy', {
@@ -153,8 +153,8 @@ describe('Integration', () => {
 
     const result = await run(`
       proxy("msg", -> (
-        check((= 1 2));
-      ));
+        check((= 1 2)).
+      )).
     `, a);
 
     stdout.stop();
@@ -220,18 +220,18 @@ describe('Integration', () => {
         expect(await run('3cm - 2cm')).to.eql([Expr.unit(1, 'cm')]);
         expect(await run('1cm + 1.5in')).to.eql([Expr.unit(1.8937008, 'in')]);
         expect(await run('7 d / 2')).to.eql([Expr.unit(3.5, 'd')]);
-        expect(await run('; 3cm * 1.5mm')).to.eql([Expr.unit(45, 'mm')]);
+        expect(await run('.\n3cm * 1.5mm')).to.eql([Expr.unit(45, 'mm')]);
       });
 
       it('should allow to work with fractions', async () => {
         expect(await run(`
-          :import (:default Frac) :from "Frac";
-          Frac.from(12);
-          Frac.from(.5);
-          Frac.from(.005);
+          :import (:default Frac) :from "Frac".
+          Frac.from(12).
+          Frac.from(.5).
+          Frac.from(.005).
         `)).to.eql([Expr.value(12), Expr.frac(1, 2), Expr.frac(1, 200)]);
 
-        expect(await run(':import (:default fr) :from "Frac"; fr(1, 2)')).to.eql([Expr.frac(1, 2)]);
+        expect(await run(':import (:default fr) :from "Frac".\nfr(1, 2)')).to.eql([Expr.frac(1, 2)]);
       });
 
       it('should convert between currencies', async () => {
@@ -248,15 +248,15 @@ describe('Integration', () => {
           resolve: () => null,
         });
 
-        expect(await run(':import to, MXN :from "Unit"; 1000USD to MXN')).to.eql([
+        expect(await run(':import to, MXN :from "Unit".\n1000USD to MXN')).to.eql([
           Expr.unit(18594.908688433865, 'MXN'),
         ]);
       });
 
       it('should convert between values', async () => {
         expect(await run(`
-          :import to, inches, convert :from "Unit";
-          convert(5, :cm, :in);
+          :import to, inches, convert :from "Unit".
+          convert(5, :cm, :in).
           2 cm to inches
         `)).to.eql([
           Expr.unit(1.9685040000000003, 'in'),
@@ -285,7 +285,7 @@ describe('Integration', () => {
       it('should evaluate other literals as units', async () => {
         Env.register = Expr.Unit.from;
 
-        expect(await run(':import (:MXN pesos) :from "Unit"; 15pesos')).to.eql([Expr.unit(15, 'MXN')]);
+        expect(await run(':import (:MXN pesos) :from "Unit".\n15pesos')).to.eql([Expr.unit(15, 'MXN')]);
       });
     });
   });
@@ -353,24 +353,25 @@ describe('Integration', () => {
       let error;
 
       try {
-        await run('x = y ; x');
+        await run('x = y.\nx');
       } catch (e) {
         error = e;
       } finally {
         expect(debug(error)).to.eql('Undeclared local `y` at line 1:5 (Lit)');
-        expect(debug(error, 'x = y ; x')).to.eql([
+        expect(debug(error, 'x = y.\nx')).to.eql([
           'Undeclared local `y` at line 1:5 (Lit)',
-          '  at `;` at line 1:7',
+          '  at `.` at line 1:6',
           '',
-          '     1 | x = y ; x',
-          '---------------^',
+          '     1 | x = y.',
+          '--------------^',
+          '     2 | x',
           '',
         ].join('\n'));
       }
     });
 
     it('should report callstack if enabled', async () => {
-      await run('x = 42; y = x * 2; 3y', null, true);
+      await run('x = 42.\ny = x * 2.\n3y', null, true);
 
       const x = [Expr.value(42)];
       const y = [Expr.local('x'), Expr.from(MUL, '*'), Expr.value(2)];
@@ -440,7 +441,7 @@ describe('Integration', () => {
         Test: { type, truth, undef },
       })[source];
 
-      const result = await run(':import type, undef, truth :from "Test"; type(42); truth(); undef()');
+      const result = await run(':import type, undef, truth :from "Test".\ntype(42).\ntruth().\nundef()');
 
       expect(result).to.eql([Expr.from(LITERAL, NUMBER), Expr.value(true)]);
     });
@@ -449,12 +450,12 @@ describe('Integration', () => {
       expect(Expr.plain(await run('1..3'))).to.eql([[1, 2, 3]]);
       expect(Expr.plain(await run(':foo "bar"'))).to.eql([{ foo: 'bar' }]);
       expect(Expr.plain(await run(':foo "bar", "buzz"'))).to.eql([{ foo: ['bar', 'buzz'] }]);
-      expect(Expr.plain(await run(':import fromCharCode :from "String"; fromCharCode'))).to.eql([String.fromCharCode]);
+      expect(Expr.plain(await run(':import fromCharCode :from "String".\nfromCharCode'))).to.eql([String.fromCharCode]);
     });
 
     it('should export definitions as functions', async () => {
       const env = new Env();
-      const [sum] = Expr.plain(await run('sum=a->b->a+b;sum', env));
+      const [sum] = Expr.plain(await run('sum=a->b->a+b.\nsum', env));
 
       expect(await evaluate(sum(1, 3), env)).to.eql({
         info: { calls: [], depth: 0, enabled: undefined },
@@ -465,7 +466,7 @@ describe('Integration', () => {
 
     it('should run through any callback if given', async () => {
       const output = [];
-      const source = await run('sum=a,b->a+b;sum');
+      const source = await run('sum=a,b->a+b.\nsum');
       const result = Expr.plain(source, async (call, args) => {
         output.push({ call, args });
       });
@@ -492,13 +493,13 @@ describe('Integration', () => {
         Test: { nested: { noop: () => {} } },
       })[source];
 
-      expect(await run(':import test :from "Fun";sum=a,b->a+b;test(sum)')).to.eql([Expr.value(3)]);
-      expect(await run(':import nested :from "Test";nested.noop()')).to.eql([]);
+      expect(await run(':import test :from "Fun".\nsum=a,b->a+b.\ntest(sum)')).to.eql([Expr.value(3)]);
+      expect(await run(':import nested :from "Test".\nnested.noop()')).to.eql([]);
 
       expect(await run(`
-        :import (:test fun) :from "Fun";
-        x = fun(a, b -> [a, b]);
-        :if (== x [1, 2]) 42;
+        :import (:test fun) :from "Fun".
+        x = fun(a, b -> [a, b]).
+        :if (== x [1, 2]) 42.
       `)).to.eql([Expr.value(42)]);
     });
 
@@ -512,9 +513,9 @@ describe('Integration', () => {
         },
       })[source];
 
-      expect(await run(':import obj :from "Test"; obj.foo.nested')).to.eql([Expr.value('bar')]);
-      expect(await run(':import (:default test) :from "Test"; test.obj.foo.nested')).to.eql([Expr.value('bar')]);
-      expect(await run(':import mixed :from "Test"; mixed.location.path; mixed.twice(21)')).to.eql([Expr.value('/'), Expr.value(42)]);
+      expect(await run(':import obj :from "Test".\nobj.foo.nested')).to.eql([Expr.value('bar')]);
+      expect(await run(':import (:default test) :from "Test".\ntest.obj.foo.nested')).to.eql([Expr.value('bar')]);
+      expect(await run(':import mixed :from "Test".\nmixed.location.path.\nmixed.twice(21)')).to.eql([Expr.value('/'), Expr.value(42)]);
     });
   });
 
@@ -531,16 +532,16 @@ describe('Integration', () => {
       expect(serialize(Parser.getAST(deindent(`
         tpl = <div>
           #{42}
-        </div>;
-      `)))).to.eql('tpl = <div>\n  #{42}\n</div>;');
+        </div>.
+      `)))).to.eql('tpl = <div>\n  #{42}\n</div>.\n');
 
       expect(serialize(Parser.getAST(deindent(`
         tpl = """
           <div>
             #{42}
           </div>
-        """;
-      `)))).to.eql('tpl = """<div>\n  #{42}\n</div>""";');
+        """.
+      `)))).to.eql('tpl = """<div>\n  #{42}\n</div>""".\n');
 
       expect(Parser.getAST('"EXAMPLE"').join('')).to.eql('"..."');
 
@@ -588,9 +589,9 @@ describe('Integration', () => {
 
       expect(Parser.getAST('(< 1 2)').join('')).to.eql('(<)');
       expect(Parser.getAST('[1, 2, 3]').join('')).to.eql('[..]');
-      expect(Parser.getAST('x=y->fn(y,..);').join('')).to.eql('x = y -> fn(y, ..);');
+      expect(Parser.getAST('x=y->fn(y,..).\n').join('')).to.eql('x = y -> fn(y, ..).\n');
 
-      expect((await run(':import map :from "Array"; map')).join('')).to.eql('Array/map');
+      expect((await run(':import map :from "Array".\nmap')).join('')).to.eql('Array/map');
 
       expect(serialize(Parser.getAST('[1, 2, 3]'))).to.eql('[1, 2, 3]');
       expect(serialize(Parser.getAST('[1..3:1]'))).to.eql('[1..3:1]');
@@ -612,7 +613,7 @@ describe('Integration', () => {
         Other: fixedEnv,
       })[source];
 
-      expect(serialize(await run(':import x :from "Other";x'))).to.eql('Other/x');
+      expect(serialize(await run(':import x :from "Other".\nx'))).to.eql('Other/x');
     });
 
     it('should serialize well-known symbols', () => {
@@ -621,7 +622,7 @@ describe('Integration', () => {
       expect(serialize(Expr.from(COMMA))).to.eql(',');
       expect(serialize(Expr.from(BEGIN))).to.eql('[');
       expect(serialize(Expr.from(DONE))).to.eql(']');
-      expect(serialize(Expr.from(EOL))).to.eql(';');
+      expect(serialize(Expr.from(EOL))).to.eql('.');
       expect(serialize(Expr.from(DOT))).to.eql('.');
       expect(serialize(Expr.from(MINUS))).to.eql('-');
       expect(serialize(Expr.from(PLUS))).to.eql('+');
@@ -657,7 +658,7 @@ describe('Integration', () => {
     });
 
     it('should add white-space around operators', () => {
-      expect(serialize(Parser.getAST('; 1 2 3'))).to.eql('; 1 + 2 + 3');
+      expect(serialize(Parser.getAST('1 2 3'))).to.eql('1 + 2 + 3');
     });
 
     it('should add white-space around single operators', () => {
@@ -671,7 +672,7 @@ describe('Integration', () => {
       expect(serialize(Parser.getAST('[1,2]~4..6'))).to.eql('[1, 2] ~ 4..6');
       expect(serialize(Parser.getAST('[1,2]++4..6'))).to.eql('[1, 2] ++ 4..6');
 
-      expect(serialize(Parser.getAST('i+=j; i-=j'))).to.eql('i += j; i -= j');
+      expect(serialize(Parser.getAST('i+=j.\ni-=j'))).to.eql('i += j.\ni -= j');
     });
 
     it('should keep repeated-operators around literals', () => {
@@ -681,8 +682,8 @@ describe('Integration', () => {
       expect(serialize(Parser.getAST('n -- 0'))).to.eql('n-- 0');
       expect(serialize(Parser.getAST('(> n -- 0)'))).to.eql('(> n-- 0)');
 
-      expect(serialize(Parser.getAST('n --; -- n'))).to.eql('n--; --n');
-      expect(serialize(Parser.getAST('n ++; ++ n'))).to.eql('n++; ++n');
+      expect(serialize(Parser.getAST('n --.\n-- n'))).to.eql('n--.\n--n');
+      expect(serialize(Parser.getAST('n ++.\n++ n'))).to.eql('n++.\n++n');
     });
 
     it('should add no white-space around range-expressions', () => {
@@ -701,7 +702,7 @@ describe('Integration', () => {
 
     it('should add delimiters where appropriate', () => {
       expect(serialize(Parser.getAST('[1 2 3]'))).to.eql('[1 + 2 + 3]');
-      expect(serialize(Parser.getAST(':import a, b :from "c";'))).to.eql(':import a, b :from "c";');
+      expect(serialize(Parser.getAST(':import a, b :from "c".\n'))).to.eql(':import a, b :from "c".\n');
     });
 
     it('should add white-space between units', () => {
@@ -773,16 +774,16 @@ describe('Integration', () => {
         },
       })[source];
 
-      const result = await run(':import sample :from "Test";sample');
+      const result = await run(':import sample :from "Test".\nsample');
 
       expect(serialize(result)).to.eql('(:num 42, :str "OK", :arr [1, 2, 3], :obj (:k "v"), :undef undefined)');
     });
 
     it('should apply formatting on callstack chunks', async () => {
-      await run('sum=a->b->a+b;add3=sum(3);add3', null, true);
+      await run('sum=a->b->a+b.\nadd3=sum(3).\nadd3', null, true);
 
       const chunks = [
-        'sum = a, b -> a + b; add3 = sum(3); add3',
+        'sum = a, b -> a + b.\nadd3 = sum(3).\nadd3',
         'sum(3)',
         'a, b -> a + b',
       ];
@@ -801,14 +802,12 @@ describe('Integration', () => {
         fib = n ->
           :if (< n 2) 1, (< n 1) 0
           :else fib(n - 1) + fib(n - 2)
-          ;
+          .
 
-        fib!(20);
+        fib!(20).
       `);
 
-      const result = deindent(`
-        fib = n -> :if (< n 2) 1, (< n 1) 0 :else fib(n - 1) + fib(n - 2); fib!(20);
-      `);
+      const result = 'fib = n -> :if (< n 2) 1, (< n 1) 0 :else fib(n - 1) + fib(n - 2).\nfib!(20).\n';
 
       expect(serialize(Parser.getAST(sample))).to.eql(result);
       expect(serialize(Parser.getAST(sample, null))).to.eql(sample);
@@ -817,18 +816,14 @@ describe('Integration', () => {
 
     it('should inline formatted code', () => {
       const sample = deindent(`
-        :template >> (a, b -> [a, b], 42);
+        :template >> (a, b -> [a, b], 42).
 
-        -1 >> 2;
+        -1 >> 2.
       `);
 
-      const result = deindent(`
-        ([-1, 2], 42);
-      `);
+      const result = '([-1, 2], 42).\n';
 
-      const resolved = deindent(`
-        :template >> (a, b -> [a, b], 42); -1 >> 2;
-      `);
+      const resolved = ':template >> (a, b -> [a, b], 42).\n-1 >> 2.\n';
 
       expect(serialize(Parser.getAST(sample))).to.eql(result);
       expect(serialize(Parser.getAST(sample, null))).to.eql(sample);
@@ -837,21 +832,19 @@ describe('Integration', () => {
 
     it('should inline formatted code (basic templates)', () => {
       const sample1 = deindent(`
-        :import puts, err, input :from "IO";
+        :import puts, err, input :from "IO".
 
-        :let buffer = input();
+        :let buffer = input().
 
         :if (~ buffer :nil)
           err("No input provided.\n")
         :else
-          puts("Thank you! Your input:\n<![[CDATA[\n#{buffer}\n]>");
+          puts("Thank you! Your input:\n<![[CDATA[\n#{buffer}\n]>").
       `);
 
-      const logic = ':if (~ buffer :nil) err("No input provided.\n") :else puts("Thank you! Your input:\n<![[CDATA[\n#{buffer}\n]>");';
+      const logic = ':if (~ buffer :nil) err("No input provided.\n") :else puts("Thank you! Your input:\n<![[CDATA[\n#{buffer}\n]>").\n';
 
-      const result1 = deindent(`
-        :import puts, err, input :from "IO"; :let buffer = input(); ${logic}
-      `);
+      const result1 = ':import puts, err, input :from "IO".\n:let buffer = input().\n' + logic;
 
       expect(serialize(Parser.getAST(sample1))).to.eql(result1);
       expect(serialize(Parser.getAST(sample1, null))).to.eql(sample1);
@@ -860,7 +853,7 @@ describe('Integration', () => {
       const sample2 = deindent(`
         :template
           += (a, b -> :let a = a + b),
-          -- (a -> :let a = a - 1);
+          -- (a -> :let a = a - 1).
 
         fib = n ->
           :let
@@ -868,27 +861,17 @@ describe('Integration', () => {
           /* test */
           :while (>= n-- 0)
             temp = a, a += b, b = temp, b
-          ;
+          .
 
         // test
-        fib(20);
+        fib(20).
       `);
 
-      const resolved = deindent(`
-        fib = n -> :let a = 1, b = 0, temp = 0 /* test */ :while (>= (n, :let n = n - 1) 0), temp = a, (:let a = a + b), b = temp, b;
-        // test
-        fib(20);
-      `);
+      const resolved = 'fib = n -> :let a = 1, b = 0, temp = 0 /* test */ :while (>= (n, :let n = n - 1) 0), temp = a, (:let a = a + b), b = temp, b.\n\n// test\nfib(20).\n';
 
-      const result = deindent(`
-        fib = n -> :let a = 1, b = 0, temp = 0 /* test */ :while (>= n-- 0), temp = a, (a += b), b = temp, b;
-        // test
-        fib(20);
-      `);
+      const result = 'fib = n -> :let a = 1, b = 0, temp = 0 /* test */ :while (>= n-- 0), temp = a, (a += b), b = temp, b.\n\n// test\nfib(20).\n';
 
-      const inline = deindent(`
-        :template += (a, b -> :let a = a + b), -- (a -> :let a = a - 1); ${result}
-      `);
+      const inline = ':template += (a, b -> :let a = a + b), -- (a -> :let a = a - 1).\n' + result;
 
       expect(serialize(Parser.getAST(sample2))).to.eql(resolved);
       expect(serialize(Parser.getAST(sample2, null))).to.eql(sample2);
@@ -897,69 +880,59 @@ describe('Integration', () => {
 
     it('should inline formatted code (advanced templates)', async () => {
       const sample = deindent(`
-        :import puts, input :from "IO";
-        :import getopts :from "Proc";
+        :import puts, input :from "IO".
+        :import getopts :from "Proc".
 
         :template
-          => (k, v -> :if ([argv.flags]:(k)) v);
+          => (k, v -> :if ([argv.flags]:(k)) v).
 
         :let argv = getopts(
           :boolean [:ask, :help],
           :alias (:h :help),
-        );
+        ).
 
         usageInfo = "
           Usage info:
 
           -h, --help  Display this info
               --ask   Prompts user for input
-        ";
+        ".
 
         messageOutput =
           :help => usageInfo | :ask => (
-            puts("\\nPlease ask a few questions:\\n\\n");
+            puts("\\nPlease ask a few questions:\\n\\n").
 
             :let ask = input([
               (:type :text, :name :foo, :message "A"),
               (:type "text" :name "bar" :message "B"),
-            ]);
+            ]).
 
-            "\\nGot: #{ask.bar} (#{(~ ask.foo 42) ? "Gotcha!" | ":("})\\n";
-          ) | "\\nMissing input.\\n#{usageInfo}";
+            "\\nGot: #{ask.bar} (#{(~ ask.foo 42) ? "Gotcha!" | ":("})\\n".
+          ) | "\\nMissing input.\\n#{usageInfo}".
 
-        puts(messageOutput, "\\n");
+        puts(messageOutput, "\\n").
       `);
 
       const prompt = ':let ask = input([(:type :text, :name :foo, :message "A"), (:type "text", :name "bar", :message "B"),])';
-      const prelude = ':template => (k, v -> :if ([argv.flags]:(k)) v); :let argv = getopts(:boolean [:ask, :help], :alias (:h :help))';
+      const prelude = ':template => (k, v -> :if ([argv.flags]:(k)) v).\n:let argv = getopts(:boolean [:ask, :help], :alias (:h :help))';
 
-      const resolved = deindent(`
-        :import puts, input :from "IO"; :import getopts :from "Proc"; :let argv = getopts(:boolean [:ask, :help], :alias (:h :help)); usageInfo = "
-          Usage info:
+      const usageInfo = '"\n  Usage info:\n\n  -h, --help  Display this info\n      --ask   Prompts user for input\n"';
+      const asks = `puts("\\nPlease ask a few questions:\\n\\n").\n${prompt}.\n"\\nGot: #{ask.bar} (#{(~ ask.foo 42) ? "Gotcha!" | ":("})\\n".\n`;
 
-          -h, --help  Display this info
-              --ask   Prompts user for input
-        "; messageOutput = (:if ([argv.flags]:(:help)) usageInfo) | (:if ([argv.flags]:(:ask)) (puts("\\nPlease ask a few questions:\\n\\n"); ${
-          prompt
-        }; "\\nGot: #{ask.bar} (#{(~ ask.foo 42) ? "Gotcha!" | ":("})\\n";)) | "\\nMissing input.\\n#{usageInfo}"; puts(messageOutput, "\\n");
-      `);
+      const resolved = ':import puts, input :from "IO".\n:import getopts :from "Proc".\n:let argv = getopts(:boolean [:ask, :help], :alias (:h :help)).\n'
+        + `usageInfo = ${usageInfo}.\n`
+        + `messageOutput = (:if ([argv.flags]:(:help)) usageInfo) | (:if ([argv.flags]:(:ask)) (${asks})) | "\\nMissing input.\\n#{usageInfo}".\n`
+        + 'puts(messageOutput, "\\n").\n';
 
-      const result = deindent(`
-        :import puts, input :from "IO"; :import getopts :from "Proc"; ${prelude}; usageInfo = "
-          Usage info:
-
-          -h, --help  Display this info
-              --ask   Prompts user for input
-        "; messageOutput = :help => usageInfo | :ask => (puts("\\nPlease ask a few questions:\\n\\n"); ${
-          prompt
-        }; "\\nGot: #{ask.bar} (#{(~ ask.foo 42) ? "Gotcha!" | ":("})\\n";) | "\\nMissing input.\\n#{usageInfo}"; puts(messageOutput, "\\n");
-      `);
+      const result = ':import puts, input :from "IO".\n:import getopts :from "Proc".\n' + prelude + `.\nusageInfo = ${usageInfo}.\n`
+        + `messageOutput = :help => usageInfo | :ask => (${asks}) | "\\nMissing input.\\n#{usageInfo}".\n`
+        + 'puts(messageOutput, "\\n").\n';
 
       expect(serialize(Parser.getAST(sample))).to.eql(resolved);
       expect(serialize(Parser.getAST(sample, null))).to.eql(sample);
       expect(serialize(Parser.getAST(sample, false))).to.eql(result);
       expect(serialize(Parser.getAST(sample), true))
-        .to.eql(':import :from; :import :from; :let; usageInfo = "..."; messageOutput = (:if) | (:if) | "..."; puts(messageOutput, "...");');
+        .to.eql(':import :from.\n:import :from.\n:let.\nusageInfo = "...".\nmessageOutput = (:if) | (:if) | "...".\nputs(messageOutput, "...").\n');
     });
   });
 });
