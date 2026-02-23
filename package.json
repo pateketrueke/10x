@@ -2,13 +2,23 @@
   "name": "10x",
   "version": "0.0.0",
   "type": "module",
+  "main": "dist/main.cjs",
+  "module": "dist/main.js",
+  "types": "dist/main.d.ts",
   "bin": {
     "10x": "bin/cli"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/main.js",
+      "require": "./dist/main.cjs",
+      "types": "./dist/main.d.ts"
+    }
   },
   "scripts": {
     "dev": "bun run build && bun --watch run index.js",
     "watch": "bun test --watch tests/",
-    "build": "bun build src/main.js --outfile=dist/main.js --format=esm --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;'",
+    "build": "bun build src/main.js --outfile=dist/main.js --format=esm --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;' && bun build src/main.js --outfile=dist/main.cjs --format=cjs --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;'",
     "pretest": "eslint tests src/lib",
     "test": "bun test tests/",
     "test:unit": "TZ=UTC bun test tests/",

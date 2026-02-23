@@ -2,11 +2,17 @@ ci: src deps
 	@npm run pretest
 	@TZ=UTC bun test --coverage tests/
 
-eval: src deps
+eval: build deps
 	@node bin/cli -- "$(code)"
 
-repl: src deps
+dev-eval: deps
+	@bun bin/cli -- "$(code)"
+
+repl: build deps
 	@node bin/cli
+
+dev-repl: deps
+	@bun bin/cli
 
 build: src deps
 	@bun run build
