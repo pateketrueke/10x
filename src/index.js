@@ -8,15 +8,43 @@ import wargs from 'wargs';
 
 import { createNodeAdapter } from './adapters/node/index.js';
 
-const x10 = await import('./main.js').catch(() => import('../dist/main.js'));
+let Env;
+let Expr;
+let Token;
+let Parser;
+let main;
+let debug;
+let format;
+let execute;
+let serialize;
+let evaluate;
+let useCurrencies;
+let createEnv;
+let applyAdapter;
+
+const runtimeReady = import('./main.js')
+  .catch(() => import('../dist/main.js'))
+  .then(x10 => {
+    ({
+      Env,
+      Expr,
+      Token,
+      Parser,
+      main,
+      debug,
+      format,
+      execute,
+      serialize,
+      evaluate,
+      useCurrencies,
+      createEnv,
+      applyAdapter,
+    } = x10);
+  });
 
 const __dirname = import.meta.dirname;
 const HISTORY_FILE = path.join(os.homedir(), '.tenx_history');
 const MAX_HISTORY = 1000;
-
-const {
-  Env, Expr, Token, Parser, main, debug, format, execute, serialize, evaluate, useCurrencies, createEnv, applyAdapter,
-} = x10;
 
 const argv = wargs(process.argv.slice(2), {
   boolean: ['trace', 'color', 'print', 'inline', 'source'],
@@ -24,6 +52,7 @@ const argv = wargs(process.argv.slice(2), {
 const nodeAdapter = createNodeAdapter(process.argv.slice(2));
 
 async function prelude() {
+  await runtimeReady;
   process.stderr.write(`\r${ansi.gray('Checking for installed currencies...')}\r`);
 
   await useCurrencies({
@@ -73,6 +102,7 @@ function saveHistory(history) {
 }
 
 async function repl() {
+  await runtimeReady;
   const history = loadHistory();
   let historyIndex = history.length;
 
@@ -148,6 +178,7 @@ async function readStdin() {
 }
 
 async function cli() {
+  await runtimeReady;
   const { _, raw, ...flags } = argv;
 
   let code = '';

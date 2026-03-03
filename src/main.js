@@ -37,5 +37,5 @@ export function createEnv(adapter, options) {
 
 export {
   Token, debug, serialize, deindent, hasDiff,
-  copy, repr, raise, assert, check, argv, only
+  copy, repr, raise, assert, check, argv, only,
 } from './lib/helpers';

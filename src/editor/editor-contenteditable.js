@@ -786,91 +786,88 @@ const STYLES = `
 `;
 
 class TenXEditor extends HTMLElement {
-  #shadow;
-  #editable;
-  #tooltip;
-  #tooltipTimer = null;
-  #tooltipTarget = null;
-  #copyFeedbackTimer = null;
-  #history = [];
-  #historyIndex = -1;
-  #debounce = null;
-  #evaluating = false;
-  #worker = null;
-  #evalRequestId = 0;
-  #appliedEvalRequestId = 0;
-  #lastText = '';
-  #anchors = [];
-  #resultsById = new Map();
-  #pendingResultIds = new Set();
-  #inlineAnchors = [];
-  #inlineResultsById = new Map();
-  #killedStatementIds = new Set();
   // Suppress onInput feedback loops while we rebuild DOM.
-  #rendering = false;
 
   connectedCallback() {
-    this.#shadow = this.attachShadow({ mode: 'open' });
+    this._shadow = this.attachShadow({ mode: 'open' });
+    this._tooltipTimer = null;
+    this._tooltipTarget = null;
+    this._copyFeedbackTimer = null;
+    this._history = [];
+    this._historyIndex = -1;
+    this._debounce = null;
+    this._evaluating = false;
+    this._worker = null;
+    this._evalRequestId = 0;
+    this._appliedEvalRequestId = 0;
+    this._lastText = '';
+    this._anchors = [];
+    this._resultsById = new Map();
+    this._pendingResultIds = new Set();
+    this._inlineAnchors = [];
+    this._inlineResultsById = new Map();
+    this._killedStatementIds = new Set();
+    this._rendering = false;
 
     const style = document.createElement('style');
     style.textContent = STYLES;
 
-    this.#editable = document.createElement('div');
-    this.#editable.setAttribute('contenteditable', 'plaintext-only');
-    this.#editable.setAttribute('spellcheck', 'false');
-    this.#editable.setAttribute('autocorrect', 'off');
-    this.#editable.setAttribute('autocapitalize', 'off');
+    this._editable = document.createElement('div');
+    this._editable.setAttribute('contenteditable', 'plaintext-only');
+    this._editable.setAttribute('spellcheck', 'false');
+    this._editable.setAttribute('autocorrect', 'off');
+    this._editable.setAttribute('autocapitalize', 'off');
 
-    this.#tooltip = document.createElement('div');
-    this.#tooltip.dataset.tooltipLayer = '';
+    this._tooltip = document.createElement('div');
+    this._tooltip.dataset.tooltipLayer = '';
 
-    this.#shadow.appendChild(style);
-    this.#shadow.appendChild(this.#editable);
-    this.#shadow.appendChild(this.#tooltip);
+    this._shadow.appendChild(style);
+    this._shadow.appendChild(this._editable);
+    this._shadow.appendChild(this._tooltip);
 
-    this.#editable.addEventListener('beforeinput', e => this.#onBeforeInput(e));
-    this.#editable.addEventListener('input', () => this.#onInput());
-    this.#editable.addEventListener('keydown', e => this.#onKeydown(e));
-    this.#editable.addEventListener('mousedown', e => this.#onMouseDown(e));
-    this.#editable.addEventListener('click', e => this.#onClick(e));
-    this.#editable.addEventListener('mousemove', e => this.#onMouseMove(e));
-    this.#editable.addEventListener('mouseleave', () => this.#hideTooltip());
-    this.#editable.addEventListener('scroll', () => this.#hideTooltip());
-    this.#setupWorker();
+    this._editable.addEventListener('beforeinput', e => this._onBeforeInput(e));
+    this._editable.addEventListener('input', () => this._onInput());
+    this._editable.addEventListener('keydown', e => this._onKeydown(e));
+    this._editable.addEventListener('mousedown', e => this._onMouseDown(e));
+    this._editable.addEventListener('click', e => this._onClick(e));
+    this._editable.addEventListener('mousemove', e => this._onMouseMove(e));
+    this._editable.addEventListener('mouseleave', () => this._hideTooltip());
+    this._editable.addEventListener('scroll', () => this._hideTooltip());
+    this._setupWorker();
 
     const initial = this.textContent || this.getAttribute('value') || '';
     if (initial) {
-      this.#applySource(initial);
-      this.#scheduleEval();
+      this._applySource(initial);
+      this._scheduleEval();
     } else {
-      this.#pushHistory('');
+      this._pushHistory('');
     }
   }
 
   disconnectedCallback() {
-    if (this.#copyFeedbackTimer) {
-      clearTimeout(this.#copyFeedbackTimer);
-      this.#copyFeedbackTimer = null;
+    if (this._copyFeedbackTimer) {
+      clearTimeout(this._copyFeedbackTimer);
+      this._copyFeedbackTimer = null;
     }
-    this.#clearTooltipTimer();
-    if (this.#worker) {
-      this.#worker.terminate();
-      this.#worker = null;
+    this._clearTooltipTimer();
+    if (this._worker) {
+      this._worker.terminate();
+      this._worker = null;
     }
   }
 
-  get value() { return this.#extractText(); }
+  get value() { return this._extractText(); }
 
   set value(text) {
-    this.#applySource(text, text?.length ?? 0);
-    this.#scheduleEval();
+    this._applySource(text, text?.length ?? 0);
+    this._scheduleEval();
   }
 
   // ── extract plain text (excluding injected result badges) ─────────────────
 
-  #extractText() {
+  _extractText() {
     const walker = document.createTreeWalker(
-      this.#editable,
+      this._editable,
       NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
       {
         acceptNode(node) {
@@ -899,36 +896,36 @@ class TenXEditor extends HTMLElement {
 
   // ── render source text + rebuild anchors + reattach current results ──────
 
-  #applySource(source, cursorOffset = null) {
-    this.#hideTooltip();
-    this.#rendering = true;
-    this.#editable.innerHTML = '';
-    this.#editable.appendChild(renderTokens(source));
-    this.#anchors = buildStatementAnchors(source);
-    this.#inlineAnchors = buildInlineAnchors(this.#anchors);
-    this.#injectResults();
-    this.#lastText = source;
-    this.#rendering = false;
-    setCursorOffset(this.#editable, this.#shadow, cursorOffset);
+  _applySource(source, cursorOffset = null) {
+    this._hideTooltip();
+    this._rendering = true;
+    this._editable.innerHTML = '';
+    this._editable.appendChild(renderTokens(source));
+    this._anchors = buildStatementAnchors(source);
+    this._inlineAnchors = buildInlineAnchors(this._anchors);
+    this._injectResults();
+    this._lastText = source;
+    this._rendering = false;
+    setCursorOffset(this._editable, this._shadow, cursorOffset);
   }
 
   // ── inject result widgets at statement EOL anchors ───────────────────────
 
-  #injectResults() {
-    this.#editable.querySelectorAll('[data-result], [data-inline-result]').forEach(el => el.remove());
-    if (!this.#anchors.length && !this.#inlineAnchors.length) return;
+  _injectResults() {
+    this._editable.querySelectorAll('[data-result], [data-inline-result]').forEach(el => el.remove());
+    if (!this._anchors.length && !this._inlineAnchors.length) return;
 
     const byLine = new Map();
-    this.#anchors.forEach(anchor => {
-      const pending = this.#pendingResultIds.has(anchor.id);
-      const result = pending ? null : this.#resultsById.get(anchor.id);
+    this._anchors.forEach(anchor => {
+      const pending = this._pendingResultIds.has(anchor.id);
+      const result = pending ? null : this._resultsById.get(anchor.id);
       if (!pending && !result) return;
       if (!byLine.has(anchor.line)) byLine.set(anchor.line, []);
       byLine.get(anchor.line).push({ result, anchor, pending });
     });
 
     if (!byLine.size) {
-      this.#injectInlineResults();
+      this._injectInlineResults();
       return;
     }
 
@@ -986,11 +983,11 @@ class TenXEditor extends HTMLElement {
 
     const previousRenderableTextNode = (fromNode) => {
       let node = fromNode;
-      if (node === this.#editable) {
-        node = this.#editable.lastChild;
+      if (node === this._editable) {
+        node = this._editable.lastChild;
         while (node && node.lastChild) node = node.lastChild;
       }
-      while (node && node !== this.#editable) {
+      while (node && node !== this._editable) {
         if (node.previousSibling) {
           node = node.previousSibling;
           while (node && node.lastChild) node = node.lastChild;
@@ -1028,7 +1025,7 @@ class TenXEditor extends HTMLElement {
 
     // Count all <br> in DOM order (including nested spans) for visual EOL.
     const walker = document.createTreeWalker(
-      this.#editable,
+      this._editable,
       NodeFilter.SHOW_ELEMENT,
       {
         acceptNode: node => (node.tagName === 'BR'
@@ -1059,18 +1056,18 @@ class TenXEditor extends HTMLElement {
       for (const entry of trailing) {
         const widget = makeWidget(entry);
         if (!widget) continue;
-        if (!insertBeforeLineEOL(widget, this.#editable)) {
-          this.#editable.appendChild(widget);
+        if (!insertBeforeLineEOL(widget, this._editable)) {
+          this._editable.appendChild(widget);
         }
       }
     }
 
-    this.#injectInlineResults();
+    this._injectInlineResults();
   }
 
-  #insertWidgetAtOffset(offset, widget) {
+  _insertWidgetAtOffset(offset, widget) {
     const walker = document.createTreeWalker(
-      this.#editable,
+      this._editable,
       NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
       {
         acceptNode(node) {
@@ -1112,14 +1109,14 @@ class TenXEditor extends HTMLElement {
       remaining -= len;
     }
 
-    this.#editable.appendChild(widget);
+    this._editable.appendChild(widget);
   }
 
-  #injectInlineResults() {
-    if (!this.#inlineAnchors.length || !this.#inlineResultsById.size) return;
+  _injectInlineResults() {
+    if (!this._inlineAnchors.length || !this._inlineResultsById.size) return;
 
-    for (const inlineAnchor of this.#inlineAnchors) {
-      const inlineResult = this.#inlineResultsById.get(inlineAnchor.id);
+    for (const inlineAnchor of this._inlineAnchors) {
+      const inlineResult = this._inlineResultsById.get(inlineAnchor.id);
       if (!inlineResult?.resultText?.trim()) continue;
 
       const badge = document.createElement('span');
@@ -1127,170 +1124,170 @@ class TenXEditor extends HTMLElement {
       badge.setAttribute('contenteditable', 'false');
       badge.textContent = `= ${inlineResult.resultText}`;
       if (inlineResult.errorText) badge.classList.add('error');
-      this.#insertWidgetAtOffset(inlineAnchor.offset, badge);
+      this._insertWidgetAtOffset(inlineAnchor.offset, badge);
     }
   }
 
   // ── evaluate ──────────────────────────────────────────────────────────────
 
-  #scheduleEval() {
-    clearTimeout(this.#debounce);
-    this.#debounce = setTimeout(() => this.#requestEval(), 600);
+  _scheduleEval() {
+    clearTimeout(this._debounce);
+    this._debounce = setTimeout(() => this._requestEval(), 600);
   }
 
-  #startWorker() {
+  _startWorker() {
     try {
-      this.#worker = new Worker(new URL('./editor-eval-worker.js', import.meta.url), { type: 'module' });
-      this.#worker.addEventListener('message', ({ data }) => {
+      this._worker = new Worker(new URL('./editor-eval-worker.js', import.meta.url), { type: 'module' });
+      this._worker.addEventListener('message', ({ data }) => {
         const {
           requestId, statementId, start, completed, statementResult, inlineResults, done, error,
         } = data || {};
-        if (!requestId || requestId < this.#appliedEvalRequestId) return;
-        this.#appliedEvalRequestId = requestId;
+        if (!requestId || requestId < this._appliedEvalRequestId) return;
+        this._appliedEvalRequestId = requestId;
 
         if (error) {
-          this.#pendingResultIds = new Set();
-          this.#injectResults();
-          this.#emitError(new Error(error));
+          this._pendingResultIds = new Set();
+          this._injectResults();
+          this._emitError(new Error(error));
           return;
         }
 
         if (statementId && start) {
-          this.#pendingResultIds.add(statementId);
-          this.#injectResults();
+          this._pendingResultIds.add(statementId);
+          this._injectResults();
           return;
         }
 
         if (statementId && completed) {
-          this.#pendingResultIds.delete(statementId);
-          this.#resultsById.delete(statementId);
+          this._pendingResultIds.delete(statementId);
+          this._resultsById.delete(statementId);
 
-          Array.from(this.#inlineResultsById.keys()).forEach(inlineId => {
+          Array.from(this._inlineResultsById.keys()).forEach(inlineId => {
             if (inlineId.startsWith(`${statementId}:`)) {
-              this.#inlineResultsById.delete(inlineId);
+              this._inlineResultsById.delete(inlineId);
             }
           });
 
           if (statementResult?.resultText?.trim()) {
-            this.#resultsById.set(statementId, statementResult);
+            this._resultsById.set(statementId, statementResult);
           }
         }
 
         (Array.isArray(inlineResults) ? inlineResults : []).forEach(inline => {
           if (!inline?.inlineId) return;
           if (!inline?.resultText?.trim()) return;
-          this.#inlineResultsById.set(inline.inlineId, inline);
+          this._inlineResultsById.set(inline.inlineId, inline);
         });
 
-        this.#injectResults();
+        this._injectResults();
 
         if (done) {
-          this.#pendingResultIds = new Set();
-          this.#injectResults();
+          this._pendingResultIds = new Set();
+          this._injectResults();
 
           const emitted = [];
-          this.#resultsById.forEach(result => {
+          this._resultsById.forEach(result => {
             if (result?.resultText && !result.errorText && result.kind !== 'function') {
               emitted.push(result.resultText);
             }
           });
-          this.#emit(emitted);
+          this._emit(emitted);
         }
       });
     } catch (_) {
-      this.#worker = null;
+      this._worker = null;
     }
   }
 
-  #setupWorker() {
-    this.#startWorker();
+  _setupWorker() {
+    this._startWorker();
   }
 
-  #restartWorker() {
-    if (this.#worker) {
-      this.#worker.terminate();
-      this.#worker = null;
+  _restartWorker() {
+    if (this._worker) {
+      this._worker.terminate();
+      this._worker = null;
     }
-    this.#startWorker();
+    this._startWorker();
   }
 
-  #requestEval({ preserveKilled = false } = {}) {
-    const text = this.#extractText();
+  _requestEval({ preserveKilled = false } = {}) {
+    const text = this._extractText();
     if (!preserveKilled) {
-      this.#killedStatementIds = new Set();
+      this._killedStatementIds = new Set();
     }
 
-    if (!text.trim() || !this.#anchors.length) {
-      this.#killedStatementIds = new Set();
-      this.#pendingResultIds = new Set();
-      this.#resultsById = new Map();
-      this.#inlineResultsById = new Map();
-      this.#injectResults();
-      this.#emit([]);
+    if (!text.trim() || !this._anchors.length) {
+      this._killedStatementIds = new Set();
+      this._pendingResultIds = new Set();
+      this._resultsById = new Map();
+      this._inlineResultsById = new Map();
+      this._injectResults();
+      this._emit([]);
       return;
     }
 
-    const statements = this.#anchors.map(anchor => ({
+    const statements = this._anchors.map(anchor => ({
       statementId: anchor.id,
       source: anchor.source,
     }));
 
-    const activeStatements = statements.filter(statement => !this.#killedStatementIds.has(statement.statementId));
+    const activeStatements = statements.filter(statement => !this._killedStatementIds.has(statement.statementId));
 
     if (!activeStatements.length) {
-      this.#pendingResultIds = new Set();
-      this.#injectResults();
-      this.#emit([]);
+      this._pendingResultIds = new Set();
+      this._injectResults();
+      this._emit([]);
       return;
     }
 
     const statementIds = new Set(activeStatements.map(statement => statement.statementId));
-    Array.from(this.#resultsById.keys()).forEach(id => {
-      if (!statementIds.has(id)) this.#resultsById.delete(id);
+    Array.from(this._resultsById.keys()).forEach(id => {
+      if (!statementIds.has(id)) this._resultsById.delete(id);
     });
-    const inlineIds = new Set(this.#inlineAnchors.map(anchor => anchor.id));
-    Array.from(this.#inlineResultsById.keys()).forEach(id => {
-      if (!inlineIds.has(id)) this.#inlineResultsById.delete(id);
+    const inlineIds = new Set(this._inlineAnchors.map(anchor => anchor.id));
+    Array.from(this._inlineResultsById.keys()).forEach(id => {
+      if (!inlineIds.has(id)) this._inlineResultsById.delete(id);
     });
 
-    this.#pendingResultIds = new Set();
-    this.#injectResults();
+    this._pendingResultIds = new Set();
+    this._injectResults();
 
-    if (this.#worker) {
+    if (this._worker) {
       // Abort previous long-running evaluation (e.g. fib(99)) so new input is responsive.
-      if (this.#evalRequestId > this.#appliedEvalRequestId) {
-        this.#restartWorker();
+      if (this._evalRequestId > this._appliedEvalRequestId) {
+        this._restartWorker();
       }
 
-      const requestId = ++this.#evalRequestId;
-      this.#worker.postMessage({
+      const requestId = ++this._evalRequestId;
+      this._worker.postMessage({
         requestId,
         statements: activeStatements,
-        skipStatementIds: Array.from(this.#killedStatementIds),
+        skipStatementIds: Array.from(this._killedStatementIds),
       });
       return;
     }
 
-    this.#evaluateOnMainThread(activeStatements);
+    this._evaluateOnMainThread(activeStatements);
   }
 
-  async #evaluateOnMainThread(statements) {
-    if (this.#evaluating) return;
+  async _evaluateOnMainThread(statements) {
+    if (this._evaluating) return;
 
-    this.#evaluating = true;
+    this._evaluating = true;
     try {
       const env = new Env();
 
       for (const statement of statements) {
         if (!statement?.source?.trim()) continue;
-        this.#pendingResultIds.add(statement.statementId);
-        this.#injectResults();
+        this._pendingResultIds.add(statement.statementId);
+        this._injectResults();
         try {
           const result = await execute(statement.source, env);
-          this.#resultsById.delete(statement.statementId);
-          Array.from(this.#inlineResultsById.keys()).forEach(inlineId => {
+          this._resultsById.delete(statement.statementId);
+          Array.from(this._inlineResultsById.keys()).forEach(inlineId => {
             if (inlineId.startsWith(`${statement.statementId}:`)) {
-              this.#inlineResultsById.delete(inlineId);
+              this._inlineResultsById.delete(inlineId);
             }
           });
 
@@ -1300,10 +1297,10 @@ class TenXEditor extends HTMLElement {
               resultText: 'ƒ',
               kind: 'function',
             };
-            this.#resultsById.set(statement.statementId, functionBadge);
+            this._resultsById.set(statement.statementId, functionBadge);
           } else if (result !== undefined && result !== null) {
             const resultText = serialize(result);
-            this.#resultsById.set(statement.statementId, { statementId: statement.statementId, resultText });
+            this._resultsById.set(statement.statementId, { statementId: statement.statementId, resultText });
           }
 
           const inlineExpressions = extractInlineExpressions(statement.source, statement.statementId);
@@ -1312,12 +1309,12 @@ class TenXEditor extends HTMLElement {
             try {
               const inlineResult = await execute(inline.expr, env);
               if (inlineResult === undefined || inlineResult === null) continue;
-              this.#inlineResultsById.set(inline.inlineId, {
+              this._inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
                 resultText: serialize(inlineResult),
               });
             } catch (error) {
-              this.#inlineResultsById.set(inline.inlineId, {
+              this._inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
                 resultText: '!',
                 errorText: String(error?.message || error),
@@ -1328,93 +1325,93 @@ class TenXEditor extends HTMLElement {
           // Scoped behavior: skip statement failures silently.
         }
 
-        this.#pendingResultIds.delete(statement.statementId);
-        this.#injectResults();
+        this._pendingResultIds.delete(statement.statementId);
+        this._injectResults();
       }
 
-      this.#pendingResultIds = new Set();
-      this.#injectResults();
+      this._pendingResultIds = new Set();
+      this._injectResults();
 
       const emitted = [];
-      this.#resultsById.forEach(result => {
+      this._resultsById.forEach(result => {
         if (result?.resultText && !result.errorText && result.kind !== 'function') {
           emitted.push(result.resultText);
         }
       });
-      this.#emit(emitted);
+      this._emit(emitted);
     } catch (e) {
-      this.#pendingResultIds = new Set();
-      this.#injectResults();
-      this.#emitError(e);
+      this._pendingResultIds = new Set();
+      this._injectResults();
+      this._emitError(e);
     } finally {
-      this.#evaluating = false;
+      this._evaluating = false;
     }
   }
 
-  #emit(results) {
+  _emit(results) {
     this.dispatchEvent(new CustomEvent('change', { detail: { results }, bubbles: true, composed: true }));
   }
 
-  #emitError(error) {
+  _emitError(error) {
     this.dispatchEvent(new CustomEvent('error', { detail: { error }, bubbles: true, composed: true }));
   }
 
   // ── undo/redo (text+caret snapshots) ──────────────────────────────────────
 
-  #pushHistory(text, cursor) {
-    this.#history = this.#history.slice(0, this.#historyIndex + 1);
-    this.#history.push({ text, cursor: cursor ?? 0 });
-    if (this.#history.length > 200) this.#history.shift();
-    this.#historyIndex = this.#history.length - 1;
+  _pushHistory(text, cursor) {
+    this._history = this._history.slice(0, this._historyIndex + 1);
+    this._history.push({ text, cursor: cursor ?? 0 });
+    if (this._history.length > 200) this._history.shift();
+    this._historyIndex = this._history.length - 1;
   }
 
-  #undo() {
-    if (this.#historyIndex <= 0) return;
-    const { text, cursor } = this.#history[--this.#historyIndex];
-    this.#applySource(text, cursor);
-    this.#scheduleEval();
+  _undo() {
+    if (this._historyIndex <= 0) return;
+    const { text, cursor } = this._history[--this._historyIndex];
+    this._applySource(text, cursor);
+    this._scheduleEval();
   }
 
-  #redo() {
-    if (this.#historyIndex >= this.#history.length - 1) return;
-    const { text, cursor } = this.#history[++this.#historyIndex];
-    this.#applySource(text, cursor);
-    this.#scheduleEval();
+  _redo() {
+    if (this._historyIndex >= this._history.length - 1) return;
+    const { text, cursor } = this._history[++this._historyIndex];
+    this._applySource(text, cursor);
+    this._scheduleEval();
   }
 
   // ── event handlers ────────────────────────────────────────────────────────
 
-  #onBeforeInput() {
+  _onBeforeInput() {
     // Snapshot text+caret before browser DOM mutation.
-    const text = this.#extractText();
-    const cursor = getCursorOffset(this.#editable, this.#shadow);
-    this.#pushHistory(text, cursor);
-    this.#lastText = text;
+    const text = this._extractText();
+    const cursor = getCursorOffset(this._editable, this._shadow);
+    this._pushHistory(text, cursor);
+    this._lastText = text;
   }
 
-  #onInput() {
-    if (this.#rendering) return;
-    this.#hideTooltip();
+  _onInput() {
+    if (this._rendering) return;
+    this._hideTooltip();
 
-    const text = this.#extractText();
-    if (text === this.#lastText) return;
+    const text = this._extractText();
+    if (text === this._lastText) return;
 
-    const cursor = getCursorOffset(this.#editable, this.#shadow) ?? text.length;
-    this.#applySource(text, cursor);
-    this.#scheduleEval();
+    const cursor = getCursorOffset(this._editable, this._shadow) ?? text.length;
+    this._applySource(text, cursor);
+    this._scheduleEval();
   }
 
-  #onKeydown(e) {
-    this.#hideTooltip();
+  _onKeydown(e) {
+    this._hideTooltip();
     const meta = e.metaKey || e.ctrlKey;
 
-    if (meta && e.key === 'z' && !e.shiftKey) { e.preventDefault(); this.#undo(); return; }
-    if (meta && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); this.#redo(); return; }
+    if (meta && e.key === 'z' && !e.shiftKey) { e.preventDefault(); this._undo(); return; }
+    if (meta && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); this._redo(); return; }
 
     if (meta && e.key === 'Enter') {
       e.preventDefault();
-      clearTimeout(this.#debounce);
-      this.#requestEval();
+      clearTimeout(this._debounce);
+      this._requestEval();
       return;
     }
 
@@ -1424,14 +1421,14 @@ class TenXEditor extends HTMLElement {
     }
   }
 
-  #onMouseDown(e) {
+  _onMouseDown(e) {
     const copyBtn = e.target instanceof Element ? e.target.closest('[data-copy-btn]') : null;
     const cancelBtn = e.target instanceof Element ? e.target.closest('[data-cancel-btn]') : null;
     if (!copyBtn && !cancelBtn) return;
     e.preventDefault();
   }
 
-  async #copyText(value) {
+  async _copyText(value) {
     if (!value) return false;
 
     try {
@@ -1461,24 +1458,24 @@ class TenXEditor extends HTMLElement {
     }
   }
 
-  #setCopyFeedback(resultNode, copyBtn, ok) {
+  _setCopyFeedback(resultNode, copyBtn, ok) {
     if (!resultNode || !copyBtn) return;
-    if (this.#copyFeedbackTimer) clearTimeout(this.#copyFeedbackTimer);
+    if (this._copyFeedbackTimer) clearTimeout(this._copyFeedbackTimer);
 
     resultNode.dataset.copyState = ok ? 'copied' : 'error';
     resultNode.dataset.copyLabel = ok ? 'Copied' : 'Copy failed';
     copyBtn.textContent = ok ? '✓' : '!';
 
-    this.#copyFeedbackTimer = setTimeout(() => {
+    this._copyFeedbackTimer = setTimeout(() => {
       if (!resultNode.isConnected || !copyBtn.isConnected) return;
       delete resultNode.dataset.copyState;
       delete resultNode.dataset.copyLabel;
       copyBtn.textContent = '⧉';
-      this.#copyFeedbackTimer = null;
+      this._copyFeedbackTimer = null;
     }, 900);
   }
 
-  async #onClick(e) {
+  async _onClick(e) {
     const cancelBtn = e.target instanceof Element ? e.target.closest('[data-cancel-btn]') : null;
     if (cancelBtn) {
       e.preventDefault();
@@ -1486,16 +1483,16 @@ class TenXEditor extends HTMLElement {
       const resultNode = cancelBtn.closest('[data-result]');
       const statementId = resultNode?.dataset.statementId;
       if (statementId) {
-        this.#killedStatementIds.add(statementId);
-        this.#pendingResultIds.delete(statementId);
-        this.#resultsById.delete(statementId);
-        Array.from(this.#inlineResultsById.keys()).forEach(inlineId => {
+        this._killedStatementIds.add(statementId);
+        this._pendingResultIds.delete(statementId);
+        this._resultsById.delete(statementId);
+        Array.from(this._inlineResultsById.keys()).forEach(inlineId => {
           if (inlineId.startsWith(`${statementId}:`)) {
-            this.#inlineResultsById.delete(inlineId);
+            this._inlineResultsById.delete(inlineId);
           }
         });
-        clearTimeout(this.#debounce);
-        this.#requestEval({ preserveKilled: true });
+        clearTimeout(this._debounce);
+        this._requestEval({ preserveKilled: true });
       }
       return;
     }
@@ -1509,52 +1506,52 @@ class TenXEditor extends HTMLElement {
     const value = resultNode?.dataset.copyValue || '';
     if (!value) return;
 
-    const ok = await this.#copyText(value);
-    this.#setCopyFeedback(resultNode, copyBtn, ok);
+    const ok = await this._copyText(value);
+    this._setCopyFeedback(resultNode, copyBtn, ok);
   }
 
-  #clearTooltipTimer() {
-    if (!this.#tooltipTimer) return;
-    clearTimeout(this.#tooltipTimer);
-    this.#tooltipTimer = null;
+  _clearTooltipTimer() {
+    if (!this._tooltipTimer) return;
+    clearTimeout(this._tooltipTimer);
+    this._tooltipTimer = null;
   }
 
-  #hideTooltip() {
-    this.#clearTooltipTimer();
-    this.#tooltipTarget = null;
-    if (this.#tooltip) this.#tooltip.style.display = 'none';
+  _hideTooltip() {
+    this._clearTooltipTimer();
+    this._tooltipTarget = null;
+    if (this._tooltip) this._tooltip.style.display = 'none';
   }
 
-  #positionTooltip(x, y) {
-    if (!this.#tooltip || this.#tooltip.style.display === 'none') return;
+  _positionTooltip(x, y) {
+    if (!this._tooltip || this._tooltip.style.display === 'none') return;
     const hostRect = this.getBoundingClientRect();
     const pad = 8;
-    const tipW = this.#tooltip.offsetWidth || 0;
-    const tipH = this.#tooltip.offsetHeight || 0;
+    const tipW = this._tooltip.offsetWidth || 0;
+    const tipH = this._tooltip.offsetHeight || 0;
 
     let left = x + 12;
     let top = y + 14;
     if (left + tipW > hostRect.width - pad) left = Math.max(pad, hostRect.width - tipW - pad);
     if (top + tipH > hostRect.height - pad) top = Math.max(pad, y - tipH - 10);
 
-    this.#tooltip.style.left = `${left}px`;
-    this.#tooltip.style.top = `${top}px`;
+    this._tooltip.style.left = `${left}px`;
+    this._tooltip.style.top = `${top}px`;
   }
 
-  #showTooltip(label, x, y, target) {
-    if (!this.#tooltip || !label) return;
-    this.#tooltip.textContent = label;
-    this.#tooltip.style.display = 'block';
-    this.#tooltipTarget = target;
-    this.#positionTooltip(x, y);
+  _showTooltip(label, x, y, target) {
+    if (!this._tooltip || !label) return;
+    this._tooltip.textContent = label;
+    this._tooltip.style.display = 'block';
+    this._tooltipTarget = target;
+    this._positionTooltip(x, y);
   }
 
-  #onMouseMove(e) {
+  _onMouseMove(e) {
     const node = e.target instanceof Element
       ? e.target.closest('[data-token-type], [data-tooltip]')
       : null;
     if (!node) {
-      this.#hideTooltip();
+      this._hideTooltip();
       return;
     }
 
@@ -1563,18 +1560,18 @@ class TenXEditor extends HTMLElement {
     const y = e.clientY - hostRect.top;
     const label = node.dataset.tooltip || node.dataset.tokenType || '';
     if (!label) {
-      this.#hideTooltip();
+      this._hideTooltip();
       return;
     }
 
-    if (this.#tooltipTarget === node && this.#tooltip.style.display !== 'none') {
-      this.#positionTooltip(x, y);
+    if (this._tooltipTarget === node && this._tooltip.style.display !== 'none') {
+      this._positionTooltip(x, y);
       return;
     }
 
-    this.#clearTooltipTimer();
-    this.#tooltipTimer = setTimeout(() => {
-      this.#showTooltip(label, x, y, node);
+    this._clearTooltipTimer();
+    this._tooltipTimer = setTimeout(() => {
+      this._showTooltip(label, x, y, node);
     }, 150);
   }
 }
