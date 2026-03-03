@@ -885,7 +885,8 @@ describe('Integration', () => {
         fib(20).
       `);
 
-      const resolved = 'fib = n -> @let a = 1, b = 0, temp = 0 /* test */ @while (>= (n, @let n = n - 1) 0), temp = a, (@let a = a + b), b = temp, b.\n\n// test\nfib(20).\n';
+      const resolved = 'fib = n -> @let a = 1, b = 0, temp = 0 /* test */ '
+        + '@while (>= (n, @let n = n - 1) 0), temp = a, (@let a = a + b), b = temp, b.\n\n// test\nfib(20).\n';
 
       const result = 'fib = n -> @let a = 1, b = 0, temp = 0 /* test */ @while (>= n-- 0), temp = a, (a += b), b = temp, b.\n\n// test\nfib(20).\n';
 
@@ -937,7 +938,8 @@ describe('Integration', () => {
       const usageInfo = '"\n  Usage info:\n\n  -h, --help  Display this info\n      --ask   Prompts user for input\n"';
       const asks = `puts("\\nPlease ask a few questions:\\n\\n").\n${prompt}.\n"\\nGot: #{ask.bar} (#{(~ ask.foo 42) ? "Gotcha!" | ":("})\\n".\n`;
 
-      const resolved = '@import puts, input @from "IO".\n@import getopts @from "Proc".\n@let argv = getopts(:boolean [:ask, :help], :alias (:h :help)).\n'
+      const resolved = '@import puts, input @from "IO".\n@import getopts @from "Proc".\n'
+        + '@let argv = getopts(:boolean [:ask, :help], :alias (:h :help)).\n'
         + `usageInfo = ${usageInfo}.\n`
         + `messageOutput = (@if ([argv.flags]:(:help)) usageInfo) | (@if ([argv.flags]:(:ask)) (${asks})) | "\\nMissing input.\\n#{usageInfo}".\n`
         + 'puts(messageOutput, "\\n").\n';

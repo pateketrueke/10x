@@ -20,6 +20,7 @@
   },
   "scripts": {
     "dev": "bun run build && bun --watch run src/index.js",
+    "lint": "eslint tests src/lib",
     "watch": "bun test --watch tests/",
     "bench": "node bench/plan05.mjs --compare bench/plan05-baseline.json --save bench/results/latest.json",
     "bench:plan05": "node bench/plan05.mjs --compare bench/plan05-baseline.json --save bench/results/latest.json",
@@ -29,7 +30,7 @@
     "build:bin:macos": "bun build --compile --target=bun-darwin-x64 src/cli.js --outfile=dist/bin/10x-macos-x64",
     "build:bin:macos-arm": "bun build --compile --target=bun-darwin-arm64 src/cli.js --outfile=dist/bin/10x-macos-arm64",
     "build:bin:windows": "bun build --compile --target=bun-windows-x64 src/cli.js --outfile=dist/bin/10x-windows-x64.exe",
-    "pretest": "eslint tests src/lib",
+    "pretest": "eslint tests src",
     "test": "bun test tests/",
     "test:unit": "TZ=UTC bun test tests/",
     "test:ci": "TZ=UTC bun test --coverage tests/"

@@ -1,5 +1,4 @@
 let metric;
-   let imperial;
 
 metric = {
   ppm: {

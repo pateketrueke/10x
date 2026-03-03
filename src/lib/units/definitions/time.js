@@ -63,7 +63,7 @@ time = {
       singular: 'Month',
      plural: 'Months',
     },
-   to_anchor: 60 * 60 * 24 * daysInYear / 12,
+   to_anchor: (60 * 60 * 24 * daysInYear) / 12,
   },
  year: {
     name: {
