@@ -41,6 +41,27 @@ describe('Prelude', () => {
     });
   });
 
+  describe('render(t)', () => {
+    it('should fail on missing input', async () => {
+      await failWith(run(':import render :from "Prelude".\nrender().\n'), 'No input to render');
+    });
+
+    it('should convert values into renderable output', async () => {
+      const result = await run(`
+        :import render :from "Prelude".
+        render("foo").
+        render(42).
+        render(<div />).
+      `);
+
+      expect(result).to.eql([
+        Expr.value('foo'),
+        Expr.value('42'),
+        Expr.value('<div />'),
+      ]);
+    });
+  });
+
   describe('cast(x, t)', () => {
     it('should fail on invalid input', async () => {
       await failWith(run(':import cast :from "Prelude".\ncast().\n'), 'Missing input to cast');

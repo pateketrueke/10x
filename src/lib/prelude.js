@@ -27,6 +27,16 @@ export function show(...args) {
   return serialize(args);
 }
 
+export function render(input) {
+  if (typeof input === 'undefined') raise('No input to render');
+
+  if (input && input.isString) {
+    return input.valueOf();
+  }
+
+  return serialize(input);
+}
+
 export function cast(token, target) {
   if (!token) raise('Missing input to cast');
   if (!target) raise('Missing type to cast');
