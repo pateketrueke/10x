@@ -3,18 +3,20 @@ import Scanner from './scanner';
 
 import {
   CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME,
+  HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM,
 } from './symbols';
 
 import {
   Token, check, raise, assert, hasBreaks, hasStatements, isStatement, isSpecial, isComment, isRange, isSlice, isComma, isNumber,
   isString, isSymbol, isLogic, isUnit, isSome, isOpen, isClose, isBegin, isDone, isBlock, isText, isCode,
-  isRef, isLiteral, isList, isEqual, isMath, isNot, isEnd, isEOF, isEOL,
+  isRef, isLiteral, isList, isEqual, isMath, isNot, isEnd, isEOF, isEOL, quote,
 } from '../helpers';
 
 export default class Parser {
   constructor(tokens, plain, ctx) {
     this.templates = (ctx && ctx.templates) || {};
     this.template = null;
+    this.textAsStrings = !!(ctx && ctx.textAsStrings);
     this.partial = [];
     this.raw = plain;
 
@@ -497,6 +499,8 @@ export default class Parser {
           root = stack.pop();
           offsets.pop();
         }
+      } else if (isText(token) && this.textAsStrings && this.isTextConvertible(token)) {
+        push(this.convertTextToString(token, tokenInfo));
       } else if (!(isText(token) || isCode(token) || isRef(token))) {
         // parse within tokenized strings!
         if (isString(token) && Array.isArray(token.value)) {
@@ -527,6 +531,43 @@ export default class Parser {
     }
 
     return tree;
+  }
+
+  isTextConvertible(token) {
+    if (!token || !token.value || !Array.isArray(token.value.buffer)) return false;
+    return token.value.buffer.some(chunk => {
+      if (typeof chunk === 'string') return chunk.trim().length > 0;
+      if (Array.isArray(chunk)) return !!chunk[2];
+      return true;
+    });
+  }
+
+  textChunkToSource(chunk) {
+    if (typeof chunk === 'string') return chunk;
+    if (Array.isArray(chunk)) return `${chunk[1]}${chunk[2]}${chunk[1]}`;
+    if (isRef(chunk)) return chunk.value.text;
+    if (chunk && typeof chunk.value === 'string') return chunk.value;
+    return '';
+  }
+
+  convertTextToString(token, tokenInfo) {
+    const source = this.textPrefix(token.value) + token.value.buffer.map(chunk => this.textChunkToSource(chunk)).join('');
+    const [subToken] = new Scanner(quote(source), tokenInfo).scanTokens();
+
+    if (isString(subToken) && Array.isArray(subToken.value)) {
+      return Expr.literal({ type: STRING, value: this.subTree(subToken.value, true) }, tokenInfo);
+    }
+
+    return Expr.from(subToken);
+  }
+
+  textPrefix(value) {
+    if (!value || !value.kind) return '';
+    if (value.kind === BLOCKQUOTE) return '> ';
+    if (value.kind === HEADING) return `${Array.from({ length: value.level || 1 }).join('#')}# `;
+    if (value.kind === OL_ITEM) return `${value.style || value.level || 1}. `;
+    if (value.kind === UL_ITEM) return `${value.style || '-'} `;
+    return '';
   }
 
   split() {

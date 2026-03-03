@@ -8,7 +8,7 @@ import Parser from '../src/lib/tree/parser';
 
 import {
   LESS, EXACT_EQ, GREATER_EQ, MINUS, SOME, EVERY, PLUS, MUL, DIV, DOT, OR,
-  EOL, TEXT, CODE, BLOCKQUOTE, COMMA, STRING, OPEN, CLOSE, RANGE, REGEX, LITERAL,
+  EOL, TEXT, CODE, BLOCKQUOTE, COMMA, STRING, OPEN, CLOSE, RANGE, REGEX, LITERAL, NUMBER,
 } from '../src/lib/tree/symbols';
 
 describe('Parser', () => {
@@ -86,6 +86,18 @@ describe('Parser', () => {
         buffer: ['x ', [CODE, '`', 'y']],
         kind: BLOCKQUOTE,
       }),
+    ]);
+
+    const parsed = Parser.getAST('> x #{1+2}', true)[0].body[0];
+    expect(parsed.type).to.eql(TEXT);
+    expect(parsed.value.kind).to.eql(BLOCKQUOTE);
+    expect(parsed.value.buffer[0]).to.eql('x ');
+    expect(parsed.value.buffer.slice(1).map(part => [part.type, part.value])).to.eql([
+      [OPEN, '#{'],
+      [NUMBER, '1'],
+      [PLUS, '+'],
+      [NUMBER, '2'],
+      [CLOSE, '}'],
     ]);
   });
 

@@ -84,6 +84,16 @@ describe('Eval', () => {
       expect(await run('bar=42.\n"foo#{bar}"')).to.eql([Expr.value('foo42')]);
     });
 
+    it('should evaluate markdown text buffers as strings when enabled', async () => {
+      const env = new Env();
+      env.textAsStrings = true;
+      env.set('x', { body: [Expr.value(2)] });
+
+      expect(await run('hello #{x}.', env)).to.eql([Expr.value('hello 2.')]);
+      expect(await run('# title #{x}.', env)).to.eql([Expr.value('# title 2.')]);
+      expect(await run('> quote #{x}.', env)).to.eql([Expr.value('> quote 2.')]);
+    });
+
     it('should format strings through mod-operator', async () => {
       expect(await run('"Test: {} {} {} {}" % (1, :nil, :on, :off)')).to.eql([Expr.value('Test: 1 :nil :on :off')]);
       expect(await run('"Test: #{env}" % (:env "VALUE")')).to.eql([Expr.value('Test: VALUE')]);

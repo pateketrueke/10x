@@ -690,9 +690,30 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
         delete this.offsets;
       }
 
-      return colorize(TEXT, `${prefix}${token.value.buffer.reduce((prev, cur) => {
+      return colorize(TEXT, `${prefix}${token.value.buffer.reduce((prev, cur, idx, all) => {
         if (Array.isArray(cur)) {
           prev += colorize(cur[0], `${cur[1]}${cur[2]}${cur[1]}`);
+        } else if (isOpen(cur) && cur.value === '#{') {
+          prev += colorize(null, '#{');
+        } else if (isClose(cur) && cur.value === '}') {
+          prev += colorize(null, '}');
+        } else if (isMath(cur) && cur.type === PLUS) {
+          const left = all[idx - 1];
+          const right = all[idx + 1];
+
+          const isPrefixJoin = left && right
+            && isString(left) && left.isRaw
+            && isOpen(right) && right.value === '#{';
+
+          const isSuffixJoin = left && right
+            && isClose(left) && left.value === '}'
+            && isString(right) && right.isRaw;
+
+          if (!isPrefixJoin && !isSuffixJoin) {
+            prev += serialize(cur, shorten, colorize, descriptor);
+          }
+        } else if (cur && cur.type) {
+          prev += serialize(cur, shorten, colorize, descriptor);
         } else if (isRef(cur)) {
           prev += serialize(cur, shorten, colorize);
         } else {

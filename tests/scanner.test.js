@@ -4,7 +4,7 @@ import { deindent } from '../src/lib/helpers';
 import Scanner from '../src/lib/tree/scanner';
 
 import {
-  STRING, PLUS, OPEN, LITERAL, CLOSE, TEXT, EQUAL, REF,
+  STRING, PLUS, OPEN, LITERAL, CLOSE, TEXT, EQUAL, REF, NUMBER,
 } from '../src/lib/tree/symbols';
 
 describe('Scanner', () => {
@@ -403,6 +403,20 @@ describe('Scanner', () => {
           },
         ],
       }]);
+    });
+
+    it('should extract interpolation tokens from markdown text buffers', () => {
+      const [token] = getTokens('hello #{x+1}', true);
+
+      expect(token.type).to.eql(TEXT);
+      expect(token.value.buffer[0]).to.eql('hello ');
+      expect(token.value.buffer.slice(1).map(part => [part.type, part.value])).to.eql([
+        [OPEN, '#{'],
+        [LITERAL, 'x'],
+        [PLUS, '+'],
+        [NUMBER, '1'],
+        [CLOSE, '}'],
+      ]);
     });
   });
 });

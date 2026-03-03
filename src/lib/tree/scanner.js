@@ -122,6 +122,38 @@ export default class Scanner {
   appendBuffer(value, line, col) {
     let offset = col;
 
+    const extractInterpolationTokens = (chunk, atLine, atCol) => {
+      if (chunk.indexOf('#{') === -1) return [chunk];
+
+      const [token] = new Scanner(quote(chunk), { line: atLine, col: atCol }).scanTokens();
+      const parts = [];
+
+      token.value.forEach((sub, idx, all) => {
+        if (sub.type === PLUS) {
+          const prev = all[idx - 1];
+          const next = all[idx + 1];
+
+          const isPrefixJoin = prev && next
+            && prev.type === STRING && prev.isRaw
+            && next.type === OPEN && next.value === '#{';
+
+          const isSuffixJoin = prev && next
+            && prev.type === CLOSE && prev.value === '}'
+            && next.type === STRING && next.isRaw;
+
+          if (isPrefixJoin || isSuffixJoin) return;
+        }
+
+        if (sub.type === STRING && sub.isRaw) {
+          parts.push(sub.value);
+        } else {
+          parts.push(sub);
+        }
+      });
+
+      return parts;
+    };
+
     // extract links from buffers
     value.buffer = value.buffer.reduce((prev, cur) => {
       if (typeof cur === 'string' && cur.includes('[')) {
@@ -146,14 +178,20 @@ export default class Scanner {
               alt: href ? alt : null,
             }, null, { line, col: offset }));
           } else {
-            prev.push(chunk);
+            prev.push(...extractInterpolationTokens(chunk, line, offset));
           }
           offset += chunk.length;
         });
       } else {
-        if (Array.isArray(cur)) offset += cur[2].length;
-        else offset += cur.length;
-        prev.push(cur);
+        if (Array.isArray(cur)) {
+          offset += cur[2].length;
+          prev.push(cur);
+        } else if (typeof cur === 'string') {
+          prev.push(...extractInterpolationTokens(cur, line, offset));
+          offset += cur.length;
+        } else {
+          prev.push(cur);
+        }
       }
       return prev;
     }, []);

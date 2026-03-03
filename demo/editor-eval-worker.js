@@ -34,6 +34,7 @@ self.addEventListener('message', async ({ data }) => {
     }
 
     const env = new Env();
+    env.textAsStrings = true;
     const results = [];
     const inlineResults = [];
 

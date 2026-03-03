@@ -898,7 +898,7 @@ class TenXEditor extends HTMLElement {
       if (result.kind === 'function') {
         widget.classList.add('function-anchor');
         const meta = getFunctionDefinitionMeta(anchor?.source || '');
-        widget.dataset.tooltip = meta.signature || '';
+        widget.dataset.tooltip = meta?.signature || 'Function definition';
       }
       return widget;
     };
@@ -1081,6 +1081,7 @@ class TenXEditor extends HTMLElement {
       const inlineNext = new Map();
       const emitted = [];
       const env = new Env();
+      env.textAsStrings = true;
 
       for (const statement of statements) {
         if (!statement?.source?.trim()) continue;
