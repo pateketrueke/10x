@@ -7,24 +7,26 @@ import chalk from 'chalk';
 import wargs from 'wargs';
 
 import * as x10 from './dist/main.js';
+import { createNodeAdapter } from './src/adapters/node/index.js';
 
 const __dirname = import.meta.dirname;
 const HISTORY_FILE = path.join(os.homedir(), '.tenx_history');
 const MAX_HISTORY = 1000;
 
 const {
-  Env, Expr, Token, Parser, main, debug, format, execute, serialize, evaluate, useCurrencies,
+  Env, Expr, Token, Parser, main, debug, format, execute, serialize, evaluate, useCurrencies, createEnv, applyAdapter,
 } = x10;
 
 const argv = wargs(process.argv.slice(2), {
   boolean: ['trace', 'color', 'print', 'inline', 'source', 'watch', 'bake', 'clean'],
 });
+const nodeAdapter = createNodeAdapter(process.argv.slice(2));
 
 async function prelude() {
   process.stderr.write(`\r${chalk.gray('Checking for installed currencies...')}\r`);
 
   await useCurrencies({
-    key: `${__dirname}/currencies-${new Date().toISOString().substr(0, 13)}.json`,
+    key: path.join(os.tmpdir(), `currencies-${new Date().toISOString().substr(0, 13)}.json`),
     read: path => JSON.parse(fs.readFileSync(path, 'utf8')),
     write: fs.writeFileSync,
     exists: fs.existsSync,
@@ -50,13 +52,7 @@ async function prelude() {
   process.stderr.write('\r\x1b[K');
 
   // shared utils and loader for nodejs
-  const [loader, shared] = await Promise.all([
-    import('./lib/loader.js'),
-    import('./lib/shared.js'),
-  ]);
-
-  loader.default(x10);
-  shared.default(x10);
+  applyAdapter(nodeAdapter);
 }
 
 function loadHistory() {
@@ -87,7 +83,7 @@ async function repl() {
     removeHistoryDuplicates: true,
   });
 
-  const env = new Env();
+  const env = createEnv(nodeAdapter);
   const info = argv.flags.trace;
   const raw = argv.flags.raw;
 
@@ -206,7 +202,7 @@ function cleanResults(content) {
 }
 
 async function watchFile(filepath, options) {
-  const env = new Env();
+  const env = createEnv(nodeAdapter);
   
   await prelude();
   
@@ -304,7 +300,7 @@ async function cli() {
 
   if (flags.bake || flags.clean) {
     await prelude();
-    const env = new Env();
+    const env = createEnv(nodeAdapter);
     const expressions = extractExpressions(code);
     
     if (flags.clean) {
@@ -320,4 +316,4 @@ async function cli() {
   }
 }
 
-export { cli, main, format, execute, evaluate, useCurrencies };
+export { cli, main, format, execute, evaluate, useCurrencies, createEnv, applyAdapter };

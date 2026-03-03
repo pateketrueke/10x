@@ -4,14 +4,36 @@ $format: esm
 ---
 */
 
-export { execute, evaluate } from './lib';
+import { execute, evaluate } from './lib';
+import Env from './lib/tree/env';
+import Expr from './lib/tree/expr';
+import Parser from './lib/tree/parser';
+import { applyAdapter as applyRuntimeAdapter, createEnv as createRuntimeEnv } from './adapters/index.js';
+
+export { execute, evaluate };
 export { useCurrencies } from './lib/builtins';
 
-export { default as Env } from './lib/tree/env';
-export { default as Expr } from './lib/tree/expr';
-export { default as Parser } from './lib/tree/parser';
+export { Env, Expr, Parser };
 
 export { main, format } from './util';
+
+export function applyAdapter(adapter, options) {
+  applyRuntimeAdapter({
+    Env,
+    Expr,
+    execute,
+    evaluate,
+  }, adapter, options);
+}
+
+export function createEnv(adapter, options) {
+  return createRuntimeEnv({
+    Env,
+    Expr,
+    execute,
+    evaluate,
+  }, adapter, options);
+}
 
 export {
   Token, debug, serialize, deindent, hasDiff,
