@@ -779,7 +779,7 @@ class TenXEditor extends HTMLElement {
     this.#editable.addEventListener('scroll', () => this.#hideTooltip());
     this.#setupWorker();
 
-    const initial = this.textContent.trim() || this.getAttribute('value') || '';
+    const initial = this.textContent || this.getAttribute('value') || '';
     if (initial) {
       this.#applySource(initial);
       this.#scheduleEval();
@@ -903,6 +903,48 @@ class TenXEditor extends HTMLElement {
       return widget;
     };
 
+    const previousRenderableTextNode = (fromNode) => {
+      let node = fromNode;
+      if (node === this.#editable) {
+        node = this.#editable.lastChild;
+        while (node && node.lastChild) node = node.lastChild;
+      }
+      while (node && node !== this.#editable) {
+        if (node.previousSibling) {
+          node = node.previousSibling;
+          while (node && node.lastChild) node = node.lastChild;
+          if (
+            node
+            && node.nodeType === Node.TEXT_NODE
+            && !node.parentElement?.closest('[data-result], [data-inline-result]')
+          ) {
+            return node;
+          }
+        } else {
+          if (
+            node.nodeType === Node.TEXT_NODE
+            && !node.parentElement?.closest('[data-result], [data-inline-result]')
+          ) {
+            return node;
+          }
+          node = node.parentNode;
+        }
+      }
+      return null;
+    };
+
+    const insertBeforeLineEOL = (widget, lineEndNode) => {
+      const textNode = previousRenderableTextNode(lineEndNode);
+      if (textNode && textNode.textContent.endsWith('.')) {
+        const range = document.createRange();
+        range.setStart(textNode, Math.max(0, textNode.textContent.length - 1));
+        range.collapse(true);
+        range.insertNode(widget);
+        return true;
+      }
+      return false;
+    };
+
     // Count all <br> in DOM order (including nested spans) for visual EOL.
     const walker = document.createTreeWalker(
       this.#editable,
@@ -921,7 +963,10 @@ class TenXEditor extends HTMLElement {
       if (lineResults?.length) {
         for (const entry of lineResults) {
           const widget = makeWidget(entry.result, entry.anchor);
-          if (widget) brNode.parentNode.insertBefore(widget, brNode);
+          if (!widget) continue;
+          if (!insertBeforeLineEOL(widget, brNode)) {
+            brNode.parentNode.insertBefore(widget, brNode);
+          }
         }
       }
       lineIdx++;
@@ -932,7 +977,10 @@ class TenXEditor extends HTMLElement {
     if (trailing?.length) {
       for (const entry of trailing) {
         const widget = makeWidget(entry.result, entry.anchor);
-        if (widget) this.#editable.appendChild(widget);
+        if (!widget) continue;
+        if (!insertBeforeLineEOL(widget, this.#editable)) {
+          this.#editable.appendChild(widget);
+        }
       }
     }
 
