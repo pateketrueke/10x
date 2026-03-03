@@ -14,7 +14,10 @@
  *   el.addEventListener('error',  e => e.detail.error)
  */
 
-import { Parser, Env, execute, serialize } from '../dist/main.js';
+import { Parser, Env, execute, serialize, applyAdapter } from '../main.js';
+import { createBrowserAdapter } from '../adapters/browser/index.js';
+
+applyAdapter(createBrowserAdapter());
 
 // ─── Token → CSS class mapping (mirrors src/util.js colorize) ────────────────
 
@@ -641,6 +644,60 @@ const STYLES = `
     cursor: help;
   }
 
+  [data-result].loading {
+    background: #293241;
+    color: #b7c0cf;
+  }
+
+  [data-result].loading > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  [data-result].loading > span::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border: 2px solid #5d6a7e;
+    border-top-color: #d9e1ee;
+    border-radius: 50%;
+    animation: xt-spin 0.8s linear infinite;
+  }
+
+  [data-result].loading [data-copy-btn] {
+    display: none !important;
+  }
+
+  [data-cancel-btn] {
+    display: none;
+    margin-left: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 11px;
+    line-height: 1;
+    opacity: 0.8;
+    cursor: pointer;
+  }
+
+  [data-result].loading:hover [data-cancel-btn],
+  [data-result].loading:focus-within [data-cancel-btn] {
+    display: inline-block;
+  }
+
+  [data-cancel-btn]:hover,
+  [data-cancel-btn]:focus-visible {
+    opacity: 1;
+    outline: none;
+  }
+
+  @keyframes xt-spin {
+    to { transform: rotate(360deg); }
+  }
+
   [data-copy-btn] {
     display: none;
     margin-left: 6px;
@@ -745,8 +802,10 @@ class TenXEditor extends HTMLElement {
   #lastText = '';
   #anchors = [];
   #resultsById = new Map();
+  #pendingResultIds = new Set();
   #inlineAnchors = [];
   #inlineResultsById = new Map();
+  #killedStatementIds = new Set();
   // Suppress onInput feedback loops while we rebuild DOM.
   #rendering = false;
 
@@ -861,10 +920,11 @@ class TenXEditor extends HTMLElement {
 
     const byLine = new Map();
     this.#anchors.forEach(anchor => {
-      const result = this.#resultsById.get(anchor.id);
-      if (!result) return;
+      const pending = this.#pendingResultIds.has(anchor.id);
+      const result = pending ? null : this.#resultsById.get(anchor.id);
+      if (!pending && !result) return;
       if (!byLine.has(anchor.line)) byLine.set(anchor.line, []);
-      byLine.get(anchor.line).push({ result, anchor });
+      byLine.get(anchor.line).push({ result, anchor, pending });
     });
 
     if (!byLine.size) {
@@ -872,12 +932,33 @@ class TenXEditor extends HTMLElement {
       return;
     }
 
-    const makeWidget = (result, anchor) => {
+    const makeWidget = ({ result, anchor, pending }) => {
+      if (pending) {
+        const widget = document.createElement('span');
+        widget.dataset.result = '';
+        widget.dataset.statementId = anchor.id;
+        widget.setAttribute('contenteditable', 'false');
+        widget.classList.add('loading');
+        const label = document.createElement('span');
+        label.textContent = '…';
+        widget.appendChild(label);
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.dataset.cancelBtn = '';
+        cancelBtn.setAttribute('aria-label', 'Cancel evaluation');
+        cancelBtn.title = 'Cancel evaluation';
+        cancelBtn.textContent = '×';
+        widget.appendChild(cancelBtn);
+        return widget;
+      }
+
       const text = result.resultText;
       if (!text?.trim()) return null;
 
       const widget = document.createElement('span');
       widget.dataset.result = '';
+      widget.dataset.statementId = anchor.id;
       widget.setAttribute('contenteditable', 'false');
       const label = document.createElement('span');
       label.textContent = result.kind === 'function' ? 'ƒ' : `→ ${text}`;
@@ -962,7 +1043,7 @@ class TenXEditor extends HTMLElement {
       const lineResults = byLine.get(lineIdx);
       if (lineResults?.length) {
         for (const entry of lineResults) {
-          const widget = makeWidget(entry.result, entry.anchor);
+          const widget = makeWidget(entry);
           if (!widget) continue;
           if (!insertBeforeLineEOL(widget, brNode)) {
             brNode.parentNode.insertBefore(widget, brNode);
@@ -976,7 +1057,7 @@ class TenXEditor extends HTMLElement {
     const trailing = byLine.get(lineIdx);
     if (trailing?.length) {
       for (const entry of trailing) {
-        const widget = makeWidget(entry.result, entry.anchor);
+        const widget = makeWidget(entry);
         if (!widget) continue;
         if (!insertBeforeLineEOL(widget, this.#editable)) {
           this.#editable.appendChild(widget);
@@ -1057,48 +1138,91 @@ class TenXEditor extends HTMLElement {
     this.#debounce = setTimeout(() => this.#requestEval(), 600);
   }
 
-  #setupWorker() {
+  #startWorker() {
     try {
       this.#worker = new Worker(new URL('./editor-eval-worker.js', import.meta.url), { type: 'module' });
       this.#worker.addEventListener('message', ({ data }) => {
-        const { requestId, results, inlineResults, error } = data || {};
+        const {
+          requestId, statementId, start, completed, statementResult, inlineResults, done, error,
+        } = data || {};
         if (!requestId || requestId < this.#appliedEvalRequestId) return;
         this.#appliedEvalRequestId = requestId;
 
         if (error) {
+          this.#pendingResultIds = new Set();
+          this.#injectResults();
           this.#emitError(new Error(error));
           return;
         }
 
-        const next = new Map();
-        const emitted = [];
-        (Array.isArray(results) ? results : []).forEach(result => {
-          if (!result?.statementId) return;
-          next.set(result.statementId, result);
-          if (result.resultText && !result.errorText && result.kind !== 'function') {
-            emitted.push(result.resultText);
-          }
-        });
+        if (statementId && start) {
+          this.#pendingResultIds.add(statementId);
+          this.#injectResults();
+          return;
+        }
 
-        const inlineNext = new Map();
+        if (statementId && completed) {
+          this.#pendingResultIds.delete(statementId);
+          this.#resultsById.delete(statementId);
+
+          Array.from(this.#inlineResultsById.keys()).forEach(inlineId => {
+            if (inlineId.startsWith(`${statementId}:`)) {
+              this.#inlineResultsById.delete(inlineId);
+            }
+          });
+
+          if (statementResult?.resultText?.trim()) {
+            this.#resultsById.set(statementId, statementResult);
+          }
+        }
+
         (Array.isArray(inlineResults) ? inlineResults : []).forEach(inline => {
           if (!inline?.inlineId) return;
-          inlineNext.set(inline.inlineId, inline);
+          if (!inline?.resultText?.trim()) return;
+          this.#inlineResultsById.set(inline.inlineId, inline);
         });
 
-        this.#resultsById = next;
-        this.#inlineResultsById = inlineNext;
         this.#injectResults();
-        this.#emit(emitted);
+
+        if (done) {
+          this.#pendingResultIds = new Set();
+          this.#injectResults();
+
+          const emitted = [];
+          this.#resultsById.forEach(result => {
+            if (result?.resultText && !result.errorText && result.kind !== 'function') {
+              emitted.push(result.resultText);
+            }
+          });
+          this.#emit(emitted);
+        }
       });
     } catch (_) {
       this.#worker = null;
     }
   }
 
-  #requestEval() {
+  #setupWorker() {
+    this.#startWorker();
+  }
+
+  #restartWorker() {
+    if (this.#worker) {
+      this.#worker.terminate();
+      this.#worker = null;
+    }
+    this.#startWorker();
+  }
+
+  #requestEval({ preserveKilled = false } = {}) {
     const text = this.#extractText();
+    if (!preserveKilled) {
+      this.#killedStatementIds = new Set();
+    }
+
     if (!text.trim() || !this.#anchors.length) {
+      this.#killedStatementIds = new Set();
+      this.#pendingResultIds = new Set();
       this.#resultsById = new Map();
       this.#inlineResultsById = new Map();
       this.#injectResults();
@@ -1111,13 +1235,43 @@ class TenXEditor extends HTMLElement {
       source: anchor.source,
     }));
 
-    if (this.#worker) {
-      const requestId = ++this.#evalRequestId;
-      this.#worker.postMessage({ requestId, statements });
+    const activeStatements = statements.filter(statement => !this.#killedStatementIds.has(statement.statementId));
+
+    if (!activeStatements.length) {
+      this.#pendingResultIds = new Set();
+      this.#injectResults();
+      this.#emit([]);
       return;
     }
 
-    this.#evaluateOnMainThread(statements);
+    const statementIds = new Set(activeStatements.map(statement => statement.statementId));
+    Array.from(this.#resultsById.keys()).forEach(id => {
+      if (!statementIds.has(id)) this.#resultsById.delete(id);
+    });
+    const inlineIds = new Set(this.#inlineAnchors.map(anchor => anchor.id));
+    Array.from(this.#inlineResultsById.keys()).forEach(id => {
+      if (!inlineIds.has(id)) this.#inlineResultsById.delete(id);
+    });
+
+    this.#pendingResultIds = new Set();
+    this.#injectResults();
+
+    if (this.#worker) {
+      // Abort previous long-running evaluation (e.g. fib(99)) so new input is responsive.
+      if (this.#evalRequestId > this.#appliedEvalRequestId) {
+        this.#restartWorker();
+      }
+
+      const requestId = ++this.#evalRequestId;
+      this.#worker.postMessage({
+        requestId,
+        statements: activeStatements,
+        skipStatementIds: Array.from(this.#killedStatementIds),
+      });
+      return;
+    }
+
+    this.#evaluateOnMainThread(activeStatements);
   }
 
   async #evaluateOnMainThread(statements) {
@@ -1125,26 +1279,31 @@ class TenXEditor extends HTMLElement {
 
     this.#evaluating = true;
     try {
-      const next = new Map();
-      const inlineNext = new Map();
-      const emitted = [];
       const env = new Env();
 
       for (const statement of statements) {
         if (!statement?.source?.trim()) continue;
+        this.#pendingResultIds.add(statement.statementId);
+        this.#injectResults();
         try {
           const result = await execute(statement.source, env);
+          this.#resultsById.delete(statement.statementId);
+          Array.from(this.#inlineResultsById.keys()).forEach(inlineId => {
+            if (inlineId.startsWith(`${statement.statementId}:`)) {
+              this.#inlineResultsById.delete(inlineId);
+            }
+          });
+
           if (isFunctionDefinitionSource(statement.source)) {
             const functionBadge = {
               statementId: statement.statementId,
               resultText: 'ƒ',
               kind: 'function',
             };
-            next.set(statement.statementId, functionBadge);
+            this.#resultsById.set(statement.statementId, functionBadge);
           } else if (result !== undefined && result !== null) {
             const resultText = serialize(result);
-            next.set(statement.statementId, { statementId: statement.statementId, resultText });
-            emitted.push(resultText);
+            this.#resultsById.set(statement.statementId, { statementId: statement.statementId, resultText });
           }
 
           const inlineExpressions = extractInlineExpressions(statement.source, statement.statementId);
@@ -1153,12 +1312,12 @@ class TenXEditor extends HTMLElement {
             try {
               const inlineResult = await execute(inline.expr, env);
               if (inlineResult === undefined || inlineResult === null) continue;
-              inlineNext.set(inline.inlineId, {
+              this.#inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
                 resultText: serialize(inlineResult),
               });
             } catch (error) {
-              inlineNext.set(inline.inlineId, {
+              this.#inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
                 resultText: '!',
                 errorText: String(error?.message || error),
@@ -1168,13 +1327,24 @@ class TenXEditor extends HTMLElement {
         } catch (_) {
           // Scoped behavior: skip statement failures silently.
         }
+
+        this.#pendingResultIds.delete(statement.statementId);
+        this.#injectResults();
       }
 
-      this.#resultsById = next;
-      this.#inlineResultsById = inlineNext;
+      this.#pendingResultIds = new Set();
       this.#injectResults();
+
+      const emitted = [];
+      this.#resultsById.forEach(result => {
+        if (result?.resultText && !result.errorText && result.kind !== 'function') {
+          emitted.push(result.resultText);
+        }
+      });
       this.#emit(emitted);
     } catch (e) {
+      this.#pendingResultIds = new Set();
+      this.#injectResults();
       this.#emitError(e);
     } finally {
       this.#evaluating = false;
@@ -1256,7 +1426,8 @@ class TenXEditor extends HTMLElement {
 
   #onMouseDown(e) {
     const copyBtn = e.target instanceof Element ? e.target.closest('[data-copy-btn]') : null;
-    if (!copyBtn) return;
+    const cancelBtn = e.target instanceof Element ? e.target.closest('[data-cancel-btn]') : null;
+    if (!copyBtn && !cancelBtn) return;
     e.preventDefault();
   }
 
@@ -1308,6 +1479,27 @@ class TenXEditor extends HTMLElement {
   }
 
   async #onClick(e) {
+    const cancelBtn = e.target instanceof Element ? e.target.closest('[data-cancel-btn]') : null;
+    if (cancelBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const resultNode = cancelBtn.closest('[data-result]');
+      const statementId = resultNode?.dataset.statementId;
+      if (statementId) {
+        this.#killedStatementIds.add(statementId);
+        this.#pendingResultIds.delete(statementId);
+        this.#resultsById.delete(statementId);
+        Array.from(this.#inlineResultsById.keys()).forEach(inlineId => {
+          if (inlineId.startsWith(`${statementId}:`)) {
+            this.#inlineResultsById.delete(inlineId);
+          }
+        });
+        clearTimeout(this.#debounce);
+        this.#requestEval({ preserveKilled: true });
+      }
+      return;
+    }
+
     const copyBtn = e.target instanceof Element ? e.target.closest('[data-copy-btn]') : null;
     if (!copyBtn) return;
     e.preventDefault();
@@ -1388,3 +1580,5 @@ class TenXEditor extends HTMLElement {
 }
 
 customElements.define('tenx-editor-ce', TenXEditor);
+
+export default TenXEditor;

@@ -1,4 +1,7 @@
-import { Env, execute, serialize } from '../dist/main.js';
+import { Env, execute, serialize, applyAdapter } from '../main.js';
+import { createBrowserAdapter } from '../adapters/browser/index.js';
+
+applyAdapter(createBrowserAdapter());
 
 function isFunctionDefinitionSource(source) {
   const normalized = String(source || '').replace(/\s+/g, ' ').trim();
@@ -24,37 +27,53 @@ function extractInlineExpressions(source, statementId = '') {
 }
 
 self.addEventListener('message', async ({ data }) => {
-  const { requestId, statements } = data || {};
+  const { requestId, statements, skipStatementIds } = data || {};
   if (!requestId) return;
 
   try {
     if (!Array.isArray(statements) || !statements.length) {
-      self.postMessage({ requestId, results: [] });
+      self.postMessage({ requestId, done: true });
       return;
     }
 
     const env = new Env();
-    const results = [];
-    const inlineResults = [];
+
+    const skipped = new Set(Array.isArray(skipStatementIds) ? skipStatementIds : []);
 
     for (const statement of statements) {
-      if (!statement?.statementId || !statement?.source?.trim()) continue;
+      if (!statement?.statementId || !statement?.source?.trim()) {
+        continue;
+      }
+      if (skipped.has(statement.statementId)) continue;
+
+      self.postMessage({
+        requestId,
+        statementId: statement.statementId,
+        start: true,
+      });
+
+      const partial = {
+        requestId,
+        statementId: statement.statementId,
+        completed: true,
+      };
 
       try {
         const result = await execute(statement.source, env);
         if (isFunctionDefinitionSource(statement.source)) {
-          results.push({
+          partial.statementResult = {
             statementId: statement.statementId,
             resultText: 'ƒ',
             kind: 'function',
-          });
+          };
         } else if (result !== undefined && result !== null) {
-          results.push({
+          partial.statementResult = {
             statementId: statement.statementId,
             resultText: serialize(result),
-          });
+          };
         }
 
+        const inlineResults = [];
         const inlineExpressions = extractInlineExpressions(statement.source, statement.statementId);
         for (const inline of inlineExpressions) {
           if (!inline.expr) continue;
@@ -73,12 +92,18 @@ self.addEventListener('message', async ({ data }) => {
             });
           }
         }
+
+        if (inlineResults.length) {
+          partial.inlineResults = inlineResults;
+        }
       } catch (_) {
         // keep old behavior: skip failed statements
       }
+
+      self.postMessage(partial);
     }
 
-    self.postMessage({ requestId, results, inlineResults });
+    self.postMessage({ requestId, done: true });
   } catch (error) {
     self.postMessage({ requestId, error: String(error?.message || error) });
   }
