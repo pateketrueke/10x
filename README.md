@@ -48,6 +48,21 @@ make demo   # builds and serves at http://localhost:3131
 bun test tests/
 ```
 
+### Performance Tracking
+
+Track the plan-05 perf hot paths (`Eval.walk` and `Env.resolved` lookup):
+
+```sh
+npm run bench
+```
+
+This writes `bench/results/latest.json` and compares against `bench/plan05-baseline.json`.
+Override workload with env vars when needed:
+
+```sh
+BENCH_TERMS=4000 BENCH_ITERS=800 npm run bench
+```
+
 ---
 
 ## Language Reference

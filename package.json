@@ -21,7 +21,9 @@
   "scripts": {
     "dev": "bun run build && bun --watch run index.js",
     "watch": "bun test --watch tests/",
-    "build": "bun build src/main.js --outfile=dist/main.js --format=esm --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;' && bun build src/main.js --outfile=dist/main.cjs --format=cjs --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;' && bun build src/editor.js --outfile=dist/editor.js --format=esm && bun build src/editor/editor-eval-worker.js --outfile=dist/editor-eval-worker.js --format=esm",
+    "bench": "node bench/plan05.mjs --compare bench/plan05-baseline.json --save bench/results/latest.json",
+    "bench:plan05": "node bench/plan05.mjs --compare bench/plan05-baseline.json --save bench/results/latest.json",
+    "build": "bun build src/main.js --outfile=dist/main.js --format=esm --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;' && bun build src/main.js --outfile=dist/main.cjs --format=cjs --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;' && bun build src/editor.js --outfile=dist/editor.js --format=esm --banner 'var global=globalThis;' && bun build src/editor/editor-eval-worker.js --outfile=dist/editor-eval-worker.js --format=esm --banner 'var global=globalThis;'",
     "build:bin": "bun build --compile --target=bun-darwin-arm64 src/cli.js --outfile=dist/bin/10x",
     "build:bin:linux": "bun build --compile --target=bun-linux-x64 src/cli.js --outfile=dist/bin/10x-linux-x64",
     "build:bin:macos": "bun build --compile --target=bun-darwin-x64 src/cli.js --outfile=dist/bin/10x-macos-x64",

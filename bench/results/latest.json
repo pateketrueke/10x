@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "timestamp": "2026-03-03T20:57:53.075Z",
+    "runtime": "v24.10.0",
+    "terms": 2000,
+    "iterations": 400,
+    "lookups": 200000,
+    "keys": 10000
+  },
+  "walk": {
+    "old_ms": 205.51,
+    "new_ms": 16.23,
+    "speedup": 12.66
+  },
+  "env_resolved_lookup": {
+    "array_includes_ms": 2243.4,
+    "set_has_ms": 8.66,
+    "speedup": 259.05
+  },
+  "comparison": {
+    "baseline": "bench/plan05-baseline.json",
+    "walk_old_ms_change_pct": -1.51,
+    "walk_new_ms_change_pct": -1.93,
+    "env_array_ms_change_pct": -2.36,
+    "env_set_ms_change_pct": -4.63
+  }
+}
