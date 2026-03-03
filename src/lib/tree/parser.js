@@ -16,7 +16,6 @@ export default class Parser {
   constructor(tokens, plain, ctx) {
     this.templates = (ctx && ctx.templates) || {};
     this.template = null;
-    this.textAsStrings = !!(ctx && ctx.textAsStrings);
     this.partial = [];
     this.raw = plain;
 
@@ -499,7 +498,7 @@ export default class Parser {
           root = stack.pop();
           offsets.pop();
         }
-      } else if (isText(token) && this.textAsStrings && this.isTextConvertible(token)) {
+      } else if (isText(token) && this.isTextConvertible(token)) {
         push(this.convertTextToString(token, tokenInfo));
       } else if (!(isText(token) || isCode(token) || isRef(token))) {
         // parse within tokenized strings!

@@ -1129,7 +1129,6 @@ class TenXEditor extends HTMLElement {
       const inlineNext = new Map();
       const emitted = [];
       const env = new Env();
-      env.textAsStrings = true;
 
       for (const statement of statements) {
         if (!statement?.source?.trim()) continue;

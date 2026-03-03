@@ -84,9 +84,8 @@ describe('Eval', () => {
       expect(await run('bar=42.\n"foo#{bar}"')).to.eql([Expr.value('foo42')]);
     });
 
-    it('should evaluate markdown text buffers as strings when enabled', async () => {
+    it('should evaluate markdown text buffers as strings', async () => {
       const env = new Env();
-      env.textAsStrings = true;
       env.set('x', { body: [Expr.value(2)] });
 
       expect(await run('hello #{x}.', env)).to.eql([Expr.value('hello 2.')]);
