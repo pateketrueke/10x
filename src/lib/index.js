@@ -2,16 +2,26 @@ import Expr from './tree/expr';
 import Eval from './tree/eval';
 import Parser from './tree/parser';
 
-import { DEFAULT_MAPPINGS } from './builtins';
+import { ensureDefaultMappings } from './builtins';
 
-// export helpers and all units!
-Expr.Unit.to = Parser.sub('a, b -> a.to(b)');
+let builtinsReady = false;
 
-Object.keys(DEFAULT_MAPPINGS).forEach(kind => {
-  Expr.Unit[kind] = Parser.sub(`:${DEFAULT_MAPPINGS[kind]}`);
-});
+function ensureBuiltins() {
+  if (builtinsReady) return;
+  builtinsReady = true;
+
+  const mappings = ensureDefaultMappings();
+
+  // export helpers and all units lazily to avoid eager startup cost
+  Expr.Unit.to = Parser.sub('a, b -> a.to(b)');
+
+  Object.keys(mappings).forEach(kind => {
+    Expr.Unit[kind] = Parser.sub(`:${mappings[kind]}`);
+  });
+}
 
 export async function evaluate(tokens, environment, enabledDetail) {
+  ensureBuiltins();
   const info = Eval.info({
     enabled: enabledDetail,
     depth: 0,
@@ -32,6 +42,7 @@ export async function evaluate(tokens, environment, enabledDetail) {
 }
 
 export async function execute(code, environment, enabledDetail) {
+  ensureBuiltins();
   let failure = null;
   let value = null;
   let info = {};

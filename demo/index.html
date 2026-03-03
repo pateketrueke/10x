@@ -27,7 +27,6 @@
       gap: 12px;
       flex-shrink: 0;
     }
-
     header h1 {
       font-size: 13px;
       font-weight: 600;
@@ -50,7 +49,7 @@
       overflow: auto;
     }
 
-    tenx-editor {
+    tenx-editor-ce {
       display: block;
       min-height: 100%;
     }
@@ -64,31 +63,35 @@
 </header>
 
 <main>
-  <tenx-editor id="editor">fib = n ->
-  :if (< n 2) 1
-  :else fib(n - 1) + fib(n - 2);
+  <tenx-editor-ce id="editor">fib = n -&gt;
+  :if (&lt; n 2) 1
+  :else fib(n - 1) + fib(n - 2).
 
-fib(10);
-fib(15);</tenx-editor>
+fib(10).
+fib(15).
+  </tenx-editor-ce>
 </main>
 
 <script type="module">
-  import './editor.js';
+  import './editor-contenteditable.js';
 
   const editor = document.getElementById('editor');
   const status = document.getElementById('status');
 
-  editor.addEventListener('change', e => {
+  function onChange(e) {
     const { results } = e.detail;
     const count = results.filter(r => r !== undefined).length;
     status.className = 'status ok';
     status.textContent = `${count} result${count === 1 ? '' : 's'}`;
-  });
+  }
 
-  editor.addEventListener('error', e => {
+  function onError(e) {
     status.className = 'status err';
     status.textContent = e.detail.error?.message?.split('\n')[0] ?? 'error';
-  });
+  }
+
+  editor.addEventListener('change', onChange);
+  editor.addEventListener('error', onError);
 
   // warm up the evaluator
   try {

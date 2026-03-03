@@ -6,7 +6,7 @@ import {
 } from './symbols';
 
 import {
-  CURRENCY_SYMBOLS, CURRENCY_EXCHANGES, DEFAULT_MAPPINGS,
+  CURRENCY_SYMBOLS, CURRENCY_EXCHANGES, DEFAULT_MAPPINGS, ensureDefaultMappings,
 } from '../builtins';
 
 import {
@@ -653,6 +653,7 @@ Expr.define('unit', class Unit extends Expr.Val {
   }
 
   to(type) {
+    ensureDefaultMappings();
     const newKind = type.replace(/^:/, '');
 
     let value;
@@ -679,6 +680,7 @@ Expr.define('unit', class Unit extends Expr.Val {
   }
 
   static exists(type) {
+    ensureDefaultMappings();
     return DEFAULT_MAPPINGS[type] || DEFAULT_MAPPINGS[type.toLowerCase()];
   }
 
