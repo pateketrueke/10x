@@ -1,3 +1,3 @@
-import { cli } from '../index.js';
+import { cli } from './index.js';
 
 await cli();

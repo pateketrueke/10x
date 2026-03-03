@@ -3,4 +3,31 @@
 ':' // ; exec "$(command -v nodejs || command -v node)" "$0" "$@"
 ; // eslint-disable-line semi-style
 
-import('../index.js').then(m => m.cli());
+const candidates = [
+  '../dist/main.js',
+  '../src/index.js',
+];
+
+async function loadCli() {
+  let lastError;
+
+  for (const specifier of candidates) {
+    try {
+      const mod = await import(specifier);
+      if (typeof mod.cli === 'function') return mod.cli;
+      lastError = new Error(`Module ${specifier} loaded but has no cli() export`);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
+loadCli()
+  .then(cli => cli())
+  .catch(error => {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    process.exit(1);
+  });

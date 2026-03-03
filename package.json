@@ -19,7 +19,7 @@
     }
   },
   "scripts": {
-    "dev": "bun run build && bun --watch run index.js",
+    "dev": "bun run build && bun --watch run src/index.js",
     "watch": "bun test --watch tests/",
     "bench": "node bench/plan05.mjs --compare bench/plan05-baseline.json --save bench/results/latest.json",
     "bench:plan05": "node bench/plan05.mjs --compare bench/plan05-baseline.json --save bench/results/latest.json",

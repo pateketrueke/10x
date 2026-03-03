@@ -4,7 +4,7 @@ $format: esm
 ---
 */
 
-import { execute, evaluate } from './lib';
+import { execute, evaluate } from './lib/index.js';
 import Env from './lib/tree/env';
 import Expr from './lib/tree/expr';
 import Parser from './lib/tree/parser';

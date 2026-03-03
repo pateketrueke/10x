@@ -14,7 +14,7 @@ import Env from '../src/lib/tree/env';
 import { execute as run } from '../src/lib';
 import { deindent, serialize } from '../src/lib/helpers';
 
-import shared from '../lib/shared.js';
+import shared from '../src/adapters/node/shared.js';
 
 process.argv = [null, null, 'a', 'X=Y', 'M:N', '-b', '--c', '--', 'd', 'e'];
 

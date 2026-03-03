@@ -25,7 +25,7 @@ import Expr from '../src/lib/tree/expr';
 import Env from '../src/lib/tree/env';
 import Parser from '../src/lib/tree/parser';
 import Scanner from '../src/lib/tree/scanner';
-import shared from '../lib/shared.js';
+import shared from '../src/adapters/node/shared.js';
 
 tk.freeze(1577858400000);
 shared({ Env }, process.argv.slice(2));
