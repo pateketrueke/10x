@@ -130,7 +130,7 @@ describe('Prelude', () => {
         Expr.value(5),
         Expr.value(3),
         Expr.value(3),
-        Expr.value(5),
+        Expr.value(0),
         Expr.value(1),
       ]);
     });

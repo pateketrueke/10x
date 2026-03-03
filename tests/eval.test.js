@@ -84,6 +84,49 @@ describe('Eval', () => {
       expect(await run('bar=42.\n"foo#{bar}"')).to.eql([Expr.value('foo42')]);
     });
 
+    it('should support tag values and callable tag composition', async () => {
+      expect(await run('<div />')).to.eql([
+        Expr.tag({
+          name: 'div',
+          attrs: {},
+          children: [],
+          selfClosing: true,
+        }),
+      ]);
+
+      expect(await run(`
+        :import render :from "Prelude".
+        box = <div class="a" />.
+        render(box((:id "main"), "ok")).
+      `)).to.eql([Expr.value('<div class="a" id="main">ok</div>')]);
+    });
+
+    it('should evaluate tag expressions and component tags', async () => {
+      expect(await run(`
+        :import render :from "Prelude".
+        x = 2.
+        render(<div n={x}>{x + 1}</div>).
+      `)).to.eql([Expr.value('<div n="2">3</div>')]);
+
+      expect(await run(`
+        :import render :from "Prelude".
+        Box = props -> <div class={props.kind} />.
+        render(<Box kind={"ok"} />).
+      `)).to.eql([Expr.value('<div class="ok" />')]);
+
+      expect(await run(`
+        :import render :from "Prelude".
+        view = -> <span>ok</span>.
+        render(<div>{@render view()}</div>).
+      `)).to.eql([Expr.value('<div><span>ok</span></div>')]);
+
+      expect(await run(`
+        :import render :from "Prelude".
+        props = (:id "x", :class "from-spread").
+        render(<div {...props} class="fixed" />).
+      `)).to.eql([Expr.value('<div id="x" class="fixed" />')]);
+    });
+
     it('should evaluate markdown text buffers as strings', async () => {
       const env = new Env();
       env.set('x', { body: [Expr.value(2)] });

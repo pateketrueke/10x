@@ -1,5 +1,6 @@
 import Expr from './expr';
 import Scanner from './scanner';
+import { parseTag } from '../tag';
 
 import {
   CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME,
@@ -502,7 +503,13 @@ export default class Parser {
         push(this.convertTextToString(token, tokenInfo));
       } else if (!(isText(token) || isCode(token) || isRef(token))) {
         // parse within tokenized strings!
-        if (isString(token) && Array.isArray(token.value)) {
+        if (isString(token) && tokenInfo.kind === 'markup' && typeof token.value === 'string') {
+          try {
+            push(Expr.tag(parseTag(token.value), tokenInfo));
+          } catch (_) {
+            push(Expr.from(token));
+          }
+        } else if (isString(token) && Array.isArray(token.value)) {
           push(Expr.literal({ type: STRING, value: this.subTree(token.value, true) }, tokenInfo));
         } else {
           push(Expr.from(token));

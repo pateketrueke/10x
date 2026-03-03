@@ -8,6 +8,7 @@ import {
   NOT, LIKE, EXACT_EQ, EQUAL, LESS_EQ, LESS, GREATER_EQ, GREATER,
   CONTROL_TYPES, SYMBOL_TYPES,
 } from './tree/symbols';
+import { renderTag } from './tag';
 
 const LOGIC_TYPES = [LESS, LESS_EQ, GREATER, GREATER_EQ, EXACT_EQ, NOT_EQ, NOT, LIKE, EQUAL, SOME, EVERY];
 const RESULT_TYPES = [NUMBER, STRING, SYMBOL, LITERAL, BLOCK, RANGE, REGEX];
@@ -532,6 +533,10 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
   }
 
   if (isLiteral(token)) {
+    if (token.isTag) {
+      return colorize(STRING, renderTag(token.value));
+    }
+
     if (token.cached) {
       return colorize(LITERAL, `${token.value}!`);
     }

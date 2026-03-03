@@ -80,6 +80,53 @@ describe('Parser', () => {
     ])]);
   });
 
+  it('should parse simple markup literal as tag value', () => {
+    expect(Parser.getAST('<div class="box">Hi</div>')).to.eql([
+      Expr.tag({
+        name: 'div',
+        attrs: { class: 'box' },
+        children: ['Hi'],
+        selfClosing: false,
+      }),
+    ]);
+  });
+
+  it('should parse tag expression attrs and children', () => {
+    expect(Parser.getAST('<div class={kind}>{x+1}</div>')).to.eql([
+      Expr.tag({
+        name: 'div',
+        attrs: {
+          class: { expr: 'kind' },
+        },
+        children: [{ expr: 'x+1' }],
+        selfClosing: false,
+      }),
+    ]);
+  });
+
+  it('should parse render directive expressions in tags', () => {
+    expect(Parser.getAST('<div>{@render view()}</div>')).to.eql([
+      Expr.tag({
+        name: 'div',
+        attrs: {},
+        children: [{ expr: 'view()' }],
+        selfClosing: false,
+      }),
+    ]);
+  });
+
+  it('should parse spread props in tag attrs', () => {
+    expect(Parser.getAST('<div {...props} class="ok" />')).to.eql([
+      Expr.tag({
+        name: 'div',
+        attrs: { class: 'ok' },
+        spreads: [{ expr: 'props' }],
+        children: [],
+        selfClosing: true,
+      }),
+    ]);
+  });
+
   it('should parse markdown tags', () => {
     expect(Parser.getAST('> x `y`', true)[0].body).to.eql([
       Expr.from(TEXT, {

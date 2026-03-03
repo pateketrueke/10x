@@ -44,6 +44,7 @@ export default class Expr {
   get isIterable() { return this.isString || this.isBlock || this.isRange; }
 
   get isObject() { return this instanceof Expr.Object; }
+  get isTag() { return this instanceof Expr.Tag; }
   get isFunction() { return this instanceof Expr.Function; }
 
   get isLiteral() { return this instanceof Expr.Literal; }
@@ -399,6 +400,9 @@ export default class Expr {
     if (mixed === false) return Expr.from(LITERAL, false, tokenInfo);
 
     if (isPlain(mixed) && mixed instanceof Expr.Val) return mixed.toToken();
+    if (isPlain(mixed) && typeof mixed.name === 'string' && Array.isArray(mixed.children)) {
+      return Expr.tag(mixed, tokenInfo);
+    }
 
     if (typeof mixed === 'string') return Expr.from(STRING, mixed, tokenInfo);
     if (typeof mixed === 'number') return Expr.from(NUMBER, mixed.toString(), tokenInfo);
@@ -531,6 +535,10 @@ export default class Expr {
 
   static map(params, tokenInfo) {
     return Expr.object({ type: LITERAL, value: params }, tokenInfo);
+  }
+
+  static tag(node, tokenInfo) {
+    return Expr.markup({ type: LITERAL, value: node }, tokenInfo);
   }
 
   static let(params, tokenInfo) {
@@ -759,6 +767,7 @@ Expr.define('frac', class Frac extends Expr.Val {
 });
 
 Expr.define('object', class Object_ extends Expr {});
+Expr.define('markup', class Tag extends Expr {});
 Expr.define('literal', class Literal extends Expr {});
 Expr.define('function', class Function_ extends Expr {});
 Expr.define('callable', class Callable extends Expr {});

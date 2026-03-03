@@ -5,7 +5,9 @@
 
 import Env from './env';
 import Expr from './expr';
+import Parser from './parser';
 import Range from '../range';
+import { composeTag } from '../tag';
 
 import {
   EOL, COMMA, MINUS, PLUS, MUL, DIV, MOD, BLOCK, RANGE, LITERAL, NUMBER, STRING, SYMBOL,
@@ -324,6 +326,100 @@ export default class Eval {
     return true;
   }
 
+  async evalTagExpr(source) {
+    if (!source) return [];
+    const body = Parser.sub(source, this.env);
+    return Eval.do(body, this.env, 'TagExpr', false, this.ctx.tokenInfo);
+  }
+
+  async evalTags() {
+    if (!this.ctx || !this.ctx.isTag) return false;
+
+    const normalizeChild = (token) => {
+      if (!token) return null;
+      if (token.isTag) return token.value;
+      return Expr.plain(token, this.convert, '<TagChild>');
+    };
+
+    const evaluateNode = async (node) => {
+      const attrs = {};
+      const children = [];
+
+      for (const spread of node.spreads || []) {
+        const [spreadValue] = await this.evalTagExpr(spread.expr);
+
+        if (typeof spreadValue === 'undefined' || spreadValue === null) continue;
+
+        const plain = Expr.plain(spreadValue, this.convert, '<TagSpread>');
+
+        if (!plain || Array.isArray(plain) || typeof plain !== 'object') {
+          raise('Tag spread expects an object value', this.ctx.tokenInfo);
+        }
+
+        Object.assign(attrs, plain);
+      }
+
+      for (const key of Object.keys(node.attrs || {})) {
+        const value = node.attrs[key];
+
+        if (value && typeof value === 'object' && typeof value.expr === 'string') {
+          const [exprValue] = await this.evalTagExpr(value.expr);
+          attrs[key] = typeof exprValue === 'undefined'
+            ? ''
+            : Expr.plain(exprValue, this.convert, '<TagAttr>');
+        } else {
+          attrs[key] = value;
+        }
+      }
+
+      for (const child of node.children || []) {
+        if (typeof child === 'string') {
+          children.push(child);
+          continue;
+        }
+
+        if (child && typeof child.expr === 'string') {
+          const parts = await this.evalTagExpr(child.expr);
+          parts.forEach(part => {
+            const fixed = normalizeChild(part);
+            if (fixed !== null && typeof fixed !== 'undefined') children.push(fixed);
+          });
+          continue;
+        }
+
+        const [resolved] = await Eval.do([Expr.tag(child, this.ctx.tokenInfo)], this.env, 'TagNode', false, this.ctx.tokenInfo);
+        const fixed = normalizeChild(resolved);
+        if (fixed !== null && typeof fixed !== 'undefined') children.push(fixed);
+      }
+
+      const resolvedNode = {
+        name: node.name,
+        attrs,
+        children,
+        selfClosing: node.selfClosing && !children.length,
+      };
+
+      const component = /^[A-Z]/.test(resolvedNode.name) && this.env.has(resolvedNode.name, true);
+
+      if (!component) {
+        return [Expr.tag(resolvedNode, this.ctx.tokenInfo)];
+      }
+
+      const props = {
+        ...resolvedNode.attrs,
+        children: resolvedNode.children,
+      };
+
+      return Eval.do([
+        Expr.local(resolvedNode.name, this.ctx.tokenInfo),
+        Expr.block({ args: [Expr.value(props, this.ctx.tokenInfo)] }, this.ctx.tokenInfo),
+      ], this.env, 'TagComp', false, this.ctx.tokenInfo);
+    };
+
+    this.append(...await evaluateNode(this.ctx.value));
+    return true;
+  }
+
   async evalLogic() {
     // evaluate logical expressions, e.g. `(< 1 2)`
     const { type, value } = this.ctx;
@@ -354,7 +450,7 @@ export default class Eval {
       && !(isMath(prev) || isEnd(prev))
       && !isEnd(this.oldToken())
     ) {
-      if (!(prev.isFFI || prev.isCallable || prev.isFunction || isMixed(prev, 'function'))) {
+      if (!(prev.isFFI || prev.isCallable || prev.isFunction || prev.isTag || isMixed(prev, 'function'))) {
         check(prev, 'callable');
       }
 
@@ -371,6 +467,12 @@ export default class Eval {
       // filter out placeholders to consume values
       const args = await Eval.do(this.ctx.getArgs(), this.env, 'Call', false, this.ctx.tokenInfo);
       const fixedArgs = args.filter(x => !isLiteral(x, '_'));
+
+      if (prev.isTag) {
+        const plainArgs = Expr.plain(fixedArgs, this.convert, '<Tag>');
+        this.replace(Expr.tag(composeTag(prev.value, plainArgs), this.ctx.tokenInfo));
+        return true;
+      }
 
       // pass evaluated args to low-level FFIs
       if (prev.isFFI) {
@@ -809,6 +911,7 @@ export default class Eval {
 
       if (
         await this.evalUnary()
+        || await this.evalTags()
         || await this.evalSymbols()
         || await this.evalStrings()
         || await this.evalDotProps()

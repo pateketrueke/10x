@@ -8,6 +8,7 @@ import {
 } from './tree/symbols';
 
 import Expr from './tree/expr';
+import { renderTag } from './tag';
 
 const RE_PLACEHOLDER = /(?<!\{)\{([^{}]*)\}/g;
 const RE_FORMATTING = /^([^:]*?)(?::(.*?[<^>](?=\d)|)(\d+|)([?bxo]|)(\.\d+|)([$^]|))?$/;
@@ -29,6 +30,10 @@ export function show(...args) {
 
 export function render(input) {
   if (typeof input === 'undefined') raise('No input to render');
+
+  if (input && input.isTag) {
+    return renderTag(input.value);
+  }
 
   if (input && input.isString) {
     return input.valueOf();
@@ -57,7 +62,8 @@ export function cast(token, target) {
 export function repr(token) {
   let type;
 
-  if (token.isObject) type = 'object';
+  if (token.isTag) type = 'markup';
+  else if (token.isObject) type = 'object';
   else if (token.isFunction) type = 'function';
   else if (token.isCallable) type = 'definition';
   else if (token.isSymbol) type = 'symbol';
@@ -71,6 +77,8 @@ export function repr(token) {
 export function size(token) {
   let obj;
 
+  if (token.isTag) obj = token.value.children || [];
+  else
   if (token.isFunction) obj = token.valueOf().target;
   else if (token.isObject) obj = Object.keys(token.valueOf());
   else if (token.isScalar || token.isRange) obj = token.valueOf();
