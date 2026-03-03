@@ -1,10 +1,10 @@
-:import puts, input :from "IO".
-:import getopts :from "Proc".
+@import puts, input @from "IO".
+@import getopts @from "Proc".
 
-:template
-  => (k, v -> :if ([argv.flags]:(k)) v).
+@template
+  => (k, v -> @if ([argv.flags]:(k)) v).
 
-:let argv = getopts(
+@let argv = getopts(
   :boolean [:ask, :help],
   :alias (:h :help),
 ).
@@ -20,7 +20,7 @@ messageOutput =
   :help => usageInfo | :ask => (
     puts("\nPlease ask a few questions:\n\n").
 
-    :let ask = input([
+    @let ask = input([
       (:type :text, :name :foo, :message "A"),
       (:type "text" :name "bar" :message "B"),
     ]).

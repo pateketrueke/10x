@@ -368,26 +368,26 @@ export default class Expr {
 
     const params = { type: BLOCK, value: { body } };
 
-    if (type === ':if') return Expr.ifStatement(params, tokenInfo);
-    if (type === ':else') return Expr.elseStatement(params, tokenInfo);
+    if (type === '@if') return Expr.ifStatement(params, tokenInfo);
+    if (type === '@else') return Expr.elseStatement(params, tokenInfo);
 
-    if (type === ':while') return Expr.whileStatement(params, tokenInfo);
-    if (type === ':do') return Expr.doStatement(params, tokenInfo);
+    if (type === '@while') return Expr.whileStatement(params, tokenInfo);
+    if (type === '@do') return Expr.doStatement(params, tokenInfo);
 
-    if (type === ':let') return Expr.letStatement(params, tokenInfo);
-    if (type === ':loop') return Expr.loopStatement(params, tokenInfo);
-    if (type === ':match') return Expr.matchStatement(params, tokenInfo);
+    if (type === '@let') return Expr.letStatement(params, tokenInfo);
+    if (type === '@loop') return Expr.loopStatement(params, tokenInfo);
+    if (type === '@match') return Expr.matchStatement(params, tokenInfo);
 
-    if (type === ':try') return Expr.tryStatement(params, tokenInfo);
-    if (type === ':check') return Expr.checkStatement(params, tokenInfo);
-    if (type === ':rescue') return Expr.rescueStatement(params, tokenInfo);
+    if (type === '@try') return Expr.tryStatement(params, tokenInfo);
+    if (type === '@check') return Expr.checkStatement(params, tokenInfo);
+    if (type === '@rescue') return Expr.rescueStatement(params, tokenInfo);
 
-    if (type === ':from') return Expr.fromStatement(params, tokenInfo);
-    if (type === ':import') return Expr.importStatement(params, tokenInfo);
-    if (type === ':module') return Expr.moduleStatement(params, tokenInfo);
-    if (type === ':export') return Expr.exportStatement(params, tokenInfo);
+    if (type === '@from') return Expr.fromStatement(params, tokenInfo);
+    if (type === '@import') return Expr.importStatement(params, tokenInfo);
+    if (type === '@module') return Expr.moduleStatement(params, tokenInfo);
+    if (type === '@export') return Expr.exportStatement(params, tokenInfo);
 
-    if (type === ':template') return Expr.templateStatement(params, tokenInfo);
+    if (type === '@template') return Expr.templateStatement(params, tokenInfo);
 
     return Expr.statement(params, tokenInfo);
   }
@@ -542,7 +542,7 @@ export default class Expr {
   }
 
   static let(params, tokenInfo) {
-    return Expr.map({ let: Expr.stmt(':let', params) }, tokenInfo);
+    return Expr.map({ let: Expr.stmt('@let', params) }, tokenInfo);
   }
 
   static body(values, tokenInfo) {

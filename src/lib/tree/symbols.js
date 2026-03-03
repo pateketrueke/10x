@@ -36,6 +36,7 @@ export const EVERY = Symbol('EVERY');
 
 export const REGEX = Symbol('REGEX');
 export const SYMBOL = Symbol('SYMBOL');
+export const DIRECTIVE = Symbol('DIRECTIVE');
 export const LITERAL = Symbol('LITERAL');
 export const NUMBER = Symbol('NUMBER');
 export const STRING = Symbol('STRING');
@@ -62,11 +63,11 @@ export const DERIVE_METHODS = [
 ];
 
 export const CONTROL_TYPES = [
-  ':if', ':else',
-  ':try', ':check', ':rescue',
-  ':while', ':do',
-  ':let', ':loop', ':match',
-  ':import', ':from', ':module', ':export', ':template',
+  '@if', '@else',
+  '@try', '@check', '@rescue',
+  '@while', '@do',
+  '@let', '@loop', '@match',
+  '@import', '@from', '@module', '@export', '@template',
 ];
 
 export const SYMBOL_TYPES = [

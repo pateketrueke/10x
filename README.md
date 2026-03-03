@@ -230,9 +230,9 @@ Direct block children are flattened:
 ### Control Flow
 
 ```
-:if (:on) "yes" "no";
-:while (condition) body;
-:let x = 1;
+@if (:on) "yes" "no";
+@while (condition) body;
+@let x = 1;
 :return value;
 ```
 
@@ -240,16 +240,16 @@ Short-circuit operators: `|` (or), `&` (and), `?` (ternary-like).
 
 ### Templates and Imports
 
-Extend operators with `:template`:
+Extend operators with `@template`:
 
 ```
-:template ++ (a, b -> a.concat(b));
+@template ++ (a, b -> a.concat(b));
 ```
 
 Import from built-in modules:
 
 ```
-:import concat :from "Array";
+@import concat @from "Array";
 ```
 
 ---

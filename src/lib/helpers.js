@@ -5,6 +5,7 @@ import {
   TEXT, OPEN, CLOSE, COMMA, BEGIN, DONE, EOF, EOL,
   MINUS, PLUS, MUL, DIV, MOD, DOT, OR, SOME, EVERY,
   PIPE, BLOCK, RANGE, REGEX, SYMBOL, LITERAL, NUMBER, STRING, NOT_EQ,
+  DIRECTIVE,
   NOT, LIKE, EXACT_EQ, EQUAL, LESS_EQ, LESS, GREATER_EQ, GREATER,
   CONTROL_TYPES, SYMBOL_TYPES,
 } from './tree/symbols';
@@ -65,6 +66,7 @@ export class Token {
 }
 
 export function isSymbol(t) { return t && t.type === SYMBOL; }
+export function isDirective(t) { return t && t.type === DIRECTIVE; }
 export function isNumber(t) { return t && t.type === NUMBER; }
 export function isString(t) { return t && t.type === STRING; }
 export function isComma(t) { return t && t.type === COMMA; }
@@ -105,7 +107,11 @@ export function isObject(t) { return t && t.type === LITERAL && (t.isObject || i
 export function isLiteral(t, v) { return t && t.type === LITERAL && (v ? t.value === v : true); }
 export function isOperator(t) { return isLogic(t) || isMath(t); }
 
-export function isStatement(t) { return t && CONTROL_TYPES.includes(t); }
+export function isStatement(t) {
+  if (!t) return false;
+  if (typeof t === 'string') return CONTROL_TYPES.includes(t);
+  return isDirective(t) && CONTROL_TYPES.includes(t.value);
+}
 export function isSpecial(t) { return t && SYMBOL_TYPES.includes(t.value); }
 export function isArray(t) { return t && t.type === RANGE && Array.isArray(t.value); }
 export function isSlice(t) { return t && t.type === SYMBOL && RE_SLICING.test(t.value); }
@@ -534,6 +540,7 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
 
   if (isLiteral(token)) {
     if (token.isTag) {
+      if (shorten) return colorize(STRING, '<.../>');
       return colorize(STRING, renderTag(token.value));
     }
 
@@ -747,10 +754,12 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
   const separator = !hasStatements(token) ? `${colorize(COMMA)} ` : ' ';
 
   if (shorten) {
-    return Object.keys(token).map(k => colorize(SYMBOL, `:${k}`)).join(separator);
+    const prefix = hasStatements(token) ? '@' : ':';
+    return Object.keys(token).map(k => colorize(SYMBOL, `${prefix}${k}`)).join(separator);
   }
 
-  const block = Object.keys(token).map(k => `${colorize(SYMBOL, `:${k}`)} ${serialize(token[k], shorten, colorize, descriptor)}`);
+  const prefix = hasStatements(token) ? '@' : ':';
+  const block = Object.keys(token).map(k => `${colorize(SYMBOL, `${prefix}${k}`)} ${serialize(token[k], shorten, colorize, descriptor)}`);
 
   return descriptor === 'Object'
     ? `${colorize(OPEN)}${block.join(separator)}${colorize(CLOSE)}`

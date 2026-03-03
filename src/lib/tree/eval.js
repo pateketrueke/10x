@@ -1084,7 +1084,7 @@ export default class Eval {
     if (isLiteral(body[0])) {
       target = isBlock(body[1]) || isLiteral(body[1]) ? body.shift() : body[0];
 
-      // evaluate strings as functions, e.g. `:loop (...) x "y: #{x * 2}"`
+      // evaluate strings as functions, e.g. `@loop (...) x "y: #{x * 2}"`
       if (isString(body[1]) && Array.isArray(body[1].value)) {
         body = body[1].valueOf();
       }
@@ -1097,7 +1097,7 @@ export default class Eval {
     }
 
     if (target) {
-      // recompose statement into call, e.g. `:loop (...) fn` => `:loop (...) _ fn(_)`
+      // recompose statement into call, e.g. `@loop (...) fn` => `@loop (...) _ fn(_)`
       if (!(environment.has(target.value, true) && body.length === 1)) {
         scope = new Env(environment);
       } else {
@@ -1152,7 +1152,7 @@ export default class Eval {
       isDone = true;
     }
 
-    // iterate lists, arrays, ranges or numeric value, e.g. `:loop (3)` OR `:loop (1..3, 5)` OR `:loop [1, 2]`
+    // iterate lists, arrays, ranges or numeric value, e.g. `@loop (3)` OR `@loop (1..3, 5)` OR `@loop [1, 2]`
     if (value.loop instanceof Expr.LoopStatement) {
       const body = value.loop.getBody();
 
@@ -1160,7 +1160,7 @@ export default class Eval {
         let range;
         let args;
 
-        // evaluate body after range, e.g. `:loop (...) x` where `x` will be also a placeholder
+        // evaluate body after range, e.g. `@loop (...) x` where `x` will be also a placeholder
         if (isBlock(body[i])) {
           if (isBlock(body[i].head())) {
             const [head, ...tail] = body[i].getBody();
@@ -1182,7 +1182,7 @@ export default class Eval {
       isDone = true;
     }
 
-    // evaluate pattern-matching, e.g. `:match (x) y z, a b, ... :else ...`
+    // evaluate pattern-matching, e.g. `@match (x) y z, a b, ... @else ...`
     if (value.match instanceof Expr.MatchStatement) {
       const fixedMatches = value.match.clone().getBody();
       const fixedBody = value.match.head().value.body;
@@ -1252,7 +1252,7 @@ export default class Eval {
       isDone = true;
     }
 
-    // evaluate code with error-handling support, e.g. `:try undef | 0`
+    // evaluate code with error-handling support, e.g. `@try undef | 0`
     if (value.try instanceof Expr.TryStatement || value.rescue instanceof Expr.RescueStatement) {
       const body = (value.try || value.rescue).getBody();
 
@@ -1267,14 +1267,14 @@ export default class Eval {
           failure = e;
         }
 
-        // evaluate guard-expression before continue, e.g. `:check expr`
+        // evaluate guard-expression before continue, e.g. `@check expr`
         if (value.check instanceof Expr.CheckStatement) {
           const [retval] = await Eval.do(value.check.getBody(), environment, 'Check', true, parentTokenInfo);
 
           if (retval && retval.value === true) isDone = true;
         }
 
-        // append rescue statements or nothing, depending on try-presence, e.g. `:rescue ...`
+        // append rescue statements or nothing, depending on try-presence, e.g. `@rescue ...`
         if (!isDone && value.rescue instanceof Expr.RescueStatement) {
           let scope = environment;
           let retry;
@@ -1287,7 +1287,7 @@ export default class Eval {
               let newBody = [];
               let head = [];
 
-              // inject failure into given block, e.g. `:rescue e -> ...`
+              // inject failure into given block, e.g. `@rescue e -> ...`
               if (fixedBody[0].isCallable) {
                 if (fixedBody[0].hasArgs) {
                   if (fixedBody[0].getArgs().length > 1) {
@@ -1339,14 +1339,14 @@ export default class Eval {
       isDone = true;
     }
 
-    // run standard while, e.g. `:while (...) x` where `x` is the body
+    // run standard while, e.g. `@while (...) x` where `x` is the body
     if (value.while instanceof Expr.WhileStatement) {
       const body = value.while.getBody();
       const head = body[0].getBody().shift();
 
       let enabled = true;
 
-      // if do-block is given, evaluate and repeat, e.g. `:do ... :while (...)`
+      // if do-block is given, evaluate and repeat, e.g. `@do ... @while (...)`
       if (value.do instanceof Expr.DoStatement) {
         do {
           subTree.push(...await Eval.do(value.do.getBody(), environment, 'It', true, parentTokenInfo));
@@ -1355,7 +1355,7 @@ export default class Eval {
         enabled = false;
       }
 
-      // otherwise, a while-block is used... e.g. `:while (...) ...`
+      // otherwise, a while-block is used... e.g. `@while (...) ...`
       while (enabled) {
         if ((await Eval.do([head], environment, 'While', true, parentTokenInfo))[0].value !== true) break;
         subTree.push(...await Eval.do(body, environment, 'It', true, parentTokenInfo));
@@ -1364,10 +1364,10 @@ export default class Eval {
       isDone = true;
     }
 
-    // evaluate import statements, e.g. `:import thing :from "Stuff";`
+    // evaluate import statements, e.g. `@import thing @from "Stuff";`
     if (value.import instanceof Expr.ImportStatement) {
       if (!(value.from instanceof Expr.FromStatement)) {
-        raise(`Missing \`:from\` for \`${token}\``);
+        raise(`Missing \`@from\` for \`${token}\``);
       }
 
       only(value.from, isString);

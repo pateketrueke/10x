@@ -1,5 +1,5 @@
-:template ++ (a, b -> a.concat(b)).
+@template ++ (a, b -> a.concat(b)).
 
-:import concat :from "Array".
+@import concat @from "Array".
 
 [1, 2] ++ 4..9.

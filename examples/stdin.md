@@ -1,8 +1,8 @@
-:import puts, err, input :from "IO".
+@import puts, err, input @from "IO".
 
-:let buffer = input().
+@let buffer = input().
 
-:if (= buffer :nil)
+@if (= buffer :nil)
   err("No input provided.\n")
-:else
+@else
   puts("Thank you! Your input:\n<![[CDATA[\n#{buffer}\n]>").

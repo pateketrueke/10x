@@ -11,6 +11,7 @@ import {
 
 import {
   TEXT, COMMENT, COMMENT_MULTI, REGEX, SYMBOL, STRING, LITERAL, NUMBER, PIPE, SOME, EVERY,
+  DIRECTIVE,
   OR, NOT, LESS, LESS_EQ, GREATER, GREATER_EQ, EXACT_EQ, NOT_EQ, EQUAL, LIKE,
   RANGE, BLOCK, COMMA, BEGIN, DONE, CLOSE, OPEN, DOT, EOL, EOF,
   MINUS, PLUS, MOD, MUL, DIV, HEADING, BLOCKQUOTE,
@@ -62,6 +63,9 @@ export function colorize(type, value, dimmed) {
 
     case SYMBOL:
       return color.yellow(value);
+
+    case DIRECTIVE:
+      return color.magenta(value);
 
     case STRING:
       value = markers(color, value);

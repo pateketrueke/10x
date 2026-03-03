@@ -189,7 +189,7 @@ describe('Parser', () => {
 
   it('should allow simple AST-transformations', () => {
     expect(Parser.getAST(`
-      :template ++ (a -> :let a = a + 1).
+      @template ++ (a -> @let a = a + 1).
       a++, ++b
     `)).to.eql([
       Expr.group([
@@ -214,7 +214,7 @@ describe('Parser', () => {
     ]);
 
     expect(Parser.getAST(`
-      :template += (a, b -> :let a = a + b).
+      @template += (a, b -> @let a = a + b).
       x.i += (2 / 5)
     `)).to.eql([
       Expr.group([
@@ -244,7 +244,7 @@ describe('Parser', () => {
     ]);
 
     expect(Parser.getAST(`
-      :template
+      @template
         ++! (a, b -> [a, b]),
         ++? (a..b).
 
@@ -390,7 +390,7 @@ describe('Parser', () => {
     });
 
     it('should parse maps as statements', () => {
-      expect(Parser.getAST(':if (< n 2) 1, (< n 1) 0')).to.eql([
+      expect(Parser.getAST('@if (< n 2) 1, (< n 1) 0')).to.eql([
         Expr.map({
           if: Expr.stmt([
             Expr.block({
@@ -405,7 +405,7 @@ describe('Parser', () => {
     });
 
     it('should parse assignments too', () => {
-      expect(Parser.getAST(':let\n(a = 1)')).to.eql([Expr.map({
+      expect(Parser.getAST('@let\n(a = 1)')).to.eql([Expr.map({
         let: Expr.group({
           body: [Expr.stmt([Expr.block({
             body: [Expr.value(1)],
@@ -414,7 +414,7 @@ describe('Parser', () => {
         }),
       })]);
 
-      expect(Parser.getAST(':while (>= n-- 0)\ntemp = a')).to.eql([Expr.map({
+      expect(Parser.getAST('@while (>= n-- 0)\ntemp = a')).to.eql([Expr.map({
         while: Expr.stmt([
           Expr.block({
             body: [

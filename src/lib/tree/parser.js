@@ -9,7 +9,7 @@ import {
 
 import {
   Token, check, raise, assert, hasBreaks, hasStatements, isStatement, isSpecial, isComment, isRange, isSlice, isComma, isNumber,
-  isString, isSymbol, isLogic, isUnit, isSome, isOpen, isClose, isBegin, isDone, isBlock, isText, isCode,
+  isString, isSymbol, isDirective, isLogic, isUnit, isSome, isOpen, isClose, isBegin, isDone, isBlock, isText, isCode,
   isRef, isLiteral, isList, isEqual, isMath, isNot, isEnd, isEOF, isEOL, quote,
 } from '../helpers';
 
@@ -63,14 +63,18 @@ export default class Parser {
       || (isSymbol(curToken) && !isSpecial(curToken))
 
       // terminate symbol if text is not allowed after! (most control structures are OK)
-      || (isText(curToken) && !CONTROL_TYPES.includes(token.value))
+      || (isText(curToken) && !(isDirective(token) && CONTROL_TYPES.includes(token.value)))
 
       // terminate if next-token is an operator, but not within templates!
-      || ((isMath(curToken) && !isSome(curToken) && curToken.type !== MINUS) && token.value !== ':template')
+      || ((isMath(curToken) && !isSome(curToken) && curToken.type !== MINUS) && token.value !== '@template')
     ) {
       if (token.value === ':nil') return Expr.value(null, token);
       if (token.value === ':on') return Expr.value(true, token);
       if (token.value === ':off') return Expr.value(false, token);
+
+      if (isDirective(token)) {
+        return Expr.stmt(token.value, [], token);
+      }
 
       return Expr.symbol(token.value, isSome(curToken) || null, token);
     }
@@ -85,7 +89,7 @@ export default class Parser {
       const body = stack[stack.length - 1];
       const cur = this.next();
 
-      if (!this.depth && isSymbol(cur)) {
+      if (!this.depth && (isSymbol(cur) || isDirective(cur))) {
         if (isSpecial(cur) || isSlice(cur)) {
           body.push(Expr.from(cur));
           continue;
@@ -318,7 +322,7 @@ export default class Parser {
       const tokenInfo = token.tokenInfo || token;
 
       // collect pairs of symbols as tuples, but leave single and well-know symbols alone!
-      if (isSymbol(token)) {
+      if (isSymbol(token) || isDirective(token)) {
         const fixedToken = this.collection(tokenInfo, curToken, nextToken);
 
         // consume next-token if symbol was set as optional, e.g. `:test?`
@@ -643,7 +647,7 @@ export default class Parser {
         && !body[0].isCallable
         && !(body[0].getArg(0) && body[0].getArg(0).isExpression)
         && (
-          [':import', ':export'].includes(name)
+          ['@import', '@export'].includes(name)
           || !(body[0].getArg(0) && body[0].getArg(0).isObject
         ))
       ) {
@@ -653,7 +657,7 @@ export default class Parser {
       const lastToken = sub[sub.length - 1];
 
       // validate and transform conditions and statements
-      if (name === ':if' || (name === ':while' && !hasConditional)) {
+      if (name === '@if' || (name === '@while' && !hasConditional)) {
         if (!isBlock(body[0])) {
           if (!isClose(lastToken)) {
             raise(`Missing block before \`${lastToken}\``, lastToken.tokenInfo);
@@ -662,7 +666,7 @@ export default class Parser {
           }
         }
 
-        if (name === ':while') hasConditional = true;
+        if (name === '@while') hasConditional = true;
       }
 
       // append non-blocks

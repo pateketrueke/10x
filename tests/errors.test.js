@@ -162,7 +162,7 @@ describe('Errors', () => {
       Env.register = Expr.Unit.from;
       Env.resolve = source => ({ Unit: Expr.unit })[source];
 
-      await failWith(run(':import to :from "Unit".\n1000USD to :UNDEF'), 'Unsupported USD currency');
+      await failWith(run('@import to @from "Unit".\n1000USD to :UNDEF'), 'Unsupported USD currency');
 
       await useCurrencies({
         key: 'x',
@@ -177,7 +177,7 @@ describe('Errors', () => {
         resolve: () => null,
       }, '2020-01-01');
 
-      await failWith(run(':import to :from "Unit".\n1000 EUR to :UNDEF'), 'Unsupported UNDEF currency');
+      await failWith(run('@import to @from "Unit".\n1000 EUR to :UNDEF'), 'Unsupported UNDEF currency');
     });
 
     it('should fail if symbols cannot resolve to units', async () => {
@@ -191,49 +191,49 @@ describe('Errors', () => {
   describe('Runtime', () => {
     describe('SYMBOL', () => {
       it('should fail on invalid module/export statements', async () => {
-        await failWith(run(':module 2.\n'), 'Unexpected `2` at line 1:9');
-        await failWith(run(':export :nil.\n'), 'Unexpected `:nil` at line 1:9');
-        await failWith(run(':export sum.\n:export sum.\n'), 'Export for `sum` already exists at line 2:1');
-        await failWith(run(':module "Test".\n:module "Other".\n'), 'Module name `Test` is already set at line 2:1');
+        await failWith(run('@module 2.\n'), 'Unexpected `2` at line 1:9');
+        await failWith(run('@export :nil.\n'), 'Unexpected `:nil` at line 1:9');
+        await failWith(run('@export sum.\n@export sum.\n'), 'Export for `sum` already exists at line 2:1');
+        await failWith(run('@module "Test".\n@module "Other".\n'), 'Module name `Test` is already set at line 2:1');
       });
 
       it('should fail on invalid import/from statements', async () => {
-        await failWith(run(':from 42.\n'), 'Unexpected `:from` at line 1:1');
-        await failWith(run(':import stuff.\n'), 'Missing `:from` for `:import` at line 1:1');
-        await failWith(run(':import (:x foo, bar) :from "Array","Bar".\n'), 'Unexpected `"..."` at line 1:37');
-        await failWith(run(':import foo :from "im_not_exists"'), 'Could not load `foo` at line 1:9 (im_not_exists/foo)');
+        await failWith(run('@from 42.\n'), 'Unexpected `@from` at line 1:1');
+        await failWith(run('@import stuff.\n'), 'Missing `@from` for `@import` at line 1:1');
+        await failWith(run('@import (:x foo, bar) @from "Array","Bar".\n'), 'Unexpected `"..."` at line 1:37');
+        await failWith(run('@import foo @from "im_not_exists"'), 'Could not load `foo` at line 1:9 (im_not_exists/foo)');
 
-        await failWith(run(':import (:nil) :from "Test"'), 'Unexpected `:nil` at line 1:10');
-        await failWith(run(':import 1 :from "Test"'), 'Expecting literal but found `1` at line 1:9');
-        await failWith(run(':import (1, :k 2) :from "Test"'), 'Expecting literal but found `1` at line 1:10');
+        await failWith(run('@import (:nil) @from "Test"'), 'Unexpected `:nil` at line 1:10');
+        await failWith(run('@import 1 @from "Test"'), 'Expecting literal but found `1` at line 1:9');
+        await failWith(run('@import (1, :k 2) @from "Test"'), 'Expecting literal but found `1` at line 1:10');
 
-        await failWith(run(':import (:key (:nil)) :from "Test"'), 'Unexpected `:nil` at line 1:16');
-        await failWith(run(':import (:key foo, (:nil)) :from "Test"'), 'Unexpected `:nil` at line 1:21');
-        await failWith(run(':import (a, :k 2) :from "Test"'), 'Expecting literal but found `2` at line 1:16');
-        await failWith(run(':import (:a b, 1) :from "Test"'), 'Expecting literal but found `1` at line 1:16');
+        await failWith(run('@import (:key (:nil)) @from "Test"'), 'Unexpected `:nil` at line 1:16');
+        await failWith(run('@import (:key foo, (:nil)) @from "Test"'), 'Unexpected `:nil` at line 1:21');
+        await failWith(run('@import (a, :k 2) @from "Test"'), 'Expecting literal but found `2` at line 1:16');
+        await failWith(run('@import (:a b, 1) @from "Test"'), 'Expecting literal but found `1` at line 1:16');
       });
 
       it('should fail on missing export definitions', async () => {
-        await failWith(run(':import fr :from "Frac"'), 'Symbol `fr` not exported (Frac/fr)');
+        await failWith(run('@import fr @from "Frac"'), 'Symbol `fr` not exported (Frac/fr)');
 
         Env.resolve = source => ({
           Undef: { t: 42 },
         })[source];
 
-        await failWith(run(':import undef :from "Undef"'), 'Symbol `undef` not exported (Undef/undef)');
-        await failWith(run(':import default :from "Unit"'), 'Symbol `default` not exported (Unit/default)');
+        await failWith(run('@import undef @from "Undef"'), 'Symbol `undef` not exported (Undef/undef)');
+        await failWith(run('@import default @from "Unit"'), 'Symbol `default` not exported (Unit/default)');
       });
 
       it('should fail on missing export definitions', async () => {
         const env = new Env();
 
-        await run(':module "Test" :export (:undef ok).\n', env);
+        await run('@module "Test" @export (:undef ok).\n', env);
 
         Env.resolve = source => ({
           './other.md': env,
         })[source];
 
-        await failWith(run(':import (:s sum) :from "./other.md".\n'), 'Local `s` not exported (Test/s:sum) at line 1:10');
+        await failWith(run('@import (:s sum) @from "./other.md".\n'), 'Local `s` not exported (Test/s:sum) at line 1:10');
       });
 
       it('should report failures from foreign-calls', async () => {
@@ -241,10 +241,10 @@ describe('Errors', () => {
           Fun: { test: fn => fn(), fail: fn => fn([], false) },
         })[source];
 
-        await failWith(run(':import test :from "Fun".\nsum=a,b->a+b.\ntest(sum)'),
+        await failWith(run('@import test @from "Fun".\nsum=a,b->a+b.\ntest(sum)'),
           'Missing arguments to call `sum` at line 3:5');
 
-        await failWith(run(':import fail :from "Fun".\nsum=a,b->a+b.\nfail(sum)'),
+        await failWith(run('@import fail @from "Fun".\nsum=a,b->a+b.\nfail(sum)'),
           'Expecting string, number or symbol but found `[..]` at line 3:5');
       });
 
@@ -253,8 +253,8 @@ describe('Errors', () => {
       });
 
       it('should fail if on invalid/optional statements', async () => {
-        await failWith(run(':do i++'), 'Unexpected `:do` at line 1:1');
-        await failWith(run(':if? true'), 'Unexpected `?` at line 1:4');
+        await failWith(run('@do i++'), 'Unexpected `@do` at line 1:1');
+        await failWith(run('@if? true'), 'Unexpected `?` at line 1:4');
         await failWith(run(':test?? true'), 'Unexpected `?` at line 1:7');
       });
 
@@ -263,37 +263,37 @@ describe('Errors', () => {
       });
 
       it('should fail on if-blocks when no-conditional is given', async () => {
-        await failWith(run(':if x'), 'Missing block before `x` at line 1:5');
+        await failWith(run('@if x'), 'Missing block before `x` at line 1:5');
       });
 
       it('should fail on if-blocks when no-statements are given', async () => {
-        await failWith(run(':if (x)'), 'Expecting statement after `)` at line 1:7');
+        await failWith(run('@if (x)'), 'Expecting statement after `)` at line 1:7');
       });
 
       it('should fail on while-blocks when no-conditional is given', async () => {
-        await failWith(run(':while x'), 'Missing block before `x` at line 1:8');
+        await failWith(run('@while x'), 'Missing block before `x` at line 1:8');
       });
 
       it('should fail on if-blocks when invalid-statements are given', async () => {
-        await failWith(run(':if (x) 1 :y 2'), 'Unexpected `:y` on statement at line 1:1');
+        await failWith(run('@if (x) 1 :y 2'), 'Unexpected `:y` on statement at line 1:1');
       });
 
       it('should fail on if-statement when is not preceeded by a conditional', async () => {
-        await failWith(run(':if true 1 :else 0'), 'Missing block before `1` at line 1:10');
+        await failWith(run('@if true 1 @else 0'), 'Missing block before `1` at line 1:10');
       });
 
       it('should fail on missing statements from any match-expressions', async () => {
-        await failWith(run(':match (1) 2, 1 :on'), 'Expecting statement after `2` at line 1:12');
-        await failWith(run(':match (:x (:y 42)) 1 2, 3 | 0'), 'Expecting statement after `3` at line 1:26');
+        await failWith(run('@match (1) 2, 1 :on'), 'Expecting statement after `2` at line 1:12');
+        await failWith(run('@match (:x (:y 42)) 1 2, 3 | 0'), 'Expecting statement after `3` at line 1:26');
       });
 
-      it('should fail if :rescue has too many arguments', async () => {
-        await failWith(run(':try x :rescue b, c -> 1'), 'Undeclared local `b` at line 1:16');
-        await failWith(run(':try x :rescue (b, c -> 1)'), 'Expecting block but found `c` at line 1:20');
+      it('should fail if @rescue has too many arguments', async () => {
+        await failWith(run('@try x @rescue b, c -> 1'), 'Undeclared local `b` at line 1:16');
+        await failWith(run('@try x @rescue (b, c -> 1)'), 'Expecting block but found `c` at line 1:20');
       });
 
-      it('should fail if :try has no :rescue block', async () => {
-        await failWith(run(':try x'), 'Undeclared local `x` at line 1:6');
+      it('should fail if @try has no @rescue block', async () => {
+        await failWith(run('@try x'), 'Undeclared local `x` at line 1:6');
       });
     });
 

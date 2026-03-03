@@ -4,6 +4,7 @@ import {
   MINUS, PLUS, MUL, DIV, MOD,
   OR, DOT, PIPE, BLOCK, RANGE, SOME, EVERY,
   REGEX, SYMBOL, LITERAL, NUMBER, STRING,
+  DIRECTIVE,
   NOT, LIKE, EQUAL, NOT_EQ, EXACT_EQ,
   LESS, LESS_EQ, GREATER, GREATER_EQ,
   COMMENT, COMMENT_MULTI,
@@ -235,7 +236,7 @@ export default class Scanner {
 
       // prevent text-phrases to be parsed as tokens, e.g. `a b` OR `A, b`, etc.
       // skip prose detection on the line immediately following an EOL (code context)
-      if (this.afterEOL !== 1 && (isAlphaNumeric(char) || char === '*') && this.parseText(char)) return;
+      if (this.afterEOL !== 1 && ((isAlphaNumeric(char) && char !== '@') || char === '*') && this.parseText(char)) return;
 
       // extract code-blocks, e.g. ````\n...\n````
       if (char === '`' && char === this.peek() && char === this.peekNext() && this.parseFence(char)) return;
@@ -339,6 +340,7 @@ export default class Scanner {
 
       case '"': this.parseString(); break;
       case ':': this.parseSymbol(); break;
+      case '@': this.parseDirective(); break;
 
       default:
         if (isDigit(char)) {
@@ -902,6 +904,18 @@ export default class Scanner {
     }
 
     this.addToken(SYMBOL);
+  }
+
+  parseDirective() {
+    while (!this.isDone()) {
+      const cur = this.peek();
+
+      if (cur === '.' && (this.peekNext() === '\n' || this.offset + 1 >= this.chars.length)) break;
+      if (cur === '/' || isAlphaNumeric(cur, true)) this.nextToken();
+      else break;
+    }
+
+    this.addToken(DIRECTIVE);
   }
 
   parseComment(multiline) {

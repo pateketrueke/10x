@@ -95,7 +95,7 @@ describe('Eval', () => {
       ]);
 
       expect(await run(`
-        :import render :from "Prelude".
+        @import render @from "Prelude".
         box = <div class="a" />.
         render(box((:id "main"), "ok")).
       `)).to.eql([Expr.value('<div class="a" id="main">ok</div>')]);
@@ -103,25 +103,25 @@ describe('Eval', () => {
 
     it('should evaluate tag expressions and component tags', async () => {
       expect(await run(`
-        :import render :from "Prelude".
+        @import render @from "Prelude".
         x = 2.
         render(<div n={x}>{x + 1}</div>).
       `)).to.eql([Expr.value('<div n="2">3</div>')]);
 
       expect(await run(`
-        :import render :from "Prelude".
+        @import render @from "Prelude".
         Box = props -> <div class={props.kind} />.
         render(<Box kind={"ok"} />).
       `)).to.eql([Expr.value('<div class="ok" />')]);
 
       expect(await run(`
-        :import render :from "Prelude".
+        @import render @from "Prelude".
         view = -> <span>ok</span>.
         render(<div>{@render view()}</div>).
       `)).to.eql([Expr.value('<div><span>ok</span></div>')]);
 
       expect(await run(`
-        :import render :from "Prelude".
+        @import render @from "Prelude".
         props = (:id "x", :class "from-spread").
         render(<div {...props} class="fixed" />).
       `)).to.eql([Expr.value('<div id="x" class="fixed" />')]);
@@ -148,7 +148,7 @@ describe('Eval', () => {
         Test: { z: { y: { t: 42 } } },
       })[source];
 
-      expect(await run(':import z :from "Test".\n"x: #{y.t}" % z')).to.eql([Expr.value('x: 42')]);
+      expect(await run('@import z @from "Test".\n"x: #{y.t}" % z')).to.eql([Expr.value('x: 42')]);
     });
 
     it('should allow access through dot-operator', async () => {
@@ -187,7 +187,7 @@ describe('Eval', () => {
         Test: { obj: { nested: { t: 42 } } },
       })[source];
 
-      expect(await run(':import obj :from "Test".\nobj.nested.t = 43.\nobj.nested.t')).to.eql([Expr.value(43)]);
+      expect(await run('@import obj @from "Test".\nobj.nested.t = 43.\nobj.nested.t')).to.eql([Expr.value(43)]);
 
       expect(await run('data=:t 42.\ndata.t = 43.\ndata.t')).to.eql([Expr.value(43)]);
       expect(await run('data=(:nested (:t 42)).\ndata.nested.t = 43.\ndata.nested.t')).to.eql([Expr.value(43)]);
@@ -211,13 +211,13 @@ describe('Eval', () => {
         },
       })[source];
 
-      expect(await run(':import obj :from "Test".\nx=obj.undef.\nx()')).to.eql([]);
-      expect(await run(':import obj :from "Test".\nx=obj.fn.\nx(1)')).to.eql([Expr.value(2)]);
-      expect(await run(':import obj :from "Test".\nobj.nested.t()')).to.eql([Expr.value(nested)]);
-      expect(await run(':import obj :from "Test".\nfn=obj.undef.\nobj.call(fn)')).to.eql([]);
-      expect(await run(':import obj :from "Test".\nobj.call(x -> x * 2)')).to.eql([Expr.value(42)]);
-      expect(await run(':import obj :from "Test".\nfn=x->:if (> 0 x) :on.\nobj.call(fn)')).to.eql([]);
-      expect(await run(':import anonymous :from "Test".\nfn=anonymous.get(-42).\nfn()')).to.eql([Expr.value(-42)]);
+      expect(await run('@import obj @from "Test".\nx=obj.undef.\nx()')).to.eql([]);
+      expect(await run('@import obj @from "Test".\nx=obj.fn.\nx(1)')).to.eql([Expr.value(2)]);
+      expect(await run('@import obj @from "Test".\nobj.nested.t()')).to.eql([Expr.value(nested)]);
+      expect(await run('@import obj @from "Test".\nfn=obj.undef.\nobj.call(fn)')).to.eql([]);
+      expect(await run('@import obj @from "Test".\nobj.call(x -> x * 2)')).to.eql([Expr.value(42)]);
+      expect(await run('@import obj @from "Test".\nfn=x->@if (> 0 x) :on.\nobj.call(fn)')).to.eql([]);
+      expect(await run('@import anonymous @from "Test".\nfn=anonymous.get(-42).\nfn()')).to.eql([Expr.value(-42)]);
     });
 
     it('should allow to call methods through pipe-operator', async () => {
@@ -225,8 +225,8 @@ describe('Eval', () => {
         Test: { obj: { nested: { f: n => n * 2 } } },
       })[source];
 
-      expect(await run(':import obj :from "Test".\n21 |> obj.nested.f')).to.eql([Expr.value(42)]);
-      expect(await run(':import obj :from "Test".\n21 |> obj.nested.f(1) + 2')).to.eql([Expr.value(44)]);
+      expect(await run('@import obj @from "Test".\n21 |> obj.nested.f')).to.eql([Expr.value(42)]);
+      expect(await run('@import obj @from "Test".\n21 |> obj.nested.f(1) + 2')).to.eql([Expr.value(44)]);
     });
 
     it('should detect classes/functions and use new-operator on them', async () => {
@@ -245,11 +245,11 @@ describe('Eval', () => {
         },
       })[source];
 
-      expect(await run(':import (:default F) :from "TestClass".\n:let c = F(42, 1, 2, 3).\n[c.truth(), c.opts]')).to.eql([
+      expect(await run('@import (:default F) @from "TestClass".\n@let c = F(42, 1, 2, 3).\n[c.truth(), c.opts]')).to.eql([
         Expr.value([42, [1, 2, 3]]),
       ]);
 
-      expect(await run(':import (:default f) :from "testFunction".\n:let c = f(42, 1, 2, 3).\nc.value')).to.eql([
+      expect(await run('@import (:default f) @from "testFunction".\n@let c = f(42, 1, 2, 3).\nc.value')).to.eql([
         Expr.value(42),
       ]);
     });
@@ -467,8 +467,8 @@ describe('Eval', () => {
 
     it('should allow to rewrite syntax with templates', async () => {
       expect(await run(`
-        :template
-          ~ (a -> :let a = a + 1).
+        @template
+          ~ (a -> @let a = a + 1).
 
         x = 1.
         y = -1.
@@ -477,8 +477,8 @@ describe('Eval', () => {
       `)).to.eql([Expr.value(1), Expr.value(0)]);
 
       expect(await run(`
-        :template += (a, b -> :let a = a + b).
-        :template *= (a, b -> :let a = a * b).
+        @template += (a, b -> @let a = a + b).
+        @template *= (a, b -> @let a = a * b).
 
         i = 0.
         i += 2.
@@ -487,7 +487,7 @@ describe('Eval', () => {
       `)).to.eql([Expr.value(6)]);
 
       expect(await run(`
-        :template
+        @template
           >> (a, b -> a + b),
           fun (a -> "Fun: #{a}").
 
@@ -496,17 +496,17 @@ describe('Eval', () => {
       `)).to.eql([Expr.value('Fun: osoms'), Expr.value(6)]);
 
       expect(await run(`
-        :template
+        @template
           <=> (a, b -> (!= a b)).
 
-        [:if (1 <=> 2) 42.
+        [@if (1 <=> 2) 42.
         2 <=> 2.
         (<= 1 2)]
       `)).to.eql([Expr.array([Expr.value(42), Expr.value(false), Expr.value(true)])]);
 
       expect(await run(`
-        :template
-          /= (a, b -> :let a = a / b).
+        @template
+          /= (a, b -> @let a = a / b).
 
         j = :k 42.
         j.k /= 2.
@@ -514,7 +514,7 @@ describe('Eval', () => {
       `)).to.eql([Expr.value(21)]);
 
       expect(await run(`
-        :template ++ (a -> :let a = a + 1).
+        @template ++ (a -> @let a = a + 1).
         c = :d 42.
         d = 0.
         a = 0.
@@ -524,23 +524,23 @@ describe('Eval', () => {
     });
 
     it('should let you mutate definitions', async () => {
-      expect(await run('i = 0.\n:let i = i + 1.\ni')).to.eql([Expr.value(1)]);
-      expect(await run('x = 6.\n:let x = x / 2.\nx')).to.eql([Expr.value(3)]);
-      expect(await run('x = 1.5.\n:let x = x * 3.\nx')).to.eql([Expr.value(4.5)]);
-      expect(await run('z = 1.\ni = 0.\n:let i = i + z.\ni')).to.eql([Expr.value(1)]);
-      expect(await run('fun = n -> n.\ni = 0.\n:let i = i + fun(2 * 3) / 2.\ni')).to.eql([Expr.value(3)]);
-      expect(await run('x = 0.\n:if (< 1 2) (:let x = x + 3.\nx).\nx')).to.eql([Expr.value(3), Expr.value(3)]);
-      expect(await run(':let x = 0 :if (< 1 2) (:let x = x + 3.\nx).\nx')).to.eql([Expr.value(3), Expr.value(3)]);
+      expect(await run('i = 0.\n@let i = i + 1.\ni')).to.eql([Expr.value(1)]);
+      expect(await run('x = 6.\n@let x = x / 2.\nx')).to.eql([Expr.value(3)]);
+      expect(await run('x = 1.5.\n@let x = x * 3.\nx')).to.eql([Expr.value(4.5)]);
+      expect(await run('z = 1.\ni = 0.\n@let i = i + z.\ni')).to.eql([Expr.value(1)]);
+      expect(await run('fun = n -> n.\ni = 0.\n@let i = i + fun(2 * 3) / 2.\ni')).to.eql([Expr.value(3)]);
+      expect(await run('x = 0.\n@if (< 1 2) (@let x = x + 3.\nx).\nx')).to.eql([Expr.value(3), Expr.value(3)]);
+      expect(await run('@let x = 0 @if (< 1 2) (@let x = x + 3.\nx).\nx')).to.eql([Expr.value(3), Expr.value(3)]);
     });
 
     it('should resolve from conditional mappings', async () => {
-      expect(await run(':if (!:nil) 42')).to.eql([Expr.value(42)]);
-      expect(await run(':if (:off) _')).to.eql([]);
-      expect(await run(':if (:off) _')).to.eql([]);
-      expect(await run(':if (:on) :off')).to.eql([Expr.value(false)]);
-      expect(await run(':if (< 1 2) "X" :else "Y"')).to.eql([Expr.value('X')]);
-      expect(await run(':if (< 2 1) "X" :else "Y"')).to.eql([Expr.value('Y')]);
-      expect(await run('f = x -> :if (>= x 3) "_" :else ".".\nf(1), f(2), f(3), f(4)')).to.eql([
+      expect(await run('@if (!:nil) 42')).to.eql([Expr.value(42)]);
+      expect(await run('@if (:off) _')).to.eql([]);
+      expect(await run('@if (:off) _')).to.eql([]);
+      expect(await run('@if (:on) :off')).to.eql([Expr.value(false)]);
+      expect(await run('@if (< 1 2) "X" @else "Y"')).to.eql([Expr.value('X')]);
+      expect(await run('@if (< 2 1) "X" @else "Y"')).to.eql([Expr.value('Y')]);
+      expect(await run('f = x -> @if (>= x 3) "_" @else ".".\nf(1), f(2), f(3), f(4)')).to.eql([
         Expr.value('.'),
         Expr.value('.'),
         Expr.value('_'),
@@ -549,8 +549,8 @@ describe('Eval', () => {
     });
 
     it('should evaluate from if-do-let mappings', async () => {
-      expect(await run(':let x=3 :if (> x 0) (x = x - 1).\nx')).to.eql([Expr.value(2)]);
-      expect(await run(':let n=3 :while (> n 0) :do (n = n - 1.\nn + 1)')).to.eql([
+      expect(await run('@let x=3 @if (> x 0) (x = x - 1).\nx')).to.eql([Expr.value(2)]);
+      expect(await run('@let n=3 @while (> n 0) @do (n = n - 1.\nn + 1)')).to.eql([
         Expr.value(3),
         Expr.value(2),
         Expr.value(1),
@@ -560,71 +560,71 @@ describe('Eval', () => {
 
   describe('Match', () => {
     it('should allow simple pattern-matching through equality', async () => {
-      expect(await run(':match 1 1 42')).to.eql([Expr.value(42)]);
-      expect(await run(':match (2) (4, 3..2) 42 :else 0')).to.eql([Expr.value(42)]);
+      expect(await run('@match 1 1 42')).to.eql([Expr.value(42)]);
+      expect(await run('@match (2) (4, 3..2) 42 @else 0')).to.eql([Expr.value(42)]);
     });
 
     it('should check values for inclusion through range-expressions', async () => {
-      expect(await run(':match 2 [1..3] 42')).to.eql([Expr.value(42)]);
-      expect(await run(':match 2 (1..3) 42')).to.eql([Expr.value(42)]);
+      expect(await run('@match 2 [1..3] 42')).to.eql([Expr.value(42)]);
+      expect(await run('@match 2 (1..3) 42')).to.eql([Expr.value(42)]);
     });
 
     it('should check values for comparison through logical-expressions', async () => {
-      expect(await run(':match 1 (< 2) 42')).to.eql([Expr.value(42)]);
-      expect(await run(':match 1 (= 2) 42 :else 0')).to.eql([Expr.value(0)]);
+      expect(await run('@match 1 (< 2) 42')).to.eql([Expr.value(42)]);
+      expect(await run('@match 1 (= 2) 42 @else 0')).to.eql([Expr.value(0)]);
     });
 
     it('should compare values if they are lists, mappings or mixed-tokens', async () => {
-      expect(await run(':match [1, 2, 3] [1, 2, 3] 42')).to.eql([Expr.value(42)]);
-      expect(await run(':if (:match (:foo "bar") (:foo "bar") :on) "OK"')).to.eql([Expr.value('OK')]);
+      expect(await run('@match [1, 2, 3] [1, 2, 3] 42')).to.eql([Expr.value(42)]);
+      expect(await run('@if (@match (:foo "bar") (:foo "bar") :on) "OK"')).to.eql([Expr.value('OK')]);
     });
 
     it('should try to evaluate from all given conditions', async () => {
-      expect(await run(':match (:x (:y 42)) 1 2, 3 4 | 0')).to.eql([Expr.value(0)]);
+      expect(await run('@match (:x (:y 42)) 1 2, 3 4 | 0')).to.eql([Expr.value(0)]);
     });
   });
 
   describe('Rescue', () => {
     it('should return nothing on failure', async () => {
-      expect(await run(':rescue x')).to.eql([]);
-      expect(await run(':rescue x | 0')).to.eql([Expr.value(0)]);
+      expect(await run('@rescue x')).to.eql([]);
+      expect(await run('@rescue x | 0')).to.eql([Expr.value(0)]);
     });
 
     it('should return statement otherwise', async () => {
-      expect(await run(':rescue 1')).to.eql([Expr.value(1)]);
+      expect(await run('@rescue 1')).to.eql([Expr.value(1)]);
     });
 
-    it('should return :rescue on try-presence', async () => {
-      expect(await run(':try x :rescue 0')).to.eql([Expr.value(0)]);
-      expect(await run(':try 1 :rescue 0')).to.eql([Expr.value(1)]);
+    it('should return @rescue on try-presence', async () => {
+      expect(await run('@try x @rescue 0')).to.eql([Expr.value(0)]);
+      expect(await run('@try 1 @rescue 0')).to.eql([Expr.value(1)]);
     });
 
-    it('should :check statements as failure-constraints', async () => {
-      expect(await run(':try x :rescue x -> 42')).to.eql([Expr.value(42)]);
-      expect(await run(':try x :rescue (> 1 2) 3')).to.eql([]);
-      expect(await run(':try x :rescue -> (> 1 2) 3')).to.eql([]);
+    it('should @check statements as failure-constraints', async () => {
+      expect(await run('@try x @rescue x -> 42')).to.eql([Expr.value(42)]);
+      expect(await run('@try x @rescue (> 1 2) 3')).to.eql([]);
+      expect(await run('@try x @rescue -> (> 1 2) 3')).to.eql([]);
 
       expect(await run(`
         attempts = 0.
         server = :is_connected 1.
-        :try
+        @try
           server.connect()
-        :check
+        @check
           server.is_connected
-        :rescue
+        @rescue
           (< attempts 10)
-            (:let attempts = attempts + 1).
+            (@let attempts = attempts + 1).
         attempts.
       `)).to.eql([Expr.value(10)]);
     });
 
-    it('should resolve from :try :rescue if :check evaluates to true', async () => {
+    it('should resolve from @try @rescue if @check evaluates to true', async () => {
       expect(await run(`
         enabled = :off.
-        :try x
-        :check enabled
-        :rescue (!enabled) (
-          :let enabled = :on.
+        @try x
+        @check enabled
+        @rescue (!enabled) (
+          @let enabled = :on.
         ) | enabled.
       `)).to.eql([Expr.value(true)]);
     });
@@ -724,17 +724,17 @@ describe('Eval', () => {
     });
 
     it('should expand any value within loops', async () => {
-      expect(await run(':loop 0..3:2')).to.eql([Expr.value(0), Expr.value(1)]);
-      expect(await run(':loop (0..3:2)')).to.eql([Expr.value(0), Expr.value(1)]);
-      expect(await run(':loop ("OK")')).to.eql([Expr.value('O'), Expr.value('K')]);
+      expect(await run('@loop 0..3:2')).to.eql([Expr.value(0), Expr.value(1)]);
+      expect(await run('@loop (0..3:2)')).to.eql([Expr.value(0), Expr.value(1)]);
+      expect(await run('@loop ("OK")')).to.eql([Expr.value('O'), Expr.value('K')]);
 
-      expect(await run(':loop [-10..10:5-3]'))
+      expect(await run('@loop [-10..10:5-3]'))
         .to.eql([Expr.value(-10), Expr.value(-7), Expr.value(-4), Expr.value(-1), Expr.value(2)]);
 
-      expect(await run(':loop ([-10..10:5-3])'))
+      expect(await run('@loop ([-10..10:5-3])'))
         .to.eql([Expr.value(-10), Expr.value(-7), Expr.value(-4), Expr.value(-1), Expr.value(2)]);
 
-      expect(await run(':loop (1, (2, (3)), 4)')).to.eql([
+      expect(await run('@loop (1, (2, (3)), 4)')).to.eql([
         Expr.value(1),
         Expr.value(1),
         Expr.value(2),
@@ -747,7 +747,7 @@ describe('Eval', () => {
         Expr.value(4),
       ]);
 
-      expect(await run(':loop (3, [4, 5], 5..3, "a".."c", "OSOM")')).to.eql([
+      expect(await run('@loop (3, [4, 5], 5..3, "a".."c", "OSOM")')).to.eql([
         Expr.value(1),
         Expr.value(2),
         Expr.value(3),
@@ -767,7 +767,7 @@ describe('Eval', () => {
     });
 
     it('should yield from arguments on block-less loops', async () => {
-      expect(await run('x=1.\ny=[4,5,6,7].\n:loop x, y, 3')).to.eql([
+      expect(await run('x=1.\ny=[4,5,6,7].\n@loop x, y, 3')).to.eql([
         Expr.value(1),
         Expr.value(4),
         Expr.value(5),
@@ -780,7 +780,7 @@ describe('Eval', () => {
     });
 
     it('should take the first literal as iterator-index', async () => {
-      expect(await run('x=[1, 2, 3].\n:loop (x) i * 2')).to.eql([
+      expect(await run('x=[1, 2, 3].\n@loop (x) i * 2')).to.eql([
         Expr.value(2),
         Expr.value(4),
         Expr.value(6),
@@ -788,7 +788,7 @@ describe('Eval', () => {
     });
 
     it('should discard first literal from body if block is given', async () => {
-      expect(await run('x=[1, 2, 3].\n:loop (x) i (i * 2)')).to.eql([
+      expect(await run('x=[1, 2, 3].\n@loop (x) i (i * 2)')).to.eql([
         Expr.value(2),
         Expr.value(4),
         Expr.value(6),
@@ -796,46 +796,46 @@ describe('Eval', () => {
     });
 
     it('should evaluate from given blocks as functions', async () => {
-      expect(await run(':loop(1..3) x -> x * 2')).to.eql([Expr.value(2), Expr.value(4), Expr.value(6)]);
+      expect(await run('@loop(1..3) x -> x * 2')).to.eql([Expr.value(2), Expr.value(4), Expr.value(6)]);
     });
 
     it('should evaluate from given strings as functions', async () => {
-      expect(await run(':loop(1..3) x "#{x * 2}"')).to.eql([Expr.value(2), Expr.value(4), Expr.value(6)]);
+      expect(await run('@loop(1..3) x "#{x * 2}"')).to.eql([Expr.value(2), Expr.value(4), Expr.value(6)]);
     });
 
     it('should evaluate iterator-index if it is a function', async () => {
-      expect(await run('thrice=fn->:loop(1..3) fn.\nthrice(x->x*2)')).to.eql([Expr.value(2), Expr.value(4), Expr.value(6)]);
+      expect(await run('thrice=fn->@loop(1..3) fn.\nthrice(x->x*2)')).to.eql([Expr.value(2), Expr.value(4), Expr.value(6)]);
     });
 
     it('should allow calls after iterator-index', async () => {
-      expect(await run('thrice=fn->:loop(1..3) x fn(x).\nthrice(x->x*2)')).to.eql([Expr.value(2), Expr.value(4), Expr.value(6)]);
+      expect(await run('thrice=fn->@loop(1..3) x fn(x).\nthrice(x->x*2)')).to.eql([Expr.value(2), Expr.value(4), Expr.value(6)]);
     });
   });
 
   describe('Modules', () => {
     it('should allow to call methods from native objects', async () => {
-      expect(await run(':import concat :from "Array".\nconcat([1,2], [3, [4]])')).to.eql([
+      expect(await run('@import concat @from "Array".\nconcat([1,2], [3, [4]])')).to.eql([
         Expr.array([Expr.value(1), Expr.value(2), Expr.value(3), Expr.array([Expr.value(4)])]),
       ]);
 
-      expect(await run(':import (:toFixed d) :from "Number".\nd(0.1234, 2)')).to.eql([Expr.value('0.12')]);
+      expect(await run('@import (:toFixed d) @from "Number".\nd(0.1234, 2)')).to.eql([Expr.value('0.12')]);
 
-      expect(await run(':import entries :from "Object".\nentries(:foo "bar")')).to.eql([Expr.array([
+      expect(await run('@import entries @from "Object".\nentries(:foo "bar")')).to.eql([Expr.array([
         Expr.array([Expr.value('foo'), Expr.value('bar')]),
       ])]);
 
-      expect(await run(':import concat :from "Array".\nconcat(1..2,3).\n')).to.eql([
+      expect(await run('@import concat @from "Array".\nconcat(1..2,3).\n')).to.eql([
         Expr.array([Expr.value(1), Expr.value(2), Expr.value(3)]),
       ]);
 
-      expect(await run(':import concat :from "Array".\na=concat(-1..2,3,4).\na')).to.eql([
+      expect(await run('@import concat @from "Array".\na=concat(-1..2,3,4).\na')).to.eql([
         Expr.array([Expr.value(-1), Expr.value(0), Expr.value(1), Expr.value(2), Expr.value(3), Expr.value(4)]),
       ]);
     });
 
     it('should require to use range-operator to spread given args', async () => {
       expect(await run(`
-        :import (:substr s, concat) :from "String".
+        @import (:substr s, concat) @from "String".
         test=concat("foo",..).
         test'=x->concat(x,"foo").
         test(s("_bar", 1), "!").
@@ -855,8 +855,8 @@ describe('Eval', () => {
       })[source];
 
       expect(await run(`
-        :import wait, twice :from "./example.js".
-        :import sum, thrice :from "./other.md".
+        @import wait, twice @from "./example.js".
+        @import sum, thrice @from "./other.md".
 
         twice(21).
         thrice(9).
@@ -870,7 +870,7 @@ describe('Eval', () => {
       const env = new Env();
 
       await run(`
-        :module "Test" :export (:sum s).
+        @module "Test" @export (:sum s).
         sum = a, b -> a + b.
       `, env);
 
@@ -879,7 +879,7 @@ describe('Eval', () => {
       })[source];
 
       expect(await run(`
-        :import (:s sum) :from "./other.md".
+        @import (:s sum) @from "./other.md".
 
         fix=sum(3).
         fix(5).
@@ -891,12 +891,12 @@ describe('Eval', () => {
         Test: { f: (...args) => ({ args }) },
       })[source];
 
-      expect(await run(':import f :from "Test".\nf(:number, :n, "OK")')).to.eql([Expr.value({
+      expect(await run('@import f @from "Test".\nf(:number, :n, "OK")')).to.eql([Expr.value({
         args: ['number', 'n', 'OK'],
       })]);
 
       expect(await run(`
-        :import f :from "Test".
+        @import f @from "Test".
         f([(:type :multiselect, :name :color, :message "Pick colors", :choices [(:title "Red", :value "#FF0000")])])
       `)).to.eql([Expr.from(LITERAL, {
         args: [[{
@@ -926,8 +926,8 @@ describe('Eval', () => {
     it('should perform memoization on marked calls, e.g. fibonacci!', async () => {
       expect(await run(`
         fib = n ->
-          :if (< n 2) 1, (< n 1) 0
-          :else fib(n - 1) + fib(n - 2).
+          @if (< n 2) 1, (< n 1) 0
+          @else fib(n - 1) + fib(n - 2).
         fib!(20).
       `)).to.eql([Expr.value(10946)]);
     });
@@ -936,14 +936,14 @@ describe('Eval', () => {
       const start2 = Date.now();
 
       expect(await run(`
-        :template
-          += (a, b -> :let a = a + b),
-          -- (a -> :let a = a - 1).
+        @template
+          += (a, b -> @let a = a + b),
+          -- (a -> @let a = a - 1).
 
         fib = n ->
-          :let
+          @let
             a = 1, b = 0, temp = 0
-          :while (>= n-- 0)
+          @while (>= n-- 0)
             temp = a, a += b, b = temp, b
           .
         fib(20)
