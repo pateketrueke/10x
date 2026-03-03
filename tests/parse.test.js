@@ -13,7 +13,7 @@ import {
 
 describe('Parser', () => {
   it('should allow to parse raw-statements', () => {
-    expect(Parser.getAST('1..3,\na,b.\n(j+"m\nn".\n\nk).\nx.\n\ny _z_', true)).to.eql([
+    expect(Parser.getAST('1..3,\na,b.\n(j+"m\nn".\n\nk).\nx.\n\ny _z_', 'split')).to.eql([
       {
         body: [
           Expr.value(1),
@@ -128,14 +128,14 @@ describe('Parser', () => {
   });
 
   it('should parse markdown tags', () => {
-    expect(Parser.getAST('> x `y`', true)[0].body).to.eql([
+    expect(Parser.getAST('> x `y`', 'split')[0].body).to.eql([
       Expr.from(TEXT, {
         buffer: ['x ', [CODE, '`', 'y']],
         kind: BLOCKQUOTE,
       }),
     ]);
 
-    const parsed = Parser.getAST('> x #{1+2}', true)[0].body[0];
+    const parsed = Parser.getAST('> x #{1+2}', 'split')[0].body[0];
     expect(parsed.type).to.eql(TEXT);
     expect(parsed.value.kind).to.eql(BLOCKQUOTE);
     expect(parsed.value.buffer[0]).to.eql('x ');

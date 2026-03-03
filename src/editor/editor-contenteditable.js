@@ -331,7 +331,7 @@ function appendInterpolatedText(parent, text, fallbackClass = '') {
     const expr = (match[1] || '').trim();
     if (expr) {
       try {
-        const exprTokens = Parser.getAST(expr, null);
+        const exprTokens = Parser.getAST(expr, 'raw');
         for (const exprToken of exprTokens) appendToken(parent, exprToken);
       } catch (_) {
         appendText(parent, expr, fallbackClass || null);
@@ -445,7 +445,7 @@ function renderTokens(source) {
   }
 
   try {
-    const tokens = Parser.getAST(source, null);
+    const tokens = Parser.getAST(source, 'raw');
     for (const token of tokens) appendToken(frag, token);
   } catch (_) {
     // Parse fallback: keep raw text editable when tokenization fails.
@@ -529,7 +529,7 @@ function buildStatementAnchors(source) {
   const anchors = [];
 
   try {
-    const chunks = Parser.getAST(source, true);
+    const chunks = Parser.getAST(source, 'split');
     const sourceLines = source.split('\n');
     const lineStarts = [];
     let offset = 0;

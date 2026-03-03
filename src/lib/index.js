@@ -48,7 +48,7 @@ export async function execute(code, environment, enabledDetail) {
   let info = {};
 
   try {
-    const res = await evaluate(Parser.getAST(code, undefined, environment), environment, enabledDetail);
+    const res = await evaluate(Parser.getAST(code, 'parse', environment), environment, enabledDetail);
 
     failure = res.error;
     value = res.result;

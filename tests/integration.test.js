@@ -401,7 +401,7 @@ describe('Integration', () => {
       e.line = 0;
       e.col = 1;
 
-      expect(debug(e, '1+2', false, source => Parser.getAST(source, null).map(x => x.value).join(''))).to.eql(`${deindent(`
+      expect(debug(e, '1+2', false, source => Parser.getAST(source, 'raw').map(x => x.value).join(''))).to.eql(`${deindent(`
         OK
 
              1 | 1+2
@@ -828,8 +828,8 @@ describe('Integration', () => {
       const result = 'fib = n -> @if (< n 2) 1, (< n 1) 0 @else fib(n - 1) + fib(n - 2).\nfib!(20).\n';
 
       expect(serialize(Parser.getAST(sample))).to.eql(result);
-      expect(serialize(Parser.getAST(sample, null))).to.eql(sample);
-      expect(serialize(Parser.getAST(sample, false))).to.eql(result);
+      expect(serialize(Parser.getAST(sample, 'raw'))).to.eql(sample);
+      expect(serialize(Parser.getAST(sample, 'inline'))).to.eql(result);
     });
 
     it('should inline formatted code', () => {
@@ -844,8 +844,8 @@ describe('Integration', () => {
       const resolved = '@template >> (a, b -> [a, b], 42).\n-1 >> 2.\n';
 
       expect(serialize(Parser.getAST(sample))).to.eql(result);
-      expect(serialize(Parser.getAST(sample, null))).to.eql(sample);
-      expect(serialize(Parser.getAST(sample, false))).to.eql(resolved);
+      expect(serialize(Parser.getAST(sample, 'raw'))).to.eql(sample);
+      expect(serialize(Parser.getAST(sample, 'inline'))).to.eql(resolved);
     });
 
     it('should inline formatted code (basic templates)', () => {
@@ -865,8 +865,8 @@ describe('Integration', () => {
       const result1 = '@import puts, err, input @from "IO".\n@let buffer = input().\n' + logic;
 
       expect(serialize(Parser.getAST(sample1))).to.eql(result1);
-      expect(serialize(Parser.getAST(sample1, null))).to.eql(sample1);
-      expect(serialize(Parser.getAST(sample1, false))).to.eql(result1);
+      expect(serialize(Parser.getAST(sample1, 'raw'))).to.eql(sample1);
+      expect(serialize(Parser.getAST(sample1, 'inline'))).to.eql(result1);
 
       const sample2 = deindent(`
         @template
@@ -892,8 +892,8 @@ describe('Integration', () => {
       const inline = '@template += (a, b -> @let a = a + b), -- (a -> @let a = a - 1).\n' + result;
 
       expect(serialize(Parser.getAST(sample2))).to.eql(resolved);
-      expect(serialize(Parser.getAST(sample2, null))).to.eql(sample2);
-      expect(serialize(Parser.getAST(sample2, false))).to.eql(inline);
+      expect(serialize(Parser.getAST(sample2, 'raw'))).to.eql(sample2);
+      expect(serialize(Parser.getAST(sample2, 'inline'))).to.eql(inline);
     });
 
     it('should inline formatted code (advanced templates)', async () => {
@@ -947,8 +947,8 @@ describe('Integration', () => {
         + 'puts(messageOutput, "\\n").\n';
 
       expect(serialize(Parser.getAST(sample))).to.eql(resolved);
-      expect(serialize(Parser.getAST(sample, null))).to.eql(sample);
-      expect(serialize(Parser.getAST(sample, false))).to.eql(result);
+      expect(serialize(Parser.getAST(sample, 'raw'))).to.eql(sample);
+      expect(serialize(Parser.getAST(sample, 'inline'))).to.eql(result);
       expect(serialize(Parser.getAST(sample), true))
         .to.eql('@import @from.\n@import @from.\n@let.\nusageInfo = "...".\nmessageOutput = (@if) | (@if) | "...".\nputs(messageOutput, "...").\n');
     });

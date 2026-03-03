@@ -597,7 +597,12 @@ export default class Expr {
   }
 
   static unsafe(target, label, raw) {
-    return [FFI, target, label || `FFI/${target.name || '?'}`, raw || null];
+    return {
+      [FFI]: true,
+      target,
+      label: label || `FFI/${target.name || '?'}`,
+      raw: !!raw,
+    };
   }
 
   static define(type, Class) {

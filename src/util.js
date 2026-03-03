@@ -91,7 +91,7 @@ export function colorize(type, value, dimmed) {
 export function summary(e, code, noInfo) {
   return debug(e, code, noInfo, source => {
     try {
-      return Parser.getAST(source, true).map(chunk => {
+      return Parser.getAST(source, 'split').map(chunk => {
         const highlighted = !chunk.lines.includes(e.line);
 
         return chunk.body.map(x => {
@@ -131,7 +131,7 @@ export function inspect(calls) {
 }
 
 export async function format(code, color, inline) {
-  print(serialize.call({}, Parser.getAST(code, inline ? false : null), null, color ? colorize : undefined), '\n');
+  print(serialize.call({}, Parser.getAST(code, inline ? 'inline' : 'raw'), null, color ? colorize : undefined), '\n');
 }
 
 export async function main(code, raw, env, info, noInfo, prelude) {
@@ -140,7 +140,7 @@ export async function main(code, raw, env, info, noInfo, prelude) {
       code = await prelude(env, code) || code;
     }
 
-    const result = raw ? Parser.getAST(code, false, env) : await execute(code, env, info);
+    const result = raw ? Parser.getAST(code, 'inline', env) : await execute(code, env, info);
 
     if (execute.failure) {
       throw execute.failure;

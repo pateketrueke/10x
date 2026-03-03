@@ -21,6 +21,10 @@ import {
   isMixed, isPlain, isRange, isSlice, isArray, isSome, isEvery, isBlock, isComma, isPipe, isMath, isNot, isMod, isEnd, isDot, isEOL, isOR,
 } from '../helpers';
 
+const LAZY_DESCRIPTORS = new Set(['Loop', 'Set']);
+const OPS_MUL_DIV = new Set([MUL, DIV]);
+const OPS_PLUS_MINUS_MOD = new Set([PLUS, MINUS, MOD]);
+
 export default class Eval {
   constructor(tokens, environment, noInheritance) {
     if (!(environment instanceof Env)) {
@@ -54,7 +58,7 @@ export default class Eval {
   append(...a) { this.result.push(...a); return this; }
   move(n) { this.offset += n || 1; return this; }
 
-  isLazy() { return ['Loop', 'Set'].includes(this.descriptor); }
+  isLazy() { return LAZY_DESCRIPTORS.has(this.descriptor); }
   isDone() { return this.offset >= this.expr.length; }
 
   getOlder() { return this.result[this.result.length - 2]; }
@@ -941,8 +945,8 @@ export default class Eval {
   async run(descriptor, tokenInfo) {
     let tokens = await this.walk(descriptor);
 
-    tokens = Eval.math([MUL, DIV], tokens, tokenInfo);
-    tokens = Eval.math([PLUS, MINUS, MOD], tokens, tokenInfo);
+    tokens = Eval.math(OPS_MUL_DIV, tokens, tokenInfo);
+    tokens = Eval.math(OPS_PLUS_MINUS_MOD, tokens, tokenInfo);
 
     return tokens.filter(x => ![EOL, COMMA].includes(x.type));
   }
@@ -1057,21 +1061,24 @@ export default class Eval {
   }
 
   static walk(ops, expr, callback) {
-    for (let i = 1, c = expr.length - 1; i < c; i++) {
+    if (expr.length < 3) return expr;
+
+    const output = [expr[0]];
+
+    for (let i = 1, c = expr.length; i < c; i++) {
       const op = expr[i];
-      const left = expr[i - 1];
-      const right = expr[i + 1];
 
-      if (op && ops.indexOf(op.type) > -1) {
-        expr.splice(i - 1, 3, callback(left, op, right));
+      if (op && ops.has(op.type) && i + 1 < c) {
+        const left = output.pop();
+        const right = expr[++i];
 
-        if (expr.length >= 3) {
-          return Eval.walk(ops, expr, callback);
-        }
+        output.push(callback(left, op, right));
+      } else {
+        output.push(op);
       }
     }
 
-    return expr;
+    return output;
   }
 
   static async loop(body, value, environment, parentTokenInfo) {

@@ -686,22 +686,26 @@ export default class Parser {
     return new Parser(tokens.concat(new Token(EOF, '', null)), raw || this.raw, this).parse();
   }
 
-  static getAST(source, rawCode, environment) {
+  static getAST(source, mode = 'parse', environment) {
     const scanner = new Scanner(source, null, environment);
     const tokens = scanner.scanTokens();
 
-    // return plain tokens in raw-mode
-    if (rawCode === null) return tokens;
+    // return plain tokens in raw mode
+    if (mode === 'raw' || mode === null) return tokens;
 
-    const parser = new Parser(tokens, rawCode, environment);
+    const parserMode = mode === 'parse' || typeof mode === 'undefined'
+      ? undefined
+      : (mode === 'inline' ? false : mode === 'split' || mode === true);
 
-    // return tokens in split-mode
-    if (rawCode) return parser.split();
+    const parser = new Parser(tokens, parserMode, environment);
+
+    // return tokens in split mode
+    if (mode === 'split') return parser.split();
 
     return parser.parse();
   }
 
   static sub(source, environment) {
-    return Parser.getAST(`.\n${source}`, false, environment).slice(1);
+    return Parser.getAST(`.\n${source}`, 'inline', environment).slice(1);
   }
 }

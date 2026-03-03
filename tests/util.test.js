@@ -150,8 +150,8 @@ describe('Util', () => {
       await captureStdout(() => format('1+2', false, true));
       await captureStdout(() => format('1+2', true, false));
 
-      expect(args[0][1]).to.eql(false);
-      expect(args[1][1]).to.eql(null);
+      expect(args[0][1]).to.eql('inline');
+      expect(args[1][1]).to.eql('raw');
     } finally {
       Parser.getAST = originalGetAST;
     }

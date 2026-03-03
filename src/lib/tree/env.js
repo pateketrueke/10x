@@ -16,7 +16,7 @@ const SAFE_PRELUDE = Object.keys(Prelude).reduce((prev, cur) => {
 export default class Env {
   constructor(value) {
     this.locals = {};
-    this.resolved = [];
+    this.resolved = new Set();
     this.templates = {};
 
     // module details
@@ -33,7 +33,7 @@ export default class Env {
   }
 
   get(name) {
-    if (this.resolved.includes(name)) {
+    if (this.resolved.has(name)) {
       const found = Expr.has(this.locals[name].body, LITERAL, name);
       const call = this.locals[name].body[0].isCallable;
 
@@ -53,7 +53,7 @@ export default class Env {
     }
 
     // keep refs to back-tracking, see usage above
-    this.resolved.push(name);
+    this.resolved.add(name);
 
     return this.locals[name];
   }
@@ -173,18 +173,19 @@ export default class Env {
       }
 
       // values wrapped as FFI are returned as is...
-      if (Array.isArray(env[name]) && env[name][0] === FFI) {
+      if (isPlain(env[name]) && env[name][FFI]) {
         const fixedToken = { ...ctx.tokenInfo };
+        const ffi = env[name];
 
-        if (env[name][3]) {
+        if (ffi.raw) {
           fixedToken.kind = 'raw';
         }
 
         body = [Expr.function({
           type: FFI,
           value: {
-            target: env[name][1],
-            label: env[name][2],
+            target: ffi.target,
+            label: ffi.label,
           },
         }, fixedToken)];
       }

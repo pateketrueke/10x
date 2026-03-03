@@ -107,7 +107,7 @@ async function repl() {
     if (info) console.time('time');
 
     try {
-      const { result, error, info: details } = await evaluate(Parser.getAST(code, undefined, env), env, argv.flags.trace);
+      const { result, error, info: details } = await evaluate(Parser.getAST(code, 'parse', env), env, argv.flags.trace);
 
       if (raw) {
         console.log(JSON.stringify(result));

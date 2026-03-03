@@ -62,7 +62,7 @@ describe('Env', () => {
     env.locals.fn = {
       body: [Expr.callable({ type: BLOCK, value: { body: [] } }, tokenInfo)],
     };
-    env.resolved.push('fn');
+    env.resolved.add('fn');
 
     expect(env.get('fn')).to.eql(env.locals.fn);
   });
