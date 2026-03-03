@@ -3,6 +3,7 @@
 .tarima
 .DS_Store
 dist
+build
 .claude
 .journal
 TASKS.md

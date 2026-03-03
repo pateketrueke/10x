@@ -73,7 +73,7 @@ fib(15).
 </main>
 
 <script type="module">
-  import '../dist/editor.js';
+  import '/dist/editor.js';
 
   const editor = document.getElementById('editor');
   const status = document.getElementById('status');
@@ -95,7 +95,7 @@ fib(15).
 
   // warm up the evaluator
   try {
-    const { execute } = await import('../dist/main.js');
+    const { execute } = await import('/dist/main.js');
     await execute('1');
     status.className = 'status ok';
     status.textContent = 'ready';

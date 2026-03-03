@@ -42,9 +42,6 @@
     "stdout-stderr": "^0.1.13"
   },
   "dependencies": {
-    "chalk": "^3.0.0",
-    "convert-units": "^2.3.4",
-    "currency-symbol.js": "^1.0.0",
     "fs-extra": "^9.0.0",
     "mock-stdin": "^1.0.0",
     "prompt-sync": "^4.2.0",

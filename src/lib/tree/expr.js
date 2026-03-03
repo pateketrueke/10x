@@ -1,4 +1,4 @@
-import Convert from 'convert-units';
+import Convert from '../units/index.js';
 
 import {
   TEXT, UL_ITEM, OL_ITEM, HEADING, BLOCKQUOTE,

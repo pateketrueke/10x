@@ -862,7 +862,7 @@ describe('Integration', () => {
 
       const logic = '@if (~ buffer :nil) err("No input provided.\n") @else puts("Thank you! Your input:\n<![[CDATA[\n#{buffer}\n]>").\n';
 
-      const result1 = '@import puts, err, input @from "IO".\n@let buffer = input().\n' + logic;
+      const result1 = `@import puts, err, input @from "IO".\n@let buffer = input().\n${logic}`;
 
       expect(serialize(Parser.getAST(sample1))).to.eql(result1);
       expect(serialize(Parser.getAST(sample1, 'raw'))).to.eql(sample1);
@@ -889,7 +889,7 @@ describe('Integration', () => {
 
       const result = 'fib = n -> @let a = 1, b = 0, temp = 0 /* test */ @while (>= n-- 0), temp = a, (a += b), b = temp, b.\n\n// test\nfib(20).\n';
 
-      const inline = '@template += (a, b -> @let a = a + b), -- (a -> @let a = a - 1).\n' + result;
+      const inline = `@template += (a, b -> @let a = a + b), -- (a -> @let a = a - 1).\n${result}`;
 
       expect(serialize(Parser.getAST(sample2))).to.eql(resolved);
       expect(serialize(Parser.getAST(sample2, 'raw'))).to.eql(sample2);
@@ -942,7 +942,7 @@ describe('Integration', () => {
         + `messageOutput = (@if ([argv.flags]:(:help)) usageInfo) | (@if ([argv.flags]:(:ask)) (${asks})) | "\\nMissing input.\\n#{usageInfo}".\n`
         + 'puts(messageOutput, "\\n").\n';
 
-      const result = '@import puts, input @from "IO".\n@import getopts @from "Proc".\n' + prelude + `.\nusageInfo = ${usageInfo}.\n`
+      const result = `@import puts, input @from "IO".\n@import getopts @from "Proc".\n${prelude}.\nusageInfo = ${usageInfo}.\n`
         + `messageOutput = :help => usageInfo | :ask => (${asks}) | "\\nMissing input.\\n#{usageInfo}".\n`
         + 'puts(messageOutput, "\\n").\n';
 

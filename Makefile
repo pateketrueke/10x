@@ -6,14 +6,15 @@ message := Release: $(shell date)
 .PHONY: pages deploy
 
 dist:
-	@npm run dist
+	@bun run build
 
 pages:
 	@(git worktree remove $(src) --force > /dev/null 2>&1) || true
 	@git worktree add $(src) $(target)
 	@cd $(src) && rm -rf *
-	@make -s dist
-	@cp -r public/* $(src)
+	@bun run build
+	@cp -r public/* $(src)/
+	@cp -r dist $(src)/dist
 
 deploy:
 	@cd $(src) && git add . && git commit -m "$(message)"

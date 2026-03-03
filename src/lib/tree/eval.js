@@ -339,13 +339,13 @@ export default class Eval {
   async evalTags() {
     if (!this.ctx || !this.ctx.isTag) return false;
 
-    const normalizeChild = (token) => {
+    const normalizeChild = token => {
       if (!token) return null;
       if (token.isTag) return token.value;
       return Expr.plain(token, this.convert, '<TagChild>');
     };
 
-    const evaluateNode = async (node) => {
+    const evaluateNode = async node => {
       const attrs = {};
       const children = [];
 

@@ -1,5 +1,5 @@
-import Convert from 'convert-units';
-import currencySymbols from 'currency-symbol.js';
+import Convert from './units/index.js';
+import currencySymbols from './currency-symbols.js';
 
 export const INC_DEC = [
   ['week', 'weekend'],
@@ -33,7 +33,7 @@ function ensureCurrencyMappings() {
   if (currencyMappingsReady) return;
   currencyMappingsReady = true;
 
-  Object.assign(CURRENCY_SYMBOLS, currencySymbols.settings.symbols);
+  Object.assign(CURRENCY_SYMBOLS, currencySymbols);
 
   Object.keys(CURRENCY_SYMBOLS).forEach(key => {
     const symbol = CURRENCY_SYMBOLS[key];

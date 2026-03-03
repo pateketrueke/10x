@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 
-import chalk from 'chalk';
+import ansi from './src/lib/ansi.js';
 import wargs from 'wargs';
 
 import * as x10 from './dist/main.js';
@@ -23,7 +23,7 @@ const argv = wargs(process.argv.slice(2), {
 const nodeAdapter = createNodeAdapter(process.argv.slice(2));
 
 async function prelude() {
-  process.stderr.write(`\r${chalk.gray('Checking for installed currencies...')}\r`);
+  process.stderr.write(`\r${ansi.gray('Checking for installed currencies...')}\r`);
 
   await useCurrencies({
     key: path.join(os.tmpdir(), `currencies-${new Date().toISOString().substr(0, 13)}.json`),
@@ -214,26 +214,26 @@ async function watchFile(filepath, options) {
       const results = evaluateExpressions(expressions, env);
       const patched = patchResults(content, results);
       fs.writeFileSync(filepath, patched);
-      process.stdout.write(`\r${chalk.green('✓')} ${path.basename(filepath)} (${results.length} expressions)\n`);
+      process.stdout.write(`\r${ansi.green('✓')} ${path.basename(filepath)} (${results.length} expressions)\n`);
     } else if (options.clean) {
       const cleaned = cleanResults(content);
       fs.writeFileSync(filepath, cleaned);
-      process.stdout.write(`\r${chalk.green('✓')} ${path.basename(filepath)} (cleaned)\n`);
+      process.stdout.write(`\r${ansi.green('✓')} ${path.basename(filepath)} (cleaned)\n`);
     } else {
       const results = evaluateExpressions(expressions, env);
       process.stdout.write('\x1b[2J\x1b[H');
-      process.stdout.write(`${chalk.bold(filepath)}\n${chalk.gray('─'.repeat(40))}\n\n`);
+      process.stdout.write(`${ansi.bold(filepath)}\n${ansi.gray('─'.repeat(40))}\n\n`);
       
       for (const expr of results) {
-        process.stdout.write(`${chalk.cyan(expr.code)}`);
+        process.stdout.write(`${ansi.cyan(expr.code)}`);
         if (expr.error) {
-          process.stdout.write(` ${chalk.red('→')} ${chalk.red(expr.error)}\n`);
+          process.stdout.write(` ${ansi.red('→')} ${ansi.red(expr.error)}\n`);
         } else {
-          process.stdout.write(` ${chalk.gray('→')} ${chalk.yellow(expr.result)}\n`);
+          process.stdout.write(` ${ansi.gray('→')} ${ansi.yellow(expr.result)}\n`);
         }
       }
       
-      process.stdout.write(`\n${chalk.gray('Watching for changes...')}\n`);
+      process.stdout.write(`\n${ansi.gray('Watching for changes...')}\n`);
     }
   }, 200);
   
@@ -270,7 +270,7 @@ async function cli() {
   if (flags.watch && _.length) {
     const file = _[0] + (!_[0].includes('.') ? '.md' : '');
     if (!fs.existsSync(file)) {
-      console.error(chalk.red(`File not found: ${file}`));
+      console.error(ansi.red(`File not found: ${file}`));
       process.exit(1);
     }
     return watchFile(file, { bake: flags.bake, clean: flags.clean });

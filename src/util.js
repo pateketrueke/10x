@@ -1,5 +1,5 @@
 
-import chalk from 'chalk';
+import ansi from './lib/ansi.js';
 
 import Parser from './lib/tree/parser';
 
@@ -28,7 +28,7 @@ export function markers(color, value) {
 }
 
 export function colorize(type, value, dimmed) {
-  const color = dimmed ? chalk.dim : chalk;
+  const color = dimmed ? ansi.dim : ansi;
 
   value = value || literal({ type });
 
@@ -50,7 +50,7 @@ export function colorize(type, value, dimmed) {
     case ITALIC: return color.yellowBright.italic(value);
 
     case REF:
-      value = chalk.underline(value);
+      value = ansi.underline(value);
 
     case TEXT:
       return color.white(value);
@@ -99,7 +99,7 @@ export function summary(e, code, noInfo) {
         }).join('');
       }).join('');
     } catch (e) {
-      return chalk.red(source);
+      return ansi.red(source);
     }
   }, colorize).trim();
 }

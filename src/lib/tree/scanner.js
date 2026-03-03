@@ -183,8 +183,7 @@ export default class Scanner {
           }
           offset += chunk.length;
         });
-      } else {
-        if (Array.isArray(cur)) {
+      } else if (Array.isArray(cur)) {
           offset += cur[2].length;
           prev.push(cur);
         } else if (typeof cur === 'string') {
@@ -193,7 +192,6 @@ export default class Scanner {
         } else {
           prev.push(cur);
         }
-      }
       return prev;
     }, []);
 

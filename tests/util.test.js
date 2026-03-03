@@ -1,6 +1,5 @@
 /* eslint-disable no-multi-assign */
 
-import chalk from 'chalk';
 import { expect } from 'chai';
 
 import Parser from '../src/lib/tree/parser';
@@ -8,6 +7,7 @@ import { execute } from '../src/lib';
 import {
   print, markers, colorize, summary, inspect, format, main,
 } from '../src/util';
+import ansi from '../src/lib/ansi';
 
 import {
   TEXT, COMMENT, REGEX, SYMBOL, STRING, LITERAL, NUMBER, PIPE, SOME, EVERY,
@@ -58,30 +58,30 @@ describe('Util', () => {
   it('colorize(...) formats known token groups and default branch', () => {
     expect(colorize(EOF, 'x')).to.eql('');
 
-    expect(colorize(COMMENT, 'x')).to.eql(chalk.gray('x'));
-    expect(colorize(null, ',')).to.eql(chalk.white(','));
+    expect(colorize(COMMENT, 'x')).to.eql(ansi.gray('x'));
+    expect(colorize(null, ',')).to.eql(ansi.white(','));
 
-    expect(colorize(CODE, 'x')).to.eql(chalk.cyanBright('x'));
-    expect(colorize(BOLD, 'x')).to.eql(chalk.redBright.bold('x'));
-    expect(colorize(ITALIC, 'x')).to.eql(chalk.yellowBright.italic('x'));
+    expect(colorize(CODE, 'x')).to.eql(ansi.cyanBright('x'));
+    expect(colorize(BOLD, 'x')).to.eql(ansi.redBright.bold('x'));
+    expect(colorize(ITALIC, 'x')).to.eql(ansi.yellowBright.italic('x'));
 
-    expect(colorize(REF, 'x')).to.eql(chalk.white(chalk.underline('x')));
+    expect(colorize(REF, 'x')).to.eql(ansi.white(ansi.underline('x')));
 
-    expect(colorize(PLUS, '+')).to.eql(chalk.magenta('+'));
-    expect(colorize(SYMBOL, ':x')).to.eql(chalk.yellow(':x'));
+    expect(colorize(PLUS, '+')).to.eql(ansi.magenta('+'));
+    expect(colorize(SYMBOL, ':x')).to.eql(ansi.yellow(':x'));
 
-    expect(colorize(STRING, 'x{y}')).to.eql(chalk.blueBright(`x${chalk.gray('{y}')}`));
-    expect(colorize(REGEX, '/x/')).to.eql(chalk.blueBright('/x/'));
+    expect(colorize(STRING, 'x{y}')).to.eql(ansi.blueBright(`x${ansi.gray('{y}')}`));
+    expect(colorize(REGEX, '/x/')).to.eql(ansi.blueBright('/x/'));
 
-    expect(colorize(LITERAL)).to.eql(chalk.white(undefined));
-    expect(colorize(LITERAL, true)).to.eql(chalk.yellow(':on'));
-    expect(colorize(LITERAL, false)).to.eql(chalk.white(undefined));
-    expect(colorize(LITERAL, 'ok')).to.eql(chalk.white('ok'));
+    expect(colorize(LITERAL)).to.eql(ansi.white(undefined));
+    expect(colorize(LITERAL, true)).to.eql(ansi.yellow(':on'));
+    expect(colorize(LITERAL, false)).to.eql(ansi.white(undefined));
+    expect(colorize(LITERAL, 'ok')).to.eql(ansi.white('ok'));
 
-    expect(colorize(NUMBER, 10)).to.eql(chalk.blue(10));
-    expect(colorize(Symbol('unknown'), 'x')).to.eql(chalk.bgRedBright('x'));
+    expect(colorize(NUMBER, 10)).to.eql(ansi.blue(10));
+    expect(colorize(Symbol('unknown'), 'x')).to.eql(ansi.bgRedBright('x'));
 
-    expect(colorize(COMMENT, 'x', true)).to.eql(chalk.dim.gray('x'));
+    expect(colorize(COMMENT, 'x', true)).to.eql(ansi.dim.gray('x'));
   });
 
   it('colorize(...) handles remaining grouped operator tokens', () => {

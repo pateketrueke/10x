@@ -35,26 +35,26 @@ export function today() {
 
 export function format(date, pattern, locale) {
   const d = toDate(date);
-  
+
   if (!pattern || pattern === 'iso') {
     return d.toISOString();
   }
-  
+
   const opts = {};
-  
+
   if (pattern.includes('date')) {
     opts.dateStyle = 'full';
   }
   if (pattern.includes('time')) {
     opts.timeStyle = 'long';
   }
-  
+
   if (Object.keys(opts).length) {
     return new Intl.DateTimeFormat(locale || 'en', opts).format(d);
   }
-  
+
   const pad = n => String(n).padStart(2, '0');
-  
+
   return pattern
     .replace(/YYYY/g, d.getFullYear())
     .replace(/YY/g, String(d.getFullYear()).slice(-2))
@@ -82,7 +82,7 @@ export function subtract(date, amount, unit) {
 
 export function startOf(date, unit) {
   const d = toDate(date);
-  
+
   switch (unit.toLowerCase()) {
     case 'day':
     case 'd':
@@ -105,7 +105,7 @@ export function startOf(date, unit) {
 
 export function endOf(date, unit) {
   const d = toDate(date);
-  
+
   switch (unit.toLowerCase()) {
     case 'day':
     case 'd':
