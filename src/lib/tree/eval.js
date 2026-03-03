@@ -26,6 +26,78 @@ const OPS_MUL_DIV = new Set([MUL, DIV]);
 const OPS_PLUS_MINUS_MOD = new Set([PLUS, MINUS, MOD]);
 
 export default class Eval {
+  static splitMatchCases(tokens) {
+    const output = [];
+    let current = [];
+
+    for (let i = 0, c = tokens.length; i < c; i++) {
+      const token = tokens[i];
+
+      if (isComma(token)) {
+        if (current.length) output.push(current);
+        current = [];
+        continue;
+      }
+
+      current.push(token);
+    }
+
+    if (current.length) output.push(current);
+    return output;
+  }
+
+  static async resolveMatchBody(input, cases, environment, parentTokenInfo) {
+    for (let i = 0, c = cases.length; i < c; i++) {
+      const [head, ...body] = cases[i];
+
+      if (!head) continue;
+
+      if (head instanceof Expr.ElseStatement) {
+        return head.getBody();
+      }
+
+      if (!body.length) {
+        check(head, 'statement', 'after');
+      }
+
+      // evaluate partial logical-expressions, e.g. `(< a b)`
+      if (isBlock(head) && isLogic(head.getArg(0))) {
+        const [kind, ...others] = head.getArgs();
+        const newBody = Expr.expression({ type: kind.type, value: [input].concat(others) }, parentTokenInfo);
+        const [result] = await Eval.do([newBody], environment, 'Expr', true, parentTokenInfo);
+
+        if (result && result.value === true) {
+          return body;
+        }
+      } else {
+        const result = await Eval.do([head], environment, 'Match', true, parentTokenInfo);
+
+        // evaluate all given values...
+        for (let j = 0, k = result.length; j < k; j++) {
+          let subBody = result[j];
+
+          // check ranges for inclusion
+          if (isArray(subBody)) {
+            if (isRange(subBody.value[0])) {
+              subBody = await subBody.value[0].value.run(true);
+            }
+
+            if (subBody.valueOf().some(x => !hasDiff(x, input))) {
+              return body;
+            }
+          }
+
+          // otherwise, just compare values
+          if (!hasDiff(input, subBody)) {
+            return body;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
   constructor(tokens, environment, noInheritance) {
     if (!(environment instanceof Env)) {
       environment = null;
@@ -1193,60 +1265,33 @@ export default class Eval {
     if (value.match instanceof Expr.MatchStatement) {
       const fixedMatches = value.match.clone().getBody();
       const fixedBody = value.match.head().value.body;
+
       const fixedArgs = isBlock(fixedBody[0]) ? fixedBody[0].getArgs() : [fixedBody[0]];
       const [input] = await Eval.do(fixedArgs, environment, 'Expr', true, parentTokenInfo);
 
       // drop initial value from the input-stack!
       fixedMatches[0].value.body.shift();
+      let cases = fixedMatches.map(x => (isBlock(x) ? x.getBody() : [x]));
 
-      let found;
-
-      for (let i = 0, c = fixedMatches.length; i < c; i++) {
-        const [head, ...body] = isBlock(fixedMatches[i]) ? fixedMatches[i].getBody() : [fixedMatches[i]];
-
-        if (!body.length) {
-          check(head, 'statement', 'after');
-        }
-
-        // evaluate partial logical-expressions, e.g. `(< a b)`
-        if (isBlock(head) && isLogic(head.getArg(0))) {
-          const [kind, ...others] = head.getArgs();
-          const newBody = Expr.expression({ type: kind.type, value: [input].concat(others) }, parentTokenInfo);
-          const [result] = await Eval.do([newBody], environment, 'Expr', true, parentTokenInfo);
-
-          if (result && result.value === true) {
-            found = body;
-            break;
-          }
-        } else {
-          const result = await Eval.do([head], environment, 'Match', true, parentTokenInfo);
-
-          // evaluate all given values...
-          for (let j = 0, k = result.length; j < k; j++) {
-            let subBody = result[j];
-
-            // check ranges for inclusion
-            if (isArray(subBody)) {
-              if (isRange(subBody.value[0])) {
-                subBody = await subBody.value[0].value.run(true);
-              }
-
-              if (subBody.valueOf().some(x => !hasDiff(x, input))) {
-                found = body;
-                break;
-              }
-            }
-
-            // otherwise, just compare values
-            if (!hasDiff(input, subBody)) {
-              found = body;
-              break;
-            }
-          }
-
-          if (found) break;
-        }
+      // Brace-form @match{...} currently lands as a single comma-delimited stream.
+      if (cases.length === 1 && cases[0].some(isComma)) {
+        cases = Eval.splitMatchCases(cases[0]);
       }
+
+      // Normalize inline `@else` maps emitted by parser collection.
+      cases = cases.map(entry => {
+        if (entry.length !== 1) return entry;
+
+        const [head] = entry;
+
+        if (isObject(head) && head.value && head.value.else instanceof Expr.ElseStatement) {
+          return [head.value.else];
+        }
+
+        return entry;
+      });
+
+      const found = await Eval.resolveMatchBody(input, cases, environment, parentTokenInfo);
 
       if (found) {
         subTree.push(...await Eval.do(found, environment, 'It', true, parentTokenInfo));

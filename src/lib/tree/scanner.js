@@ -266,6 +266,8 @@ export default class Scanner {
     switch (char) {
       case '(': this.addToken(OPEN); break;
       case ')': this.addToken(CLOSE); break;
+      case '{': this.addToken(OPEN, char, { kind: 'brace' }); break;
+      case '}': this.addToken(CLOSE, char, { kind: 'brace' }); break;
       case ',': this.addToken(COMMA); break;
       case '[': this.addToken(BEGIN); break;
       case ']': this.addToken(DONE); break;

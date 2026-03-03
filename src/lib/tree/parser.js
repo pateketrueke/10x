@@ -49,6 +49,12 @@ export default class Parser {
   }
 
   collection(token, curToken, nextToken) {
+    const isFirstClassMatch = isDirective(token)
+      && token.value === '@match'
+      && isOpen(curToken)
+      && curToken.tokenInfo
+      && curToken.tokenInfo.kind === 'brace';
+
     if (
       // special values/terminators, e.g. `:off` OR `:1-2`
       isSpecial(token) || isSlice(token) || isEnd(curToken)
@@ -123,6 +129,26 @@ export default class Parser {
     }
 
     this.appendTo(stack, key, map, token, optional);
+
+    if (isFirstClassMatch && map.match instanceof Expr.MatchStatement) {
+      const [braceBody] = map.match.getBody();
+      const cases = isBlock(braceBody) ? braceBody.getBody() : [];
+      const input = Expr.local('$', token);
+
+      return Expr.callable({
+        type: BLOCK,
+        value: {
+          args: [input.clone()],
+          body: [
+            Expr.map({
+              match: Expr.stmt('@match', [
+                Expr.stmt([input].concat(cases), token),
+              ], token),
+            }, token),
+          ],
+        },
+      }, token);
+    }
 
     return Expr.map(map, token);
   }
@@ -644,6 +670,7 @@ export default class Parser {
       while (
         body.length === 1
         && isBlock(body[0])
+        && body[0].tokenInfo.kind !== 'brace'
         && !body[0].isCallable
         && !(body[0].getArg(0) && body[0].getArg(0).isExpression)
         && (

@@ -582,6 +582,18 @@ describe('Eval', () => {
     it('should try to evaluate from all given conditions', async () => {
       expect(await run('@match (:x (:y 42)) 1 2, 3 4 | 0')).to.eql([Expr.value(0)]);
     });
+
+    it('should allow first-class @match{...} functions', async () => {
+      expect(await run(`
+        classify = @match{1 42, 2 0, @else 9}.
+        classify(2).
+      `)).to.eql([Expr.value(0)]);
+
+      expect(await run(`
+        classify = @match{1 "one", 2 "two", @else "?"}.
+        classify(7).
+      `)).to.eql([Expr.value('?')]);
+    });
   });
 
   describe('Rescue', () => {
