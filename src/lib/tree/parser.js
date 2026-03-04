@@ -3,7 +3,7 @@ import Scanner from './scanner';
 import { parseTag } from '../tag';
 
 import {
-  CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME,
+  CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME, DOT,
   HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM,
 } from './symbols';
 
@@ -192,6 +192,71 @@ export default class Parser {
     });
 
     return node;
+  }
+
+  destructure(token) {
+    const bindings = [{ name: token.value, rest: false }];
+    let offset = this.offset;
+    let hasRest = false;
+
+    while (offset < this.tokens.length) {
+      let cur = this.tokens[offset];
+
+      while (isText(cur)) {
+        offset++;
+        cur = this.tokens[offset];
+      }
+
+      if (!isComma(cur)) return null;
+
+      offset++;
+      cur = this.tokens[offset];
+
+      while (isText(cur)) {
+        offset++;
+        cur = this.tokens[offset];
+      }
+
+      const isRest = isRange(cur);
+
+      if (isRest) {
+        offset++;
+        cur = this.tokens[offset];
+
+        // support `...rest` in addition to `..rest`.
+        if (cur && cur.type === DOT) {
+          offset++;
+          cur = this.tokens[offset];
+        }
+      }
+
+      while (isText(cur)) {
+        offset++;
+        cur = this.tokens[offset];
+      }
+
+      if (!isLiteral(cur)) return null;
+      if (hasRest) raise('Rest binding must be last', cur);
+
+      bindings.push({ name: cur.value, rest: isRest });
+      hasRest = isRest;
+
+      offset++;
+      cur = this.tokens[offset];
+
+      while (isText(cur)) {
+        offset++;
+        cur = this.tokens[offset];
+      }
+
+      if (isEqual(cur)) {
+        return { bindings, offset };
+      }
+
+      if (!isComma(cur)) return null;
+    }
+
+    return null;
   }
 
   expression() {
@@ -440,6 +505,25 @@ export default class Parser {
 
       // handle regular definitions and function-shortcuts
       if (isLiteral(token)) {
+        if (isComma(curToken) && this.has(EQUAL)) {
+          const parsed = this.destructure(tokenInfo);
+
+          if (parsed) {
+            this.offset = parsed.offset + 1;
+            this.current = this.tokens[parsed.offset];
+
+            const body = this.subTree(this.statement([OR, PIPE]));
+
+            push(Expr.map({
+              destructure: Expr.stmt('@destructure', [
+                Expr.from(LITERAL, parsed.bindings, tokenInfo),
+                Expr.stmt(body, { ...tokenInfo, kind: 'raw' }),
+              ], tokenInfo),
+            }, tokenInfo));
+            continue;
+          }
+        }
+
         // parse local definitions, e.g. `x =`
         if (isEqual(curToken)) {
           push(Expr.callable(this.definition(token), tokenInfo));

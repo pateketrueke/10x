@@ -1209,6 +1209,42 @@ export default class Eval {
       isDone = true;
     }
 
+    if (value.destructure instanceof Expr.DestructureStatement) {
+      const [bindingsToken, bodyToken] = value.destructure.getBody();
+      const bindings = (bindingsToken && bindingsToken.value) || [];
+
+      const source = await Eval.do(bodyToken.getBody(), environment, 'Let', true, parentTokenInfo);
+      let values = source;
+
+      if (source.length === 1) {
+        if (isArray(source[0])) {
+          values = source[0].value;
+        } else if (isRange(source[0])) {
+          const expanded = await source[0].value.run(true);
+          values = expanded.value;
+        }
+      }
+
+      const restIndex = bindings.findIndex(binding => binding.rest === true);
+      const minRequired = restIndex === -1 ? bindings.length : restIndex;
+
+      if (values.length < minRequired) {
+        raise(`Expecting at least ${minRequired} values to destructure, given ${values.length}`, parentTokenInfo);
+      }
+
+      bindings.forEach((binding, index) => {
+        if (binding.name === '_') return;
+
+        const token = binding.rest
+          ? Expr.array(values.slice(index), parentTokenInfo)
+          : values[index];
+
+        environment.def(binding.name, token || Expr.value(null, parentTokenInfo));
+      });
+
+      isDone = true;
+    }
+
     // evaluate if-then-else logic
     if (value.if instanceof Expr.IfStatement) {
       const { body } = value.if.value;

@@ -4,6 +4,7 @@ import { execute as run } from '../src/lib';
 import Env from '../src/lib/tree/env';
 import Expr from '../src/lib/tree/expr';
 import Range from '../src/lib/range';
+import { failWith } from './helpers';
 
 import { RANGE, LITERAL } from '../src/lib/tree/symbols';
 
@@ -593,6 +594,27 @@ describe('Eval', () => {
         classify = @match{1 "one", 2 "two", @else "?"}.
         classify(7).
       `)).to.eql([Expr.value('?')]);
+    });
+  });
+
+  describe('Destructuring', () => {
+    it('should bind comma-separated locals from rhs values', async () => {
+      expect(await run('a,b=(1,2).\na,b')).to.eql([Expr.value(1), Expr.value(2)]);
+      expect(await run('x,y,z=(10,20,30).\ny')).to.eql([Expr.value(20)]);
+    });
+
+    it('should support rest bindings and discards', async () => {
+      expect(await run('a,b,...rest=(1,2,3,4).\na,b,rest')).to.eql([
+        Expr.value(1),
+        Expr.value(2),
+        Expr.array([Expr.value(3), Expr.value(4)]),
+      ]);
+
+      expect(await run('_,b=(4,5).\nb')).to.eql([Expr.value(5)]);
+    });
+
+    it('should fail if rhs does not provide enough values', async () => {
+      await failWith(run('a,b,c=(1,2).'), 'Expecting at least 3 values to destructure, given 2');
     });
   });
 

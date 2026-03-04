@@ -375,6 +375,7 @@ export default class Expr {
     if (type === '@do') return Expr.doStatement(params, tokenInfo);
 
     if (type === '@let') return Expr.letStatement(params, tokenInfo);
+    if (type === '@destructure') return Expr.destructureStatement(params, tokenInfo);
     if (type === '@loop') return Expr.loopStatement(params, tokenInfo);
     if (type === '@match') return Expr.matchStatement(params, tokenInfo);
 
@@ -786,6 +787,7 @@ Expr.define('doStatement', class DoStatement extends Expr.Statement {});
 Expr.define('whileStatement', class WhileStatement extends Expr.Statement {});
 
 Expr.define('letStatement', class LetStatement extends Expr.Statement {});
+Expr.define('destructureStatement', class DestructureStatement extends Expr.Statement {});
 Expr.define('loopStatement', class LoopStatement extends Expr.Statement {});
 Expr.define('matchStatement', class MatchStatement extends Expr.Statement {});
 
