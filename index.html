@@ -13,7 +13,23 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <link rel="manifest" href="./manifest.webmanifest" />
-  <script type="module" src="./dist/editor.js"></script>
+  <script type="module">
+    const editorModuleCandidates = [
+      './dist/editor.js',
+      '../dist/editor.js',
+      '/dist/editor.js',
+      '/10x/dist/editor.js',
+    ];
+
+    for (const candidate of editorModuleCandidates) {
+      try {
+        await import(candidate);
+        break;
+      } catch (error) {
+        // keep trying candidates so index works in local and deployed paths
+      }
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -590,15 +606,33 @@ runtime signal regis<span class="xt-literal">try</span> <span class="xt-op">-&gt
       overlayBody.innerHTML = '';
     }
 
+    async function ensureEditorReady(timeoutMs = 2200) {
+      if (customElements.get('x-editor')) return true;
+      try {
+        await Promise.race([
+          customElements.whenDefined('x-editor').then(() => true),
+          new Promise(resolve => setTimeout(() => resolve(false), timeoutMs)),
+        ]);
+      } catch {
+        return false;
+      }
+      return !!customElements.get('x-editor');
+    }
+
     function openEditorDemo(key) {
       const demo = DEMO_SNIPPETS[key];
       if (!demo) return;
       openOverlay(demo.title, body => {
-        body.style.padding = '0';
-        const ed = document.createElement('x-editor');
-        ed.style.cssText = `height:${demo.height}px;display:block;`;
-        body.appendChild(ed);
-        customElements.whenDefined('x-editor').then(() => {
+        ensureEditorReady().then(ready => {
+          if (!ready) {
+            body.style.padding = '1rem';
+            body.innerHTML = '<p class="mono">Editor module not available in this path. Open <a href="./editor.html">editor.html</a>.</p>';
+            return;
+          }
+          body.style.padding = '0';
+          const ed = document.createElement('x-editor');
+          ed.style.cssText = `height:${demo.height}px;display:block;`;
+          body.appendChild(ed);
           if (demo.src) ed.value = demo.src;
         });
       });
@@ -617,7 +651,8 @@ runtime signal regis<span class="xt-literal">try</span> <span class="xt-op">-&gt
       button.addEventListener('click', () => openEditorDemo(button.getAttribute('data-demo')));
     });
 
-    customElements.whenDefined('x-editor').then(() => {
+    ensureEditorReady().then(ready => {
+      if (!ready) return;
       const ed = document.getElementById('landing-editor');
       if (ed) {
         ed.value = 'count = @signal 0.\\n@render "#app" @html\\n  <h1>{count}</h1>.';
