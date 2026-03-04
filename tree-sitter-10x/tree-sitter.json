@@ -1,0 +1,31 @@
+{
+  "grammars": [
+    {
+      "name": "10x",
+      "camelcase": "10x",
+      "scope": "source.10x",
+      "path": ".",
+      "file-types": [
+        "10x",
+        "md"
+      ],
+      "injection-regex": "^10x$"
+    }
+  ],
+  "metadata": {
+    "version": "0.0.0",
+    "license": "MIT",
+    "description": "10x grammar for tree-sitter",
+    "links": {
+      "repository": "https://github.com/tree-sitter/tree-sitter-10x"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true
+  }
+}

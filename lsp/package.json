@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js --stdio",
-    "build": "esbuild server.js --bundle --platform=node --outfile=dist/server.cjs"
+    "build": "esbuild server.js --bundle --platform=node --format=esm --outfile=dist/server.mjs"
   },
   "dependencies": {
     "vscode-languageserver": "^9.0.1",

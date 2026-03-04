@@ -1,0 +1,23 @@
+id = "tenx"
+name = "10x"
+version = "0.0.0"
+schema_version = 1
+authors = ["10x contributors"]
+description = "10x language support for Zed."
+repository = "https://github.com/alvov/10x"
+
+[grammars.tenx]
+repository = "../tree-sitter-10x"
+path = "."
+
+[language_servers.tenx-lsp]
+name = "10x Language Server"
+languages = ["10x"]
+command = ["node", "../lsp/dist/server.mjs", "--stdio"]
+
+[languages.tenx]
+name = "10x"
+grammar = "tenx"
+path_suffixes = ["10x", "md"]
+line_comments = ["// "]
+language_servers = ["tenx-lsp"]

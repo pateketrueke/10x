@@ -48,6 +48,20 @@ make demo   # builds and serves at http://localhost:3131
 bun test tests/
 ```
 
+### Tooling (Plan 07 WIP)
+
+```sh
+# Build language server bundle
+npm run lsp:build
+
+# Generate/test tree-sitter grammar
+npm run ts:generate
+npm run ts:test
+
+# End-to-end tooling smoke check (LSP + tree-sitter + zed wiring)
+npm run tooling:smoke
+```
+
 ### Performance Tracking
 
 Track the plan-05 perf hot paths (`Eval.walk` and `Env.resolved` lookup):

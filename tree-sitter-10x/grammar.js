@@ -42,10 +42,10 @@ module.exports = grammar({
       ')',
     ),
 
-    directive: $ => seq(
+    directive: $ => prec.left(seq(
       field('name', $.directive_name),
-      repeat(choice($.expression, $.tag, $.collection)),
-    ),
+      repeat1($.expression),
+    )),
 
     directive_name: $ => token(prec(1, /@[A-Za-z_][A-Za-z0-9_-]*/)),
 
@@ -92,9 +92,10 @@ module.exports = grammar({
     ),
 
     interpolation: $ => seq(
-      '#{',
-      $.expression,
-      '}',
+      choice(
+        seq('#{', $.expression, '}'),
+        seq('{', $.expression, '}'),
+      ),
     ),
 
     tag: $ => seq(
