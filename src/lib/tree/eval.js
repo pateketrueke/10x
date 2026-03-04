@@ -109,6 +109,72 @@ export default class Eval {
     return output;
   }
 
+  static templateNameFromEntry(entry) {
+    const body = isBlock(entry) ? entry.getBody() : [entry];
+
+    return body
+      .filter(token => token && !isComma(token) && !isBlock(token))
+      .map(token => token.valueOf())
+      .join('')
+      .trim();
+  }
+
+  static templateImportSpec(templateStmt) {
+    const spec = {
+      hasTemplateImport: false,
+      includeAll: false,
+      names: [],
+    };
+
+    if (!(templateStmt instanceof Expr.TemplateStatement)) {
+      return spec;
+    }
+
+    spec.hasTemplateImport = true;
+
+    templateStmt.getBody().forEach(entry => {
+      const name = Eval.templateNameFromEntry(entry);
+      if (!name) return;
+      if (name === '*' || name === '@template') {
+        spec.includeAll = true;
+        return;
+      }
+
+      if (!spec.names.includes(name)) {
+        spec.names.push(name);
+      }
+    });
+
+    return spec;
+  }
+
+  static resolveTemplateByName(templates, name) {
+    if (!templates || !name) return null;
+
+    let node = templates;
+
+    for (let i = 0, c = name.length; i < c; i++) {
+      node = node[name[i]];
+      if (!node) return null;
+    }
+
+    return node && node.args ? node : null;
+  }
+
+  static registerTemplateByName(templates, name, definition) {
+    if (!templates || !name || !definition) return;
+
+    let root = templates;
+
+    for (let i = 0, c = name.length - 1; i < c; i++) {
+      const key = name[i];
+      if (!root[key]) root[key] = {};
+      root = root[key];
+    }
+
+    root[name[name.length - 1]] = definition;
+  }
+
   static async resolveMatchBody(input, cases, environment, parentTokenInfo) {
     const target = Eval.getResultTagToken(input) || input;
 
@@ -1729,6 +1795,39 @@ export default class Eval {
         return Env.load(ctx, name, alias, value.from.head().valueOf(), environment);
       }));
 
+      const templateSpec = Eval.templateImportSpec(value.template);
+
+      if (templateSpec.hasTemplateImport) {
+        const sourceName = value.from.head().valueOf();
+        const source = await Env.resolve(sourceName, '@template', null, environment);
+
+        if (!(source instanceof Env)) {
+          raise(`Cannot import templates from \`${sourceName}\``, parentTokenInfo);
+        }
+
+        const exported = source.exportedTemplates || {};
+        const names = templateSpec.includeAll
+          ? Object.keys(exported)
+          : templateSpec.names;
+
+        names.forEach(requestedName => {
+          const exportedName = exported[requestedName];
+
+          if (!templateSpec.includeAll && !exportedName) {
+            raise(`Template \`${requestedName}\` not exported`, parentTokenInfo);
+          }
+
+          const realName = exportedName || requestedName;
+          const definition = Eval.resolveTemplateByName(source.templates, realName);
+
+          if (!definition) {
+            raise(`Missing template \`${realName}\` in \`${sourceName}\``, parentTokenInfo);
+          }
+
+          Eval.registerTemplateByName(environment.templates, realName, definition);
+        });
+      }
+
       isDone = true;
     }
 
@@ -1755,6 +1854,24 @@ export default class Eval {
 
           environment.exported[alias || name] = name;
         });
+
+        if (value.template instanceof Expr.TemplateStatement) {
+          const names = value.template.getBody()
+            .map(Eval.templateNameFromEntry)
+            .filter(Boolean);
+
+          names.forEach(name => {
+            if (environment.exportedTemplates[name]) {
+              raise(`Template export for \`${name}\` already exists`);
+            }
+
+            if (!Eval.resolveTemplateByName(environment.templates, name)) {
+              raise(`Missing template \`${name}\``, parentTokenInfo);
+            }
+
+            environment.exportedTemplates[name] = name;
+          });
+        }
       }
 
       isDone = true;

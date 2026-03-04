@@ -7,7 +7,7 @@ import Env from '../src/lib/tree/env';
 import Parser from '../src/lib/tree/parser';
 
 import {
-  LESS, EXACT_EQ, GREATER_EQ, MINUS, SOME, EVERY, PLUS, MUL, DIV, DOT, OR,
+  LESS, EXACT_EQ, GREATER, GREATER_EQ, MINUS, SOME, EVERY, PLUS, MUL, DIV, DOT, OR, EQUAL,
   EOL, TEXT, CODE, BLOCKQUOTE, COMMA, STRING, OPEN, CLOSE, RANGE, REGEX, LITERAL, NUMBER,
 } from '../src/lib/tree/symbols';
 
@@ -175,6 +175,39 @@ describe('Parser', () => {
         import: Expr.stmt('@import', [Expr.local('utils')]),
         from: Expr.stmt('@from', [Expr.value('./utils.md')]),
       }),
+    ]);
+
+    expect(Parser.getAST('[ops, @template](./ops.md)')).to.eql([
+      Expr.map({
+        import: Expr.stmt('@import', [Expr.local('ops')]),
+        from: Expr.stmt('@from', [Expr.value('./ops.md')]),
+        template: Expr.stmt('@template', [
+          Expr.stmt([Expr.local('*')]),
+        ]),
+      }),
+    ]);
+
+    expect(Parser.getAST('[ops, @template >>](./ops.md)')).to.eql([
+      Expr.map({
+        import: Expr.stmt('@import', [Expr.local('ops')]),
+        from: Expr.stmt('@from', [Expr.value('./ops.md')]),
+        template: Expr.stmt('@template', [
+          Expr.stmt([Expr.local('>>')]),
+        ]),
+      }),
+    ]);
+  });
+
+  it('should keep @export @template declarations in AST without crashing', () => {
+    expect(Parser.getAST('@export @template >>, +=.')).to.eql([
+      Expr.map({
+        export: Expr.stmt('@export', []),
+        template: Expr.stmt('@template', [
+          Expr.stmt([Expr.from(GREATER), Expr.from(GREATER)]),
+          Expr.stmt([Expr.from(PLUS), Expr.from(EQUAL)]),
+        ]),
+      }),
+      Expr.from(EOL),
     ]);
   });
 

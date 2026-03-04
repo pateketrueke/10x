@@ -21,6 +21,7 @@ export default class Env {
 
     // module details
     this.exported = true;
+    this.exportedTemplates = {};
     this.descriptor = null;
 
     Object.defineProperty(this, 'parent', { value });

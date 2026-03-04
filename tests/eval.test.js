@@ -407,6 +407,56 @@ describe('Eval', () => {
         Env.resolve = resolve;
       }
     });
+
+    it('should import exported templates from markdown links on demand', async () => {
+      const resolve = Env.resolve;
+      const moduleEnv = new Env();
+      const scope = new Env();
+
+      try {
+        await run(`
+          @module "Ops" @export ops.
+          @export @template >>.
+          ops = -> :on.
+          @template >> ((a b) -> (!= a b)).
+        `, moduleEnv);
+
+        Env.resolve = source => {
+          if (source === './ops.md') return moduleEnv;
+          return null;
+        };
+
+        await run('[ops, @template >>](./ops.md)', scope);
+        expect(await run('1 >> 2.', scope)).to.eql([Expr.value(true)]);
+      } finally {
+        Env.resolve = resolve;
+      }
+    });
+
+    it('should import all exported templates from markdown links', async () => {
+      const resolve = Env.resolve;
+      const moduleEnv = new Env();
+      const scope = new Env();
+
+      try {
+        await run(`
+          @module "Ops" @export ops.
+          @export @template >>.
+          ops = -> :on.
+          @template >> ((a b) -> (!= a b)).
+        `, moduleEnv);
+
+        Env.resolve = source => {
+          if (source === './ops.md') return moduleEnv;
+          return null;
+        };
+
+        await run('[ops, @template](./ops.md)', scope);
+        expect(await run('1 >> 2.', scope)).to.eql([Expr.value(true)]);
+      } finally {
+        Env.resolve = resolve;
+      }
+    });
   });
 
   describe('Functions', () => {

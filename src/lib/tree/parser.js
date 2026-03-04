@@ -33,6 +33,10 @@ export default class Parser {
       const subTree = stmt.getBody();
       const expr = subTree.pop();
 
+      if (!isBlock(expr) || !expr.hasArgs || !expr.getArg(0) || !expr.getArg(0).isCallable) {
+        return;
+      }
+
       let root = this.templates;
       let key;
 
@@ -46,6 +50,38 @@ export default class Parser {
 
       root[key] = expr.getArgs()[0].value;
     });
+  }
+
+  parseRefImportSpec(alias) {
+    const parts = String(alias || '')
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+
+    const imports = [];
+    const templates = [];
+    let includeAllTemplates = false;
+
+    parts.forEach(part => {
+      if (!part.startsWith('@template')) {
+        imports.push(part);
+        return;
+      }
+
+      const rest = part.slice('@template'.length).trim();
+
+      if (!rest) {
+        includeAllTemplates = true;
+        return;
+      }
+
+      rest.split(/\s+/)
+        .map(name => name.trim())
+        .filter(Boolean)
+        .forEach(name => templates.push(name));
+    });
+
+    return { imports, includeAllTemplates, templates };
   }
 
   collection(token, curToken, nextToken) {
@@ -424,6 +460,7 @@ export default class Parser {
         if (
           this.raw !== false
           && fixedToken.value
+          && Object.keys(fixedToken.value).length === 1
           && fixedToken.value.template instanceof Expr.TemplateStatement
         ) {
           this.extension(fixedToken.value.template.value.body);
@@ -552,10 +589,28 @@ export default class Parser {
       }
 
       if (isRef(token) && token.isRaw && token.value && token.value.alt && token.value.href) {
-        push(Expr.map({
-          import: Expr.stmt('@import', [Expr.local(token.value.alt.trim(), tokenInfo)], tokenInfo),
+        const spec = this.parseRefImportSpec(token.value.alt.trim());
+        const importBody = spec.imports.map(name => Expr.local(name, tokenInfo));
+        const map = {
+          import: Expr.stmt('@import', importBody, tokenInfo),
           from: Expr.stmt('@from', [Expr.value(token.value.href.trim(), tokenInfo)], tokenInfo),
-        }, tokenInfo));
+        };
+
+        if (spec.includeAllTemplates || spec.templates.length) {
+          const templateBody = [];
+
+          if (spec.includeAllTemplates) {
+            templateBody.push(Expr.stmt([Expr.local('*', tokenInfo)], tokenInfo));
+          }
+
+          spec.templates.forEach(name => {
+            templateBody.push(Expr.stmt([Expr.local(name, tokenInfo)], tokenInfo));
+          });
+
+          map.template = Expr.stmt('@template', templateBody, tokenInfo);
+        }
+
+        push(Expr.map(map, tokenInfo));
         continue;
       }
 
