@@ -119,6 +119,8 @@ count = <span class="dir">@signal</span> <span class="dir">@prop</span> <span cl
   </main>
 
   <script type="module">
+    import { h, mount, patch } from 'https://unpkg.com/somedom/dist/somedom.mjs';
+
     const SIGNAL = Symbol('10x.signal');
 
     function makeRuntime(host) {
@@ -138,6 +140,9 @@ count = <span class="dir">@signal</span> <span class="dir">@prop</span> <span cl
               this.value = next;
               this.subs.forEach(fn => fn());
             },
+            peek() {
+              return this.value;
+            },
           };
           return s;
         },
@@ -151,14 +156,28 @@ count = <span class="dir">@signal</span> <span class="dir">@prop</span> <span cl
           return v && v[SIGNAL] ? v.get() : v;
         },
 
+        h,
+
         html(renderFn) {
           return { render: renderFn };
         },
 
         renderShadow(shadow, styles, view) {
+          // inject styles once
+          const styleEl = document.createElement('style');
+          styleEl.textContent = styles.replace(/<\/?style>/g, '');
+          shadow.appendChild(styleEl);
+
+          let prev = null;
           const run = () => {
             currentEffect = run;
-            shadow.innerHTML = styles + String(view.render());
+            const next = view.render();
+            if (!prev) {
+              mount(shadow, next);
+            } else {
+              patch(shadow, prev, next);
+            }
+            prev = next;
             currentEffect = null;
           };
           run();
@@ -173,7 +192,6 @@ count = <span class="dir">@signal</span> <span class="dir">@prop</span> <span cl
     }
 
     const STYLES = `
-      <style>
         :host {
           display: inline-block;
           font-family: "Space Grotesk", sans-serif;
@@ -215,7 +233,6 @@ count = <span class="dir">@signal</span> <span class="dir">@prop</span> <span cl
         }
         #inc { border-color: #58d3a8; color: #58d3a8; }
         #dec { border-color: #6eb4ff; color: #6eb4ff; }
-      </style>
     `;
 
     // Compiled from examples/x-counter.md
@@ -229,14 +246,14 @@ count = <span class="dir">@signal</span> <span class="dir">@prop</span> <span cl
 
         // @render @shadow @html ...
         R.renderShadow(shadow, STYLES, R.html(() =>
-          `<div class="counter">
-            <h1>${R.read(count)}</h1>
-            <div class="actions">
-              <button id="dec">−</button>
-              <button id="inc">+</button>
-              <button id="reset">reset</button>
-            </div>
-          </div>`
+          R.h('div', { 'class': 'counter' },
+            R.h('h1', null, String(R.read(count))),
+            R.h('div', { 'class': 'actions' },
+              R.h('button', { id: 'dec' }, '−'),
+              R.h('button', { id: 'inc' }, '+'),
+              R.h('button', { id: 'reset' }, 'reset'),
+            ),
+          )
         ));
 
         // @on "click" "#inc"   count = count + 1.

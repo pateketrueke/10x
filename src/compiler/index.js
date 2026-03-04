@@ -44,26 +44,24 @@ function quote(value) {
 }
 
 function compileTag(node) {
-  const attrs = Object.entries(node.attrs || {}).map(([key, value]) => {
-    if (value === true) return ` ${key}`;
-    if (value && typeof value === 'object' && typeof value.expr === 'string') {
-      return ` ${key}="\${Runtime.read(${value.expr.trim()})}"`;
-    }
+  const attrEntries = Object.entries(node.attrs || {});
+  const attrsStr = attrEntries.length === 0
+    ? 'null'
+    : '{ ' + attrEntries.map(([k, v]) => {
+        if (v === true) return `${JSON.stringify(k)}: true`;
+        if (v && typeof v === 'object' && typeof v.expr === 'string')
+          return `${JSON.stringify(k)}: Runtime.read(${v.expr.trim()})`;
+        return `${JSON.stringify(k)}: ${JSON.stringify(String(v))}`;
+      }).join(', ') + ' }';
 
-    return ` ${key}=${quote(String(value))}`;
-  }).join('');
-
-  if (node.selfClosing) {
-    return `<${node.name}${attrs} />`;
-  }
-
-  const children = (node.children || []).map(child => {
-    if (typeof child === 'string') return child;
-    if (child && typeof child.expr === 'string') return `\${Runtime.read(${child.expr.trim()})}`;
+  const childrenParts = (node.children || []).map(child => {
+    if (typeof child === 'string') return JSON.stringify(child);
+    if (child && typeof child.expr === 'string') return `Runtime.read(${child.expr.trim()})`;
     return compileTag(child);
-  }).join('');
+  });
 
-  return `<${node.name}${attrs}>${children}</${node.name}>`;
+  const childrenStr = childrenParts.join(', ');
+  return `Runtime.h(${JSON.stringify(node.name)}, ${attrsStr}${childrenStr ? ', ' + childrenStr : ''})`;
 }
 
 function compileArgs(args, ctx) {
@@ -79,7 +77,7 @@ function compileLambda(token, ctx) {
 
 function compileToken(token, ctx = { signalVars: new Set() }) {
   if (token.isTag) {
-    return `\`${compileTag(token.value)}\``;
+    return compileTag(token.value);
   }
 
   if (token.isCallable && !token.getName()) {

@@ -133,6 +133,8 @@ count = @signal 1.
   </main>
 
   <script type="module">
+    import { h, mount, patch } from 'https://unpkg.com/somedom/dist/somedom.mjs';
+
     const SIGNAL = Symbol('10x.signal');
     let currentEffect = null;
 
@@ -150,19 +152,30 @@ count = @signal 1.
             this.value = nextValue;
             this.subs.forEach(fn => fn());
           },
+          peek() {
+            return this.value;
+          },
         };
       },
       read(value) {
         return value && value[SIGNAL] ? value.get() : value;
       },
+      h,
       html(renderFn) {
         return { render: renderFn };
       },
       render(selector, view) {
         const target = document.querySelector(selector);
+        let prev = null;
         const run = () => {
           currentEffect = run;
-          target.innerHTML = String(view.render());
+          const next = view.render();
+          if (!prev) {
+            mount(target, next);
+          } else {
+            patch(target, prev, next);
+          }
+          prev = next;
           currentEffect = null;
         };
         run();
@@ -179,7 +192,17 @@ count = @signal 1.
     const todos = Runtime.signal("Write parser regression tests");
     const count = Runtime.signal(1);
 
-    Runtime.render("#app", Runtime.html(() => `<section class="todo-card"><h1>TodoList</h1><p class="meta">items added: ${Runtime.read(count)}</p><p class="items">${Runtime.read(todos)}</p><div class="actions"><button id="add">+ add item</button><button id="clear">clear</button></div></section>`));
+    Runtime.render("#app", Runtime.html(() =>
+      Runtime.h('section', { 'class': 'todo-card' },
+        Runtime.h('h1', null, 'TodoList'),
+        Runtime.h('p', { 'class': 'meta' }, 'items added: ', String(Runtime.read(count))),
+        Runtime.h('p', { 'class': 'items' }, String(Runtime.read(todos))),
+        Runtime.h('div', { 'class': 'actions' },
+          Runtime.h('button', { id: 'add' }, '+ add item'),
+          Runtime.h('button', { id: 'clear' }, 'clear'),
+        ),
+      )
+    ));
     Runtime.on("click", "#add", () => { todos.set(Runtime.read(todos) + ", ship feature " + Runtime.read(count)); });
     Runtime.on("click", "#add", () => { count.set(Runtime.read(count) + 1); });
     Runtime.on("click", "#clear", () => { todos.set("Inbox zero"); });

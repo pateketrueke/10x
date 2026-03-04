@@ -1,3 +1,7 @@
+import { h, mount, patch } from 'somedom';
+
+export { h };
+
 const SIGNAL = Symbol('10x.signal');
 
 let currentEffect = null;
@@ -14,6 +18,9 @@ export function signal(initialValue) {
     set(nextValue) {
       this.value = nextValue;
       this.subs.forEach(fn => fn());
+      return this.value;
+    },
+    peek() {
       return this.value;
     },
   };
@@ -62,8 +69,19 @@ export function render(selectorOrElement, view) {
 
   if (!target) throw new Error(`Render target not found: ${selectorOrElement}`);
 
+  let prev = null;
   return effect(() => {
-    target.innerHTML = String(view.render());
+    const next = view.render();
+    if (typeof next === 'string') {
+      // fallback for template-string views
+      target.innerHTML = next;
+    } else if (!prev) {
+      mount(target, next);
+      prev = next;
+    } else {
+      patch(target, prev, next);
+      prev = next;
+    }
   });
 }
 

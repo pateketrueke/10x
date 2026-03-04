@@ -47,7 +47,7 @@ const HISTORY_FILE = path.join(os.homedir(), '.tenx_history');
 const MAX_HISTORY = 1000;
 
 const argv = wargs(process.argv.slice(2), {
-  boolean: ['trace', 'color', 'print', 'inline', 'source'],
+  boolean: ['trace', 'color', 'print', 'inline', 'source', 'lint'],
 });
 const nodeAdapter = createNodeAdapter(process.argv.slice(2));
 
@@ -179,6 +179,28 @@ async function readStdin() {
 
 async function cli() {
   await runtimeReady;
+
+  if (argv.flags.lint) {
+    const files = argv._;
+    let hasError = false;
+
+    for (const file of files) {
+      const filePath = file + (!file.includes('.') ? '.md' : '');
+      const src = fs.readFileSync(filePath).toString();
+      try {
+        Parser.getAST(src, 'parse');
+        console.log(`${file}: ok`);
+      } catch (e) {
+        const line = Number.isFinite(e.line) ? e.line + 1 : 1;
+        const col = Number.isFinite(e.col) ? e.col + 1 : 1;
+        console.error(`${file}:${line}:${col}: ${e.name}: ${e.message}`);
+        hasError = true;
+      }
+    }
+
+    process.exit(hasError ? 1 : 0);
+  }
+
   const { _, raw, ...flags } = argv;
 
   let code = '';
