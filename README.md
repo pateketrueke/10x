@@ -276,6 +276,7 @@ See the [`examples/`](examples/) directory:
 - [`fib_loop.md`](examples/fib_loop.md) — Fibonacci with mutable loop state
 - [`fib_memo.md`](examples/fib_memo.md) — Fibonacci with memoization
 - [`concat.md`](examples/concat.md) — Custom operator + import
+- [`lulz.md`](examples/lulz.md) — Range + pipe + `@match` + map-heavy toy program
 - [`markdown.md`](examples/markdown.md) — Prose mixed with code
 - [`prompt.md`](examples/prompt.md) — Interactive input
 - [`stdin.md`](examples/stdin.md) — Reading from stdin
