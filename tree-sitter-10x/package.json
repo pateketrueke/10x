@@ -1,0 +1,13 @@
+{
+  "name": "tree-sitter-10x",
+  "version": "0.0.0",
+  "private": true,
+  "main": "grammar.js",
+  "scripts": {
+    "generate": "tree-sitter generate",
+    "test": "tree-sitter test"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.24.7"
+  }
+}
