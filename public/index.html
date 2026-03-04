@@ -380,18 +380,18 @@
       <article class="card span-4 reveal">
         <h2>Language</h2>
         <p>Numbers, units, ranges, symbols.</p>
-<pre data-lang="10x">1/2.
-5 cm to :in.
-[1..5].
-:ok.</pre>
+<pre data-lang="10x"><span class="xt-number">1</span><span class="xt-op">/</span>2.
+<span class="xt-number">5</span> cm to <span class="xt-symbol">:in</span>.
+[<span class="xt-number">1</span>..5].
+<span class="xt-symbol">:ok</span>.</pre>
       </article>
 
       <article class="card span-4 reveal">
         <h2>Functions</h2>
         <p>Lambdas, closures, and pipe composition.</p>
-<pre data-lang="10x">add = (a b) -&gt; a + b.
-double = n -&gt; n * 2.
-[1..5] |&gt; map(double).</pre>
+<pre data-lang="10x">add <span class="xt-op">=</span> (a b) <span class="xt-op">-&gt;</span> a <span class="xt-op">+</span> b.
+double <span class="xt-op">=</span> n <span class="xt-op">-&gt;</span> n <span class="xt-op">*</span> <span class="xt-number">2</span>.
+[<span class="xt-number">1</span>..5] <span class="xt-op">|&gt;</span> map(double).</pre>
       </article>
 
       <article class="card span-4 reveal">
@@ -405,59 +405,59 @@ double = n -&gt; n * 2.
       <article class="card span-6 reveal">
         <h2>Signals & Reactivity</h2>
         <p>Reactive state, derived values, and automatic re-render.</p>
-<pre data-lang="10x">count = @signal 0.
-double = @computed count * 2.
-@render "#app" @html
-  [&lt;h1&gt;{count}&lt;/h1&gt;, &lt;p&gt;{double}&lt;/p&gt;].
-@on "click" "#inc"
-  count = count + 1.</pre>
+<pre data-lang="10x">count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.
+double <span class="xt-op">=</span> <span class="xt-op">@computed</span> count <span class="xt-op">*</span> <span class="xt-number">2</span>.
+<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span>
+  [<span class="xt-op">&lt;</span>h1<span class="xt-op">&gt;</span>{count}<span class="xt-op">&lt;</span><span class="xt-op">/</span>h1<span class="xt-op">&gt;</span>, <span class="xt-op">&lt;</span>p<span class="xt-op">&gt;</span>{double}<span class="xt-op">&lt;</span><span class="xt-op">/</span>p<span class="xt-op">&gt;</span>].
+<span class="xt-op">@on</span> <span class="xt-string">"click"</span> <span class="xt-string">"#inc"</span>
+  count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</pre>
       </article>
 
       <article class="card span-6 reveal">
         <h2>Web Components</h2>
         <p>Shadow DOM components compile to <span class="mono">setup(host)</span>.</p>
-<pre data-lang="10x">count = @signal @prop "start" 0.
-@render @shadow @html
-  &lt;div&gt;&lt;h1&gt;{count}&lt;/h1&gt;&lt;/div&gt;.
-@on "click", "#inc",
-  count = count + 1.</pre>
+<pre data-lang="10x">count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-op">@prop</span> <span class="xt-string">"start"</span> <span class="xt-number">0</span>.
+<span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span>
+  <span class="xt-op">&lt;</span>div<span class="xt-op">&gt;</span><span class="xt-op">&lt;</span>h1<span class="xt-op">&gt;</span>{count}<span class="xt-op">&lt;</span><span class="xt-op">/</span>h1<span class="xt-op">&gt;</span><span class="xt-op">&lt;</span><span class="xt-op">/</span>div<span class="xt-op">&gt;</span>.
+<span class="xt-op">@on</span> <span class="xt-string">"click"</span>, <span class="xt-string">"#inc"</span>,
+  count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</pre>
       </article>
 
       <article class="card span-6 reveal">
         <h2>Compiler</h2>
         <p>Compile <span class="mono">.md</span> to portable ESM.</p>
-<pre data-lang="10x"># source                    # compiled
-count = @signal 0.      -&gt; export const count = Runtime.signal(0);
-@render "#app" @html    -&gt; Runtime.render("#app", Runtime.html(() =&gt; ...));
-@on "click" "#btn"      -&gt; Runtime.on("click", "#btn", () =&gt; ...);</pre>
+<pre data-lang="10x"><span class="xt-comment"># source                    # compiled</span>
+count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.      <span class="xt-op">-&gt;</span> export const count <span class="xt-op">=</span> Runtime.signal(<span class="xt-number">0</span>);
+<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span>    <span class="xt-op">-&gt;</span> Runtime.render(<span class="xt-string">"#app"</span>, Runtime.html(() <span class="xt-op">=</span><span class="xt-op">&gt;</span> ...));
+<span class="xt-op">@on</span> <span class="xt-string">"click"</span> <span class="xt-string">"#btn"</span>      <span class="xt-op">-&gt;</span> Runtime.on(<span class="xt-string">"click"</span>, <span class="xt-string">"#btn"</span>, () <span class="xt-op">=</span><span class="xt-op">&gt;</span> ...);</pre>
       </article>
 
       <article class="card span-6 reveal">
         <h2>CSS</h2>
         <p>Raw CSS, object styles, and auto atomic utilities.</p>
-<pre data-lang="10x">@style "body { margin: 0; }".
-@style (:host { backgroundColor: "#0f1217" }).
-@render "#app" @html
-  &lt;div class="flex items-center gap-2 p-4"&gt;x&lt;/div&gt;.</pre>
+<pre data-lang="10x"><span class="xt-op">@style</span> <span class="xt-string">"body { margin: 0; }"</span>.
+<span class="xt-op">@style</span> (<span class="xt-symbol">:host</span> { backgroundColor: <span class="xt-string">"#0f1217"</span> }).
+<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span>
+  <span class="xt-op">&lt;</span>div class<span class="xt-op">=</span><span class="xt-string">"flex items-center gap-2 p-4"</span><span class="xt-op">&gt;</span>x<span class="xt-op">&lt;</span><span class="xt-op">/</span>div<span class="xt-op">&gt;</span>.</pre>
       </article>
 
       <article class="card span-6 reveal">
         <h2>VDOM Directives</h2>
         <p>Native somedom attrs: <span class="mono">d:*</span>, <span class="mono">s:*</span>, and <span class="mono">ref</span>.</p>
-<pre data-lang="10x">open = @signal :on.
-name = @signal "".
-el = @signal :nil.
-@render "#app" @html
-  &lt;input d:model={name} d:show={open} ref={el} /&gt;.</pre>
+<pre data-lang="10x">open <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-symbol">:on</span>.
+name <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-string">""</span>.
+el <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-symbol">:nil</span>.
+<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span>
+  <span class="xt-op">&lt;</span>input d<span class="xt-symbol">:model</span><span class="xt-op">=</span>{name} d<span class="xt-symbol">:show</span><span class="xt-op">=</span>{open} ref<span class="xt-op">=</span>{el} <span class="xt-op">/</span><span class="xt-op">&gt;</span>.</pre>
       </article>
 
       <article class="card span-6 reveal">
         <h2>Bundler</h2>
         <p>Bundle local modules and aliases into a single app artifact.</p>
-<pre data-lang="sh">10x compile app/main.md --bundle --out app.js
-10x compile app/main.md --bundle --alias "@app=./src"
-bun run app.js
-node app.js</pre>
+<pre data-lang="sh"><span class="xt-literal">10x</span> compile app/main.md --bundle --out app.js
+<span class="xt-literal">10x</span> compile app/main.md --bundle --alias "@app=./src"
+<span class="xt-literal">bun</span> run app.js
+<span class="xt-literal">node</span> app.js</pre>
       </article>
 
       <article class="card span-12 reveal">
@@ -511,20 +511,20 @@ node app.js</pre>
 
       <article class="card span-6 reveal">
         <h2>Quick Start</h2>
-<pre data-lang="sh">bun install
-bun run repl
-node bin/cli examples/fib_memo.md
-10x compile examples/x-counter.md
-10x compile examples/fib_memo.md | bun run -
-make demo</pre>
+<pre data-lang="sh"><span class="xt-literal">bun</span> install
+<span class="xt-literal">bun</span> run repl
+<span class="xt-literal">node</span> bin/cli examples/fib_memo.md
+<span class="xt-literal">10x</span> compile examples/x-counter.md
+<span class="xt-literal">10x</span> compile examples/fib_memo.md | bun run -
+<span class="xt-literal">make</span> demo</pre>
       </article>
 
       <article class="card span-12 reveal">
         <h2>Tooling Ecosystem</h2>
         <p>Tree-sitter grammar, LSP, Zed extension, Vite plugin, and runtime devtools.</p>
-<pre data-lang="10x">tree-sitter -&gt; highlight queries -&gt; LSP -&gt; Zed extension
-compiler -&gt; Vite plugin
-runtime signal registry -&gt; DevTools overlay</pre>
+<pre data-lang="10x">tree<span class="xt-op">-</span>sitter <span class="xt-op">-&gt;</span> highlight queries <span class="xt-op">-&gt;</span> LSP <span class="xt-op">-&gt;</span> Zed extension
+compiler <span class="xt-op">-&gt;</span> Vite plugin
+runtime signal regis<span class="xt-literal">try</span> <span class="xt-op">-&gt;</span> DevTools overlay</pre>
       </article>
     </section>
   </div>
@@ -538,99 +538,6 @@ runtime signal registry -&gt; DevTools overlay</pre>
   </dialog>
 
   <script>
-    const escapeHtml = text => String(text)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-
-    function highlight10x(src) {
-      const out = [];
-      let i = 0;
-      while (i < src.length) {
-        let m;
-        if (src.startsWith('"""', i)) {
-          const end = src.indexOf('"""', i + 3);
-          const value = end < 0 ? src.slice(i) : src.slice(i, end + 3);
-          out.push(['xt-string', value]);
-          i += value.length;
-          continue;
-        }
-        if (src[i] === '"') {
-          const end = src.indexOf('"', i + 1);
-          const value = end < 0 ? src.slice(i) : src.slice(i, end + 1);
-          out.push(['xt-string', value]);
-          i += value.length;
-          continue;
-        }
-        if (src.startsWith('//', i) || src.startsWith('#', i)) {
-          const end = src.indexOf('\n', i);
-          const value = end < 0 ? src.slice(i) : src.slice(i, end);
-          out.push(['xt-comment', value]);
-          i += value.length;
-          continue;
-        }
-        if (src[i] === '@' && (m = src.slice(i).match(/^@[a-z]+/i))) {
-          out.push(['xt-op', m[0]]);
-          i += m[0].length;
-          continue;
-        }
-        if (src[i] === ':' && (m = src.slice(i).match(/^:[a-z_][a-z0-9_]*/i))) {
-          out.push(['xt-symbol', m[0]]);
-          i += m[0].length;
-          continue;
-        }
-        if ((m = src.slice(i).match(/^\d+(\.\d+)?/)) && (i === 0 || /[\s(,\[+\-*]/.test(src[i - 1]))) {
-          out.push(['xt-number', m[0]]);
-          i += m[0].length;
-          continue;
-        }
-        if (src.startsWith('->', i) || src.startsWith('|>', i)) {
-          out.push(['xt-op', src.slice(i, i + 2)]);
-          i += 2;
-          continue;
-        }
-        if (/[+\-*/%=<>!~]/.test(src[i])) {
-          out.push(['xt-op', src[i]]);
-          i++;
-          continue;
-        }
-        if (/[A-Za-z_][A-Za-z0-9_]*/.test(src.slice(i, i + 1)) && (m = src.slice(i).match(/^[A-Za-z_][A-Za-z0-9_]*/))) {
-          const kw = m[0];
-          if (['if', 'else', 'while', 'loop', 'try', 'rescue', 'match'].includes(kw)) {
-            out.push(['xt-literal', kw]);
-            i += kw.length;
-            continue;
-          }
-        }
-
-        const last = out[out.length - 1];
-        if (last && last[0] === '') {
-          last[1] += src[i];
-        } else {
-          out.push(['', src[i]]);
-        }
-        i++;
-      }
-
-      return out.map(([cls, text]) => (cls
-        ? `<span class="${cls}">${escapeHtml(text)}</span>`
-        : escapeHtml(text))).join('');
-    }
-
-    function highlightSh(src) {
-      return escapeHtml(src).replace(/^([a-z0-9._-]+)(\s+.+)?$/gim, (_, cmd, rest = '') => {
-        const withPath = rest.replace(/(\s|^)([./~][\w./-]+)/g, '$1<span class="xt-symbol">$2</span>');
-        return `<span class="xt-literal">${cmd}</span>${withPath}`;
-      });
-    }
-
-    document.querySelectorAll('pre[data-lang]').forEach(pre => {
-      const src = pre.textContent || '';
-      const lang = pre.getAttribute('data-lang');
-      if (lang === '10x') pre.innerHTML = highlight10x(src);
-      if (lang === 'sh') pre.innerHTML = highlightSh(src);
-    });
-
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) entry.target.classList.add('show');
