@@ -116,7 +116,11 @@ export function isSpecial(t) { return t && SYMBOL_TYPES.includes(t.value); }
 export function isArray(t) { return t && t.type === RANGE && Array.isArray(t.value); }
 export function isSlice(t) { return t && t.type === SYMBOL && RE_SLICING.test(t.value); }
 export function isUnit(t) { return t && t.type === NUMBER && isPlain(t.value); }
-export function isData(t) { return (isRange(t) && Array.isArray(t.value)) || isLiteral(t) || (isResult(t) && !isInvokable(t)); }
+export function isData(t) {
+  return (isRange(t) && Array.isArray(t.value))
+    || isLiteral(t)
+    || (isResult(t) && !isInvokable(t));
+}
 
 export function hasStatements(o) {
   return CONTROL_TYPES.some(k => o[k.substr(1)] && o[k.substr(1)].isStatement);

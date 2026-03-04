@@ -539,6 +539,7 @@ describe('Parser', () => {
   describe('RANGE', () => {
     it('should parse ranges', () => {
       expect(Parser.getAST('a..b')).to.eql([Expr.range([Expr.local('a')], [Expr.local('b')])]);
+      expect(Parser.getAST('1..')).to.eql([Expr.range([Expr.value(1)], [])]);
     });
 
     it('should parse arrays', () => {

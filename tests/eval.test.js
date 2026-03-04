@@ -695,6 +695,16 @@ describe('Eval', () => {
       ])]);
     });
 
+    it('should allow open-ended ranges with lazy consumption', async () => {
+      expect(await run('1..:5')).to.eql([
+        Expr.value(1),
+        Expr.value(2),
+        Expr.value(3),
+        Expr.value(4),
+        Expr.value(5),
+      ]);
+    });
+
     it('should allow consecutive values', async () => {
       expect(await run('[1,2].\n[3,4]')).to.eql([
         Expr.array([Expr.value(1), Expr.value(2)]),

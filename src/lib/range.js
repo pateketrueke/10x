@@ -21,17 +21,18 @@ export default class Range {
 
     // range boundaries
     this.begin = base.valueOf();
-    this.end = target.valueOf();
+    this.end = typeof target === 'undefined' || target === null ? Infinity : target.valueOf();
+    this.infinite = this.end === Infinity || this.end === -Infinity;
 
     // handle alpha-numeric ranges...
-    if (isString(base) || isString(target)) {
+    if (!this.infinite && (isString(base) || isString(target))) {
       this.begin = String(this.begin).charCodeAt();
       this.end = String(this.end).charCodeAt();
       this.alpha = true;
     }
 
     // handle reverse-loops
-    if (this.begin > this.end) {
+    if (!this.infinite && this.begin > this.end) {
       this.step = -1;
     }
 
@@ -39,11 +40,13 @@ export default class Range {
   }
 
   getIterator() {
-    return Range.build(this.begin, this.end, this.step);
+    return Range.build(this.begin, this.end, this.step, this.infinite);
   }
 
   toString() {
-    const prefix = [this.begin, this.end].join('..');
+    const prefix = this.infinite
+      ? `${this.begin}..`
+      : [this.begin, this.end].join('..');
 
     let suffix = '';
     let defs = this.idx;
@@ -125,9 +128,11 @@ export default class Range {
     const it = gen.getIterator();
     const seq = [];
 
-    const max = gen.end > gen.begin
+    const max = gen.infinite
+      ? Infinity
+      : (gen.end > gen.begin
       ? gen.end - gen.begin
-      : gen.begin - gen.end;
+      : gen.begin - gen.end);
 
     for (let i = 0, nextValue = it.next(); nextValue.done !== true; nextValue = it.next(), i++) {
       let keep = true;
@@ -135,6 +140,8 @@ export default class Range {
       if (gen.offset !== null) {
         if (gen.offset >= 0) {
           keep = i >= gen.offset;
+        } else if (gen.infinite) {
+          throw new Error('Negative offsets are not supported for infinite ranges');
         } else if (gen.begin < 0) {
           keep = max - i + gen.offset < 0;
         } else {
@@ -170,9 +177,14 @@ export default class Range {
   }
 
   static* build(begin, end, i) {
-    yield begin;
-    if (begin === end) return;
-    yield* Range.build(begin + i, end, i);
+    const infinite = end === Infinity || end === -Infinity;
+    let current = begin;
+
+    while (true) {
+      yield current;
+      if (!infinite && current === end) return;
+      current += i;
+    }
   }
 
   static async unwrap(result, callback, nextToken) {

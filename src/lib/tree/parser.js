@@ -338,7 +338,7 @@ export default class Parser {
   }
 
   leaf() {
-    return this.subTree(this.statement([OR, SOME, COMMA, SYMBOL]), true);
+    return this.subTree(this.statement([OR, PIPE, SOME, COMMA, SYMBOL]), true);
   }
 
   pull() {

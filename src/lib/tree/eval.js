@@ -197,7 +197,7 @@ export default class Eval {
 
     // evaluate pipe-operator, e.g. `3 |> sum(5) |> sum(8)`
     if (isPipe(this.ctx)) {
-      if (!isData(prev)) check(this.ctx, 'value', 'before');
+      if (!(isData(prev) || isRange(prev))) check(this.ctx, 'value', 'before');
       if (!next || !isInvokable(next)) check(this.ctx, 'callable', 'after');
 
       assert(next, true, LITERAL, BLOCK);
@@ -351,10 +351,15 @@ export default class Eval {
         }, []), this.ctx.tokenInfo));
       } else {
         assert(options.begin[0], true, NUMBER, STRING);
-        assert(options.end[0], true, NUMBER, STRING);
+        const hasEnd = options.end && options.end.length > 0;
 
-        const fixedRange = Range.from(options.begin[0], options.end[0]);
-        const subTree = await fixedRange.run(!this.isLazy() && !isSlice(next));
+        if (hasEnd) {
+          assert(options.end[0], true, NUMBER, STRING);
+        }
+
+        const fixedRange = Range.from(options.begin[0], hasEnd ? options.end[0] : undefined);
+        const shouldRun = !fixedRange.infinite && !this.isLazy() && !isSlice(next);
+        const subTree = await fixedRange.run(shouldRun);
 
         this.replace(Expr.from(RANGE, subTree, this.ctx.tokenInfo));
       }

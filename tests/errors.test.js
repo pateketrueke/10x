@@ -327,10 +327,6 @@ describe('Errors', () => {
         await failWith(run('..2'), 'Expecting value before `..` at line 1:1');
       });
 
-      it('should fail if no right-value is given', async () => {
-        await failWith(run('1..'), 'Expecting value after `..` at line 1:2');
-      });
-
       it('should fail if incompatible values are given', async () => {
         await failWith(run('1 .. []'), 'Expecting number or string but found `[..]` at line 1:6');
         await failWith(run(':nil .. 2'), 'Expecting number or string but found `:nil` at line 1:1');

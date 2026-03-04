@@ -583,7 +583,6 @@ export default class Expr {
   static range(begin, end, tokenInfo) {
     if (!begin.length && !end.length) check(tokenInfo, 'values', 'around');
     if (!begin.length) check(tokenInfo, 'value', 'before');
-    if (!end.length) check(tokenInfo, 'value', 'after');
 
     return Expr.from(RANGE, { begin, end }, tokenInfo);
   }
