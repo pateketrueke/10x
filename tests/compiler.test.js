@@ -25,7 +25,9 @@ describe('Compiler', () => {
     const output = compile('@render "#app" @html <h1>{count}</h1>.');
 
     expect(output).to.contain("import * as Runtime from '../runtime/index.js';");
-    expect(output).to.contain('Runtime.render("#app", Runtime.html(() => `<h1>${Runtime.read(count)}</h1>`));');
+    expect(output).to.match(
+      /Runtime\.render\("#app", Runtime\.html\(\(\) => `<h1>\$\{Runtime\.read\(count\)\}<\/h1>`\)\);/
+    );
   });
 
   it('should compile signal assignment and on-handler updates', () => {

@@ -61,7 +61,7 @@ describe('Runtime', () => {
       expect(node.innerHTML).to.eql('<h1>2</h1>');
 
       dispose();
-      expect(listeners.click).to.be.undefined;
+      expect(listeners.click).to.equal(undefined);
     } finally {
       globalThis.document = originalDocument;
     }

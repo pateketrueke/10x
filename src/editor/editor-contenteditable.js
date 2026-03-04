@@ -26,6 +26,54 @@ const SYMBOL_NAME = sym => {
   return sym.toString().match(/Symbol\((.+)\)/)?.[1] ?? '';
 };
 
+function inferTokenType(token) {
+  if (!token) return 'unknown';
+
+  if (token.isCallable || token.isFunction) return 'fn';
+  if (token.isTag) return 'tag';
+  if (token.isObject) {
+    const shape = token.valueOf ? token.valueOf() : token.value;
+    if (shape && typeof shape === 'object' && shape.__tag && shape.value) return 'result';
+    return 'record';
+  }
+  if (token.isRange) return Array.isArray(token.value) ? 'list' : 'range';
+  if (token.isNumber) return 'number';
+  if (token.isString) return 'string';
+  if (token.isSymbol) return 'symbol';
+
+  const n = SYMBOL_NAME(token.type);
+  return n ? n.toLowerCase() : 'unknown';
+}
+
+function inferRuntimeType(value) {
+  if (value === null) return 'nil';
+  if (value === undefined) return 'unknown';
+
+  if (typeof value === 'number') return 'number';
+  if (typeof value === 'string') return 'string';
+  if (typeof value === 'boolean') return 'boolean';
+  if (typeof value === 'function') return 'fn';
+
+  if (Array.isArray(value)) {
+    if (!value.length) return 'list<unknown>';
+    if (value.length === 1) return inferRuntimeType(value[0]);
+    const sample = value.find(Boolean);
+    const inner = sample ? inferRuntimeType(sample) : 'unknown';
+    return `list<${inner}>`;
+  }
+
+  if (value && typeof value === 'object' && typeof value.type === 'symbol') {
+    return inferTokenType(value);
+  }
+
+  if (value && typeof value === 'object') {
+    if (value.__tag && value.value) return 'result';
+    return 'record';
+  }
+
+  return 'unknown';
+}
+
 function tokenClass(token) {
   const n = SYMBOL_NAME(token.type);
   switch (n) {
@@ -623,7 +671,9 @@ const STYLES = `
 
   [data-result] {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 1px 6px;
     border-radius: 3px;
     background: #1e3a2f;
@@ -723,6 +773,23 @@ const STYLES = `
     outline: none;
   }
 
+  [data-type-hint] {
+    display: inline-block;
+    padding: 0 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #9aa8b5;
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    opacity: 0.92;
+  }
+
+  [data-result].error [data-type-hint] {
+    color: #d3a59d;
+    border-color: rgba(244, 135, 113, 0.28);
+  }
+
   [data-result][data-copy-state="copied"]::after,
   [data-result][data-copy-state="error"]::after {
     content: attr(data-copy-label);
@@ -795,6 +862,10 @@ class TenXEditor extends HTMLElement {
     this._copyFeedbackTimer = null;
     this._history = [];
     this._historyIndex = -1;
+    this._replHistory = [];
+    this._replHistoryIndex = -1;
+    this._replDraft = '';
+    this._showTypeHints = true;
     this._debounce = null;
     this._evaluating = false;
     this._worker = null;
@@ -834,6 +905,8 @@ class TenXEditor extends HTMLElement {
     this._editable.addEventListener('mouseleave', () => this._hideTooltip());
     this._editable.addEventListener('scroll', () => this._hideTooltip());
     this._setupWorker();
+    this._loadUIState();
+    this._loadReplHistory();
 
     const initial = this.textContent || this.getAttribute('value') || '';
     if (initial) {
@@ -960,6 +1033,14 @@ class TenXEditor extends HTMLElement {
       const label = document.createElement('span');
       label.textContent = result.kind === 'function' ? 'ƒ' : `→ ${text}`;
       widget.appendChild(label);
+
+      if (this._showTypeHints && result.typeText) {
+        const typeHint = document.createElement('span');
+        typeHint.dataset.typeHint = '';
+        typeHint.textContent = result.typeText;
+        typeHint.title = `runtime type: ${result.typeText}`;
+        widget.appendChild(typeHint);
+      }
 
       if (result.kind !== 'function') {
         widget.dataset.copyValue = text;
@@ -1124,6 +1205,9 @@ class TenXEditor extends HTMLElement {
       badge.setAttribute('contenteditable', 'false');
       badge.textContent = `= ${inlineResult.resultText}`;
       if (inlineResult.errorText) badge.classList.add('error');
+      if (this._showTypeHints && inlineResult.typeText) {
+        badge.title = `runtime type: ${inlineResult.typeText}`;
+      }
       this._insertWidgetAtOffset(inlineAnchor.offset, badge);
     }
   }
@@ -1296,11 +1380,16 @@ class TenXEditor extends HTMLElement {
               statementId: statement.statementId,
               resultText: 'ƒ',
               kind: 'function',
+              typeText: 'fn',
             };
             this._resultsById.set(statement.statementId, functionBadge);
           } else if (result !== undefined && result !== null) {
             const resultText = serialize(result);
-            this._resultsById.set(statement.statementId, { statementId: statement.statementId, resultText });
+            this._resultsById.set(statement.statementId, {
+              statementId: statement.statementId,
+              resultText,
+              typeText: inferRuntimeType(result),
+            });
           }
 
           const inlineExpressions = extractInlineExpressions(statement.source, statement.statementId);
@@ -1312,6 +1401,7 @@ class TenXEditor extends HTMLElement {
               this._inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
                 resultText: serialize(inlineResult),
+                typeText: inferRuntimeType(inlineResult),
               });
             } catch (error) {
               this._inlineResultsById.set(inline.inlineId, {
@@ -1379,6 +1469,109 @@ class TenXEditor extends HTMLElement {
     this._scheduleEval();
   }
 
+  // ── repl history / type hint settings ─────────────────────────────────────
+
+  _isReplMode() {
+    return this.hasAttribute('repl');
+  }
+
+  _storageKey(name) {
+    const explicit = this.getAttribute('storage-key');
+    const base = explicit || `tenx-editor-ce:${this.id || 'default'}`;
+    return `${base}:${name}`;
+  }
+
+  _loadUIState() {
+    try {
+      const raw = localStorage.getItem(this._storageKey('ui'));
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.showTypeHints === 'boolean') {
+        this._showTypeHints = parsed.showTypeHints;
+      }
+    } catch (_) {
+      // keep defaults
+    }
+  }
+
+  _saveUIState() {
+    try {
+      localStorage.setItem(this._storageKey('ui'), JSON.stringify({
+        showTypeHints: this._showTypeHints,
+      }));
+    } catch (_) {
+      // ignore storage failures
+    }
+  }
+
+  _loadReplHistory() {
+    if (!this._isReplMode()) return;
+
+    try {
+      const raw = localStorage.getItem(this._storageKey('repl-history'));
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      this._replHistory = parsed
+        .filter(entry => typeof entry === 'string')
+        .slice(-100);
+      this._replHistoryIndex = this._replHistory.length;
+    } catch (_) {
+      // ignore malformed storage
+    }
+  }
+
+  _saveReplHistory() {
+    if (!this._isReplMode()) return;
+
+    try {
+      localStorage.setItem(this._storageKey('repl-history'), JSON.stringify(this._replHistory.slice(-100)));
+    } catch (_) {
+      // ignore storage failures
+    }
+  }
+
+  _commitReplEntry() {
+    if (!this._isReplMode()) return;
+
+    const text = this._extractText().trim();
+    if (!text) return;
+
+    if (!this._replHistory.length || this._replHistory[this._replHistory.length - 1] !== text) {
+      this._replHistory.push(text);
+      if (this._replHistory.length > 100) this._replHistory.shift();
+      this._saveReplHistory();
+    }
+
+    this._replHistoryIndex = this._replHistory.length;
+    this._replDraft = '';
+  }
+
+  _browseReplHistory(delta) {
+    if (!this._isReplMode()) return false;
+    if (!this._replHistory.length) return false;
+
+    const current = this._extractText();
+    if (this._replHistoryIndex === this._replHistory.length) {
+      this._replDraft = current;
+    }
+
+    const nextIndex = Math.min(
+      this._replHistory.length,
+      Math.max(0, this._replHistoryIndex + delta)
+    );
+
+    if (nextIndex === this._replHistoryIndex) return false;
+    this._replHistoryIndex = nextIndex;
+
+    const nextText = this._replHistoryIndex === this._replHistory.length
+      ? this._replDraft
+      : this._replHistory[this._replHistoryIndex];
+
+    this._applySource(nextText, nextText.length);
+    return true;
+  }
+
   // ── event handlers ────────────────────────────────────────────────────────
 
   _onBeforeInput() {
@@ -1410,8 +1603,27 @@ class TenXEditor extends HTMLElement {
 
     if (meta && e.key === 'Enter') {
       e.preventDefault();
+      this._commitReplEntry();
       clearTimeout(this._debounce);
       this._requestEval();
+      return;
+    }
+
+    if (meta && (e.key === 't' || e.key === 'T')) {
+      e.preventDefault();
+      this._showTypeHints = !this._showTypeHints;
+      this._saveUIState();
+      this._injectResults();
+      return;
+    }
+
+    if (this._isReplMode() && !meta && !e.shiftKey && e.key === 'ArrowUp' && this._browseReplHistory(-1)) {
+      e.preventDefault();
+      return;
+    }
+
+    if (this._isReplMode() && !meta && !e.shiftKey && e.key === 'ArrowDown' && this._browseReplHistory(1)) {
+      e.preventDefault();
       return;
     }
 

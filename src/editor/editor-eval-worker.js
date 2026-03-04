@@ -3,6 +3,62 @@ import { createBrowserAdapter } from '../adapters/browser/index.js';
 
 applyAdapter(createBrowserAdapter());
 
+const SYMBOL_NAME = sym => {
+  if (!sym || typeof sym !== 'symbol') return '';
+  return sym.toString().match(/Symbol\((.+)\)/)?.[1] ?? '';
+};
+
+function inferTokenType(token) {
+  if (!token) return 'unknown';
+
+  if (token.isCallable || token.isFunction) return 'fn';
+  if (token.isTag) return 'tag';
+  if (token.isObject) {
+    const shape = token.valueOf ? token.valueOf() : token.value;
+    if (shape && typeof shape === 'object' && shape.__tag && shape.value) return 'result';
+    return 'record';
+  }
+  if (token.isRange) return Array.isArray(token.value) ? 'list' : 'range';
+  if (token.isNumber) return 'number';
+  if (token.isString) return 'string';
+  if (token.isSymbol) return 'symbol';
+
+  const symbol = SYMBOL_NAME(token.type);
+  return symbol ? symbol.toLowerCase() : 'unknown';
+}
+
+function inferRuntimeType(value) {
+  if (value === null) return 'nil';
+  if (value === undefined) return 'unknown';
+
+  if (typeof value === 'number') return 'number';
+  if (typeof value === 'string') return 'string';
+  if (typeof value === 'boolean') return 'boolean';
+  if (typeof value === 'function') return 'fn';
+
+  if (Array.isArray(value)) {
+    if (!value.length) return 'list<unknown>';
+
+    // Eval returns an array of tokens; expose single-value type directly.
+    if (value.length === 1) return inferRuntimeType(value[0]);
+
+    const sample = value.find(Boolean);
+    const inner = sample ? inferRuntimeType(sample) : 'unknown';
+    return `list<${inner}>`;
+  }
+
+  if (value && typeof value === 'object' && typeof value.type === 'symbol') {
+    return inferTokenType(value);
+  }
+
+  if (value && typeof value === 'object') {
+    if (value.__tag && value.value) return 'result';
+    return 'record';
+  }
+
+  return 'unknown';
+}
+
 function isFunctionDefinitionSource(source) {
   const normalized = String(source || '').replace(/\s+/g, ' ').trim();
   return /^[^=]+=\s*.*->/.test(normalized);
@@ -65,11 +121,13 @@ self.addEventListener('message', async ({ data }) => {
             statementId: statement.statementId,
             resultText: 'ƒ',
             kind: 'function',
+            typeText: 'fn',
           };
         } else if (result !== undefined && result !== null) {
           partial.statementResult = {
             statementId: statement.statementId,
             resultText: serialize(result),
+            typeText: inferRuntimeType(result),
           };
         }
 
@@ -83,6 +141,7 @@ self.addEventListener('message', async ({ data }) => {
             inlineResults.push({
               inlineId: inline.inlineId,
               resultText: serialize(inlineResult),
+              typeText: inferRuntimeType(inlineResult),
             });
           } catch (error) {
             inlineResults.push({
