@@ -12,6 +12,8 @@ import { applyAdapter as applyRuntimeAdapter, createEnv as createRuntimeEnv } fr
 
 export { execute, evaluate };
 export { useCurrencies } from './lib/builtins';
+export { compile } from './compiler/index.js';
+export * as Runtime from './runtime/index.js';
 
 export { Env, Expr, Parser };
 
