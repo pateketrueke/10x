@@ -2241,6 +2241,16 @@ function ensureDefaultMappings() {
   return DEFAULT_MAPPINGS;
 }
 
+// node_modules/somedom/dist/somedom.mjs
+var a = ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"];
+var Q = new Set;
+
+// src/lib/void-tags.js
+var VOID_TAGS = new Set((a || []).map((name) => String(name).toLowerCase()));
+function isVoidTag(name) {
+  return VOID_TAGS.has(String(name || "").toLowerCase());
+}
+
 // src/lib/tag.js
 function fail(message) {
   throw new Error(message);
@@ -2251,6 +2261,27 @@ function isPlain(value) {
 function skipSpaces(input, state) {
   while (state.i < input.length && /\s/.test(input[state.i]))
     state.i++;
+}
+function consumeOptionalClosingTag(input, state, name) {
+  let offset = state.i;
+  while (offset < input.length && /\s/.test(input[offset]))
+    offset++;
+  if (input[offset] !== "<" || input[offset + 1] !== "/")
+    return;
+  offset += 2;
+  const start = offset;
+  while (offset < input.length && /[A-Za-z0-9:_-]/.test(input[offset]))
+    offset++;
+  if (offset === start)
+    return;
+  const closeName = input.slice(start, offset);
+  if (closeName.toLowerCase() !== String(name || "").toLowerCase())
+    return;
+  while (offset < input.length && /\s/.test(input[offset]))
+    offset++;
+  if (input[offset] !== ">")
+    return;
+  state.i = offset + 1;
 }
 function readName(input, state) {
   const start = state.i;
@@ -2385,6 +2416,11 @@ function parseNode(input, state) {
     node.spreads = spreads;
   if (selfClosing)
     return node;
+  if (isVoidTag(name)) {
+    node.selfClosing = true;
+    consumeOptionalClosingTag(input, state, name);
+    return node;
+  }
   while (state.i < input.length) {
     if (input[state.i] === "<" && input[state.i + 1] === "/") {
       state.i += 2;
@@ -2707,12 +2743,12 @@ function hasDiff(prev, next, isWeak) {
   if (isPlain2(prevValue)) {
     if (!isPlain2(nextValue))
       return true;
-    const a = Object.keys(prevValue).sort();
+    const a2 = Object.keys(prevValue).sort();
     const b = Object.keys(nextValue).sort();
-    if (hasDiff(a, b, isWeak))
+    if (hasDiff(a2, b, isWeak))
       return true;
-    for (let i = 0;i < a.length; i += 1) {
-      if (hasDiff(prevValue[a[i]], nextValue[b[i]], isWeak))
+    for (let i = 0;i < a2.length; i += 1) {
+      if (hasDiff(prevValue[a2[i]], nextValue[b[i]], isWeak))
         return true;
     }
     return false;
@@ -3672,8 +3708,8 @@ class Expr {
   static body(values, tokenInfo) {
     return Expr.from(BLOCK, { body: values || [] }, tokenInfo);
   }
-  static frac(a, b, tokenInfo) {
-    return Expr.from(NUMBER, new Expr.Frac(a, b), tokenInfo);
+  static frac(a2, b, tokenInfo) {
+    return Expr.from(NUMBER, new Expr.Frac(a2, b), tokenInfo);
   }
   static unit(num, type, tokenInfo) {
     if (typeof num === "number") {
@@ -3779,13 +3815,13 @@ Expr.define("unit", class Unit extends Expr.Val {
     const newKind = type.replace(/^:/, "");
     let value;
     if (CURRENCY_SYMBOLS[this.kind] || CURRENCY_SYMBOLS[newKind]) {
-      const a = CURRENCY_EXCHANGES[this.kind];
+      const a2 = CURRENCY_EXCHANGES[this.kind];
       const b = CURRENCY_EXCHANGES[newKind];
-      if (!a)
+      if (!a2)
         throw new Error(`Unsupported ${this.kind} currency`);
       if (!b)
         throw new Error(`Unsupported ${newKind} currency`);
-      value = this.num * b / a;
+      value = this.num * b / a2;
     } else {
       value = convert(this.num).from(this.kind).to(newKind);
     }
@@ -3847,18 +3883,18 @@ Expr.define("frac", class Frac extends Expr.Val {
     const [left, right] = base.toString().split(".");
     if (!right)
       return parseFloat(left);
-    const a = parseFloat(left + right);
+    const a2 = parseFloat(left + right);
     const b = 10 ** right.length;
-    const factor = Frac.gcd(a, b);
+    const factor = Frac.gcd(a2, b);
     if (left < 1) {
-      return new Frac(a / factor, b / factor);
+      return new Frac(a2 / factor, b / factor);
     }
-    return new Frac(b / factor, a / factor);
+    return new Frac(b / factor, a2 / factor);
   }
-  static gcd(a, b) {
+  static gcd(a2, b) {
     if (!b)
-      return a;
-    return Frac.gcd(b, a % b);
+      return a2;
+    return Frac.gcd(b, a2 % b);
   }
 });
 Expr.define("object", class Object_ extends Expr {
@@ -4234,12 +4270,12 @@ async function collectLazy(input, limit = Infinity, offset = 0) {
   }
   return seq;
 }
-function equals(a, b, weak) {
-  if (typeof a === "undefined")
+function equals(a2, b, weak) {
+  if (typeof a2 === "undefined")
     raise("Missing left value");
   if (typeof b === "undefined")
     raise("Missing right value");
-  return !hasDiff(a, b, weak);
+  return !hasDiff(a2, b, weak);
 }
 function items(...args) {
   return args.reduce((p, c) => p.concat(c), []);
@@ -4358,13 +4394,21 @@ function list(input) {
 async function head(input) {
   const lazy = await collectLazy(input, 1);
   if (lazy) {
+    if (!lazy.length)
+      raise("head: empty list");
     return lazy[0];
   }
   const range = asRange(input);
   if (range) {
-    return collectRange(range, 1)[0];
+    const [first2] = collectRange(range, 1);
+    if (typeof first2 === "undefined")
+      raise("head: empty list");
+    return first2;
   }
-  return list(input)[0];
+  const [first] = list(input);
+  if (typeof first === "undefined")
+    raise("head: empty list");
+  return first;
 }
 async function tail(input) {
   const lazy = await collectLazy(input, Infinity, 1);
@@ -4405,14 +4449,14 @@ async function drop(input, length, offset) {
     const max = range.infinite ? offset ? offset.valueOf() + (length ? length.valueOf() : 1) : (length ? length.valueOf() : 1) + 1 : Infinity;
     const arr2 = collectRange(range, max);
     const b2 = length ? length.valueOf() : 1;
-    const a2 = offset ? offset.valueOf() : arr2.length - b2;
-    arr2.splice(a2, b2);
+    const a3 = offset ? offset.valueOf() : arr2.length - b2;
+    arr2.splice(a3, b2);
     return arr2;
   }
   const arr = list(input);
   const b = length ? length.valueOf() : 1;
-  const a = offset ? offset.valueOf() : arr.length - b;
-  arr.splice(a, b);
+  const a2 = offset ? offset.valueOf() : arr.length - b;
+  arr.splice(a2, b);
   return input;
 }
 async function map(input, callback) {
@@ -4571,6 +4615,7 @@ class Env {
     this.resolved = new Set;
     this.templates = {};
     this.exported = true;
+    this.exportedTemplates = {};
     this.descriptor = null;
     Object.defineProperty(this, "parent", { value });
   }
@@ -4913,6 +4958,8 @@ class Scanner {
     if (this.col === 1) {
       if (this.afterEOL !== 1 && char === "[" && this.parseRef(this.col))
         return;
+      if (char === "-" && this.parseThematicBreak())
+        return;
       if (char === "#" && this.parseBlock(char))
         return;
       if (char === ">" && this.peek() === " " && this.parseBlock(char))
@@ -5183,6 +5230,22 @@ class Scanner {
 `)
       this.pushToken(this.getToken());
   }
+  parseThematicBreak() {
+    const start = this.start;
+    const lineCol = this.col - 1;
+    let end = this.offset;
+    while (end < this.chars.length && this.chars[end] !== `
+`)
+      end++;
+    const line = this.source.substring(start, end).trim();
+    if (!/^-{3,}$/.test(line))
+      return false;
+    this.appendText();
+    this.offset = end;
+    this.col = lineCol + (end - start);
+    this.blank = "";
+    return true;
+  }
   parseBlock(char) {
     this.appendText();
     this.parseLine();
@@ -5316,6 +5379,13 @@ class Scanner {
       this.appendText();
       return true;
     }
+    if (token === " " && nextToken === "(" && /^[A-Z]/.test(this.blank)) {
+      this.pushToken(token);
+      this.offset = this.start = i + 1;
+      this.parseLine();
+      this.appendText();
+      return true;
+    }
     this.blank = "";
   }
   subString(chunk, isMarkup, tokenInfo) {
@@ -5432,6 +5502,13 @@ class Scanner {
     const openTag = this.peekCurrent(4);
     const tagName = openTag.substr(1);
     const close = [tagName];
+    const hasImmediateClosing = (name) => {
+      let idx = this.offset + 1;
+      while (idx < this.source.length && /\s/.test(this.source[idx]))
+        idx++;
+      const closing = `</${name}>`;
+      return this.source.slice(idx, idx + closing.length).toLowerCase() === closing.toLowerCase();
+    };
     let offset = 0;
     while (!this.isDone()) {
       if (this.peek() === `
@@ -5446,6 +5523,12 @@ class Scanner {
       if (cur === "/" && next === ">") {
         this.nextToken(2);
         close.pop();
+      }
+      if (cur === ">" && close.length) {
+        const top = String(close[close.length - 1] || "").toLowerCase();
+        if (isVoidTag(top) && !hasImmediateClosing(top)) {
+          close.pop();
+        }
       }
       if (offset && cur === "<" && isAlphaNumeric(next)) {
         let nextTag = "";
@@ -5608,6 +5691,9 @@ class Parser {
     stmts.forEach((stmt) => {
       const subTree = stmt.getBody();
       const expr = subTree.pop();
+      if (!isBlock(expr) || !expr.hasArgs || !expr.getArg(0) || !expr.getArg(0).isCallable) {
+        return;
+      }
       let root = this.templates;
       let key;
       while (subTree.length) {
@@ -5619,6 +5705,25 @@ class Parser {
       }
       root[key] = expr.getArgs()[0].value;
     });
+  }
+  parseRefImportSpec(alias) {
+    const parts = String(alias || "").split(",").map((part) => part.trim()).filter(Boolean);
+    const imports = [];
+    const templates = [];
+    let includeAllTemplates = false;
+    parts.forEach((part) => {
+      if (!part.startsWith("@template")) {
+        imports.push(part);
+        return;
+      }
+      const rest = part.slice("@template".length).trim();
+      if (!rest) {
+        includeAllTemplates = true;
+        return;
+      }
+      rest.split(/\s+/).map((name) => name.trim()).filter(Boolean).forEach((name) => templates.push(name));
+    });
+    return { imports, includeAllTemplates, templates };
   }
   collection(token, curToken, nextToken) {
     const isFirstClassMatch = isDirective(token) && token.value === "@match" && isOpen(curToken) && curToken.tokenInfo && curToken.tokenInfo.kind === "brace";
@@ -5641,7 +5746,8 @@ class Parser {
     while (!this.isDone() && !this.isEnd([OR, PIPE])) {
       const body = stack[stack.length - 1];
       const cur = this.next();
-      if (!this.depth && (isSymbol(cur) || isDirective(cur))) {
+      const keepElseBodyDirective = key === "@else" && !body.length && isDirective(cur) && ["@do", "@match", "@let"].includes(cur.value);
+      if (!this.depth && (isSymbol(cur) || isDirective(cur)) && !keepElseBodyDirective) {
         if (isSpecial(cur) || isSlice(cur)) {
           body.push(Expr.from(cur));
           continue;
@@ -5889,7 +5995,7 @@ class Parser {
         const fixedToken = this.collection(tokenInfo, curToken, nextToken);
         if (isSymbol(fixedToken) && fixedToken.isOptional)
           this.next();
-        if (this.raw !== false && fixedToken.value && fixedToken.value.template instanceof Expr.TemplateStatement) {
+        if (this.raw !== false && fixedToken.value && Object.keys(fixedToken.value).length === 1 && fixedToken.value.template instanceof Expr.TemplateStatement) {
           this.extension(fixedToken.value.template.value.body);
           if (isEOL(this.peek()))
             this.skip();
@@ -5984,10 +6090,23 @@ class Parser {
         }
       }
       if (isRef(token) && token.isRaw && token.value && token.value.alt && token.value.href) {
-        push2(Expr.map({
-          import: Expr.stmt("@import", [Expr.local(token.value.alt.trim(), tokenInfo)], tokenInfo),
+        const spec = this.parseRefImportSpec(token.value.alt.trim());
+        const importBody = spec.imports.map((name) => Expr.local(name, tokenInfo));
+        const map2 = {
+          import: Expr.stmt("@import", importBody, tokenInfo),
           from: Expr.stmt("@from", [Expr.value(token.value.href.trim(), tokenInfo)], tokenInfo)
-        }, tokenInfo));
+        };
+        if (spec.includeAllTemplates || spec.templates.length) {
+          const templateBody = [];
+          if (spec.includeAllTemplates) {
+            templateBody.push(Expr.stmt([Expr.local("*", tokenInfo)], tokenInfo));
+          }
+          spec.templates.forEach((name) => {
+            templateBody.push(Expr.stmt([Expr.local(name, tokenInfo)], tokenInfo));
+          });
+          map2.template = Expr.stmt("@template", templateBody, tokenInfo);
+        }
+        push2(Expr.map(map2, tokenInfo));
         continue;
       }
       if (!isLiteral(token) && isBlock(curToken) && !(isOpen(token) || isClose(token) || isComma(token))) {
@@ -6082,6 +6201,9 @@ class Parser {
         const table = this.tableFromTokens(rows, tokenInfo);
         if (table) {
           push2(table);
+          if (!(isEnd(this.peek()) || isClose(this.peek()) || isDone(this.peek()))) {
+            push2(Expr.from(EOL, ".", tokenInfo));
+          }
         } else {
           rows.forEach((row) => {
             if (this.isTextConvertible(row)) {
@@ -6093,10 +6215,10 @@ class Parser {
         const namespace = this.namespaceFromHeading(token, tokenInfo);
         if (namespace) {
           push2(namespace);
-        } else if (this.isTextConvertible(token)) {
+        } else if (this.hasInterpolation(token)) {
           push2(this.convertTextToString(token, tokenInfo));
         }
-      } else if (isText(token) && this.isTextConvertible(token)) {
+      } else if (isText(token) && this.hasInterpolation(token)) {
         push2(this.convertTextToString(token, tokenInfo));
       } else if (!(isText(token) || isCode(token) || isRef(token))) {
         if (isString(token) && tokenInfo.kind === "markup" && typeof token.value === "string") {
@@ -6134,6 +6256,17 @@ class Parser {
       if (Array.isArray(chunk))
         return !!chunk[2];
       return true;
+    });
+  }
+  hasInterpolation(token) {
+    if (!token || !token.value || !Array.isArray(token.value.buffer))
+      return false;
+    return token.value.buffer.some((chunk) => {
+      if (Array.isArray(chunk))
+        return !!chunk[2];
+      if (typeof chunk === "object" && chunk !== null)
+        return chunk.kind !== "raw";
+      return false;
     });
   }
   isBlankTextToken(token) {
@@ -6315,6 +6448,7 @@ ${source}`, "inline", environment).slice(1);
 var LAZY_DESCRIPTORS = new Set(["Loop", "Set"]);
 var OPS_MUL_DIV = new Set([MUL, DIV]);
 var OPS_PLUS_MINUS_MOD = new Set([PLUS, MINUS, MOD]);
+var OPS_LOGIC = new Set([LESS, LESS_EQ, GREATER, GREATER_EQ, EQUAL, EXACT_EQ, NOT_EQ, LIKE, NOT]);
 
 class Eval {
   static getResultTagToken(token) {
@@ -6382,6 +6516,57 @@ class Eval {
     if (current2.length)
       output.push(current2);
     return output;
+  }
+  static templateNameFromEntry(entry) {
+    const body = isBlock(entry) ? entry.getBody() : [entry];
+    return body.filter((token) => token && !isComma(token) && !isBlock(token)).map((token) => token.valueOf()).join("").trim();
+  }
+  static templateImportSpec(templateStmt) {
+    const spec = {
+      hasTemplateImport: false,
+      includeAll: false,
+      names: []
+    };
+    if (!(templateStmt instanceof Expr.TemplateStatement)) {
+      return spec;
+    }
+    spec.hasTemplateImport = true;
+    templateStmt.getBody().forEach((entry) => {
+      const name = Eval.templateNameFromEntry(entry);
+      if (!name)
+        return;
+      if (name === "*" || name === "@template") {
+        spec.includeAll = true;
+        return;
+      }
+      if (!spec.names.includes(name)) {
+        spec.names.push(name);
+      }
+    });
+    return spec;
+  }
+  static resolveTemplateByName(templates, name) {
+    if (!templates || !name)
+      return null;
+    let node = templates;
+    for (let i = 0, c = name.length;i < c; i++) {
+      node = node[name[i]];
+      if (!node)
+        return null;
+    }
+    return node && node.args ? node : null;
+  }
+  static registerTemplateByName(templates, name, definition) {
+    if (!templates || !name || !definition)
+      return;
+    let root = templates;
+    for (let i = 0, c = name.length - 1;i < c; i++) {
+      const key = name[i];
+      if (!root[key])
+        root[key] = {};
+      root = root[key];
+    }
+    root[name[name.length - 1]] = definition;
   }
   static async resolveMatchBody(input, cases, environment, parentTokenInfo) {
     const target = Eval.getResultTagToken(input) || input;
@@ -6493,8 +6678,8 @@ class Eval {
       this.result.pop();
     return this;
   }
-  append(...a) {
-    this.result.push(...a);
+  append(...a2) {
+    this.result.push(...a2);
     return this;
   }
   move(n) {
@@ -6815,13 +7000,29 @@ class Eval {
   }
   async evalLogic() {
     const { type, value } = this.ctx;
-    const result = await Eval.do(value, this.env, "Expr", true, this.ctx.tokenInfo);
+    let result = await Eval.do(value, this.env, "Expr", true, this.ctx.tokenInfo);
     if (isSome(this.ctx) || isEvery(this.ctx)) {
       const values = await Promise.all(result.map((token) => {
         return Eval.do([token], this.env, "Expr", false, this.ctx.tokenInfo);
       }));
       this.append(Expr.value(values[isSome(this.ctx) ? "some" : "every"]((x) => x[0].valueOf())));
       return true;
+    }
+    if (result.length > 2) {
+      for (let i = 1, c = value.length;i < c; i++) {
+        let left;
+        let right;
+        try {
+          left = await Eval.do(value.slice(0, i), this.env, "LogicArg", true, this.ctx.tokenInfo);
+          right = await Eval.do(value.slice(i), this.env, "LogicArg", true, this.ctx.tokenInfo);
+        } catch (_) {
+          continue;
+        }
+        if (left.length === 1 && right.length === 1) {
+          result = [left[0], right[0]];
+          break;
+        }
+      }
     }
     if (result.length > 2)
       raise(`Expecting exactly 2 arguments, given ${result.length}`);
@@ -7243,6 +7444,7 @@ class Eval {
     let tokens = await this.walk(descriptor);
     tokens = Eval.math(OPS_MUL_DIV, tokens, tokenInfo);
     tokens = Eval.math(OPS_PLUS_MINUS_MOD, tokens, tokenInfo);
+    tokens = Eval.walk(OPS_LOGIC, tokens, (left, op, right) => Eval.logic(op.type, left, right, tokenInfo));
     return tokens.filter((x) => ![EOL, COMMA].includes(x.type));
   }
   static info(defaults) {
@@ -7644,6 +7846,28 @@ class Eval {
       await Promise.all(Expr.each(value.import.getBody(), (ctx, name, alias) => {
         return Env.load(ctx, name, alias, value.from.head().valueOf(), environment);
       }));
+      const templateSpec = Eval.templateImportSpec(value.template);
+      if (templateSpec.hasTemplateImport) {
+        const sourceName = value.from.head().valueOf();
+        const source = await Env.resolve(sourceName, "@template", null, environment);
+        if (!(source instanceof Env)) {
+          raise(`Cannot import templates from \`${sourceName}\``, parentTokenInfo);
+        }
+        const exported = source.exportedTemplates || {};
+        const names = templateSpec.includeAll ? Object.keys(exported) : templateSpec.names;
+        names.forEach((requestedName) => {
+          const exportedName = exported[requestedName];
+          if (!templateSpec.includeAll && !exportedName) {
+            raise(`Template \`${requestedName}\` not exported`, parentTokenInfo);
+          }
+          const realName = exportedName || requestedName;
+          const definition = Eval.resolveTemplateByName(source.templates, realName);
+          if (!definition) {
+            raise(`Missing template \`${realName}\` in \`${sourceName}\``, parentTokenInfo);
+          }
+          Eval.registerTemplateByName(environment.templates, realName, definition);
+        });
+      }
       isDone2 = true;
     }
     if (value.module instanceof Expr.ModuleStatement || value.export instanceof Expr.ExportStatement) {
@@ -7664,6 +7888,18 @@ class Eval {
           }
           environment.exported[alias || name] = name;
         });
+        if (value.template instanceof Expr.TemplateStatement) {
+          const names = value.template.getBody().map(Eval.templateNameFromEntry).filter(Boolean);
+          names.forEach((name) => {
+            if (environment.exportedTemplates[name]) {
+              raise(`Template export for \`${name}\` already exists`);
+            }
+            if (!Eval.resolveTemplateByName(environment.templates, name)) {
+              raise(`Missing template \`${name}\``, parentTokenInfo);
+            }
+            environment.exportedTemplates[name] = name;
+          });
+        }
       }
       isDone2 = true;
     }
@@ -7777,19 +8013,134 @@ var OPERATOR = new Map([
   [MUL, "*"],
   [DIV, "/"],
   [MOD, "%"],
-  [EQUAL, "="],
+  [EQUAL, "==="],
   [LESS, "<"],
   [LESS_EQ, "<="],
   [GREATER, ">"],
   [GREATER_EQ, ">="],
   [NOT_EQ, "!="],
   [EXACT_EQ, "==="],
-  [OR, "|"],
+  [OR, "||"],
   [LIKE, "~"],
   [PIPE, "|>"]
 ]);
-// src/runtime/index.js
+// src/runtime/core.js
 var SIGNAL = Symbol("10x.signal");
+var currentEffect = null;
+var globalRegistry = (() => {
+  if (!globalThis.__10x_signals) {
+    globalThis.__10x_signals = new Map;
+  }
+  return globalThis.__10x_signals;
+})();
+function isSignal(value) {
+  return !!(value && value[SIGNAL]);
+}
+function read(value) {
+  return isSignal(value) ? value.get() : value;
+}
+function effect(fn) {
+  const run = () => {
+    currentEffect = run;
+    try {
+      fn();
+    } finally {
+      currentEffect = null;
+    }
+  };
+  run();
+  return run;
+}
+function getSignalRegistry() {
+  return globalRegistry;
+}
+// src/runtime/dom.js
+var componentObservers = new WeakMap;
+// src/runtime/devtools.js
+function renderRows(container, registry) {
+  const entries = Array.from(registry.entries());
+  container.innerHTML = "";
+  entries.forEach(([name, signal]) => {
+    const row = document.createElement("div");
+    row.style.display = "grid";
+    row.style.gridTemplateColumns = "1fr auto auto";
+    row.style.gap = "0.6rem";
+    row.style.padding = "0.25rem 0";
+    row.style.borderBottom = "1px solid rgba(255,255,255,0.08)";
+    const key = document.createElement("code");
+    key.textContent = String(name);
+    const value = document.createElement("code");
+    value.textContent = JSON.stringify(read(signal));
+    const subs = document.createElement("code");
+    subs.textContent = `subs:${signal.subs ? signal.subs.size : 0}`;
+    row.appendChild(key);
+    row.appendChild(value);
+    row.appendChild(subs);
+    container.appendChild(row);
+  });
+}
+function devtools() {
+  if (typeof document === "undefined")
+    return null;
+  let panel = document.getElementById("10x-devtools-panel");
+  if (panel)
+    return panel;
+  const registry = getSignalRegistry();
+  panel = document.createElement("aside");
+  panel.id = "10x-devtools-panel";
+  panel.style.position = "fixed";
+  panel.style.bottom = "1rem";
+  panel.style.right = "1rem";
+  panel.style.width = "360px";
+  panel.style.maxHeight = "45vh";
+  panel.style.overflow = "auto";
+  panel.style.zIndex = "99999";
+  panel.style.padding = "0.7rem";
+  panel.style.borderRadius = "12px";
+  panel.style.border = "1px solid rgba(255,255,255,0.15)";
+  panel.style.background = "rgba(12,16,22,0.94)";
+  panel.style.color = "#d8dde4";
+  panel.style.font = "12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+  const title = document.createElement("div");
+  title.textContent = "10x DevTools · Signals";
+  title.style.fontWeight = "700";
+  title.style.marginBottom = "0.5rem";
+  const body = document.createElement("div");
+  panel.appendChild(title);
+  panel.appendChild(body);
+  document.body.appendChild(panel);
+  effect(() => {
+    renderRows(body, registry);
+  });
+  return panel;
+}
+function devtoolsEnabledByQuery(search) {
+  const input = typeof search === "string" ? search : typeof window !== "undefined" && window.location ? window.location.search : "";
+  if (!input)
+    return false;
+  const params = new URLSearchParams(input.startsWith("?") ? input : `?${input}`);
+  if (!params.has("devtools"))
+    return false;
+  const value = params.get("devtools");
+  return value !== "0" && value !== "false" && value !== "off";
+}
+function maybeEnableDevtools() {
+  if (typeof document === "undefined" || typeof window === "undefined")
+    return null;
+  if (!devtoolsEnabledByQuery(window.location && window.location.search))
+    return null;
+  const start = () => {
+    try {
+      devtools();
+    } catch (_) {}
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+    return null;
+  }
+  return start();
+}
+maybeEnableDevtools();
 // src/lib/ansi.js
 var CODES = {
   bold: [1, 22],
