@@ -31,13 +31,13 @@ function renderRows(container, registry) {
 export function devtools() {
   if (typeof document === 'undefined') return null;
 
-  let panel = document.getElementById('tenx-devtools-panel');
+  let panel = document.getElementById('10x-devtools-panel');
   if (panel) return panel;
 
   const registry = getSignalRegistry();
 
   panel = document.createElement('aside');
-  panel.id = 'tenx-devtools-panel';
+  panel.id = '10x-devtools-panel';
   panel.style.position = 'fixed';
   panel.style.bottom = '1rem';
   panel.style.right = '1rem';

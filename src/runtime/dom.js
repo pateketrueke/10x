@@ -56,7 +56,7 @@ export function style(hostOrCss, css) {
     return;
   }
 
-  const id = `tenx-${hashStr(cssText)}`;
+  const id = `10x-${hashStr(cssText)}`;
   if (document.getElementById(id)) return;
 
   const element = document.createElement('style');

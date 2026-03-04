@@ -1,5 +1,5 @@
 {
-  "name": "vite-plugin-tenx",
+  "name": "vite-plugin-10x",
   "version": "0.0.0",
   "type": "module",
   "main": "./index.js"

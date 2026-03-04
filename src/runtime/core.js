@@ -2,10 +2,10 @@ const SIGNAL = Symbol('10x.signal');
 
 let currentEffect = null;
 const globalRegistry = (() => {
-  if (!globalThis.__tenx_signals) {
-    globalThis.__tenx_signals = new Map();
+  if (!globalThis.__10x_signals) {
+    globalThis.__10x_signals = new Map();
   }
-  return globalThis.__tenx_signals;
+  return globalThis.__10x_signals;
 })();
 
 export function signal(initialValue, name) {

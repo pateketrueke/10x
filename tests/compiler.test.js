@@ -57,10 +57,10 @@ describe('Compiler', () => {
 
   it('should allow overriding runtime import path', () => {
     const output = compile('@render "#app" @html <h1>{count}</h1>.', {
-      runtimePath: '/vendor/tenx-runtime.mjs',
+      runtimePath: '/vendor/10x-runtime.mjs',
     });
 
-    expect(output).to.contain('import * as Runtime from "/vendor/tenx-runtime.mjs";');
+    expect(output).to.contain('import * as Runtime from "/vendor/10x-runtime.mjs";');
   });
 
   it('should emit prose lines as comments above compiled statements', () => {

@@ -47,7 +47,7 @@ const runtimeReady = import('./main.js')
   });
 
 const __dirname = import.meta.dirname;
-const HISTORY_FILE = path.join(os.homedir(), '.tenx_history');
+const HISTORY_FILE = path.join(os.homedir(), '.10x_history');
 const MAX_HISTORY = 1000;
 
 const argv = wargs(process.argv.slice(2), {

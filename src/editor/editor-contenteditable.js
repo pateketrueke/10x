@@ -1,5 +1,5 @@
 /**
- * <tenx-editor-ce> — scoped contenteditable demo editor.
+ * <x-editor> — scoped contenteditable demo editor.
  *
  * Architecture:
  *   - Immediate syntax highlighting on every input
@@ -852,7 +852,7 @@ const STYLES = `
   }
 `;
 
-class TenXEditor extends HTMLElement {
+class XEditor extends HTMLElement {
   // Suppress onInput feedback loops while we rebuild DOM.
 
   connectedCallback() {
@@ -1477,7 +1477,7 @@ class TenXEditor extends HTMLElement {
 
   _storageKey(name) {
     const explicit = this.getAttribute('storage-key');
-    const base = explicit || `tenx-editor-ce:${this.id || 'default'}`;
+    const base = explicit || `x-editor:${this.id || 'default'}`;
     return `${base}:${name}`;
   }
 
@@ -1788,6 +1788,6 @@ class TenXEditor extends HTMLElement {
   }
 }
 
-customElements.define('tenx-editor-ce', TenXEditor);
+customElements.define('x-editor', XEditor);
 
-export default TenXEditor;
+export default XEditor;

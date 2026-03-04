@@ -1,8 +1,8 @@
 import { compile } from '../../src/compiler/index.js';
 
-export default function tenx(options = {}) {
+export default function plugin(options = {}) {
   return {
-    name: 'vite-plugin-tenx',
+    name: 'vite-plugin-10x',
     enforce: 'pre',
     transform(code, id) {
       if (!id.endsWith('.md')) return null;
