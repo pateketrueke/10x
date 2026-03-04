@@ -856,6 +856,19 @@ const STYLES = `
     color: #ffe4e4;
   }
 
+  [data-inline-anchor] {
+    cursor: help;
+  }
+
+  [data-inline-anchor][data-inline-has-result] {
+    text-decoration: underline dotted rgba(127, 183, 255, 0.7);
+    text-underline-offset: 2px;
+  }
+
+  [data-inline-anchor][data-inline-error] {
+    text-decoration-color: rgba(244, 135, 113, 0.8);
+  }
+
   [data-tooltip-layer] {
     position: absolute;
     z-index: 20;
@@ -899,6 +912,7 @@ class XEditor extends HTMLElement {
     this._pendingResultIds = new Set();
     this._inlineAnchors = [];
     this._inlineResultsById = new Map();
+    this._inlineAnchorNodes = new Map();
     this._killedStatementIds = new Set();
     this._rendering = false;
 
@@ -998,6 +1012,7 @@ class XEditor extends HTMLElement {
     this._editable.appendChild(renderTokens(source));
     this._anchors = buildStatementAnchors(source);
     this._inlineAnchors = buildInlineAnchors(this._anchors);
+    this._bindInlineAnchorNodes();
     this._injectResults();
     this._lastText = source;
     this._rendering = false;
@@ -1079,6 +1094,11 @@ class XEditor extends HTMLElement {
 
   _injectResults() {
     this._editable.querySelectorAll('[data-result]').forEach(el => el.remove());
+    this._editable.querySelectorAll('[data-inline-anchor]').forEach(node => {
+      delete node.dataset.inlineHasResult;
+      delete node.dataset.inlineError;
+      node.dataset.tooltip = 'Interpolation delimiter';
+    });
     if (!this._anchors.length && !this._inlineAnchors.length) return;
 
     const byLine = new Map();
@@ -1189,12 +1209,45 @@ class XEditor extends HTMLElement {
     for (const inlineAnchor of this._inlineAnchors) {
       const inlineResult = this._inlineResultsById.get(inlineAnchor.id);
       if (!inlineResult?.resultText?.trim()) continue;
-      const widget = this._makeResultWidget({
-        result: inlineResult,
-        inlineId: inlineAnchor.id,
-      });
-      if (!widget) continue;
-      this._insertWidgetAtOffset(inlineAnchor.offset, widget);
+      if (this._inlineResultMode() === 'widget') {
+        const widget = this._makeResultWidget({
+          result: inlineResult,
+          inlineId: inlineAnchor.id,
+        });
+        if (!widget) continue;
+        this._insertWidgetAtOffset(inlineAnchor.offset, widget);
+        continue;
+      }
+
+      const anchorNode = this._inlineAnchorNodes.get(inlineAnchor.id);
+      if (!anchorNode) continue;
+      const lines = [`→ ${inlineResult.resultText}`];
+      if (inlineResult?.errorText) lines.push(`error: ${inlineResult.errorText}`);
+      if (this._showTypeHints && inlineResult?.typeText) lines.push(`type: ${inlineResult.typeText}`);
+      anchorNode.dataset.tooltip = lines.join('\n');
+      anchorNode.dataset.inlineHasResult = '';
+      if (inlineResult?.errorText) anchorNode.dataset.inlineError = '';
+    }
+  }
+
+  _inlineResultMode() {
+    const mode = (this.getAttribute('inline-results') || '').trim().toLowerCase();
+    return mode === 'widget' ? 'widget' : 'tooltip';
+  }
+
+  _bindInlineAnchorNodes() {
+    this._inlineAnchorNodes = new Map();
+    if (!this._inlineAnchors.length) return;
+
+    const openDelims = Array.from(this._editable.querySelectorAll('.xt-interp-delim'))
+      .filter(node => node.textContent === '#{');
+
+    for (let i = 0; i < this._inlineAnchors.length && i < openDelims.length; i++) {
+      const inlineId = this._inlineAnchors[i].id;
+      const node = openDelims[i];
+      node.dataset.inlineAnchor = inlineId;
+      node.dataset.tooltip = 'Interpolation delimiter';
+      this._inlineAnchorNodes.set(inlineId, node);
     }
   }
 
