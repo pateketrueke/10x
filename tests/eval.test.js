@@ -556,6 +556,9 @@ describe('Eval', () => {
         Expr.value(2),
         Expr.value(1),
       ]);
+      expect(await run('@do (x = 1.\ny = 2.\nx + y)')).to.eql([Expr.value(3)]);
+      expect(await run('x = 10.\n@do (x = 1.\nx).\nx')).to.eql([Expr.value(1), Expr.value(10)]);
+      await failWith(run('@do (x = 1).\nx'), 'Undeclared local `x` at line 2:1');
     });
   });
 

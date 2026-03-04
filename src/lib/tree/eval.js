@@ -1266,6 +1266,18 @@ export default class Eval {
       isDone = true;
     }
 
+    // evaluate standalone do-block with local scope and sequencing
+    if (value.do instanceof Expr.DoStatement && !(value.while instanceof Expr.WhileStatement)) {
+      const scope = new Env(environment);
+      const result = await Eval.do(value.do.getBody(), scope, 'Do', true, parentTokenInfo);
+
+      if (result.length) {
+        subTree.push(result[result.length - 1]);
+      }
+
+      isDone = true;
+    }
+
     // evaluate if-then-else logic
     if (value.if instanceof Expr.IfStatement) {
       const { body } = value.if.value;

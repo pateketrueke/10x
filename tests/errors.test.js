@@ -253,7 +253,6 @@ describe('Errors', () => {
       });
 
       it('should fail if on invalid/optional statements', async () => {
-        await failWith(run('@do i++'), 'Unexpected `@do` at line 1:1');
         await failWith(run('@if? true'), 'Unexpected `?` at line 1:4');
         await failWith(run(':test?? true'), 'Unexpected `?` at line 1:7');
       });
