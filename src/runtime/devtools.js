@@ -68,3 +68,38 @@ export function devtools() {
 
   return panel;
 }
+
+export function devtoolsEnabledByQuery(search) {
+  const input = typeof search === 'string'
+    ? search
+    : (typeof window !== 'undefined' && window.location ? window.location.search : '');
+  if (!input) return false;
+
+  const params = new URLSearchParams(input.startsWith('?') ? input : `?${input}`);
+  if (!params.has('devtools')) return false;
+
+  const value = params.get('devtools');
+  return value !== '0' && value !== 'false' && value !== 'off';
+}
+
+export function maybeEnableDevtools() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return null;
+  if (!devtoolsEnabledByQuery(window.location && window.location.search)) return null;
+
+  const start = () => {
+    try {
+      devtools();
+    } catch (_) {
+      // no-op for environments where DOM is not fully initialized
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+    return null;
+  }
+
+  return start();
+}
+
+maybeEnableDevtools();

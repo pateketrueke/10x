@@ -1199,7 +1199,7 @@ export function compile(source, options = {}) {
     return prev;
   }, []);
 
-  const atomicCss = generateAtomicCss(collectAtomicClasses(statements));
+  const atomicCss = options.atomicCss === false ? '' : generateAtomicCss(collectAtomicClasses(statements));
   if (atomicCss) {
     const hostArg = hasShadow ? 'host, ' : '';
     lines.unshift(`Runtime.style(${hostArg}${JSON.stringify(atomicCss)});`);

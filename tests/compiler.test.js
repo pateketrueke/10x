@@ -241,6 +241,15 @@ describe('Compiler', () => {
     expect(output.indexOf('Runtime.style(')).to.be.lessThan(output.indexOf('Runtime.render('));
   });
 
+  it('should allow disabling atomic css injection', () => {
+    const output = compile('@render "#app" @html <div class="flex p-2">x</div>.', {
+      atomicCss: false,
+    });
+
+    expect(output).to.not.contain('.flex{display:flex}');
+    expect(output).to.not.contain('.p-2{padding:8px}');
+  });
+
   it('should pass signal objects through directive/ref attrs in tags', () => {
     const output = compile([
       'visible = @signal :on.',
