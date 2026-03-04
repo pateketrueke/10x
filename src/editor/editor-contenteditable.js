@@ -449,8 +449,16 @@ function appendToken(parent, token) {
   const n = SYMBOL_NAME(token.type ?? '');
   const tooltip = tokenTooltipLabel(token);
   if (n === 'EOF') return;
-  // EOL = dot '.' — render as text, not a line break
-  if (n === 'EOL') { parent.appendChild(document.createTextNode('.')); return; }
+  // EOL = dot '.' — render as an explicit anchor node (not a line break).
+  if (n === 'EOL') {
+    const eol = document.createElement('span');
+    eol.className = 'xt-punct';
+    eol.dataset.eol = '';
+    if (typeof token.line === 'number') eol.dataset.line = String(token.line);
+    eol.textContent = '.';
+    parent.appendChild(eol);
+    return;
+  }
 
   // Inline markdown tuples may encode as TOKEN + [openDelimiter, body...].
   // Rebuild both delimiters so extract/render round-trips correctly.
@@ -1102,91 +1110,34 @@ class XEditor extends HTMLElement {
       return widget;
     };
 
-    const previousRenderableTextNode = (fromNode) => {
-      let node = fromNode;
-      if (node === this._editable) {
-        node = this._editable.lastChild;
-        while (node && node.lastChild) node = node.lastChild;
-        if (
-          node
-          && node.nodeType === Node.TEXT_NODE
-          && !node.parentElement?.closest('[data-result], [data-inline-result]')
-        ) {
-          return node;
-        }
-      }
-      while (node && node !== this._editable) {
-        if (node.previousSibling) {
-          node = node.previousSibling;
-          while (node && node.lastChild) node = node.lastChild;
-          if (
-            node
-            && node.nodeType === Node.TEXT_NODE
-            && !node.parentElement?.closest('[data-result], [data-inline-result]')
-          ) {
-            return node;
-          }
-        } else {
-          if (
-            node.nodeType === Node.TEXT_NODE
-            && !node.parentElement?.closest('[data-result], [data-inline-result]')
-          ) {
-            return node;
-          }
-          node = node.parentNode;
-        }
-      }
-      return null;
-    };
+    const eolByLine = new Map();
+    this._editable.querySelectorAll('[data-eol]').forEach(node => {
+      const line = Number(node.dataset.line);
+      if (!Number.isInteger(line)) return;
+      if (!eolByLine.has(line)) eolByLine.set(line, []);
+      eolByLine.get(line).push(node);
+    });
 
-    const insertBeforeLineEOL = (widget, lineEndNode) => {
-      const textNode = previousRenderableTextNode(lineEndNode);
-      if (textNode && textNode.textContent.endsWith('.')) {
-        const range = document.createRange();
-        range.setStart(textNode, Math.max(0, textNode.textContent.length - 1));
-        range.collapse(true);
-        range.insertNode(widget);
-        return true;
-      }
-      return false;
-    };
+    const tailByEol = new WeakMap();
+    const sortedLines = Array.from(byLine.keys()).sort((a, b) => a - b);
+    for (const line of sortedLines) {
+      const lineResults = byLine.get(line) || [];
+      const eols = eolByLine.get(line) || [];
 
-    // Count all <br> in DOM order (including nested spans) for visual EOL.
-    const walker = document.createTreeWalker(
-      this._editable,
-      NodeFilter.SHOW_ELEMENT,
-      {
-        acceptNode: node => (node.tagName === 'BR'
-          ? NodeFilter.FILTER_ACCEPT
-          : NodeFilter.FILTER_SKIP),
-      }
-    );
-
-    let lineIdx = 0;
-    let brNode;
-    while ((brNode = walker.nextNode())) {
-      const lineResults = byLine.get(lineIdx);
-      if (lineResults?.length) {
-        for (const entry of lineResults) {
-          const widget = makeWidget(entry);
-          if (!widget) continue;
-          if (!insertBeforeLineEOL(widget, brNode)) {
-            brNode.parentNode.insertBefore(widget, brNode);
-          }
-        }
-      }
-      lineIdx++;
-    }
-
-    // Final line (without trailing <br>)
-    const trailing = byLine.get(lineIdx);
-    if (trailing?.length) {
-      for (const entry of trailing) {
+      for (let i = 0; i < lineResults.length; i++) {
+        const entry = lineResults[i];
         const widget = makeWidget(entry);
         if (!widget) continue;
-        if (!insertBeforeLineEOL(widget, this._editable)) {
-          this._editable.appendChild(widget);
+
+        const eol = eols[Math.min(i, Math.max(0, eols.length - 1))];
+        if (eol?.parentNode) {
+          const tail = tailByEol.get(eol) || eol;
+          eol.parentNode.insertBefore(widget, tail.nextSibling);
+          tailByEol.set(eol, widget);
+          continue;
         }
+
+        this._editable.appendChild(widget);
       }
     }
 
