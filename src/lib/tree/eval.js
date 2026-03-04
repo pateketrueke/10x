@@ -340,6 +340,11 @@ export default class Eval {
 
     // handle partial and full ranges
     if (isRange(this.ctx)) {
+      if (this.ctx.value instanceof Range) {
+        this.append(this.ctx);
+        return true;
+      }
+
       const options = await Eval.do(this.ctx.value, this.env, 'Set', false, this.ctx.tokenInfo);
 
       if (isArray(this.ctx)) {
@@ -558,12 +563,23 @@ export default class Eval {
       // pass evaluated args to low-level FFIs
       if (prev.isFFI) {
         let result;
+        const label = prev.value.label || '';
+        const supportsCallableArgs = ['map', 'filter'].includes(label);
+        const preparedArgs = fixedArgs.map(arg => {
+          if (supportsCallableArgs && arg && arg.isCallable) {
+            return (...input) => {
+              return this.convert(arg, Expr.value(input).valueOf(), `<${prev.value.label || 'FFI'}>`);
+            };
+          }
+
+          return arg;
+        });
 
         // spread arguments if not block is given... e.g. `f((1, 2))`
         if (!(this.ctx.getArg(0) && this.ctx.getArg(0).isBlock)) {
-          result = await prev.value.target(...fixedArgs);
+          result = await prev.value.target(...preparedArgs);
         } else {
-          result = await prev.value.target(fixedArgs);
+          result = await prev.value.target(preparedArgs);
         }
 
         if (typeof result === 'undefined') this.discard();

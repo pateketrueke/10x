@@ -13,9 +13,14 @@ import Range from './range';
 
 const RE_PLACEHOLDER = /(?<!\{)\{([^{}]*)\}/g;
 const RE_FORMATTING = /^([^:]*?)(?::(.*?[<^>](?=\d)|)(\d+|)([?bxo]|)(\.\d+|)([$^]|))?$/;
+const RE_LAZY = Symbol('LAZY_SEQ');
 
 function isRangeLike(input) {
   return input instanceof Range || (input && typeof input.getIterator === 'function' && typeof input.run === 'function');
+}
+
+function isLazySeq(input) {
+  return !!(input && input[RE_LAZY]);
 }
 
 function asRange(input) {
@@ -53,6 +58,98 @@ function collectRange(range, limit = Infinity, offset = 0) {
     if (index < offset) continue;
 
     seq.push(range.alpha ? String.fromCharCode(next.value) : next.value);
+    if (seq.length >= limit) break;
+  }
+
+  return seq;
+}
+
+function toToken(value) {
+  return value instanceof Expr ? value : Expr.value(value);
+}
+
+function fromToken(value) {
+  return value instanceof Expr ? value.valueOf() : value;
+}
+
+function toLazy(input) {
+  if (isLazySeq(input)) return input;
+  if (input && input.value) return toLazy(input.value);
+
+  const range = asRange(input);
+
+  if (range) {
+    return {
+      [RE_LAZY]: true,
+      source: range,
+      ops: [],
+      infinite: !!range.infinite,
+    };
+  }
+
+  return null;
+}
+
+function appendLazy(input, op) {
+  const lazy = toLazy(input);
+
+  if (!lazy) return null;
+
+  return {
+    [RE_LAZY]: true,
+    source: lazy.source,
+    ops: lazy.ops.concat(op),
+    infinite: lazy.infinite,
+  };
+}
+
+async function collectLazy(input, limit = Infinity, offset = 0) {
+  const lazy = toLazy(input);
+
+  if (!lazy) return null;
+  if (lazy.infinite && limit === Infinity) raise('Infinite range requires explicit limit');
+
+  let iterator;
+
+  if (isRangeLike(lazy.source)) {
+    iterator = lazy.source.getIterator();
+  } else if (Array.isArray(lazy.source) || typeof lazy.source[Symbol.iterator] === 'function') {
+    iterator = lazy.source[Symbol.iterator]();
+  } else {
+    raise('Input is not iterable');
+  }
+
+  const seq = [];
+  let index = 0;
+
+  for (let next = iterator.next(); next.done !== true; next = iterator.next(), index++) {
+    if (index < offset) continue;
+
+    let value = next.value;
+
+    if (isRangeLike(lazy.source) && lazy.source.alpha) {
+      value = String.fromCharCode(value);
+    }
+
+    let keep = true;
+    let token = toToken(value);
+
+    for (let i = 0, c = lazy.ops.length; i < c; i++) {
+      const op = lazy.ops[i];
+
+      if (op.type === 'map') {
+        token = toToken(await op.callback(token));
+      }
+
+      if (op.type === 'filter') {
+        keep = !!(await op.callback(token));
+        if (!keep) break;
+      }
+    }
+
+    if (!keep) continue;
+
+    seq.push(fromToken(token));
     if (seq.length >= limit) break;
   }
 
@@ -186,7 +283,13 @@ export function list(input) {
   return data;
 }
 
-export function head(input) {
+export async function head(input) {
+  const lazy = await collectLazy(input, 1);
+
+  if (lazy) {
+    return lazy[0];
+  }
+
   const range = asRange(input);
 
   if (range) {
@@ -196,7 +299,13 @@ export function head(input) {
   return list(input)[0];
 }
 
-export function tail(input) {
+export async function tail(input) {
+  const lazy = await collectLazy(input, Infinity, 1);
+
+  if (lazy) {
+    return lazy;
+  }
+
   const range = asRange(input);
 
   if (range) {
@@ -206,7 +315,13 @@ export function tail(input) {
   return list(input).slice(1);
 }
 
-export function take(input, length) {
+export async function take(input, length) {
+  const lazy = await collectLazy(input, length || 1);
+
+  if (lazy) {
+    return lazy;
+  }
+
   const range = asRange(input);
 
   if (range) {
@@ -216,7 +331,21 @@ export function take(input, length) {
   return list(input).slice(0, length || 1);
 }
 
-export function drop(input, length, offset) {
+export async function drop(input, length, offset) {
+  const lazy = toLazy(input);
+
+  if (lazy && lazy.infinite && typeof offset === 'undefined') {
+    const amount = length ? length.valueOf() : 1;
+
+    return appendLazy(input, {
+      type: 'filter',
+      callback: (() => {
+        let count = amount;
+        return () => count-- <= 0;
+      })(),
+    });
+  }
+
   const range = asRange(input);
 
   if (range) {
@@ -238,6 +367,48 @@ export function drop(input, length, offset) {
 
   arr.splice(a, b);
   return input;
+}
+
+export async function map(input, callback) {
+  if (typeof callback !== 'function') raise('Missing map callback');
+
+  const lazy = appendLazy(input, { type: 'map', callback });
+
+  if (lazy) {
+    return lazy;
+  }
+
+  const arr = await list(input);
+  const out = [];
+
+  for (let i = 0, c = arr.length; i < c; i++) {
+    out.push(fromToken(await callback(toToken(arr[i]))));
+  }
+
+  return out;
+}
+
+export async function filter(input, callback) {
+  if (typeof callback !== 'function') {
+    raise('Missing filter callback');
+  }
+
+  const lazy = appendLazy(input, { type: 'filter', callback });
+
+  if (lazy) {
+    return lazy;
+  }
+
+  const arr = await list(input);
+  const out = [];
+
+  for (let i = 0, c = arr.length; i < c; i++) {
+    if (await callback(toToken(arr[i]))) {
+      out.push(arr[i]);
+    }
+  }
+
+  return out;
 }
 
 export function rev(input) {

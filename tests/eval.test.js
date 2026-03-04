@@ -705,8 +705,10 @@ describe('Eval', () => {
       ]);
 
       expect(await run(`
-        @import (head, take) @from "Prelude".
-        head(1..), take(1.., 5)
+        @import (head, take, map, filter) @from "Prelude".
+        head(1..), take(1.., 5),
+        1.. |> filter(n -> (= n % 2 0)) |> take(5),
+        1.. |> map(n -> n * 3) |> take(4)
       `)).to.eql([
         Expr.value(1),
         Expr.array([
@@ -715,6 +717,19 @@ describe('Eval', () => {
           Expr.value(3),
           Expr.value(4),
           Expr.value(5),
+        ]),
+        Expr.array([
+          Expr.value(2),
+          Expr.value(4),
+          Expr.value(6),
+          Expr.value(8),
+          Expr.value(10),
+        ]),
+        Expr.array([
+          Expr.value(3),
+          Expr.value(6),
+          Expr.value(9),
+          Expr.value(12),
         ]),
       ]);
     });
