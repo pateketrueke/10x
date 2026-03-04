@@ -75,6 +75,12 @@ function normalizeUnitLiterals(source) {
   return String(source || '').replace(/\b(\d+(?:\.\d+)?)([A-Za-z]{1,5})\b/g, '$1 $2');
 }
 
+function unitLiteralDisplay(source) {
+  const match = String(source || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*([A-Za-z]{1,5})\.?$/);
+  if (!match) return '';
+  return `${match[1]} ${match[2]}`;
+}
+
 function isFunctionDefinitionSource(source) {
   const normalized = String(source || '').replace(/\s+/g, ' ').trim();
   return /^[^=]+=\s*.*->/.test(normalized);
@@ -98,6 +104,19 @@ function extractInlineExpressions(source, statementId = '') {
   return expressions;
 }
 
+const EDITOR_BOOTSTRAP = '@import to @from "Unit".';
+
+async function bootstrapEnv(env) {
+  if (!env || env.__xEditorBootstrapDone) return;
+  env.__xEditorBootstrapDone = true;
+
+  try {
+    await execute(EDITOR_BOOTSTRAP, env);
+  } catch (_) {
+    // Keep editor resilient when optional imports fail.
+  }
+}
+
 self.addEventListener('message', async ({ data }) => {
   const { requestId, statements, skipStatementIds } = data || {};
   if (!requestId) return;
@@ -109,6 +128,7 @@ self.addEventListener('message', async ({ data }) => {
     }
 
     const env = new Env();
+    await bootstrapEnv(env);
 
     const skipped = new Set(Array.isArray(skipStatementIds) ? skipStatementIds : []);
 
@@ -132,6 +152,7 @@ self.addEventListener('message', async ({ data }) => {
 
       try {
         const statementSource = normalizeUnitLiterals(statement.source);
+        const unitDisplay = unitLiteralDisplay(statementSource);
         const result = await execute(statementSource, env);
         if (isFunctionDefinitionSource(statementSource)) {
           partial.statementResult = {
@@ -171,6 +192,14 @@ self.addEventListener('message', async ({ data }) => {
 
         if (inlineResults.length) {
           partial.inlineResults = inlineResults;
+        }
+
+        if (!partial.statementResult && unitDisplay) {
+          partial.statementResult = {
+            statementId: statement.statementId,
+            resultText: unitDisplay,
+            typeText: 'unit',
+          };
         }
       } catch (error) {
         partial.statementResult = {

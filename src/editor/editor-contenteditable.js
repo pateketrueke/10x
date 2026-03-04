@@ -90,6 +90,12 @@ function normalizeUnitLiterals(source) {
   return String(source || '').replace(/\b(\d+(?:\.\d+)?)([A-Za-z]{1,5})\b/g, '$1 $2');
 }
 
+function unitLiteralDisplay(source) {
+  const match = String(source || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*([A-Za-z]{1,5})\.?$/);
+  if (!match) return '';
+  return `${match[1]} ${match[2]}`;
+}
+
 function tokenClass(token) {
   const n = SYMBOL_NAME(token.type);
   switch (n) {
@@ -642,6 +648,19 @@ function extractInlineExpressions(source, statementId = '') {
   }
 
   return expressions;
+}
+
+const EDITOR_BOOTSTRAP = '@import to @from "Unit".';
+
+async function bootstrapEnv(env) {
+  if (!env || env.__xEditorBootstrapDone) return;
+  env.__xEditorBootstrapDone = true;
+
+  try {
+    await execute(EDITOR_BOOTSTRAP, env);
+  } catch (_) {
+    // Keep editor resilient when optional imports fail.
+  }
 }
 
 function isFunctionDefinitionSource(source) {
@@ -1491,6 +1510,7 @@ class XEditor extends HTMLElement {
     this._evaluating = true;
     try {
       const env = new Env();
+      await bootstrapEnv(env);
 
       for (const statement of statements) {
         if (!statement?.source?.trim()) continue;
@@ -1498,6 +1518,7 @@ class XEditor extends HTMLElement {
         this._injectResults();
         try {
           const statementSource = normalizeUnitLiterals(statement.source);
+          const unitDisplay = unitLiteralDisplay(statementSource);
           const result = await execute(statementSource, env);
           this._resultsById.delete(statement.statementId);
           Array.from(this._inlineResultsById.keys()).forEach(inlineId => {
@@ -1541,6 +1562,14 @@ class XEditor extends HTMLElement {
                 errorText: formatRuntimeError(error),
               });
             }
+          }
+
+          if (!this._resultsById.has(statement.statementId) && unitDisplay) {
+            this._resultsById.set(statement.statementId, {
+              statementId: statement.statementId,
+              resultText: unitDisplay,
+              typeText: 'unit',
+            });
           }
         } catch (error) {
           this._resultsById.set(statement.statementId, {
