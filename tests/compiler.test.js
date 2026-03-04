@@ -31,7 +31,7 @@ describe('Compiler', () => {
   it('should compile signal assignment and on-handler updates', () => {
     const output = compile([
       'count = @signal 0.',
-      '@on "click", "#btn", count = count + 1.',
+      '@on :click, "#btn", count = count + 1.',
     ].join('\n'));
 
     expect(output).to.contain('const count = Runtime.signal(0, "count");');
@@ -42,8 +42,8 @@ describe('Compiler', () => {
     const output = compile([
       'count = @signal @prop "start" 0.',
       '@render @shadow @html <h1>{count}</h1>.',
-      '@on "click", "#inc", count = count + 1.',
-      '@on "click", "#reset", count = @prop "start" 0.',
+      '@on :click, "#inc", count = count + 1.',
+      '@on :click, "#reset", count = @prop "start" 0.',
     ].join('\n'));
 
     expect(output).to.contain('export function setup(host) {');
@@ -87,7 +87,7 @@ describe('Compiler', () => {
       'count = @signal 0.',
       '',
       '> increment handler',
-      '@on "click", "#inc", count = count + 1.',
+      '@on :click, "#inc", count = count + 1.',
     ].join('\n'));
 
     expect(output).to.contain('// Counter setup');
@@ -99,7 +99,7 @@ describe('Compiler', () => {
   it('should compile @on directives without comma separators', () => {
     const output = compile([
       'count = @signal 0.',
-      '@on "click" "#inc" count = count + 1.',
+      '@on :click "#inc" count = count + 1.',
     ].join('\n'));
 
     expect(output).to.contain('Runtime.on("click", "#inc", () => { count.set(Runtime.read(count) + 1); });');

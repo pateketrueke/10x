@@ -34,6 +34,6 @@ The template reads `count` and `todos` directly, and the runtime subscribes to b
 `#add` appends a new item label and increments the counter.
 `#clear` resets the text to a clean baseline.
 
-@on "click", "#add", todos = todos + ", ship feature " + count.
-@on "click", "#add", count = count + 1.
-@on "click", "#clear", todos = "Inbox zero".
+@on :click "#add"   todos = todos + ", ship feature " + count.
+@on :click "#add"   count = count + 1.
+@on :click "#clear" todos = "Inbox zero".

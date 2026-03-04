@@ -32,9 +32,9 @@ Whenever `count` changes, `{count}` updates automatically.
 Buttons map directly to state transitions:
 increment, decrement, and reset back to the initial prop value.
 
-@on "click" "#inc"   count = count + 1.
-@on "click" "#dec"   count = count - 1.
-@on "click" "#reset" count = @prop "start" 0.
+@on :click "#inc"   count = count + 1.
+@on :click "#dec"   count = count - 1.
+@on :click "#reset" count = @prop "start" 0.
 
 ## Usage Notes
 

@@ -761,7 +761,7 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
               <div class="lit-code"><span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span><br>&nbsp;&nbsp;<span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span><span class="xt-tag">=</span><span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>{count}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.</div>
               <div class="lit-h2">## Behavior</div>
               <div class="lit-prose">Buttons map directly to state transitions.</div>
-              <div class="lit-code"><span class="xt-op">@on</span> <span class="xt-string">"click"</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</div>
+              <div class="lit-code"><span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</div>
             </div>
           </div>
         </div>
@@ -857,7 +857,7 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
 count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.
 double <span class="xt-op">=</span> <span class="xt-op">@computed</span> count <span class="xt-op">*</span> <span class="xt-number">2</span>.
 <span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span> <span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span><span class="xt-tag">=</span><span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>{count}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.
-<span class="xt-op">@on</span> <span class="xt-string">"click"</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</pre>
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</pre>
             </div>
             <div>
               <div class="side-label">compiled</div>
@@ -1112,8 +1112,8 @@ fib!(10).
       <button id="reset" class="sig-reset">reset</button>
     </div>
   </div>.
-@on click "#inc" count = count + 1.
-@on click "#reset" count = 0.`,
+@on :click "#inc" count = count + 1.
+@on :click "#reset" count = 0.`,
 
       xctr: `count = @signal @prop "start" 0.
 @style "
@@ -1133,9 +1133,9 @@ fib!(10).
       <button id="reset" class="ctr-reset">reset</button>
     </div>
   </div>.
-@on click "#inc" count = count + 1.
-@on click "#dec" count = count - 1.
-@on click "#reset" count = @prop "start" 0.`,
+@on :click "#inc" count = count + 1.
+@on :click "#dec" count = count - 1.
+@on :click "#reset" count = @prop "start" 0.`,
 
       todo: `todos = @signal "Write parser regression tests".
 count = @signal 1.
@@ -1153,8 +1153,8 @@ count = @signal 1.
     <div class="todo-items">{todos}</div>
     <button id="add" class="todo-add">+ add item</button>
   </section>.
-@on click "#add" todos = todos + ", task " + count.
-@on click "#add" count = count + 1.`,
+@on :click "#add" todos = todos + ", task " + count.
+@on :click "#add" count = count + 1.`,
 
       fns: `add    = (a b) -> a + b.
 double = n -> n * 2.
