@@ -229,6 +229,7 @@ export default class Scanner {
       if (this.afterEOL !== 1 && char === '[' && this.parseRef(this.col)) return;
 
       // extract markdown block-tags, e.g. `#...` OR `>...`, etc.
+      if (char === '-' && this.parseThematicBreak()) return;
       if (char === '#' && this.parseBlock(char)) return;
       if (char === '>' && this.peek() === ' ' && this.parseBlock(char)) return;
       if (char === '[' && this.parseLinkLine()) return;
@@ -523,6 +524,24 @@ export default class Scanner {
     while (!this.isDone() && this.peek() !== '\n') this.pushToken(this.getToken());
   }
 
+  parseThematicBreak() {
+    const start = this.start;
+    const lineCol = this.col - 1;
+    let end = this.offset;
+
+    while (end < this.chars.length && this.chars[end] !== '\n') end++;
+
+    const line = this.source.substring(start, end).trim();
+
+    if (!/^-{3,}$/.test(line)) return false;
+
+    this.appendText();
+    this.offset = end;
+    this.col = lineCol + (end - start);
+    this.blank = '';
+    return true;
+  }
+
   parseBlock(char) {
     this.appendText();
     this.parseLine();
@@ -689,6 +708,15 @@ export default class Scanner {
       this.parseLine();
       this.appendText();
 
+      return true;
+    }
+
+    // Treat sentence-like `Word (args).` as prose (not code-call syntax).
+    if (token === ' ' && nextToken === '(' && /^[A-Z]/.test(this.blank)) {
+      this.pushToken(token);
+      this.offset = this.start = i + 1;
+      this.parseLine();
+      this.appendText();
       return true;
     }
 

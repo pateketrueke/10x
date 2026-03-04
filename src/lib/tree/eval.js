@@ -24,6 +24,7 @@ import {
 const LAZY_DESCRIPTORS = new Set(['Loop', 'Set']);
 const OPS_MUL_DIV = new Set([MUL, DIV]);
 const OPS_PLUS_MINUS_MOD = new Set([PLUS, MINUS, MOD]);
+const OPS_LOGIC = new Set([LESS, LESS_EQ, GREATER, GREATER_EQ, EQUAL, EXACT_EQ, NOT_EQ, LIKE, NOT]);
 
 export default class Eval {
   static getResultTagToken(token) {
@@ -711,7 +712,7 @@ export default class Eval {
   async evalLogic() {
     // evaluate logical expressions, e.g. `(< 1 2)`
     const { type, value } = this.ctx;
-    const result = await Eval.do(value, this.env, 'Expr', true, this.ctx.tokenInfo);
+    let result = await Eval.do(value, this.env, 'Expr', true, this.ctx.tokenInfo);
 
     // evaluate multiple checks, e.g. `(? a b c)` OR `($ x y z)`
     if (isSome(this.ctx) || isEvery(this.ctx)) {
@@ -721,6 +722,25 @@ export default class Eval {
 
       this.append(Expr.value(values[isSome(this.ctx) ? 'some' : 'every'](x => x[0].valueOf())));
       return true;
+    }
+
+    if (result.length > 2) {
+      for (let i = 1, c = value.length; i < c; i++) {
+        let left;
+        let right;
+
+        try {
+          left = await Eval.do(value.slice(0, i), this.env, 'LogicArg', true, this.ctx.tokenInfo);
+          right = await Eval.do(value.slice(i), this.env, 'LogicArg', true, this.ctx.tokenInfo);
+        } catch (_) {
+          continue;
+        }
+
+        if (left.length === 1 && right.length === 1) {
+          result = [left[0], right[0]];
+          break;
+        }
+      }
     }
 
     if (result.length > 2) raise(`Expecting exactly 2 arguments, given ${result.length}`);
@@ -1293,6 +1313,7 @@ export default class Eval {
 
     tokens = Eval.math(OPS_MUL_DIV, tokens, tokenInfo);
     tokens = Eval.math(OPS_PLUS_MINUS_MOD, tokens, tokenInfo);
+    tokens = Eval.walk(OPS_LOGIC, tokens, (left, op, right) => Eval.logic(op.type, left, right, tokenInfo));
 
     return tokens.filter(x => ![EOL, COMMA].includes(x.type));
   }

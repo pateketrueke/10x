@@ -131,7 +131,12 @@ export default class Parser {
       const body = stack[stack.length - 1];
       const cur = this.next();
 
-      if (!this.depth && (isSymbol(cur) || isDirective(cur))) {
+      const keepElseBodyDirective = key === '@else'
+        && !body.length
+        && isDirective(cur)
+        && ['@do', '@match', '@let'].includes(cur.value);
+
+      if (!this.depth && (isSymbol(cur) || isDirective(cur)) && !keepElseBodyDirective) {
         if (isSpecial(cur) || isSlice(cur)) {
           body.push(Expr.from(cur));
           continue;
@@ -744,6 +749,9 @@ export default class Parser {
 
         if (table) {
           push(table);
+          if (!(isEnd(this.peek()) || isClose(this.peek()) || isDone(this.peek()))) {
+            push(Expr.from(EOL, '.', tokenInfo));
+          }
         } else {
           rows.forEach(row => {
             if (this.isTextConvertible(row)) {
@@ -759,7 +767,7 @@ export default class Parser {
         } else if (this.hasInterpolation(token)) {
           push(this.convertTextToString(token, tokenInfo));
         }
-      } else if (isText(token) && this.isTextConvertible(token)) {
+      } else if (isText(token) && this.hasInterpolation(token)) {
         push(this.convertTextToString(token, tokenInfo));
       } else if (!(isText(token) || isCode(token) || isRef(token))) {
         // parse within tokenized strings!

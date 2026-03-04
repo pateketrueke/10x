@@ -267,6 +267,14 @@ Import from built-in modules:
 @import concat @from "Array";
 ```
 
+Markdown links are also module imports, but only in standalone form:
+
+```
+[utils](./utils.md)
+```
+
+Keep them on their own line. Inline prose like `See [utils](./utils.md)` is treated as prose/code text and is not a valid import form.
+
 ---
 
 ## Examples
@@ -278,5 +286,6 @@ See the [`examples/`](examples/) directory:
 - [`concat.md`](examples/concat.md) — Custom operator + import
 - [`lulz.md`](examples/lulz.md) — Range + pipe + `@match` + map-heavy toy program
 - [`markdown.md`](examples/markdown.md) — Prose mixed with code
+- [`todolist.md`](examples/todolist.md) — Reactive directives demo (`@signal`, `@html`, `@render`, `@on`)
 - [`prompt.md`](examples/prompt.md) — Interactive input
 - [`stdin.md`](examples/stdin.md) — Reading from stdin

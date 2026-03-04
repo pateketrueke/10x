@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="/10x/" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10x TodoList Demo</title>
+  <style>
+    :root {
+      --bg: #101417;
+      --card: #182026;
+      --ink: #e7ecf0;
+      --muted: #9aa7b1;
+      --line: #2d3944;
+      --accent: #58d3a8;
+      --accent-2: #6eb4ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background:
+        radial-gradient(70rem 30rem at 10% -20%, rgba(88, 211, 168, 0.2), transparent 60%),
+        radial-gradient(60rem 35rem at 120% 10%, rgba(110, 180, 255, 0.2), transparent 60%),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Space Grotesk", "Avenir Next", sans-serif;
+      padding: 2rem 1rem 3rem;
+    }
+
+    .wrap {
+      width: min(920px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 16px;
+      padding: 1rem;
+    }
+
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(1.2rem, 4vw, 1.8rem);
+    }
+
+    .meta {
+      margin: 0 0 0.65rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .items {
+      margin: 0.6rem 0 1rem;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 0.65rem 0.75rem;
+      min-height: 2.6rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0.5rem 0.85rem;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+      transition: transform 140ms ease;
+    }
+
+    #add {
+      background: var(--accent);
+      color: #051c14;
+    }
+
+    #clear {
+      border-color: var(--line);
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    button:hover { transform: translateY(-1px); }
+
+    pre {
+      margin: 0;
+      padding: 0.9rem;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #11181f;
+      color: #c9d5df;
+      overflow: auto;
+      font-size: 0.83rem;
+      line-height: 1.45;
+      font-family: "IBM Plex Mono", "SF Mono", monospace;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section id="app" class="card"></section>
+    <section class="card">
+      <h1>Source (`examples/todolist.md`)</h1>
+      <pre>todos = @signal "Write parser regression tests".
+count = @signal 1.
+
+@render "#app" @html
+  &lt;section class="todo-card"&gt;
+    &lt;h1&gt;TodoList&lt;/h1&gt;
+    &lt;p class="meta"&gt;items added: {count}&lt;/p&gt;
+    &lt;p class="items"&gt;{todos}&lt;/p&gt;
+    &lt;div class="actions"&gt;
+      &lt;button id="add"&gt;+ add item&lt;/button&gt;
+      &lt;button id="clear"&gt;clear&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;.
+
+@on "click", "#add", todos = todos + ", ship feature " + count.
+@on "click", "#add", count = count + 1.
+@on "click", "#clear", todos = "Inbox zero".</pre>
+    </section>
+  </main>
+
+  <script type="module">
+    const SIGNAL = Symbol('10x.signal');
+    let currentEffect = null;
+
+    const Runtime = {
+      signal(initialValue) {
+        return {
+          [SIGNAL]: true,
+          value: initialValue,
+          subs: new Set(),
+          get() {
+            if (currentEffect) this.subs.add(currentEffect);
+            return this.value;
+          },
+          set(nextValue) {
+            this.value = nextValue;
+            this.subs.forEach(fn => fn());
+          },
+        };
+      },
+      read(value) {
+        return value && value[SIGNAL] ? value.get() : value;
+      },
+      html(renderFn) {
+        return { render: renderFn };
+      },
+      render(selector, view) {
+        const target = document.querySelector(selector);
+        const run = () => {
+          currentEffect = run;
+          target.innerHTML = String(view.render());
+          currentEffect = null;
+        };
+        run();
+      },
+      on(eventName, selector, handler) {
+        const target = document.querySelector(selector);
+        target.addEventListener(eventName, handler);
+      },
+    };
+
+    // Compiled from examples/todolist.md
+    const todos = Runtime.signal("Write parser regression tests");
+    const count = Runtime.signal(1);
+
+    Runtime.render("#app", Runtime.html(() => `<section class="todo-card"><h1>TodoList</h1><p class="meta">items added: ${Runtime.read(count)}</p><p class="items">${Runtime.read(todos)}</p><div class="actions"><button id="add">+ add item</button><button id="clear">clear</button></div></section>`));
+    Runtime.on("click", "#add", () => { todos.set(Runtime.read(todos) + ", ship feature " + Runtime.read(count)); });
+    Runtime.on("click", "#add", () => { count.set(Runtime.read(count) + 1); });
+    Runtime.on("click", "#clear", () => { todos.set("Inbox zero"); });
+  </script>
+</body>
+</html>

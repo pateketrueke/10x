@@ -62,6 +62,8 @@ describe('Eval', () => {
       expect(await run('1 | 2')).to.eql([Expr.value(1)]);
       expect(await run(':on ? 42 | -1')).to.eql([Expr.value(42)]);
       expect(await run(':off ? 42 | -1')).to.eql([Expr.value(-1)]);
+      expect(await run('@if (:off) 0 @else @do (x = 99.\nx)')).to.eql([Expr.value(99)]);
+      expect(await run('@if (:on) "yes" @else @do (x = 42.\nx)')).to.eql([Expr.value('yes')]);
     });
 
     it('should not evaluate comments', async () => {
@@ -408,6 +410,29 @@ describe('Eval', () => {
       }
     });
 
+    it('should ignore prose-like markdown elements without interpolation', async () => {
+      expect(await run('x = 1.\n---\nx.')).to.eql([Expr.value(1)]);
+      expect(await run('x = 1.\n> A note.\nx.')).to.eql([Expr.value(1)]);
+      expect(await run('x = 1.\n- A bullet.\nx.')).to.eql([Expr.value(1)]);
+      expect(await run('x = 1.\n1. Ordered.\nx.')).to.eql([Expr.value(1)]);
+      expect(await run('Some prose.\n\nx = 1.\nx.')).to.eql([Expr.value(1)]);
+      expect(await run('Hello (world).\n\nx = 1.\nx.')).to.eql([Expr.value(1)]);
+    });
+
+    it('should keep standalone markdown table separated from following code', async () => {
+      const tableDoc = '| a | b |\n|---|---|\n| 1 | 2 |\n\nx = 1.\nx.';
+
+      expect(await run(tableDoc)).to.eql([
+        Expr.array([
+          Expr.map({
+            a: Expr.body([Expr.value(1)]),
+            b: Expr.body([Expr.value(2)]),
+          }),
+        ]),
+        Expr.value(1),
+      ]);
+    });
+
     it('should import exported templates from markdown links on demand', async () => {
       const resolve = Env.resolve;
       const moduleEnv = new Env();
@@ -652,12 +677,14 @@ describe('Eval', () => {
       expect(await run('@if (:on) :off')).to.eql([Expr.value(false)]);
       expect(await run('@if (< 1 2) "X" @else "Y"')).to.eql([Expr.value('X')]);
       expect(await run('@if (< 2 1) "X" @else "Y"')).to.eql([Expr.value('Y')]);
+      expect(await run('@from "Prelude" @import (size).\n@if (< size([1,2]) 5) "small" @else "big"')).to.eql([Expr.value('small')]);
       expect(await run('f = x -> @if (>= x 3) "_" @else ".".\nf(1), f(2), f(3), f(4)')).to.eql([
         Expr.value('.'),
         Expr.value('.'),
         Expr.value('_'),
         Expr.value('_'),
       ]);
+      expect(await run('@from "Prelude" @import (filter).\nfilter([1,4,2], x -> x < 3)')).to.eql([Expr.array([Expr.value(1), Expr.value(2)])]);
     });
 
     it('should evaluate from if-do-let mappings', async () => {

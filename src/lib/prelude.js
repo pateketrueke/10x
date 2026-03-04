@@ -287,16 +287,22 @@ export async function head(input) {
   const lazy = await collectLazy(input, 1);
 
   if (lazy) {
+    if (!lazy.length) raise('head: empty list');
     return lazy[0];
   }
 
   const range = asRange(input);
 
   if (range) {
-    return collectRange(range, 1)[0];
+    const [first] = collectRange(range, 1);
+    if (typeof first === 'undefined') raise('head: empty list');
+    return first;
   }
 
-  return list(input)[0];
+  const [first] = list(input);
+
+  if (typeof first === 'undefined') raise('head: empty list');
+  return first;
 }
 
 export async function tail(input) {

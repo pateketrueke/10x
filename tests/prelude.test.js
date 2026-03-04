@@ -170,6 +170,10 @@ describe('Prelude', () => {
       expect(await run('@import head @from "Prelude".\nhead("foo")')).to.eql([Expr.value('f')]);
       expect(await run('@import head @from "Prelude".\nhead("foo")')).to.eql([Expr.value('f')]);
     });
+
+    it('should fail on empty lists', async () => {
+      await failWith(run('@import head @from "Prelude".\nhead([])'), 'head: empty list');
+    });
   });
 
   describe('tail(t)', () => {
