@@ -68,12 +68,25 @@ export function render(selectorOrElement, view) {
 }
 
 export function on(eventName, selectorOrElement, handler) {
-  const target = typeof selectorOrElement === 'string'
-    ? document.querySelector(selectorOrElement)
-    : selectorOrElement;
+  if (typeof handler !== 'function') throw new Error('on(...) expects a handler function');
+
+  if (typeof selectorOrElement === 'string') {
+    const delegated = event => {
+      const origin = event && event.target;
+      const matched = origin && typeof origin.closest === 'function'
+        ? origin.closest(selectorOrElement)
+        : null;
+
+      if (matched) handler(event);
+    };
+
+    document.addEventListener(eventName, delegated);
+    return () => document.removeEventListener(eventName, delegated);
+  }
+
+  const target = selectorOrElement;
 
   if (!target) throw new Error(`Event target not found: ${selectorOrElement}`);
-  if (typeof handler !== 'function') throw new Error('on(...) expects a handler function');
 
   target.addEventListener(eventName, handler);
   return () => target.removeEventListener(eventName, handler);

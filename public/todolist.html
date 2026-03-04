@@ -168,8 +168,10 @@ count = @signal 1.
         run();
       },
       on(eventName, selector, handler) {
-        const target = document.querySelector(selector);
-        target.addEventListener(eventName, handler);
+        document.addEventListener(eventName, event => {
+          const hit = event.target && event.target.closest(selector);
+          if (hit) handler(event);
+        });
       },
     };
 

@@ -35,33 +35,37 @@ describe('Runtime', () => {
   });
 
   it('should render html views and bind events', () => {
-    const listeners = {};
+    const nodeListeners = {};
+    const documentListeners = {};
     const node = {
       innerHTML: '',
-      addEventListener: (name, fn) => { listeners[name] = fn; },
-      removeEventListener: name => { delete listeners[name]; },
+      addEventListener: (name, fn) => { nodeListeners[name] = fn; },
+      removeEventListener: name => { delete nodeListeners[name]; },
     };
 
     const originalDocument = globalThis.document;
     const count = signal(1);
 
     globalThis.document = {
-      querySelector: selector => (selector === '#app' || selector === '#btn' ? node : null),
+      querySelector: selector => (selector === '#app' ? node : null),
+      addEventListener: (name, fn) => { documentListeners[name] = fn; },
+      removeEventListener: name => { delete documentListeners[name]; },
     };
 
     try {
-      const view = html(() => `<h1>${count.get()}</h1>`);
+      const view = html(() => `<button id="btn">${count.get()}</button>`);
       render('#app', view);
 
-      expect(node.innerHTML).to.eql('<h1>1</h1>');
+      expect(node.innerHTML).to.eql('<button id="btn">1</button>');
 
       const dispose = on('click', '#btn', () => count.set(count.get() + 1));
-      listeners.click();
+      documentListeners.click({ target: { closest: selector => (selector === '#btn' ? {} : null) } });
+      documentListeners.click({ target: { closest: selector => (selector === '#btn' ? {} : null) } });
 
-      expect(node.innerHTML).to.eql('<h1>2</h1>');
+      expect(node.innerHTML).to.eql('<button id="btn">3</button>');
 
       dispose();
-      expect(listeners.click).to.equal(undefined);
+      expect(documentListeners.click).to.equal(undefined);
     } finally {
       globalThis.document = originalDocument;
     }
