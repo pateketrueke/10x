@@ -160,6 +160,54 @@ export function annotationTypeForSource(source, env) {
   return ann ? String(ann) : '';
 }
 
+function canonicalTypeName(typeName) {
+  const text = String(typeName || '').trim().toLowerCase();
+  if (!text) return '';
+  if (text === 'num' || text === 'number') return 'number';
+  if (text === 'str' || text === 'string') return 'string';
+  if (text === 'bool' || text === 'boolean') return 'boolean';
+  if (text.startsWith('unit<') && text.endsWith('>')) return 'number';
+  if (text === 'list' || text.startsWith('list<')) return 'list';
+  return text;
+}
+
+function prettyTypeName(typeName) {
+  const canon = canonicalTypeName(typeName);
+  if (canon === 'number') return 'num';
+  if (canon === 'string') return 'str';
+  if (canon === 'boolean') return 'bool';
+  if (canon === 'list') return 'list';
+  return String(typeName || '').trim() || 'unknown';
+}
+
+export function annotationWarningForSource(source, env, runtimeType) {
+  const expected = annotationTypeForSource(source, env);
+  if (!expected) return null;
+
+  const inferred = String(runtimeType || '').trim();
+  if (!inferred || inferred === 'unknown') return null;
+
+  const expectedCanon = canonicalTypeName(expected);
+  const inferredCanon = canonicalTypeName(inferred);
+  if (!expectedCanon || !inferredCanon || expectedCanon === inferredCanon) return null;
+
+  return {
+    expectedType: expected,
+    runtimeType: inferred,
+    message: `Type mismatch: expected ${prettyTypeName(expected)}, got ${prettyTypeName(inferred)}`,
+  };
+}
+
+export function annotationHintFromSource(source) {
+  const text = String(source || '').trim();
+  const match = text.match(/^([A-Za-z_][A-Za-z0-9_!?-]*)\s*::\s*(.+?)\.\s*$/s);
+  if (!match) return null;
+  return {
+    name: match[1],
+    typeText: match[2].trim(),
+  };
+}
+
 export function extractInlineExpressions(source, statementId = '') {
   const text = String(source || '');
   const expressions = [];

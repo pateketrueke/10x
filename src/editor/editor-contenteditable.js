@@ -24,6 +24,7 @@ import {
   unitLiteralDisplay,
   hasUnitSuffix,
   annotationTypeForSource,
+  annotationWarningForSource,
   catalogSymbolHint,
   isFunctionDefinitionSource,
   extractInlineExpressions,
@@ -862,6 +863,19 @@ const STYLES = `
     border-color: rgba(244, 135, 113, 0.28);
   }
 
+  [data-annotation-warning] {
+    white-space: nowrap;
+    display: inline-block;
+    padding: 0 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 204, 120, 0.45);
+    color: #ffcc78;
+    background: rgba(255, 204, 120, 0.08);
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+  }
+
   [data-result][data-copy-state="copied"]::after,
   [data-result][data-copy-state="error"]::after {
     content: attr(data-copy-label);
@@ -1095,7 +1109,7 @@ class XEditor extends HTMLElement {
     label.textContent = result?.kind === 'function' ? 'ƒ' : `→ ${text}`;
     widget.appendChild(label);
 
-    if (this._showTypeHints && result?.typeText) {
+    if (this._showTypeHints && result?.typeText && result?.kind === 'function') {
       const typeHint = document.createElement('span');
       typeHint.dataset.typeHint = '';
       typeHint.textContent = result.typeText;
@@ -1112,6 +1126,14 @@ class XEditor extends HTMLElement {
       copyBtn.title = 'Copy result';
       copyBtn.textContent = '⧉';
       widget.appendChild(copyBtn);
+    }
+
+    if (result?.annotationWarning?.message) {
+      const warning = document.createElement('span');
+      warning.dataset.annotationWarning = '';
+      warning.textContent = 'mismatch';
+      warning.title = result.annotationWarning.message;
+      widget.appendChild(warning);
     }
 
     if (result?.errorText) widget.classList.add('error');
@@ -1467,11 +1489,14 @@ class XEditor extends HTMLElement {
           } else if (result !== undefined && result !== null) {
             const resultText = formatRuntimeValue(result, 180);
             const displayText = unitDisplay && !hasUnitSuffix(resultText) ? unitDisplay : resultText;
+            const runtimeType = inferRuntimeType(result);
             const annotationType = annotationTypeForSource(statement.source, env);
+            const annotationWarning = annotationWarningForSource(statement.source, env, runtimeType);
             this._resultsById.set(statement.statementId, {
               statementId: statement.statementId,
               resultText: displayText,
-              typeText: annotationType || inferRuntimeType(result),
+              typeText: annotationType || runtimeType,
+              annotationWarning,
             });
           }
 

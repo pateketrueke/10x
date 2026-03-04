@@ -51,9 +51,181 @@ const HISTORY_FILE = path.join(os.homedir(), '.10x_history');
 const MAX_HISTORY = 1000;
 
 const argv = wargs(process.argv.slice(2), {
-  boolean: ['trace', 'color', 'print', 'inline', 'source', 'lint', 'bundle'],
+  boolean: ['trace', 'color', 'print', 'inline', 'source', 'lint', 'check', 'fix', 'dry-run', 'bundle'],
 });
 const nodeAdapter = createNodeAdapter(process.argv.slice(2));
+
+function annotationNameRE(name) {
+  return name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function collectSourceFacts(source) {
+  const lines = String(source || '').split('\n');
+  const annotations = [];
+  const bindings = [];
+
+  lines.forEach((line, index) => {
+    const ann = line.match(/^\s*([A-Za-z_][A-Za-z0-9_!?-]*)\s*::\s*(.+?)\.\s*$/);
+    if (ann) {
+      annotations.push({
+        name: ann[1],
+        typeText: ann[2].trim(),
+        line: index,
+      });
+    }
+
+    const bind = line.match(/^\s*([A-Za-z_][A-Za-z0-9_!?-]*)\s*=/);
+    if (bind) {
+      bindings.push({
+        name: bind[1],
+        line: index,
+      });
+    }
+  });
+
+  return { lines, annotations, bindings };
+}
+
+function lintAnnotationSource(source) {
+  const { lines, annotations } = collectSourceFacts(source);
+  const warnings = [];
+  const seen = new Map();
+
+  for (const ann of annotations) {
+    if (seen.has(ann.name)) {
+      warnings.push({
+        line: ann.line,
+        message: `Duplicate annotation for \`${ann.name}\``,
+      });
+    }
+    seen.set(ann.name, ann.line);
+
+    let cursor = ann.line + 1;
+    while (cursor < lines.length) {
+      const line = lines[cursor];
+      if (!line.trim() || /^\s*\/\//.test(line)) {
+        cursor += 1;
+        continue;
+      }
+      const re = new RegExp(`^\\s*${annotationNameRE(ann.name)}\\s*=`);
+      if (!re.test(line)) {
+        warnings.push({
+          line: ann.line,
+          message: `Orphan annotation for \`${ann.name}\` (next statement is not \`${ann.name} = ...\`)`,
+        });
+      }
+      break;
+    }
+
+    if (cursor >= lines.length) {
+      warnings.push({
+        line: ann.line,
+        message: `Orphan annotation for \`${ann.name}\` (no following binding)`,
+      });
+    }
+  }
+
+  return warnings;
+}
+
+function inferBindingRuntimeType(token) {
+  if (!token) return 'unknown';
+  if (token.isCallable || token.isFunction) return 'fn';
+  if (token.isTag) return 'tag';
+  if (token.isObject) return 'record';
+  if (token.isRange) return Array.isArray(token.value) ? 'list' : 'range';
+  if (token.isNumber) {
+    const kind = token?.value?.kind ?? token?.value?.value?.kind;
+    if (typeof kind === 'string' && kind.trim()) return `unit<${kind.trim()}>`;
+    return 'number';
+  }
+  if (token.isString) return 'string';
+  if (token.isSymbol) return 'symbol';
+  if (token.value === true || token.value === false) return 'bool';
+  if (token.value === null) return 'nil';
+  return 'unknown';
+}
+
+function canonicalTypeName(typeName) {
+  const text = String(typeName || '').trim().toLowerCase();
+  if (!text) return '';
+  if (text === 'num' || text === 'number') return 'number';
+  if (text === 'str' || text === 'string') return 'string';
+  if (text === 'bool' || text === 'boolean') return 'boolean';
+  return text;
+}
+
+function toAnnotationTypeName(typeName) {
+  const canon = canonicalTypeName(typeName);
+  if (canon === 'number') return 'num';
+  if (canon === 'string') return 'str';
+  if (canon === 'boolean') return 'bool';
+  return String(typeName || 'any');
+}
+
+async function runTypeChecksForFile(source) {
+  const env = createEnv(nodeAdapter);
+  await execute(source, env);
+
+  const { annotations, bindings } = collectSourceFacts(source);
+  const annByName = new Map();
+  annotations.forEach(ann => annByName.set(ann.name, ann.typeText));
+
+  const warnings = [];
+  const inferredByName = new Map();
+
+  for (const bind of bindings) {
+    const token = env?.locals?.[bind.name]?.body?.[0];
+    const inferred = inferBindingRuntimeType(token);
+    const inferredAnn = toAnnotationTypeName(inferred);
+    inferredByName.set(bind.name, inferred);
+
+    const expected = annByName.get(bind.name);
+    if (!expected) {
+      warnings.push({
+        line: bind.line,
+        message: `Unannotated binding \`${bind.name}\` (inferred: ${inferredAnn})`,
+        hint: true,
+      });
+      continue;
+    }
+
+    if (
+      expected
+      && inferred !== 'unknown'
+      && canonicalTypeName(expected) !== canonicalTypeName(inferred)
+    ) {
+      warnings.push({
+        line: bind.line,
+        message: `Type mismatch for \`${bind.name}\`: annotated \`${expected}\`, inferred \`${inferredAnn}\``,
+      });
+    }
+  }
+
+  return { warnings, inferredByName, annotations, bindings };
+}
+
+function applyMissingAnnotations(source, inferredByName, annotations, bindings) {
+  const lines = String(source || '').split('\n');
+  const existing = new Set(annotations.map(x => x.name));
+  const inserts = new Map();
+
+  for (const bind of bindings) {
+    if (existing.has(bind.name)) continue;
+    const inferred = inferredByName.get(bind.name) || '';
+    if (!inferred || inferred === 'unknown') continue;
+    inserts.set(bind.line, `${bind.name} :: ${toAnnotationTypeName(inferred)}.`);
+  }
+
+  if (!inserts.size) return source;
+
+  const out = [];
+  lines.forEach((line, idx) => {
+    if (inserts.has(idx)) out.push(inserts.get(idx));
+    out.push(line);
+  });
+  return `${out.join('\n')}${source.endsWith('\n') ? '' : '\n'}`;
+}
 
 async function prelude() {
   await runtimeReady;
@@ -221,16 +393,69 @@ function resolveWithAliases(specifier, importerPath, aliasEntries) {
 async function cli() {
   await runtimeReady;
 
-  if (argv.flags.lint) {
+  if (argv.flags.lint || argv.flags.check || argv.flags.fix) {
     const files = argv._;
     let hasError = false;
+    const runCheck = !!argv.flags.check || !!argv.flags.fix;
+    const runFix = !!argv.flags.fix;
+    const dryRun = !!(argv.flags['dry-run'] || argv.flags.dryRun || argv.flags.dry_run);
+
+    if (runCheck || runFix) {
+      await prelude();
+    }
 
     for (const file of files) {
       const filePath = file + (!file.includes('.') ? '.md' : '');
       const src = fs.readFileSync(filePath).toString();
       try {
         Parser.getAST(src, 'parse');
-        console.log(`${file}: ok`);
+
+        const lintWarnings = lintAnnotationSource(src);
+        lintWarnings.forEach(w => {
+          console.error(`${file}:${w.line + 1}:1: warning: ${w.message}`);
+        });
+
+        let checkWarnings = [];
+        let fixedOutput = null;
+
+        if (runCheck || runFix) {
+          try {
+            const checked = await runTypeChecksForFile(src);
+            checkWarnings = checked.warnings;
+            checkWarnings.forEach(w => {
+              const level = w.hint ? 'hint' : 'warning';
+              console.error(`${file}:${w.line + 1}:1: ${level}: ${w.message}`);
+            });
+
+            if (runFix) {
+              fixedOutput = applyMissingAnnotations(src, checked.inferredByName, checked.annotations, checked.bindings);
+              if (fixedOutput !== src) {
+                if (dryRun) {
+                  console.log(`${file}: fix available (dry-run)`);
+                } else {
+                  fs.writeFileSync(filePath, fixedOutput, 'utf8');
+                  console.log(`${file}: fixed`);
+                }
+              } else {
+                console.log(`${file}: no changes`);
+              }
+            }
+          } catch (e) {
+            const line = Number.isFinite(e.line) ? e.line + 1 : 1;
+            const col = Number.isFinite(e.col) ? e.col + 1 : 1;
+            console.error(`${file}:${line}:${col}: ${e.name}: ${e.message}`);
+            hasError = true;
+            continue;
+          }
+        }
+
+        if (!runFix) {
+          console.log(`${file}: ok`);
+        }
+
+        if (lintWarnings.some(w => !w.hint) || checkWarnings.some(w => !w.hint)) {
+          hasError = true;
+        }
       } catch (e) {
         const line = Number.isFinite(e.line) ? e.line + 1 : 1;
         const col = Number.isFinite(e.col) ? e.col + 1 : 1;

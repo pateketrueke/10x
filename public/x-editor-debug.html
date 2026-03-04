@@ -252,6 +252,22 @@ step = @signal 2.
 ].
 users |> map (u) -> u.name.
 `,
+      'type-hints': `distance :: num.
+distance = 2cm to :in.
+
+label :: str.
+label = "Distance: #{distance}".
+
+toggle :: bool.
+toggle = :on.
+
+items = [1, 2, 3].
+items |> map(n -> n * distance).
+
+// mismatch on purpose: annotated num, runtime is string
+wrong :: num.
+wrong = "oops".
+`,
       'errors:runtime': `x = 1.
 y = x.missing.
 y.`,
@@ -344,7 +360,7 @@ calc = 2cm to :in.
         status.textContent = `Editor loaded${from}`;
         // eslint-disable-next-line no-console
         console.log('[x-editor-debug] loaded from', window.__editorLoadedFrom || '(predefined custom element)');
-        setSourceByPreset('units');
+        setSourceByPreset('type-hints');
         return;
       }
 

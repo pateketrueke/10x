@@ -8,6 +8,7 @@ import {
   unitLiteralDisplay,
   hasUnitSuffix,
   annotationTypeForSource,
+  annotationWarningForSource,
   isFunctionDefinitionSource,
   extractInlineExpressions,
   bootstrapEnv,
@@ -62,11 +63,14 @@ self.addEventListener('message', async ({ data }) => {
         } else if (result !== undefined && result !== null) {
           const resultText = formatRuntimeValue(result, 180);
           const displayText = unitDisplay && !hasUnitSuffix(resultText) ? unitDisplay : resultText;
+          const runtimeType = inferRuntimeType(result);
           const annotationType = annotationTypeForSource(statement.source, env);
+          const annotationWarning = annotationWarningForSource(statement.source, env, runtimeType);
           partial.statementResult = {
             statementId: statement.statementId,
             resultText: displayText,
-            typeText: annotationType || inferRuntimeType(result),
+            typeText: annotationType || runtimeType,
+            annotationWarning,
           };
         }
 
