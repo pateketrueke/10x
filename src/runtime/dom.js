@@ -3,6 +3,53 @@ import { effect } from './core.js';
 
 export { h };
 
+const componentObservers = new WeakMap();
+
+function registerShadowHost(host, moduleUrl) {
+  if (!moduleUrl) return;
+  const globalObj = globalThis;
+  const registry = globalObj.__10x_components instanceof Map
+    ? globalObj.__10x_components
+    : (globalObj.__10x_components = new Map());
+  let hosts = registry.get(moduleUrl);
+  if (!hosts) {
+    hosts = new Set();
+    registry.set(moduleUrl, hosts);
+  }
+  hosts.add(host);
+
+  if (typeof MutationObserver !== 'function') return;
+  if (typeof document === 'undefined' || !document.body) return;
+
+  let byModule = componentObservers.get(host);
+  if (!byModule) {
+    byModule = new Map();
+    componentObservers.set(host, byModule);
+  }
+  if (byModule.has(moduleUrl)) return;
+
+  const cleanup = () => {
+    const currentHosts = registry.get(moduleUrl);
+    if (currentHosts) {
+      currentHosts.delete(host);
+      if (!currentHosts.size) registry.delete(moduleUrl);
+    }
+    const currentByModule = componentObservers.get(host);
+    if (currentByModule) {
+      const observer = currentByModule.get(moduleUrl);
+      if (observer) observer.disconnect();
+      currentByModule.delete(moduleUrl);
+      if (!currentByModule.size) componentObservers.delete(host);
+    }
+  };
+
+  const observer = new MutationObserver(() => {
+    if (!host.isConnected) cleanup();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  byModule.set(moduleUrl, observer);
+}
+
 function hashStr(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -142,7 +189,7 @@ export function on(eventName, selectorOrElement, handler, root) {
   return () => target.removeEventListener(eventName, handler);
 }
 
-export function renderShadow(host, view) {
+export function renderShadow(host, view, moduleUrl) {
   if (typeof document === 'undefined') {
     return () => {};
   }
@@ -152,6 +199,7 @@ export function renderShadow(host, view) {
   }
 
   const shadow = host.shadowRoot || host.attachShadow({ mode: 'open' });
+  registerShadowHost(host, moduleUrl);
   const outlet = document.createElement('div');
   shadow.appendChild(outlet);
 

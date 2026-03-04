@@ -4,6 +4,7 @@ export default function plugin(options = {}) {
   const {
     runtimePath = '10x/runtime',
     uno = false,
+    hmr = true,
     include,
     exclude,
     ...compileOptions
@@ -27,6 +28,7 @@ export default function plugin(options = {}) {
         code: compile(code, {
           runtimePath,
           atomicCss: !uno,
+          hmr,
           ...compileOptions,
         }),
         map: null,

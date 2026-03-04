@@ -840,10 +840,38 @@ function compileStyleDirective(body, ctx) {
   return `Runtime.style(${hostArg}${compileToken(arg, ctx)})`;
 }
 
+function compileHmrFooter() {
+  return [
+    'if (import.meta.hot) {',
+    '  const _hmrUrl = import.meta.url;',
+    '  import.meta.hot.dispose(data => {',
+    '    data.__signals = {};',
+    '    for (const [k, s] of (globalThis.__10x_signals || new Map())) {',
+    "      if (typeof k === 'string') data.__signals[k] = s.peek();",
+    '    }',
+    '  });',
+    '  import.meta.hot.accept(newMod => {',
+    '    const snap = import.meta.hot.data.__signals || {};',
+    '    for (const [k, s] of (globalThis.__10x_signals || new Map())) {',
+    "      if (typeof k === 'string' && snap[k] !== undefined) s.set(snap[k]);",
+    '    }',
+    '    const hosts = globalThis.__10x_components?.get(_hmrUrl);',
+    '    if (hosts && newMod?.setup) {',
+    '      hosts.forEach(host => {',
+    '        if (host.shadowRoot) host.shadowRoot.innerHTML = "";',
+    '        newMod.setup(host);',
+    '      });',
+    '    }',
+    '  });',
+    '}',
+  ];
+}
+
 function compileRenderDirective(body, value, ctx) {
   const htmlExpr = value.html instanceof Object ? compileHtmlDirective(value.html.getBody(), ctx) : 'undefined';
   if (value.shadow) {
-    return `Runtime.renderShadow(host, ${htmlExpr})`;
+    const hmrUrlArg = ctx.hmr ? ', import.meta.url' : '';
+    return `Runtime.renderShadow(host, ${htmlExpr}${hmrUrlArg})`;
   }
   const selector = body.length ? compileExpression(body, ctx) : 'undefined';
   return `Runtime.render(${selector}, ${htmlExpr})`;
@@ -1180,11 +1208,13 @@ export function compile(source, options = {}) {
   const statements = splitStatements(ast);
   const hasShadow = collectShadowFlag(statements);
   const needsDom = collectNeedsDom(statements);
+  const hmrEnabled = options.hmr === true && options.module !== false;
   const runtimePath = options.runtimePath || './runtime';
   const { imports, globals } = collectImportSpecs(statements, runtimePath);
   const ctx = {
     signalVars: collectSignalBindings(statements),
     shadow: hasShadow,
+    hmr: hmrEnabled,
     exportDefinitions: options.module !== false && !hasShadow && options.exportAll !== false,
     printStatements: collectPrintStatements(normalized),
     autoPrintExpressions: options.autoPrintExpressions !== false && options.module !== false && !hasShadow,
@@ -1233,6 +1263,7 @@ export function compile(source, options = {}) {
   } else {
     output.push(...lines);
   }
+  if (hmrEnabled) output.push(...compileHmrFooter());
 
   return output.join('\n');
 }

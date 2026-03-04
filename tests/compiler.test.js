@@ -55,6 +55,24 @@ describe('Compiler', () => {
     expect(output).to.contain('}');
   });
 
+  it('should not emit HMR footer by default', () => {
+    const output = compile('count = @signal 0.');
+    expect(output).to.not.contain('import.meta.hot');
+  });
+
+  it('should emit HMR footer when enabled', () => {
+    const output = compile('count = @signal 0.', { hmr: true });
+    expect(output).to.contain('if (import.meta.hot)');
+    expect(output).to.contain('import.meta.hot.dispose(data => {');
+    expect(output).to.contain('import.meta.hot.accept(newMod => {');
+    expect(output).to.contain('globalThis.__10x_components?.get(_hmrUrl)');
+  });
+
+  it('should pass import.meta.url to renderShadow when HMR is enabled', () => {
+    const output = compile('@render @shadow @html <h1>x</h1>.', { hmr: true });
+    expect(output).to.contain('Runtime.renderShadow(host, Runtime.html(() => Runtime.h("h1", null, "x")), import.meta.url);');
+  });
+
   it('should allow overriding runtime import path', () => {
     const output = compile('@render "#app" @html <h1>{count}</h1>.', {
       runtimePath: '/vendor/10x-runtime.mjs',
