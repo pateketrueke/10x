@@ -714,6 +714,7 @@ const STYLES = `
     vertical-align: middle;
     user-select: none;
     pointer-events: auto;
+    margin-left: .5rem;
   }
 
   [data-result].error {
