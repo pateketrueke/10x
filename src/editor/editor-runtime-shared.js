@@ -1,0 +1,135 @@
+import { compact } from '../main.js';
+
+export const SYMBOL_NAME = sym => {
+  if (!sym || typeof sym !== 'symbol') return '';
+  return sym.toString().match(/Symbol\((.+)\)/)?.[1] ?? '';
+};
+
+export function inferTokenType(token) {
+  if (!token) return 'unknown';
+
+  if (token.isCallable || token.isFunction) return 'fn';
+  if (token.isTag) return 'tag';
+  if (token.isObject) {
+    const shape = token.valueOf ? token.valueOf() : token.value;
+    if (shape && typeof shape === 'object' && shape.__tag && shape.value) return 'result';
+    return 'record';
+  }
+  if (token.isRange) return Array.isArray(token.value) ? 'list' : 'range';
+  if (token.isNumber) return 'number';
+  if (token.isString) return 'string';
+  if (token.isSymbol) return 'symbol';
+
+  const symbol = SYMBOL_NAME(token.type);
+  return symbol ? symbol.toLowerCase() : 'unknown';
+}
+
+export function inferRuntimeType(value) {
+  if (value === null) return 'nil';
+  if (value === undefined) return 'unknown';
+
+  if (typeof value === 'number') return 'number';
+  if (typeof value === 'string') return 'string';
+  if (typeof value === 'boolean') return 'boolean';
+  if (typeof value === 'function') return 'fn';
+
+  if (Array.isArray(value)) {
+    if (!value.length) return 'list<unknown>';
+    if (value.length === 1) return inferRuntimeType(value[0]);
+
+    const sample = value.find(Boolean);
+    const inner = sample ? inferRuntimeType(sample) : 'unknown';
+    return `list<${inner}>`;
+  }
+
+  if (value && typeof value === 'object' && typeof value.type === 'symbol') {
+    return inferTokenType(value);
+  }
+
+  if (value && typeof value === 'object') {
+    if (value.__tag && value.value) return 'result';
+    return 'record';
+  }
+
+  return 'unknown';
+}
+
+export function compactResultText(value, max = 180) {
+  const text = String(value ?? '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  if (!text) return '';
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(1, max - 1)).trim()}…`;
+}
+
+export function isUnitToken(token) {
+  return SYMBOL_NAME(token?.type) === 'NUMBER'
+    && token?.value
+    && typeof token.value.toString === 'function'
+    && /[A-Za-z]/.test(String(token.value.toString()));
+}
+
+export function formatRuntimeValue(value, max = 180) {
+  if (Array.isArray(value) && value.length === 1 && isUnitToken(value[0])) {
+    return compactResultText(value[0].value.toString(), max);
+  }
+  if (isUnitToken(value)) {
+    return compactResultText(value.value.toString(), max);
+  }
+  return compact(value, max);
+}
+
+export function formatRuntimeError(error) {
+  const message = String(error?.message || error || 'Runtime error');
+  return compactResultText(message, 160);
+}
+
+export function normalizeUnitLiterals(source) {
+  return String(source || '').replace(/\b(\d+(?:\.\d+)?)([A-Za-z]{1,5})\b/g, '$1 $2');
+}
+
+export function unitLiteralDisplay(source) {
+  const match = String(source || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*([A-Za-z]{1,5})\.?$/);
+  if (!match) return '';
+  return `${match[1]} ${match[2]}`;
+}
+
+export function hasUnitSuffix(text) {
+  return /[A-Za-z]/.test(String(text || ''));
+}
+
+export function isFunctionDefinitionSource(source) {
+  const normalized = String(source || '').replace(/\s+/g, ' ').trim();
+  return /^[^=]+=\s*.*->/.test(normalized);
+}
+
+export function extractInlineExpressions(source, statementId = '') {
+  const text = String(source || '');
+  const expressions = [];
+  const re = /#\{([^{}]+)\}/g;
+  let match;
+  let index = 0;
+
+  while ((match = re.exec(text))) {
+    index += 1;
+    expressions.push({
+      inlineId: `${statementId}:${index}`,
+      expr: match[1].trim(),
+      insertOffset: match.index + match[0].length - 1,
+    });
+  }
+
+  return expressions;
+}
+
+export const EDITOR_BOOTSTRAP = '@import to @from "Unit".';
+
+export async function bootstrapEnv(env, executeFn) {
+  if (!env || env.__xEditorBootstrapDone) return;
+  env.__xEditorBootstrapDone = true;
+
+  try {
+    await executeFn(EDITOR_BOOTSTRAP, env);
+  } catch (_) {
+    // Keep editor resilient when optional imports fail.
+  }
+}

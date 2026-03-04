@@ -13,88 +13,24 @@
  *   el.addEventListener('change', e => e.detail.results)
  *   el.addEventListener('error',  e => e.detail.error)
  */
-
-import { Parser, Env, execute, compact, applyAdapter } from '../main.js';
+import { Parser, Env, execute, applyAdapter } from '../main.js';
 import { createBrowserAdapter } from '../adapters/browser/index.js';
+import {
+  SYMBOL_NAME,
+  inferRuntimeType,
+  formatRuntimeValue,
+  formatRuntimeError,
+  normalizeUnitLiterals,
+  unitLiteralDisplay,
+  hasUnitSuffix,
+  isFunctionDefinitionSource,
+  extractInlineExpressions,
+  bootstrapEnv,
+} from './editor-runtime-shared.js';
 
 applyAdapter(createBrowserAdapter());
 
 // ─── Token → CSS class mapping (mirrors src/util.js colorize) ────────────────
-
-const SYMBOL_NAME = sym => {
-  if (!sym || typeof sym !== 'symbol') return '';
-  return sym.toString().match(/Symbol\((.+)\)/)?.[1] ?? '';
-};
-
-function inferTokenType(token) {
-  if (!token) return 'unknown';
-
-  if (token.isCallable || token.isFunction) return 'fn';
-  if (token.isTag) return 'tag';
-  if (token.isObject) {
-    const shape = token.valueOf ? token.valueOf() : token.value;
-    if (shape && typeof shape === 'object' && shape.__tag && shape.value) return 'result';
-    return 'record';
-  }
-  if (token.isRange) return Array.isArray(token.value) ? 'list' : 'range';
-  if (token.isNumber) return 'number';
-  if (token.isString) return 'string';
-  if (token.isSymbol) return 'symbol';
-
-  const n = SYMBOL_NAME(token.type);
-  return n ? n.toLowerCase() : 'unknown';
-}
-
-function inferRuntimeType(value) {
-  if (value === null) return 'nil';
-  if (value === undefined) return 'unknown';
-
-  if (typeof value === 'number') return 'number';
-  if (typeof value === 'string') return 'string';
-  if (typeof value === 'boolean') return 'boolean';
-  if (typeof value === 'function') return 'fn';
-
-  if (Array.isArray(value)) {
-    if (!value.length) return 'list<unknown>';
-    if (value.length === 1) return inferRuntimeType(value[0]);
-    const sample = value.find(Boolean);
-    const inner = sample ? inferRuntimeType(sample) : 'unknown';
-    return `list<${inner}>`;
-  }
-
-  if (value && typeof value === 'object' && typeof value.type === 'symbol') {
-    return inferTokenType(value);
-  }
-
-  if (value && typeof value === 'object') {
-    if (value.__tag && value.value) return 'result';
-    return 'record';
-  }
-
-  return 'unknown';
-}
-
-function compactResultText(value, max = 180) {
-  const text = String(value ?? '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
-  if (!text) return '';
-  if (text.length <= max) return text;
-  return `${text.slice(0, Math.max(1, max - 1)).trim()}…`;
-}
-
-function formatRuntimeError(error) {
-  const message = String(error?.message || error || 'Runtime error');
-  return compactResultText(message, 160);
-}
-
-function normalizeUnitLiterals(source) {
-  return String(source || '').replace(/\b(\d+(?:\.\d+)?)([A-Za-z]{1,5})\b/g, '$1 $2');
-}
-
-function unitLiteralDisplay(source) {
-  const match = String(source || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*([A-Za-z]{1,5})\.?$/);
-  if (!match) return '';
-  return `${match[1]} ${match[2]}`;
-}
 
 function tokenClass(token) {
   const n = SYMBOL_NAME(token.type);
@@ -186,9 +122,31 @@ function tokenText(token) {
   const v = token.value;
   if (typeof v === 'string') return v;
   if (typeof v === 'number') return String(v);
+  if (n === 'NUMBER' && v && typeof v === 'object') {
+    if (typeof v.num === 'number' && typeof v.kind === 'string') {
+      return `${v.num}${v.kind}`;
+    }
+    if (typeof v.toString === 'function' && v.toString !== Object.prototype.toString) {
+      return String(v);
+    }
+  }
+  if ((n === 'LITERAL' || n === 'SYMBOL' || n === 'DIRECTIVE') && v && typeof v === 'object') {
+    if (typeof v.value === 'string' || typeof v.value === 'number') return String(v.value);
+    if (typeof v.name === 'string') return v.name;
+    if (typeof v.kind === 'string') return v.kind;
+    if (typeof v.toString === 'function' && v.toString !== Object.prototype.toString) {
+      return String(v);
+    }
+  }
   // Nested token containers are rendered recursively elsewhere.
   if (v && typeof v === 'object' && !Array.isArray(v)) return '';
-  return v != null ? String(v) : '';
+  const text = v != null ? String(v) : '';
+  return text;
+}
+
+function quoteStringDisplay(text) {
+  const value = String(text ?? '');
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
 function hasTextBody(buffer) {
@@ -551,8 +509,12 @@ function appendToken(parent, token) {
   const text = tokenText(token);
   if (!text) return;
 
-  if (n === 'STRING' && /<\/?[A-Za-z]/.test(text)) {
-    appendHtmlTaggedText(parent, text, tokenClass(token), tooltip);
+  if (n === 'STRING') {
+    if (/<\/?[A-Za-z]/.test(text)) {
+      appendHtmlTaggedText(parent, text, tokenClass(token), tooltip);
+      return;
+    }
+    appendText(parent, quoteStringDisplay(text), tokenClass(token), tooltip);
     return;
   }
 
@@ -582,41 +544,7 @@ function renderTokens(source) {
 
   try {
     const tokens = Parser.getAST(source, 'raw');
-    let onDirectiveArgIndex = -1;
     for (const token of tokens) {
-      const name = SYMBOL_NAME(token?.type);
-
-      if (name === 'DIRECTIVE' && String(token.value || '').toLowerCase() === 'on') {
-        onDirectiveArgIndex = 0;
-        appendToken(frag, token);
-        continue;
-      }
-
-      if (name === 'EOL') {
-        onDirectiveArgIndex = -1;
-        appendToken(frag, token);
-        continue;
-      }
-
-      if (onDirectiveArgIndex >= 0 && name === 'TEXT') {
-        appendToken(frag, token);
-        continue;
-      }
-
-      if (
-        onDirectiveArgIndex >= 0
-        && onDirectiveArgIndex < 2
-        && name === 'LITERAL'
-        && typeof token.value === 'string'
-      ) {
-        appendText(frag, JSON.stringify(token.value), 'xt-string', 'String');
-        onDirectiveArgIndex += 1;
-        continue;
-      }
-
-      if (onDirectiveArgIndex >= 0 && name !== 'TEXT') onDirectiveArgIndex += 1;
-      if (onDirectiveArgIndex >= 2) onDirectiveArgIndex = -1;
-
       appendToken(frag, token);
     }
   } catch (_) {
@@ -628,44 +556,6 @@ function renderTokens(source) {
 
 function normalizeStatement(source) {
   return source.replace(/\s+/g, ' ').trim();
-}
-
-function extractInlineExpressions(source, statementId = '') {
-  const text = String(source || '');
-  const expressions = [];
-  const re = /#\{([^{}]+)\}/g;
-  let match;
-  let index = 0;
-
-  while ((match = re.exec(text))) {
-    index += 1;
-    expressions.push({
-      inlineId: `${statementId}:${index}`,
-      expr: match[1].trim(),
-      // Place inline result inside interpolation, before the closing `}`.
-      insertOffset: match.index + match[0].length - 1,
-    });
-  }
-
-  return expressions;
-}
-
-const EDITOR_BOOTSTRAP = '@import to @from "Unit".';
-
-async function bootstrapEnv(env) {
-  if (!env || env.__xEditorBootstrapDone) return;
-  env.__xEditorBootstrapDone = true;
-
-  try {
-    await execute(EDITOR_BOOTSTRAP, env);
-  } catch (_) {
-    // Keep editor resilient when optional imports fail.
-  }
-}
-
-function isFunctionDefinitionSource(source) {
-  const normalized = String(source || '').replace(/\s+/g, ' ').trim();
-  return /^[^=]+=\s*.*->/.test(normalized);
 }
 
 function getFunctionDefinitionMeta(source) {
@@ -1134,9 +1024,15 @@ class XEditor extends HTMLElement {
     this._anchors.forEach(anchor => {
       const pending = this._pendingResultIds.has(anchor.id);
       const result = pending ? null : this._resultsById.get(anchor.id);
-      if (!pending && !result) return;
+      const fallbackUnitText = unitLiteralDisplay(normalizeUnitLiterals(anchor.source));
+      if (!pending && !result && !fallbackUnitText) return;
       if (!byLine.has(anchor.line)) byLine.set(anchor.line, []);
-      byLine.get(anchor.line).push({ result, anchor, pending });
+      byLine.get(anchor.line).push({
+        result,
+        anchor,
+        pending,
+        fallbackUnitText,
+      });
     });
 
     if (!byLine.size) {
@@ -1144,7 +1040,7 @@ class XEditor extends HTMLElement {
       return;
     }
 
-    const makeWidget = ({ result, anchor, pending }) => {
+    const makeWidget = ({ result, anchor, pending, fallbackUnitText }) => {
       if (pending) {
         const widget = document.createElement('span');
         widget.dataset.result = '';
@@ -1165,7 +1061,7 @@ class XEditor extends HTMLElement {
         return widget;
       }
 
-      const text = result.resultText;
+      const text = (result && result.resultText) || fallbackUnitText || '';
       if (!text?.trim()) return null;
 
       const widget = document.createElement('span');
@@ -1174,10 +1070,10 @@ class XEditor extends HTMLElement {
       widget.setAttribute('contenteditable', 'false');
       const label = document.createElement('span');
       label.dataset.resultLabel = '';
-      label.textContent = result.kind === 'function' ? 'ƒ' : `→ ${text}`;
+      label.textContent = result?.kind === 'function' ? 'ƒ' : `→ ${text}`;
       widget.appendChild(label);
 
-      if (this._showTypeHints && result.typeText) {
+      if (this._showTypeHints && result?.typeText) {
         const typeHint = document.createElement('span');
         typeHint.dataset.typeHint = '';
         typeHint.textContent = result.typeText;
@@ -1185,7 +1081,7 @@ class XEditor extends HTMLElement {
         widget.appendChild(typeHint);
       }
 
-      if (result.kind !== 'function') {
+      if (result?.kind !== 'function') {
         widget.dataset.copyValue = text;
         const copyBtn = document.createElement('button');
         copyBtn.type = 'button';
@@ -1196,8 +1092,8 @@ class XEditor extends HTMLElement {
         widget.appendChild(copyBtn);
       }
 
-      if (result.errorText) widget.classList.add('error');
-      if (result.kind === 'function') {
+      if (result?.errorText) widget.classList.add('error');
+      if (result?.kind === 'function') {
         widget.classList.add('function-anchor');
         const meta = getFunctionDefinitionMeta(anchor?.source || '');
         widget.dataset.tooltip = meta?.signature || 'Function definition';
@@ -1371,7 +1267,15 @@ class XEditor extends HTMLElement {
 
   _startWorker() {
     try {
-      this._worker = new Worker(new URL('./editor-eval-worker.js', import.meta.url), { type: 'module' });
+      const workerUrl = new URL('./editor-eval-worker.js', import.meta.url);
+      const moduleUrl = new URL(import.meta.url);
+      const inheritedRev = moduleUrl.searchParams.get('v')
+        || moduleUrl.searchParams.get('debug')
+        || moduleUrl.searchParams.get('t')
+        || '';
+      const rev = globalThis.__X_EDITOR_WORKER_REV || inheritedRev || '';
+      if (rev) workerUrl.searchParams.set('v', String(rev));
+      this._worker = new Worker(workerUrl, { type: 'module' });
       this._worker.addEventListener('message', ({ data }) => {
         const {
           requestId, statementId, start, completed, statementResult, inlineResults, done, error,
@@ -1511,7 +1415,7 @@ class XEditor extends HTMLElement {
     this._evaluating = true;
     try {
       const env = new Env();
-      await bootstrapEnv(env);
+      await bootstrapEnv(env, execute);
 
       for (const statement of statements) {
         if (!statement?.source?.trim()) continue;
@@ -1537,9 +1441,11 @@ class XEditor extends HTMLElement {
             };
             this._resultsById.set(statement.statementId, functionBadge);
           } else if (result !== undefined && result !== null) {
+            const resultText = formatRuntimeValue(result, 180);
+            const displayText = unitDisplay && !hasUnitSuffix(resultText) ? unitDisplay : resultText;
             this._resultsById.set(statement.statementId, {
               statementId: statement.statementId,
-              resultText: compact(result, 180),
+              resultText: displayText,
               typeText: inferRuntimeType(result),
             });
           }
@@ -1547,12 +1453,17 @@ class XEditor extends HTMLElement {
           const inlineExpressions = extractInlineExpressions(statementSource, statement.statementId);
           for (const inline of inlineExpressions) {
             if (!inline.expr) continue;
+            const inlineSource = normalizeUnitLiterals(inline.expr);
             try {
-              const inlineResult = await execute(inline.expr, env);
+              const inlineResult = await execute(inlineSource, env);
               if (inlineResult === undefined || inlineResult === null) continue;
+
+              const compactInline = formatRuntimeValue(inlineResult, 120);
+              if (!compactInline?.trim()) continue;
+
               this._inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
-                resultText: compact(inlineResult, 120),
+                resultText: compactInline,
                 typeText: inferRuntimeType(inlineResult),
               });
             } catch (error) {
@@ -1564,7 +1475,13 @@ class XEditor extends HTMLElement {
             }
           }
 
-          if (!this._resultsById.has(statement.statementId) && unitDisplay) {
+          if (
+            unitDisplay
+            && (
+              !this._resultsById.has(statement.statementId)
+              || !this._resultsById.get(statement.statementId)?.resultText?.trim()
+            )
+          ) {
             this._resultsById.set(statement.statementId, {
               statementId: statement.statementId,
               resultText: unitDisplay,

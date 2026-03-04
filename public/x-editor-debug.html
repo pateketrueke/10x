@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="/public/" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>x-editor Debug</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #11182b;
+      --muted: #8ea0c6;
+      --ink: #e7eeff;
+      --accent: #4fc1ff;
+      --border: rgba(255, 255, 255, 0.12);
+      --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+      --sans: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 10% 10%, #13203b, var(--bg) 40%);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 1.25rem;
+    }
+
+    h1 {
+      margin: 0 0 .4rem;
+      font-size: 1.4rem;
+    }
+
+    p {
+      margin: 0 0 1rem;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 2.1fr 1fr;
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .card-head {
+      padding: .65rem .9rem;
+      border-bottom: 1px solid var(--border);
+      font: 600 .8rem var(--mono);
+      color: var(--muted);
+      letter-spacing: .02em;
+    }
+
+    .card-body { padding: .9rem; }
+
+    x-editor {
+      display: block;
+      min-height: 58vh;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      margin-bottom: .75rem;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: #182342;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: .38rem .6rem;
+      font: 500 .75rem var(--mono);
+      cursor: pointer;
+    }
+
+    button:hover { border-color: rgba(79, 193, 255, 0.55); }
+
+    textarea, pre {
+      width: 100%;
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #0d1528;
+      color: var(--ink);
+      font: .74rem/1.5 var(--mono);
+      padding: .6rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    textarea { min-height: 150px; resize: vertical; }
+    pre { min-height: 130px; }
+
+    .label {
+      font: 600 .7rem var(--mono);
+      color: var(--muted);
+      margin-bottom: .35rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .stack {
+      display: grid;
+      gap: .75rem;
+    }
+
+    .status {
+      color: var(--accent);
+      font: 500 .74rem var(--mono);
+      margin-bottom: .5rem;
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      x-editor { min-height: 44vh; }
+    }
+  </style>
+  <script type="module">
+    const candidates = [
+      '/dist/editor.js',
+      '/10x/dist/editor.js',
+      './dist/editor.js',
+      '../dist/editor.js',
+    ];
+    const rev = `debug=${Date.now()}`;
+    window.__X_EDITOR_WORKER_REV = rev;
+
+    let loaded = false;
+    let loadedFrom = '';
+    for (const src of candidates) {
+      try {
+        const spec = src.includes('?') ? `${src}&${rev}` : `${src}?${rev}`;
+        await import(spec);
+        loaded = true;
+        loadedFrom = spec;
+        break;
+      } catch (_) {
+        // try next candidate
+      }
+    }
+
+    window.__editorLoaded = loaded;
+    window.__editorLoadedFrom = loadedFrom;
+  </script>
+</head>
+<body>
+  <main class="shell">
+    <h1>x-editor Debug Playground</h1>
+    <p>Iterate on parser/highlighter/anchor behavior fast. Load a preset, edit directly in the editor, and inspect emitted results/errors.</p>
+
+    <div class="grid">
+      <section class="card">
+        <div class="card-head">Editor</div>
+        <div class="card-body">
+          <div class="controls" id="preset-buttons"></div>
+          <div class="status" id="load-status">Loading editor...</div>
+          <x-editor id="debug-editor"></x-editor>
+        </div>
+      </section>
+
+      <aside class="stack">
+        <section class="card">
+          <div class="card-head">Source Controls</div>
+          <div class="card-body stack">
+            <div>
+              <div class="label">Source Buffer</div>
+              <textarea id="source-box"></textarea>
+            </div>
+            <div class="controls">
+              <button id="apply-source" type="button">Apply Source</button>
+              <button id="pull-source" type="button">Read From Editor</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">Events</div>
+          <div class="card-body stack">
+            <div>
+              <div class="label">change(detail.results)</div>
+              <pre id="change-log">[]</pre>
+            </div>
+            <div>
+              <div class="label">error(detail.error)</div>
+              <pre id="error-log">(none)</pre>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const PRESETS = {
+      units: `2cm.
+2cm to :in.`,
+      html: `@render @shadow @html
+  <div class="wrap" data-id="a1">
+    <button id="inc">+</button>
+  </div>.`,
+      onclick: `count = @signal 0.
+@on :click "#inc" count = count + 1.`,
+      list: `[1..20].`,
+      records: `user = { :name "Ada", :role "dev", :active :on }.
+user.`,
+      interp: `"Total: #{2cm to :in} in".`,
+    };
+
+    const editor = document.querySelector('#debug-editor');
+    const status = document.querySelector('#load-status');
+    const sourceBox = document.querySelector('#source-box');
+    const changeLog = document.querySelector('#change-log');
+    const errorLog = document.querySelector('#error-log');
+    const presetButtons = document.querySelector('#preset-buttons');
+    const applyBtn = document.querySelector('#apply-source');
+    const pullBtn = document.querySelector('#pull-source');
+
+    function setSource(text) {
+      sourceBox.value = text;
+      editor.value = text;
+    }
+
+    Object.entries(PRESETS).forEach(([key, code]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = key;
+      btn.addEventListener('click', () => setSource(code));
+      presetButtons.appendChild(btn);
+    });
+
+    applyBtn.addEventListener('click', () => {
+      editor.value = sourceBox.value;
+    });
+
+    pullBtn.addEventListener('click', () => {
+      sourceBox.value = editor.value || '';
+    });
+
+    editor.addEventListener('change', event => {
+      const payload = event?.detail?.results || [];
+      changeLog.textContent = JSON.stringify(payload, null, 2);
+    });
+
+    editor.addEventListener('error', event => {
+      const err = event?.detail?.error;
+      errorLog.textContent = err ? String(err.message || err) : '(none)';
+    });
+
+    async function waitForEditor(ms = 4000) {
+      if (customElements.get('x-editor')) return true;
+      try {
+        await Promise.race([
+          customElements.whenDefined('x-editor'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+        ]);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    (async () => {
+      const ready = await waitForEditor();
+      if (ready) {
+        const from = window.__editorLoadedFrom ? ` (${window.__editorLoadedFrom})` : '';
+        status.textContent = `Editor loaded${from}`;
+        // eslint-disable-next-line no-console
+        console.log('[x-editor-debug] loaded from', window.__editorLoadedFrom || '(predefined custom element)');
+        setSource(PRESETS.units);
+        return;
+      }
+
+      if (!window.__editorLoaded) {
+        status.textContent = 'Editor module could not be loaded from known paths.';
+      } else {
+        status.textContent = 'Editor module loaded, but <x-editor> was not defined in time.';
+      }
+      status.style.color = '#ff8e8e';
+    })();
+  </script>
+</body>
+</html>
