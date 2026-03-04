@@ -332,6 +332,10 @@
     .xt-string { color: #ce9178; }
     .xt-symbol { color: #dcdcaa; }
     .xt-op     { color: #c586c0; }
+    .xt-tag    { color: #4fc1ff; }
+    .xt-tag-name { color: #4fc1ff; }
+    .xt-attr   { color: #9cdcfe; }
+    .xt-attr-value { color: #ce9178; }
     .xt-comment{ color: #6a9955; }
     .xt-literal{ color: #9cdcfe; }
     .xt-sh-cmd { color: #9cdcfe; }
@@ -377,6 +381,10 @@
     .lit-code .xt-op { color: #c586c0; }
     .lit-code .xt-string { color: #ce9178; }
     .lit-code .xt-number { color: #b5cea8; }
+    .lit-code .xt-tag,
+    .lit-code .xt-tag-name { color: #4fc1ff; }
+    .lit-code .xt-attr { color: #9cdcfe; }
+    .lit-code .xt-attr-value { color: #ce9178; }
 
     /* ── compiler split ─────────────────────────────────────────── */
     .compiler-split {
@@ -750,7 +758,7 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
               <div class="lit-code">count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-op">@prop</span> <span class="xt-string">"start"</span> <span class="xt-number">0</span>.</div>
               <div class="lit-h2">## View</div>
               <div class="lit-prose">Renders into shadow DOM. Template subscribes to <code style="font-family:var(--mono);font-size:.9em">count</code> automatically.</div>
-              <div class="lit-code"><span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span><br>&nbsp;&nbsp;&lt;h1&gt;{count}&lt;/h1&gt;.</div>
+              <div class="lit-code"><span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span><br>&nbsp;&nbsp;<span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span><span class="xt-tag">=</span><span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>{count}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.</div>
               <div class="lit-h2">## Behavior</div>
               <div class="lit-prose">Buttons map directly to state transitions.</div>
               <div class="lit-code"><span class="xt-op">@on</span> <span class="xt-string">"click"</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</div>
@@ -847,26 +855,17 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
               <div class="side-label">source</div>
 <pre><span class="xt-comment"># signals.md</span>
 count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.
-double <span class="xt-op">=</span> <span class="xt-op">@computed</span>
-  count <span class="xt-op">*</span> <span class="xt-number">2</span>.
-<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span>
-  &lt;h1&gt;{count}&lt;/h1&gt;.
-<span class="xt-op">@on</span> <span class="xt-string">"click"</span> <span class="xt-string">"#inc"</span>
-  count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</pre>
+double <span class="xt-op">=</span> <span class="xt-op">@computed</span> count <span class="xt-op">*</span> <span class="xt-number">2</span>.
+<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span> <span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span><span class="xt-tag">=</span><span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>{count}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.
+<span class="xt-op">@on</span> <span class="xt-string">"click"</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</pre>
             </div>
             <div>
               <div class="side-label">compiled</div>
 <pre><span class="xt-comment">// signals.md → ESM</span>
-export const count <span class="xt-op">=</span>
-  Runtime.signal(<span class="xt-number">0</span>).
-export const double <span class="xt-op">=</span>
-  Runtime.computed(()
-    <span class="xt-op">=&gt;</span> count() <span class="xt-op">*</span> <span class="xt-number">2</span>).
-Runtime.render(<span class="xt-string">"#app"</span>,
-  Runtime.html(()
-    <span class="xt-op">=&gt;</span> ...)).
-Runtime.on(<span class="xt-string">"click"</span>,
-  <span class="xt-string">"#inc"</span>, () <span class="xt-op">=&gt;</span> {
+export const count <span class="xt-op">=</span> Runtime.signal(<span class="xt-number">0</span>).
+export const double <span class="xt-op">=</span> Runtime.computed(() <span class="xt-op">=&gt;</span> count() <span class="xt-op">*</span> <span class="xt-number">2</span>).
+Runtime.render(<span class="xt-string">"#app"</span>, Runtime.html(() <span class="xt-op">=&gt;</span> ...)).
+Runtime.on(<span class="xt-string">"click"</span>, <span class="xt-string">"#inc"</span>, () <span class="xt-op">=&gt;</span> {
   count(count() <span class="xt-op">+</span> <span class="xt-number">1</span>);
 }).</pre>
             </div>

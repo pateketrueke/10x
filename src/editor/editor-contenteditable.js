@@ -96,6 +96,7 @@ function tokenClass(token) {
     case 'COMMENT': case 'COMMENT_MULTI': return 'xt-comment';
     case 'NUMBER':  return 'xt-number';
     case 'STRING':  return 'xt-string';
+    case 'TAG':     return 'xt-tag';
     case 'REGEX':   return 'xt-regex';
     case 'SYMBOL':  return 'xt-symbol';
     case 'LITERAL': return 'xt-literal';
@@ -375,6 +376,66 @@ function appendText(parent, text, cls, tooltip = '') {
   }
 }
 
+function appendHtmlTagToken(parent, tag, baseClass = '') {
+  const appendPart = (value, extraClass, tooltip = 'HTML tag') => {
+    if (!value) return;
+    const cls = [baseClass, extraClass].filter(Boolean).join(' ');
+    appendText(parent, value, cls || null, tooltip);
+  };
+
+  const closing = /^<\//.test(tag);
+  const selfClosing = /\/>$/.test(tag);
+  const nameMatch = tag.match(/^<\/?\s*([^\s/>]+)/);
+  const tagName = nameMatch?.[1] || '';
+
+  appendPart('<', 'xt-tag');
+  if (closing) appendPart('/', 'xt-tag');
+  appendPart(tagName, 'xt-tag-name', 'HTML tag name');
+
+  const attrSliceStart = nameMatch ? nameMatch[0].length : (closing ? 2 : 1);
+  const attrSliceEnd = Math.max(attrSliceStart, tag.length - (selfClosing ? 2 : 1));
+  const attrs = tag.slice(attrSliceStart, attrSliceEnd);
+  let cursor = 0;
+  const attrRegex = /(\s+)([^\s=/>]+)(?:\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s\"'=<>`]+))?/g;
+  let match;
+  while ((match = attrRegex.exec(attrs))) {
+    const chunk = attrs.slice(cursor, match.index);
+    if (chunk) appendPart(chunk, 'xt-tag');
+    appendPart(match[1], 'xt-tag');
+    appendPart(match[2], 'xt-attr', 'HTML attribute');
+    if (typeof match[3] === 'string') {
+      const nameEnd = match[1].length + match[2].length;
+      const valueStart = match[0].indexOf(match[3], nameEnd);
+      const between = valueStart >= 0 ? match[0].slice(nameEnd, valueStart) : '';
+      if (between) appendPart(between, 'xt-tag');
+      appendPart(match[3], 'xt-attr-value', 'HTML attribute value');
+    }
+    cursor = match.index + match[0].length;
+  }
+  const tailAttrs = attrs.slice(cursor);
+  if (tailAttrs) appendPart(tailAttrs, 'xt-tag');
+
+  if (selfClosing) appendPart('/>', 'xt-tag');
+  else appendPart('>', 'xt-tag');
+}
+
+function appendHtmlTaggedText(parent, text, baseClass = '', fallbackTooltip = '') {
+  if (!text) return;
+  const tagRegex = /<\/?[A-Za-z][^>]*>/g;
+  let match;
+  let cursor = 0;
+
+  while ((match = tagRegex.exec(text))) {
+    const before = text.slice(cursor, match.index);
+    if (before) appendText(parent, before, baseClass || null, fallbackTooltip);
+    appendHtmlTagToken(parent, match[0], baseClass);
+    cursor = match.index + match[0].length;
+  }
+
+  const tail = text.slice(cursor);
+  if (tail) appendText(parent, tail, baseClass || null, fallbackTooltip);
+}
+
 function appendInterpolatedText(parent, text, fallbackClass = '') {
   if (!text || !text.includes('#{')) {
     appendText(parent, text, fallbackClass || null);
@@ -484,6 +545,11 @@ function appendToken(parent, token) {
   const text = tokenText(token);
   if (!text) return;
 
+  if (n === 'STRING' && /<\/?[A-Za-z]/.test(text)) {
+    appendHtmlTaggedText(parent, text, tokenClass(token), tooltip);
+    return;
+  }
+
   appendText(parent, text, tokenClass(token), tooltip);
 }
 
@@ -537,7 +603,7 @@ function renderTokens(source) {
         && name === 'LITERAL'
         && typeof token.value === 'string'
       ) {
-        appendText(frag, token.value, 'xt-string', 'String');
+        appendText(frag, JSON.stringify(token.value), 'xt-string', 'String');
         onDirectiveArgIndex += 1;
         continue;
       }
@@ -702,6 +768,10 @@ const STYLES = `
   .xt-symbol  { color: #dcdcaa; }
   .xt-literal { color: #dcdcaa; }
   .xt-op      { color: #c586c0; }
+  .xt-tag     { color: #4fc1ff; }
+  .xt-tag-name { color: #4fc1ff; }
+  .xt-attr    { color: #9cdcfe; }
+  .xt-attr-value { color: #ce9178; }
   .xt-comment { color: #6a9955; }
   .xt-heading { color: #569cd6; }
   .xt-bold    { color: #d4d4d4; font-weight: bold; }
@@ -1083,6 +1153,7 @@ class XEditor extends HTMLElement {
       widget.dataset.statementId = anchor.id;
       widget.setAttribute('contenteditable', 'false');
       const label = document.createElement('span');
+      label.dataset.resultLabel = '';
       label.textContent = result.kind === 'function' ? 'ƒ' : `→ ${text}`;
       widget.appendChild(label);
 
