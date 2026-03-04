@@ -447,7 +447,29 @@ function appendHtmlTagToken(parent, tag, baseClass = '') {
       const valueStart = match[0].indexOf(match[3], nameEnd);
       const between = valueStart >= 0 ? match[0].slice(nameEnd, valueStart) : '';
       if (between) appendPart(between, 'xt-tag');
-      appendPart(match[3], 'xt-attr-value', 'HTML attribute value');
+      const rawValue = match[3];
+      const isQuoted = rawValue.length >= 2
+        && ((rawValue.startsWith('"') && rawValue.endsWith('"'))
+          || (rawValue.startsWith('\'') && rawValue.endsWith('\'')));
+      if (isQuoted) {
+        const quote = rawValue[0];
+        const inner = rawValue.slice(1, -1);
+        appendPart(quote, 'xt-tag');
+        appendInterpolatedText(
+          parent,
+          inner,
+          [baseClass, 'xt-attr-value'].filter(Boolean).join(' '),
+          'HTML attribute value'
+        );
+        appendPart(quote, 'xt-tag');
+      } else {
+        appendInterpolatedText(
+          parent,
+          rawValue,
+          [baseClass, 'xt-attr-value'].filter(Boolean).join(' '),
+          'HTML attribute value'
+        );
+      }
     }
     cursor = match.index + match[0].length;
   }
@@ -466,13 +488,13 @@ function appendHtmlTaggedText(parent, text, baseClass = '', fallbackTooltip = ''
 
   while ((match = tagRegex.exec(text))) {
     const before = text.slice(cursor, match.index);
-    if (before) appendText(parent, before, baseClass || null, fallbackTooltip);
+    if (before) appendInterpolatedText(parent, before, baseClass || null, fallbackTooltip);
     appendHtmlTagToken(parent, match[0], baseClass);
     cursor = match.index + match[0].length;
   }
 
   const tail = text.slice(cursor);
-  if (tail) appendText(parent, tail, baseClass || null, fallbackTooltip);
+  if (tail) appendInterpolatedText(parent, tail, baseClass || null, fallbackTooltip);
 }
 
 function appendInterpolatedText(parent, text, fallbackClass = '', fallbackTooltip = '') {
@@ -546,9 +568,13 @@ function appendToken(parent, token) {
   }
 
   if (n === 'STRING' && Array.isArray(token.value)) {
-    const text = quoteStringDisplay(interpolatedStringBody(token));
+    const text = interpolatedStringBody(token);
+    if (token?.kind === 'markup' || /<\/?[A-Za-z]/.test(text)) {
+      appendHtmlTaggedText(parent, text, '', '');
+      return;
+    }
     const cls = tokenClass(token);
-    appendInterpolatedText(parent, text, cls, tooltip);
+    appendInterpolatedText(parent, quoteStringDisplay(text), cls, tooltip);
     return;
   }
 

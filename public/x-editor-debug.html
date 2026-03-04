@@ -245,12 +245,9 @@ step = @signal 2.
 @on :click "#inc" count = count + step.
 @on :click "#dec" count = count - step.
 `,
-      'pipeline+map': `users = [
-  { :name "Ada", :age 31 }
-  { :name "Lin", :age 26 }
-  { :name "Jo", :age 38 }
-].
-users |> map (u) -> u.name.
+      'pipeline+map': `users = [1, 2, 3, 4].
+users |> map(n -> n * 3).
+users |> filter(n -> n % 2 == 0) |> take(2).
 `,
       'type-hints': `distance :: num.
 distance = 2cm to :in.

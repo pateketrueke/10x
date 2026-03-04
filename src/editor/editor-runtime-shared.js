@@ -227,7 +227,10 @@ export function extractInlineExpressions(source, statementId = '') {
   return expressions;
 }
 
-export const EDITOR_BOOTSTRAP = '@import to @from "Unit".';
+export const EDITOR_BOOTSTRAP = `
+@import to @from "Unit".
+@from "Prelude" @import (map, filter, take, drop, head, tail, size, keys, vals, pairs, rev, list, push, show).
+`;
 
 export async function bootstrapEnv(env, executeFn) {
   if (!env || env.__xEditorBootstrapDone) return;

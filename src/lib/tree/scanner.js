@@ -60,7 +60,19 @@ export default class Scanner {
       if (value.indexOf('#{') === -1) {
         this.chunks.push(new Token(STRING, value, null, { ...tokenInfo, kind: 'raw' }));
       } else {
-        this.chunks.push(...new Scanner(quote(value), { line: 0, col: 3 }).scanTokens()[0].value);
+        const re = /#\{([^{}]+)\}/g;
+        let cursor = 0;
+        let match;
+
+        while ((match = re.exec(value))) {
+          const before = value.slice(cursor, match.index);
+          if (before) this.append(before, tokenInfo);
+          this.append(new Scanner(match[1], tokenInfo).scanTokens(), tokenInfo);
+          cursor = match.index + match[0].length;
+        }
+
+        const tail = value.slice(cursor);
+        if (tail) this.append(tail, tokenInfo);
       }
     } else {
       value.pop();
