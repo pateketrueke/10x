@@ -90,6 +90,11 @@
     }
 
     button:hover { border-color: rgba(79, 193, 255, 0.55); }
+    button.is-active {
+      border-color: rgba(79, 193, 255, 0.95);
+      box-shadow: inset 0 0 0 1px rgba(79, 193, 255, 0.45);
+      background: #22345e;
+    }
 
     textarea, pre {
       width: 100%;
@@ -220,6 +225,41 @@
       records: `user = { :name "Ada", :role "dev", :active :on }.
 user.`,
       interp: `"Total: #{2cm to :in} in".`,
+      'interp:advanced': `w = 2cm.
+h = 3in.
+"Box: #{w} x #{h} | area-ish: #{w * h}".
+`,
+      'units:edges': `2cm.
+2cm .
+2cm    .
+2cm to :in.
+1/2cm + 4mm.
+`,
+      'html:attrs+interp': `@render @shadow @html
+  <section class="card" data-size="lg" data-note="#{2cm to :in}">
+    <h3 title="Hi">Demo</h3>
+    <button id="inc" data-count="#{1+2}">+</button>
+  </section>.`,
+      'events:multi': `count = @signal 0.
+step = @signal 2.
+@on :click "#inc" count = count + step.
+@on :click "#dec" count = count - step.
+`,
+      'pipeline+map': `users = [
+  { :name "Ada", :age 31 }
+  { :name "Lin", :age 26 }
+  { :name "Jo", :age 38 }
+].
+users |> map (u) -> u.name.
+`,
+      'errors:runtime': `x = 1.
+y = x.missing.
+y.`,
+      'markdown+code': `# Heading
+This is prose with *bold* and \`code\`.
+
+calc = 2cm to :in.
+"inline -> #{calc}".`,
     };
 
     const editor = document.querySelector('#debug-editor');
@@ -230,26 +270,48 @@ user.`,
     const presetButtons = document.querySelector('#preset-buttons');
     const applyBtn = document.querySelector('#apply-source');
     const pullBtn = document.querySelector('#pull-source');
+    let activePreset = '';
+    const presetButtonByKey = new Map();
 
     function setSource(text) {
       sourceBox.value = text;
       editor.value = text;
     }
 
+    function setActivePreset(key) {
+      activePreset = key;
+      presetButtonByKey.forEach((btn, btnKey) => {
+        btn.classList.toggle('is-active', btnKey === key);
+      });
+    }
+
+    function setSourceByPreset(key) {
+      if (!(key in PRESETS)) return;
+      setSource(PRESETS[key]);
+      setActivePreset(key);
+    }
+
     Object.entries(PRESETS).forEach(([key, code]) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = key;
-      btn.addEventListener('click', () => setSource(code));
+      btn.addEventListener('click', () => setSourceByPreset(key));
+      presetButtonByKey.set(key, btn);
       presetButtons.appendChild(btn);
     });
 
     applyBtn.addEventListener('click', () => {
       editor.value = sourceBox.value;
+      if (activePreset && PRESETS[activePreset] !== sourceBox.value) {
+        setActivePreset('');
+      }
     });
 
     pullBtn.addEventListener('click', () => {
       sourceBox.value = editor.value || '';
+      if (activePreset && PRESETS[activePreset] !== sourceBox.value) {
+        setActivePreset('');
+      }
     });
 
     editor.addEventListener('change', event => {
@@ -282,7 +344,7 @@ user.`,
         status.textContent = `Editor loaded${from}`;
         // eslint-disable-next-line no-console
         console.log('[x-editor-debug] loaded from', window.__editorLoadedFrom || '(predefined custom element)');
-        setSource(PRESETS.units);
+        setSourceByPreset('units');
         return;
       }
 
