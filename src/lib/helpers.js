@@ -754,6 +754,29 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
     return colorize(token.type, token.value);
   }
 
+  if (
+    isPlain(token)
+    && token.__tag
+    && token.value
+    && typeof token.__tag.getBody === 'function'
+    && typeof token.value.getBody === 'function'
+  ) {
+    const [tag] = token.__tag.getBody();
+    const payload = token.value.getBody();
+
+    if (isSymbol(tag) && [':ok', ':err'].includes(tag.value)) {
+      const kind = tag.value.substr(1);
+
+      if (!payload.length) return colorize(SYMBOL, `@${kind}`);
+
+      return `${colorize(SYMBOL, `@${kind}`)} ${
+        payload.length === 1
+          ? serialize(payload[0], shorten, colorize, descriptor)
+          : serialize(payload, shorten, colorize, descriptor)
+      }`;
+    }
+  }
+
   // skip separators from all statements!
   const separator = !hasStatements(token) ? `${colorize(COMMA)} ` : ' ';
 

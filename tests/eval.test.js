@@ -359,6 +359,20 @@ describe('Eval', () => {
     });
   });
 
+  describe('Result', () => {
+    it('should build and unwrap @ok/@err values with ?', async () => {
+      expect(await run('(@ok 42) ? 0')).to.eql([Expr.value(42)]);
+      expect(await run('(@err "boom") ? 0')).to.eql([Expr.value(0)]);
+      expect(await run('(@ok 5) ? 0 |> (x -> x * 2)')).to.eql([Expr.value(10)]);
+      expect(await run('(@err "boom") ? 0 |> (x -> x * 2)')).to.eql([Expr.value(0)]);
+    });
+
+    it('should allow matching Result values by :ok/:err tag', async () => {
+      expect(await run('@match (@ok 1) (:ok) 42, (:err) 0')).to.eql([Expr.value(42)]);
+      expect(await run('@match (@err "x") (:ok) 42, (:err) 0')).to.eql([Expr.value(0)]);
+    });
+  });
+
   describe('Functions', () => {
     it('should evaluate lambda expressions', async () => {
       expect(await run('x=->42.\nx()')).to.eql([Expr.value(42)]);

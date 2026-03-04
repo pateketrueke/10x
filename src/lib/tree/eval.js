@@ -26,6 +26,34 @@ const OPS_MUL_DIV = new Set([MUL, DIV]);
 const OPS_PLUS_MINUS_MOD = new Set([PLUS, MINUS, MOD]);
 
 export default class Eval {
+  static getResultTagToken(token) {
+    if (!isObject(token)) return null;
+
+    const value = token.valueOf();
+    const tag = value && value.__tag;
+    const payload = value && value.value;
+
+    if (!tag || !payload || typeof tag.getBody !== 'function' || typeof payload.getBody !== 'function') {
+      return null;
+    }
+
+    const [head] = tag.getBody();
+
+    if (!isSymbol(head)) return null;
+    if (![':ok', ':err'].includes(head.valueOf())) return null;
+
+    return head;
+  }
+
+  static async buildResultToken(kind, body, environment, parentTokenInfo) {
+    const values = await Eval.do(body, environment, 'Result', true, parentTokenInfo);
+
+    return Expr.map({
+      __tag: Expr.body([Expr.symbol(`:${kind}`, false, parentTokenInfo)], parentTokenInfo),
+      value: Expr.body(values, parentTokenInfo),
+    }, parentTokenInfo);
+  }
+
   static normalizeBraceRecordArgs(args) {
     const normalized = [];
     let changed = false;
@@ -68,6 +96,8 @@ export default class Eval {
   }
 
   static async resolveMatchBody(input, cases, environment, parentTokenInfo) {
+    const target = Eval.getResultTagToken(input) || input;
+
     for (let i = 0, c = cases.length; i < c; i++) {
       const [head, ...body] = cases[i];
 
@@ -84,7 +114,7 @@ export default class Eval {
       // evaluate partial logical-expressions, e.g. `(< a b)`
       if (isBlock(head) && isLogic(head.getArg(0))) {
         const [kind, ...others] = head.getArgs();
-        const newBody = Expr.expression({ type: kind.type, value: [input].concat(others) }, parentTokenInfo);
+        const newBody = Expr.expression({ type: kind.type, value: [target].concat(others) }, parentTokenInfo);
         const [result] = await Eval.do([newBody], environment, 'Expr', true, parentTokenInfo);
 
         if (result && result.value === true) {
@@ -103,13 +133,13 @@ export default class Eval {
               subBody = await subBody.value[0].value.run(true);
             }
 
-            if (subBody.valueOf().some(x => !hasDiff(x, input))) {
+            if (subBody.valueOf().some(x => !hasDiff(x, target))) {
               return body;
             }
           }
 
           // otherwise, just compare values
-          if (!hasDiff(input, subBody)) {
+          if (!hasDiff(target, subBody)) {
             return body;
           }
         }
@@ -827,6 +857,28 @@ export default class Eval {
       return true;
     }
 
+    if (isSome(this.ctx) && isResult(prev)) {
+      const tag = Eval.getResultTagToken(prev);
+
+      if (tag) {
+        const payloadBody = prev.valueOf().value.getBody();
+
+        if (tag.valueOf() === ':ok') {
+          if (payloadBody.length === 1) {
+            this.replace(payloadBody[0]);
+          } else {
+            this.replace(Expr.array(payloadBody));
+          }
+
+          this.move(Expr.chunk(this.expr, this.offset + 1).offset);
+        } else {
+          this.discard();
+        }
+
+        return true;
+      }
+    }
+
     // merge records, e.g. `{:a 1} | {"b": 2}`
     if (isResult(prev) && isOR(this.ctx) && isObject(prev) && !isSome(older)) {
       const { body, offset } = Expr.chunk(this.expr, this.offset + 1);
@@ -1343,6 +1395,16 @@ export default class Eval {
         }
       }
 
+      isDone = true;
+    }
+
+    if (value.ok instanceof Expr.OkStatement) {
+      subTree.push(await Eval.buildResultToken('ok', value.ok.getBody(), environment, parentTokenInfo));
+      isDone = true;
+    }
+
+    if (value.err instanceof Expr.ErrStatement) {
+      subTree.push(await Eval.buildResultToken('err', value.err.getBody(), environment, parentTokenInfo));
       isDone = true;
     }
 

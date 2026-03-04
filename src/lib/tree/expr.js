@@ -370,6 +370,8 @@ export default class Expr {
 
     if (type === '@if') return Expr.ifStatement(params, tokenInfo);
     if (type === '@else') return Expr.elseStatement(params, tokenInfo);
+    if (type === '@ok') return Expr.okStatement(params, tokenInfo);
+    if (type === '@err') return Expr.errStatement(params, tokenInfo);
 
     if (type === '@while') return Expr.whileStatement(params, tokenInfo);
     if (type === '@do') return Expr.doStatement(params, tokenInfo);
@@ -781,6 +783,8 @@ Expr.define('expression', class Expression extends Expr {});
 
 Expr.define('ifStatement', class IfStatement extends Expr.Statement {});
 Expr.define('elseStatement', class ElseStatement extends Expr.Statement {});
+Expr.define('okStatement', class OkStatement extends Expr.Statement {});
+Expr.define('errStatement', class ErrStatement extends Expr.Statement {});
 
 Expr.define('doStatement', class DoStatement extends Expr.Statement {});
 Expr.define('whileStatement', class WhileStatement extends Expr.Statement {});

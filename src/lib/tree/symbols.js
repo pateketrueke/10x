@@ -64,6 +64,7 @@ export const DERIVE_METHODS = [
 
 export const CONTROL_TYPES = [
   '@if', '@else',
+  '@ok', '@err',
   '@try', '@check', '@rescue',
   '@while', '@do',
   '@let', '@loop', '@match',
