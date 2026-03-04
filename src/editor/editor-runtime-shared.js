@@ -1,9 +1,50 @@
 import { compact } from '../main.js';
+import {
+  ensureDefaultMappings,
+  DEFAULT_MAPPINGS,
+  DEFAULT_INFLECTIONS,
+} from '../lib/builtins.js';
 
 export const SYMBOL_NAME = sym => {
   if (!sym || typeof sym !== 'symbol') return '';
   return sym.toString().match(/Symbol\((.+)\)/)?.[1] ?? '';
 };
+
+let symbolCatalogReady = false;
+
+function ensureSymbolCatalog() {
+  if (symbolCatalogReady) return;
+  symbolCatalogReady = true;
+  ensureDefaultMappings();
+}
+
+export function catalogSymbolHint(symbolText) {
+  const raw = String(symbolText || '').trim();
+  if (!raw.startsWith(':') || raw.length < 2) return '';
+
+  ensureSymbolCatalog();
+
+  const key = raw.slice(1).toLowerCase();
+  const canonical = DEFAULT_MAPPINGS[key] || DEFAULT_MAPPINGS[raw.slice(1)] || '';
+  if (!canonical) return '';
+
+  const forms = DEFAULT_INFLECTIONS[canonical];
+  if (Array.isArray(forms) && forms.length) {
+    const preferred = forms[1] || forms[0] || '';
+    return String(preferred || '').trim();
+  }
+
+  return '';
+}
+
+function unitKindFromToken(token) {
+  const kind = token?.value?.value?.kind ?? token?.value?.kind;
+  if (typeof kind === 'string' && kind.trim()) return kind.trim();
+
+  const asText = String(token?.value?.toString?.() ?? '');
+  const match = asText.match(/[A-Za-z]{1,10}$/);
+  return match?.[0] || '';
+}
 
 export function inferTokenType(token) {
   if (!token) return 'unknown';
@@ -16,7 +57,11 @@ export function inferTokenType(token) {
     return 'record';
   }
   if (token.isRange) return Array.isArray(token.value) ? 'list' : 'range';
-  if (token.isNumber) return 'number';
+  if (token.isNumber) {
+    const unitKind = unitKindFromToken(token);
+    if (unitKind) return `unit<${unitKind}>`;
+    return 'number';
+  }
   if (token.isString) return 'string';
   if (token.isSymbol) return 'symbol';
 

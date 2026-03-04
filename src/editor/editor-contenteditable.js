@@ -23,6 +23,7 @@ import {
   normalizeUnitLiterals,
   unitLiteralDisplay,
   hasUnitSuffix,
+  catalogSymbolHint,
   isFunctionDefinitionSource,
   extractInlineExpressions,
   bootstrapEnv,
@@ -75,10 +76,25 @@ function tokenTooltipLabel(token) {
   }
 
   switch (n) {
-    case 'NUMBER': return 'Number';
-    case 'STRING': return 'String';
+    case 'NUMBER':
+      if (
+        token?.value
+        && typeof token.value === 'object'
+        && typeof token.value.kind === 'string'
+        && token.value.kind.trim()
+      ) {
+        return `Unit (${token.value.kind.trim()})`;
+      }
+      return 'Number';
+    case 'STRING':
+      if (token?.kind === 'markup') return 'Markup string';
+      return 'String';
     case 'REGEX': return 'Regex';
-    case 'SYMBOL': return 'Symbol';
+    case 'SYMBOL': {
+      const hint = catalogSymbolHint(token?.value);
+      if (hint) return `Symbol (${token?.value}) • ${hint}`;
+      return 'Symbol';
+    }
     case 'LITERAL': return 'Literal';
     case 'COMMENT':
     case 'COMMENT_MULTI': return 'Comment';
@@ -625,13 +641,27 @@ function buildStatementAnchors(source) {
     for (const chunk of chunks) {
       if (!chunk.body.length) continue;
 
-      const line = Array.isArray(chunk.lines) && chunk.lines.length
+      let line = Array.isArray(chunk.lines) && chunk.lines.length
         ? chunk.lines[chunk.lines.length - 1]
         : 0;
       const firstLine = Array.isArray(chunk.lines) && chunk.lines.length
         ? chunk.lines[0]
         : line;
-      const statementSource = sourceLines.slice(firstLine, line + 1).join('\n');
+      let statementSource = sourceLines.slice(firstLine, line + 1).join('\n');
+
+      // Parser split can under-report multiline markup/string statement bounds.
+      // If we don't see a terminating dot yet, extend until next EOL-looking line.
+      if (!/\.\s*$/.test(statementSource.trimEnd())) {
+        let end = line;
+        while (end + 1 < sourceLines.length) {
+          end += 1;
+          statementSource += `\n${sourceLines[end]}`;
+          if (/\.\s*$/.test(sourceLines[end])) {
+            line = end;
+            break;
+          }
+        }
+      }
       if (!statementSource.trim()) continue;
 
       const normalized = normalizeStatement(statementSource);
