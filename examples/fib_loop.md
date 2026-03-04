@@ -1,5 +1,5 @@
 @template
-  += (a, b -> @let a = a + b),
+  += ((a b) -> @let a = a + b),
   -- (a -> @let a = a - 1).
 
 fib = n ->

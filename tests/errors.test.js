@@ -90,8 +90,8 @@ describe('Errors', () => {
     it('should fail if arguments are not literals', async () => {
       await failWith(run('x=y->4->3'), 'Expecting literal but found `4` at line 1:6');
       await failWith(run('x=y,1->42'), 'Expecting literal but found `1` at line 1:5');
-      await failWith(run('x=y,..1->42'), 'Expecting literal but found `..` at line 1:5');
-      await failWith(run('x=y,0..1->42'), 'Expecting literal but found `0` at line 1:5');
+      await failWith(run('x=y,..1->42'), 'Expecting literal but found `1` at line 1:7');
+      await failWith(run('x=y,0..1->42'), 'Expecting literal but found `1` at line 1:8');
     });
 
     it('should report failures after comments', async () => {
@@ -241,10 +241,10 @@ describe('Errors', () => {
           Fun: { test: fn => fn(), fail: fn => fn([], false) },
         })[source];
 
-        await failWith(run('@import test @from "Fun".\nsum=a,b->a+b.\ntest(sum)'),
+        await failWith(run('@import test @from "Fun".\nsum=(a b) -> a+b.\ntest(sum)'),
           'Missing arguments to call `sum` at line 3:5');
 
-        await failWith(run('@import fail @from "Fun".\nsum=a,b->a+b.\nfail(sum)'),
+        await failWith(run('@import fail @from "Fun".\nsum=(a b) -> a+b.\nfail(sum)'),
           'Expecting string, number or symbol but found `[..]` at line 3:5');
       });
 
@@ -287,8 +287,8 @@ describe('Errors', () => {
       });
 
       it('should fail if @rescue has too many arguments', async () => {
-        await failWith(run('@try x @rescue b, c -> 1'), 'Undeclared local `b` at line 1:16');
-        await failWith(run('@try x @rescue (b, c -> 1)'), 'Expecting block but found `c` at line 1:20');
+        await failWith(run('@try x @rescue (b c) 1'), 'Undeclared local `b` at line 1:17');
+        await failWith(run('@try x @rescue ((b c) 1)'), 'Undeclared local `b` at line 1:18');
       });
 
       it('should fail if @try has no @rescue block', async () => {
@@ -345,15 +345,15 @@ describe('Errors', () => {
 
     describe('BLOCK', () => {
       it('should fail on missing arguments', async () => {
-        await failWith(run('sum=a,b->a+b.\nsum().\n'), 'Missing arguments to call `sum` at line 2:4');
+        await failWith(run('sum=(a b) -> a+b.\nsum().\n'), 'Missing arguments to call `sum` at line 2:4');
         await failWith(run('sum=a->b->a+b.\nsum(5)()'), 'Missing argument `b` to call `sum` at line 2:7');
-        await failWith(run('test=a,b,c->a+b+c.\nfix=test(_,"B",_).\nfix("X")'), 'Missing argument `c` to call `test` at line 3:4');
+        await failWith(run('test=(a b c) -> a+b+c.\nfix=test(_,"B",_).\nfix("X")'), 'Missing argument `c` to call `test` at line 3:4');
       });
 
       it('should fail on too many arguments', async () => {
         await failWith(run('test=a->a.\ntest(1, 2, 3)'), 'Unexpected argument `2` to call `test` at line 2:5');
         await failWith(run('sum=a->b->a+b.\nadd5=sum(5).\nadd5(3, 4)'), 'Unexpected argument `4` to call `sum` at line 3:5');
-        await failWith(run('test=a,b,c->a+b+c.\nfix=test(_,"B",_).\nfix("X","Y","Z")'), 'Unexpected argument `"..."` to call `test` at line 3:4');
+        await failWith(run('test=(a b c) -> a+b+c.\nfix=test(_,"B",_).\nfix("X","Y","Z")'), 'Unexpected argument `"..."` to call `test` at line 3:4');
       });
 
       it('should fail if non-callable is invoked', async () => {
@@ -385,7 +385,7 @@ describe('Errors', () => {
       it('should fail if previous value is not a mapping', async () => {
         await failWith(run('. '), 'Expecting map before `.` at line 1:1');
         await failWith(run('1.foo'), 'Expecting map but found `1` at line 1:1');
-        await failWith(run('noop=x,y->x*y.\n1.noop'), 'Unexpected call to `noop` at line 2:2');
+        await failWith(run('noop=(x y) -> x*y.\n1.noop'), 'Unexpected call to `noop` at line 2:2');
       });
 
       it('should fail if following value is not a literal', async () => {

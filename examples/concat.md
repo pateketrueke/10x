@@ -1,4 +1,4 @@
-@template ++ (a, b -> a.concat(b)).
+@template ++ ((a b) -> a.concat(b)).
 
 @import concat @from "Array".
 

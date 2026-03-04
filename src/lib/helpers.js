@@ -651,7 +651,15 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
       const parent = token.isStatement || descriptor === 'Stmt' ? 'Stmt' : 'Block';
 
       if (!token.hasSource) {
-        if (token.hasArgs) args += serialize(token.getArgs(), shorten, colorize, parent);
+        if (token.hasArgs) {
+          const renderedArgs = serialize(token.getArgs(), shorten, colorize, parent);
+
+          if (token.hasBody && token.getArgs().length > 1) {
+            args += `${colorize(OPEN)}${renderedArgs.replace(/,\s*/g, ' ')}${colorize(CLOSE)}`;
+          } else {
+            args += renderedArgs;
+          }
+        }
         if (token.hasName) block += `${colorize(LITERAL, token.getName())}${args} ${colorize(EQUAL)} `;
       }
 

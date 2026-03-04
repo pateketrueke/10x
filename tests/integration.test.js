@@ -124,7 +124,7 @@ describe('Integration', () => {
   it('should share templates through top-level environment', async () => {
     const env = new Env();
 
-    await run('@template <> (a, b -> (!= a b))', env);
+    await run('@template <> ((a b) -> (!= a b))', env);
 
     expect(await run('1 <> 2', env)).to.eql([Expr.value(true)]);
   });
@@ -139,7 +139,7 @@ describe('Integration', () => {
       @from "Prelude" @import check, items.
       @from "IO" @import puts.
 
-      test = desc, block -> (
+      test = (desc block) -> (
         output = block() | :nil.
         failed = (? output :nil).
         puts("# #{failed ? "not ok" | "ok"} — #{desc}\n").
@@ -468,7 +468,7 @@ describe('Integration', () => {
 
     it('should run through any callback if given', async () => {
       const output = [];
-      const source = await run('sum=a,b->a+b.\nsum');
+      const source = await run('sum=(a b) -> a+b.\nsum');
       const result = Expr.plain(source, async (call, args) => {
         output.push({ call, args });
       });
@@ -495,12 +495,12 @@ describe('Integration', () => {
         Test: { nested: { noop: () => {} } },
       })[source];
 
-      expect(await run('@import test @from "Fun".\nsum=a,b->a+b.\ntest(sum)')).to.eql([Expr.value(3)]);
+      expect(await run('@import test @from "Fun".\nsum=(a b) -> a+b.\ntest(sum)')).to.eql([Expr.value(3)]);
       expect(await run('@import nested @from "Test".\nnested.noop()')).to.eql([]);
 
       expect(await run(`
         @import (:test fun) @from "Fun".
-        x = fun(a, b -> [a, b]).
+        x = fun((a b) -> [a, b]).
         @if (== x [1, 2]) 42.
       `)).to.eql([Expr.value(42)]);
     });
@@ -801,9 +801,9 @@ describe('Integration', () => {
       await run('sum=a->b->a+b.\nadd3=sum(3).\nadd3', null, true);
 
       const chunks = [
-        'sum = a, b -> a + b.\nadd3 = sum(3).\nadd3',
+        'sum = (a b) -> a + b.\nadd3 = sum(3).\nadd3',
         'sum(3)',
-        'a, b -> a + b',
+        '(a b) -> a + b',
       ];
 
       run.info.calls.forEach((ast, i) => {
@@ -834,14 +834,14 @@ describe('Integration', () => {
 
     it('should inline formatted code', () => {
       const sample = deindent(`
-        @template >> (a, b -> [a, b], 42).
+        @template >> ((a b) -> [a, b], 42).
 
         -1 >> 2.
       `);
 
       const result = '([-1, 2], 42).\n';
 
-      const resolved = '@template >> (a, b -> [a, b], 42).\n-1 >> 2.\n';
+      const resolved = '@template >> ((a b) -> [a, b], 42).\n-1 >> 2.\n';
 
       expect(serialize(Parser.getAST(sample))).to.eql(result);
       expect(serialize(Parser.getAST(sample, 'raw'))).to.eql(sample);
@@ -870,7 +870,7 @@ describe('Integration', () => {
 
       const sample2 = deindent(`
         @template
-          += (a, b -> @let a = a + b),
+          += ((a b) -> @let a = a + b),
           -- (a -> @let a = a - 1).
 
         fib = n ->
@@ -890,7 +890,7 @@ describe('Integration', () => {
 
       const result = 'fib = n -> @let a = 1, b = 0, temp = 0 /* test */ @while (>= n-- 0), temp = a, (a += b), b = temp, b.\n\n// test\nfib(20).\n';
 
-      const inline = `@template += (a, b -> @let a = a + b), -- (a -> @let a = a - 1).\n${result}`;
+      const inline = `@template += ((a b) -> @let a = a + b), -- (a -> @let a = a - 1).\n${result}`;
 
       expect(serialize(Parser.getAST(sample2))).to.eql(resolved);
       expect(serialize(Parser.getAST(sample2, 'raw'))).to.eql(sample2);
@@ -903,7 +903,7 @@ describe('Integration', () => {
         @import getopts @from "Proc".
 
         @template
-          => (k, v -> @if ([argv.flags]:(k)) v).
+          => ((k v) -> @if ([argv.flags]:(k)) v).
 
         @let argv = getopts(
           :boolean [:ask, :help],
@@ -933,7 +933,7 @@ describe('Integration', () => {
       `);
 
       const prompt = '@let ask = input([(:type :text, :name :foo, :message "A"), (:type "text", :name "bar", :message "B"),])';
-      const prelude = '@template => (k, v -> @if ([argv.flags]:(k)) v).\n@let argv = getopts(:boolean [:ask, :help], :alias (:h :help))';
+      const prelude = '@template => ((k v) -> @if ([argv.flags]:(k)) v).\n@let argv = getopts(:boolean [:ask, :help], :alias (:h :help))';
 
       const usageInfo = '"\n  Usage info:\n\n  -h, --help  Display this info\n      --ask   Prompts user for input\n"';
       const asks = `puts("\\nPlease ask a few questions:\\n\\n").\n${prompt}.\n"\\nGot: #{ask.bar} (#{(~ ask.foo 42) ? "Gotcha!" | ":("})\\n".\n`;

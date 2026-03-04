@@ -252,7 +252,7 @@ describe('Prelude', () => {
         @from "Prelude" @import check items.
         @from "IO" @import puts.
 
-        test = desc, block -> (
+        test = (desc block) -> (
           output = block() | :nil.
           failed = (? output :nil).
           puts("# #{failed ? "not ok" | "ok"} — #{desc}\n").

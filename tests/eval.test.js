@@ -256,8 +256,8 @@ describe('Eval', () => {
     });
 
     it('should allow to invoke def-props', async () => {
-      expect(await run('Math=:sum(a,b->a+b).\nMath.sum(2,3)')).to.eql([Expr.value(5)]);
-      expect(await run('sum=a,b->a+b.\nMath=:sum sum.\nMath.sum(5,3)')).to.eql([Expr.value(8)]);
+      expect(await run('Math=:sum((a b) -> a+b).\nMath.sum(2,3)')).to.eql([Expr.value(5)]);
+      expect(await run('sum=(a b) -> a+b.\nMath=:sum sum.\nMath.sum(5,3)')).to.eql([Expr.value(8)]);
     });
 
     it('should keep outer context safe', async () => {
@@ -290,7 +290,7 @@ describe('Eval', () => {
 
     it('should evaluate from anonymous functions', async () => {
       expect(await run('fun=f->f().\nfun(-> 42)')).to.eql([Expr.value(42)]);
-      expect(await run('fun=_,f->f().\nfun(1,-> 42)')).to.eql([Expr.value(42)]);
+      expect(await run('fun=(_ f) -> f().\nfun(1,-> 42)')).to.eql([Expr.value(42)]);
     });
   });
 
@@ -437,8 +437,8 @@ describe('Eval', () => {
       expect(await run('fn=->42.\n0|>fn|>fn|>fn|>fn')).to.eql([Expr.value(42)]);
       expect(await run('sum=a->b->a+b.\n-3 |> sum(5) + 4 |> sum(9)')).to.eql([Expr.value(15)]);
       expect(await run('sum=a->b->a+b.\ntwice = n -> n |> sum(n).\ntwice(3)')).to.eql([Expr.value(6)]);
-      expect(await run('fn=a,b->a+b(a).\n3|>fn()(n -> n * 2)')).to.eql([Expr.value(9)]);
-      expect(await run('fn=a,b->a+b(a).\n3|>fn(n -> n * 2)')).to.eql([Expr.value(9)]);
+      expect(await run('fn=(a b) -> a+b(a).\n3|>fn()(n -> n * 2)')).to.eql([Expr.value(9)]);
+      expect(await run('fn=(a b) -> a+b(a).\n3|>fn(n -> n * 2)')).to.eql([Expr.value(9)]);
     });
 
     it('should allow to bind nested definitions', async () => {
@@ -447,8 +447,8 @@ describe('Eval', () => {
 
     it('should allow to use _ as placeholder', async () => {
       expect(await run('div=a->b->a/b.\ndiv2=div(_, 2).\ndiv2(1)')).to.eql([Expr.value(0.5)]);
-      expect(await run('test=a,b,c->a+b+c.\nfix=test("?","B",_).\nfix("X")')).to.eql([Expr.value('?BX')]);
-      expect(await run('test=a,b,c->a+b+c.\nfix=test(_,"B",_).\nfix("X","Y")')).to.eql([Expr.value('XBY')]);
+      expect(await run('test=(a b c) -> a+b+c.\nfix=test("?","B",_).\nfix("X")')).to.eql([Expr.value('?BX')]);
+      expect(await run('test=(a b c) -> a+b+c.\nfix=test(_,"B",_).\nfix("X","Y")')).to.eql([Expr.value('XBY')]);
     });
 
     it('should resolve callees from any expression', async () => {
@@ -464,10 +464,10 @@ describe('Eval', () => {
     it('should allow to use definitions as binary-operators', async () => {
       const env = new Env();
 
-      expect(await run('adds = a, b -> a + b.\n', env)).to.eql([]);
+      expect(await run('adds = (a b) -> a + b.\n', env)).to.eql([]);
       expect(await run('1 adds (5 / (2 - 4))', env)).to.eql([Expr.value(-1.5)]);
 
-      expect(await run('infix = a, b -> a + "_" + b.\n"FOO" infix "BAR"')).to.eql([Expr.value('FOO_BAR')]);
+      expect(await run('infix = (a b) -> a + "_" + b.\n"FOO" infix "BAR"')).to.eql([Expr.value('FOO_BAR')]);
     });
 
     it('should not mutate arguments from bound-calls', async () => {
@@ -479,7 +479,7 @@ describe('Eval', () => {
     });
 
     it('should allow to call through mod-operator', async () => {
-      expect(await run('sum=a,b->a+b.\nsum % :a 3 :b 5')).to.eql([Expr.value(8)]);
+      expect(await run('sum=(a b) -> a+b.\nsum % :a 3 :b 5')).to.eql([Expr.value(8)]);
     });
   });
 
@@ -539,8 +539,8 @@ describe('Eval', () => {
       `)).to.eql([Expr.value(1), Expr.value(0)]);
 
       expect(await run(`
-        @template += (a, b -> @let a = a + b).
-        @template *= (a, b -> @let a = a * b).
+        @template += ((a b) -> @let a = a + b).
+        @template *= ((a b) -> @let a = a * b).
 
         i = 0.
         i += 2.
@@ -550,7 +550,7 @@ describe('Eval', () => {
 
       expect(await run(`
         @template
-          >> (a, b -> a + b),
+          >> ((a b) -> a + b),
           fun (a -> "Fun: #{a}").
 
         fun("osoms").
@@ -559,7 +559,7 @@ describe('Eval', () => {
 
       expect(await run(`
         @template
-          <=> (a, b -> (!= a b)).
+          <=> ((a b) -> (!= a b)).
 
         [@if (1 <=> 2) 42.
         2 <=> 2.
@@ -568,7 +568,7 @@ describe('Eval', () => {
 
       expect(await run(`
         @template
-          /= (a, b -> @let a = a / b).
+          /= ((a b) -> @let a = a / b).
 
         j = :k 42.
         j.k /= 2.
@@ -731,7 +731,7 @@ describe('Eval', () => {
   describe('Ranges', () => {
     it('should spread arguments on calls', async () => {
       expect(await run(`
-        div=a,b->a/b.
+        div=(a b) -> a/b.
         div2=div(2,..).
         div2(4).
         div2'=div(..,2).
@@ -739,7 +739,7 @@ describe('Eval', () => {
       `)).to.eql([Expr.value(0.5), Expr.value(2)]);
 
       expect(await run(`
-        try=a, b, .. -> [a, b, ..].
+        try=(a b ..) -> [a, b, ..].
         try(1, 2, 3, 4, 5).
       `)).to.eql([Expr.value([1, 2, 3, 4, 5])]);
     });
@@ -984,7 +984,7 @@ describe('Eval', () => {
     it('should allow to import from external sources', async () => {
       const env = new Env();
 
-      await run('thrice = n -> n * 3.\nsum = a, b -> a + b.\n', env);
+      await run('thrice = n -> n * 3.\nsum = (a b) -> a + b.\n', env);
 
       Env.resolve = source => ({
         './example.js': require('./fixtures/example'),
@@ -1008,7 +1008,7 @@ describe('Eval', () => {
 
       await run(`
         @module "Test" @export (:sum s).
-        sum = a, b -> a + b.
+        sum = (a b) -> a + b.
       `, env);
 
       Env.resolve = source => ({
@@ -1074,7 +1074,7 @@ describe('Eval', () => {
 
       expect(await run(`
         @template
-          += (a, b -> @let a = a + b),
+          += ((a b) -> @let a = a + b),
           -- (a -> @let a = a - 1).
 
         fib = n ->

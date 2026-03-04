@@ -244,7 +244,7 @@ describe('Parser', () => {
     ]);
 
     expect(Parser.getAST(`
-      @template += (a, b -> @let a = a + b).
+      @template += ((a b) -> @let a = a + b).
       x.i += (2 / 5)
     `)).to.eql([
       Expr.group([
@@ -275,7 +275,7 @@ describe('Parser', () => {
 
     expect(Parser.getAST(`
       @template
-        ++! (a, b -> [a, b]),
+        ++! ((a b) -> [a, b]),
         ++? (a..b).
 
       1 ++! 2.
@@ -332,7 +332,7 @@ describe('Parser', () => {
     });
 
     it('should parse multiple arguments', () => {
-      expect(Parser.getAST('.\na, b -> a + b')).to.eql([
+      expect(Parser.getAST('.\n(a b) -> a + b')).to.eql([
         Expr.from(EOL),
         Expr.block({
           args: [Expr.local('a'), Expr.local('b')],
@@ -375,10 +375,10 @@ describe('Parser', () => {
       const call = Expr.block({ args, body });
       const input = [Expr.value(5), Expr.from(COMMA), Expr.value(6)];
 
-      expect(Parser.getAST('.\na, b -> a + b')).to.eql([Expr.from(EOL), call]);
-      expect(Parser.getAST('(a, b -> a + b)')).to.eql([Expr.group([call])]);
-      expect(Parser.getAST('(a, b -> a + b)(5, 6)')).to.eql([Expr.group([call]), Expr.group(input)]);
-      expect(Parser.getAST('(a, b -> (a + b)(5, 6))')).to.eql([Expr.group([
+      expect(Parser.getAST('.\n(a b) -> a + b')).to.eql([Expr.from(EOL), call]);
+      expect(Parser.getAST('((a b) -> a + b)')).to.eql([Expr.group([call])]);
+      expect(Parser.getAST('((a b) -> a + b)(5, 6)')).to.eql([Expr.group([call]), Expr.group(input)]);
+      expect(Parser.getAST('((a b) -> (a + b)(5, 6))')).to.eql([Expr.group([
         Expr.block({
           args,
           body: [

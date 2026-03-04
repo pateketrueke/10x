@@ -2,7 +2,7 @@
 @import getopts @from "Proc".
 
 @template
-  => (k, v -> @if ([argv.flags]:(k)) v).
+  => ((k v) -> @if ([argv.flags]:(k)) v).
 
 @let argv = getopts(
   :boolean [:ask, :help],

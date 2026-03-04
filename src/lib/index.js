@@ -13,7 +13,7 @@ function ensureBuiltins() {
   const mappings = ensureDefaultMappings();
 
   // export helpers and all units lazily to avoid eager startup cost
-  Expr.Unit.to = Parser.sub('a, b -> a.to(b)');
+  Expr.Unit.to = Parser.sub('(a b) -> a.to(b)');
 
   Object.keys(mappings).forEach(kind => {
     Expr.Unit[kind] = Parser.sub(`:${mappings[kind]}`);

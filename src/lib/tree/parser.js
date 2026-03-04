@@ -531,8 +531,8 @@ export default class Parser {
           continue;
         }
 
-        // parse local functions, e.g. `a ->` OR `n, m ->`
-        if ((isComma(curToken) || isBlock(curToken)) && this.has(BLOCK)) {
+        // parse local single-arg functions, e.g. `a ->`
+        if (isBlock(curToken) && this.has(BLOCK)) {
           const args = Expr.args([Expr.from(token)].concat(this.statement([BLOCK])));
           const body = this.expression();
 
@@ -560,7 +560,7 @@ export default class Parser {
       }
 
       // validate functions after literals
-      if (!isLiteral(token) && isBlock(curToken) && !(isOpen(token) || isComma(token))) {
+      if (!isLiteral(token) && isBlock(curToken) && !(isOpen(token) || isClose(token) || isComma(token))) {
         raise(`Expecting literal but found \`${token.value}\``, tokenInfo);
       }
 
@@ -621,6 +621,50 @@ export default class Parser {
 
           root = stack.pop();
           offsets.pop();
+
+          // parse canonical multi-arg functions, e.g. `(a b) ->`
+          if (isClose(token) && isBlock(curToken)) {
+            const leaf = get();
+            const group = leaf[leaf.length - 1];
+
+            if (isBlock(group) && group.hasArgs) {
+              let args = group.getArgs();
+
+              // Normalize `(a b ..) ->` parsed as an open-ended range into varargs.
+              if (
+                args.length === 1
+                && isRange(args[0])
+                && args[0].value
+                && Array.isArray(args[0].value.begin)
+                && (!args[0].value.end || !args[0].value.end.length)
+              ) {
+                args = args[0].value.begin.concat([Expr.from(LITERAL, '..', args[0].tokenInfo || tokenInfo)]);
+              }
+
+              args = args.map(arg => {
+                if (isRange(arg)) {
+                  arg = arg.clone();
+                  arg.type = LITERAL;
+                }
+
+                return arg;
+              });
+
+              if (args.length && args.every(arg => isLiteral(arg))) {
+                this.next();
+                const body = this.subTree(this.statement([OR, PIPE]));
+
+                leaf[leaf.length - 1] = Expr.callable({
+                  type: BLOCK,
+                  value: {
+                    args: Expr.args(args),
+                    body,
+                  },
+                }, (args[0] && args[0].tokenInfo) || group.tokenInfo || curToken.tokenInfo || tokenInfo);
+                continue;
+              }
+            }
+          }
         }
       } else if (isText(token) && token.value.kind === TABLE) {
         const rows = [token];

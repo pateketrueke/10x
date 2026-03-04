@@ -25,7 +25,7 @@ describe('Shared', () => {
     it('cwd() and chdir(p)', async () => {
       const result = await run(deindent(`
         @import cwd, chdir @from "Proc".
-        is = a, b -> (== a b).
+        is = (a b) -> (== a b).
 
         cwd() is "${process.cwd()}"
         chdir("..").
@@ -42,7 +42,7 @@ describe('Shared', () => {
 
       const result = await run(deindent(`
         @import getenv, setenv, unsetenv @from "Proc".
-        is = a, b -> (== a b).
+        is = (a b) -> (== a b).
 
         unsetenv(:FIXED).
         getenv(:FIXED) | 1.
@@ -58,8 +58,8 @@ describe('Shared', () => {
     it('homedir() and tmpdir()', async () => {
       const result = await run(deindent(`
         @import homedir, tmpdir @from "Proc".
-        is = a, b -> (== a b).
-        isin = a, b -> (~ b a).
+        is = (a b) -> (== a b).
+        isin = (a b) -> (~ b a).
 
         homedir() is "${process.env.HOME}".
         tmpdir() isin "${process.env.TMPDIR}".
