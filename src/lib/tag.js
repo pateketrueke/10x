@@ -1,3 +1,5 @@
+import { isVoidTag } from './void-tags';
+
 function fail(message) {
   throw new Error(message);
 }
@@ -8,6 +10,26 @@ function isPlain(value) {
 
 function skipSpaces(input, state) {
   while (state.i < input.length && /\s/.test(input[state.i])) state.i++;
+}
+
+function consumeOptionalClosingTag(input, state, name) {
+  let offset = state.i;
+
+  while (offset < input.length && /\s/.test(input[offset])) offset++;
+  if (input[offset] !== '<' || input[offset + 1] !== '/') return;
+  offset += 2;
+
+  const start = offset;
+  while (offset < input.length && /[A-Za-z0-9:_-]/.test(input[offset])) offset++;
+  if (offset === start) return;
+
+  const closeName = input.slice(start, offset);
+  if (closeName.toLowerCase() !== String(name || '').toLowerCase()) return;
+
+  while (offset < input.length && /\s/.test(input[offset])) offset++;
+  if (input[offset] !== '>') return;
+
+  state.i = offset + 1;
 }
 
 function readName(input, state) {
@@ -166,6 +188,11 @@ function parseNode(input, state) {
   if (spreads.length) node.spreads = spreads;
 
   if (selfClosing) return node;
+  if (isVoidTag(name)) {
+    node.selfClosing = true;
+    consumeOptionalClosingTag(input, state, name);
+    return node;
+  }
 
   while (state.i < input.length) {
     if (input[state.i] === '<' && input[state.i + 1] === '/') {

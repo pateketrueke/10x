@@ -354,8 +354,12 @@ function compileTag(node) {
     ? 'null'
     : '{ ' + attrEntries.map(([k, v]) => {
         if (v === true) return `${JSON.stringify(k)}: true`;
-        if (v && typeof v === 'object' && typeof v.expr === 'string')
-          return `${JSON.stringify(k)}: Runtime.read(${v.expr.trim()})`;
+        if (v && typeof v === 'object' && typeof v.expr === 'string') {
+          const passSignal = /^(d:|s:|class:|style:)/.test(k) || k === 'ref';
+          return passSignal
+            ? `${JSON.stringify(k)}: ${v.expr.trim()}`
+            : `${JSON.stringify(k)}: Runtime.read(${v.expr.trim()})`;
+        }
         return `${JSON.stringify(k)}: ${JSON.stringify(String(v))}`;
       }).join(', ') + ' }';
 
@@ -421,7 +425,7 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
   if (token && token.isObject) {
     const value = token.value || {};
     const keys = Object.keys(value);
-    const isDirective = keys.some(k => ['render', 'on', 'html', 'signal', 'prop', 'if', 'else', 'do', 'let', 'match', 'while', 'loop', 'try', 'rescue', 'export', 'import', 'from', 'style'].includes(k));
+    const isDirective = keys.some(k => ['render', 'on', 'html', 'signal', 'computed', 'prop', 'if', 'else', 'do', 'let', 'match', 'while', 'loop', 'try', 'rescue', 'export', 'import', 'from', 'style'].includes(k));
 
     if (isDirective) return compileDirectiveObject(token, ctx);
 
@@ -815,9 +819,19 @@ function compileExportDirective(body, ctx) {
   return `export { ${names.join(', ')} }`;
 }
 
-function compileHtmlDirective(body) {
+function compileHtmlDirective(body, ctx) {
   const [template] = body;
-  return `Runtime.html(() => ${compileToken(template)})`;
+  if (template && template.type === RANGE && Array.isArray(template.value)) {
+    const items = template.value
+      .filter(token => token && token.type !== COMMA)
+      .map(token => compileToken(token, ctx));
+    return `Runtime.html(() => [${items.join(', ')}])`;
+  }
+  return `Runtime.html(() => ${compileToken(template, ctx)})`;
+}
+
+function compileComputedDirective(body, ctx) {
+  return `Runtime.computed(() => ${compileExpression(body, ctx)})`;
 }
 
 function compileStyleDirective(body, ctx) {
@@ -827,7 +841,7 @@ function compileStyleDirective(body, ctx) {
 }
 
 function compileRenderDirective(body, value, ctx) {
-  const htmlExpr = value.html instanceof Object ? compileHtmlDirective(value.html.getBody()) : 'undefined';
+  const htmlExpr = value.html instanceof Object ? compileHtmlDirective(value.html.getBody(), ctx) : 'undefined';
   if (value.shadow) {
     return `Runtime.renderShadow(host, ${htmlExpr})`;
   }
@@ -943,11 +957,15 @@ function compileDirectiveObject(token, ctx) {
   }
 
   if (value.html) {
-    return compileHtmlDirective(value.html.getBody());
+    return compileHtmlDirective(value.html.getBody(), ctx);
   }
 
   if (value.signal) {
     return compileSignalDirective(value.signal.getBody(), ctx);
+  }
+
+  if (value.computed) {
+    return compileComputedDirective(value.computed.getBody(), ctx);
   }
 
   if (value.style) {
@@ -981,6 +999,11 @@ function compileDefinition(token, asStatement = false, ctx = { signalVars: new S
       return asStatement ? `${out};` : out;
     }
     const out = `${declConst} ${name} = Runtime.signal(${compileExpression(head.value.signal.getBody(), ctx)}, ${JSON.stringify(name)})`;
+    return asStatement ? `${out};` : out;
+  }
+
+  if (head.isObject && head.value && head.value.computed) {
+    const out = `${declConst} ${name} = Runtime.computed(() => ${compileExpression(head.value.computed.getBody(), ctx)})`;
     return asStatement ? `${out};` : out;
   }
 
@@ -1081,8 +1104,13 @@ function collectAtomicClasses(statements) {
       walkTagNode(token.value);
     }
 
-    if (token.hasArgs) token.getArgs().forEach(walkToken);
-    if (token.hasBody) token.getBody().forEach(walkToken);
+    if (token.value && Array.isArray(token.value.args) && typeof token.getArgs === 'function') {
+      token.getArgs().forEach(walkToken);
+    }
+
+    if (token.value && Array.isArray(token.value.body) && typeof token.getBody === 'function') {
+      token.getBody().forEach(walkToken);
+    }
 
     if (token.isObject && token.value) {
       Object.values(token.value).forEach(value => {

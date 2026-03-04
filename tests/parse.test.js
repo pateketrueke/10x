@@ -127,6 +127,17 @@ describe('Parser', () => {
     ]);
   });
 
+  it('should parse self-closing void tags', () => {
+    expect(Parser.getAST('<input type="text" />')).to.eql([
+      Expr.tag({
+        name: 'input',
+        attrs: { type: 'text' },
+        children: [],
+        selfClosing: true,
+      }),
+    ]);
+  });
+
   it('should parse markdown tags', () => {
     expect(Parser.getAST('> x `y`', 'split')[0].body).to.eql([
       Expr.from(TEXT, {

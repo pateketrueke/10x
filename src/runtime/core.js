@@ -11,19 +11,25 @@ const globalRegistry = (() => {
 export function signal(initialValue, name) {
   const state = {
     [SIGNAL]: true,
-    value: initialValue,
+    _value: initialValue,
     subs: new Set(),
+    get value() {
+      return this.get();
+    },
+    set value(nextValue) {
+      this.set(nextValue);
+    },
     get() {
       if (currentEffect) this.subs.add(currentEffect);
-      return this.value;
+      return this._value;
     },
     set(nextValue) {
-      this.value = nextValue;
+      this._value = nextValue;
       this.subs.forEach(fn => fn());
-      return this.value;
+      return this._value;
     },
     peek() {
-      return this.value;
+      return this._value;
     },
   };
 
@@ -52,6 +58,26 @@ export function effect(fn) {
 
   run();
   return run;
+}
+
+export function computed(fn) {
+  const out = signal(undefined);
+  effect(() => out.set(fn()));
+  return out;
+}
+
+export function batch(fn) {
+  return fn();
+}
+
+export function untracked(fn) {
+  const prev = currentEffect;
+  currentEffect = null;
+  try {
+    return fn();
+  } finally {
+    currentEffect = prev;
+  }
 }
 
 export function html(renderFn) {

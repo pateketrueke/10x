@@ -13,6 +13,7 @@ import {
 import {
   Token, split, quote, raise, format, deindent, isPlain, isDigit, isReadable, isAlphaNumeric,
 } from '../helpers';
+import { isVoidTag } from '../void-tags';
 
 import Env from './env';
 import Expr from './expr';
@@ -867,6 +868,13 @@ export default class Scanner {
     const tagName = openTag.substr(1);
     const close = [tagName];
 
+    const hasImmediateClosing = name => {
+      let idx = this.offset + 1;
+      while (idx < this.source.length && /\s/.test(this.source[idx])) idx++;
+      const closing = `</${name}>`;
+      return this.source.slice(idx, idx + closing.length).toLowerCase() === closing.toLowerCase();
+    };
+
     let offset = 0;
 
     while (!this.isDone()) {
@@ -883,6 +891,13 @@ export default class Scanner {
       if (cur === '/' && next === '>') {
         this.nextToken(2);
         close.pop();
+      }
+
+      if (cur === '>' && close.length) {
+        const top = String(close[close.length - 1] || '').toLowerCase();
+        if (isVoidTag(top) && !hasImmediateClosing(top)) {
+          close.pop();
+        }
       }
 
       if (offset && cur === '<' && isAlphaNumeric(next)) {

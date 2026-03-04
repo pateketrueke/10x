@@ -241,4 +241,30 @@ describe('Compiler', () => {
     expect(output.indexOf('Runtime.style(')).to.be.lessThan(output.indexOf('Runtime.render('));
   });
 
+  it('should pass signal objects through directive/ref attrs in tags', () => {
+    const output = compile([
+      'visible = @signal :on.',
+      'inputValue = @signal "x".',
+      'refObj = @signal :nil.',
+      '@render "#app" @html <input d:show={visible} d:model={inputValue} ref={refObj} value={inputValue} />.',
+    ].join('\n'));
+
+    expect(output).to.contain('"d:show": visible');
+    expect(output).to.contain('"d:model": inputValue');
+    expect(output).to.contain('"ref": refObj');
+    expect(output).to.contain('"value": Runtime.read(inputValue)');
+  });
+
+  it('should compile @computed and html fragments', () => {
+    const output = compile([
+      'count = @signal 1.',
+      'double = @computed count * 2.',
+      '@render "#app" @html [<h1>{count}</h1>, <p>{double}</p>].',
+    ].join('\n'));
+
+    expect(output).to.contain('const double = Runtime.computed(() => (Runtime.read(count) * 2));');
+    expect(output).to.contain('Runtime.html(() => [Runtime.h("h1"');
+    expect(output).to.contain('Runtime.h("p"');
+  });
+
 });

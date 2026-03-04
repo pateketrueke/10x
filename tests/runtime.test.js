@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import {
-  signal, effect, html, render, on, isSignal, read,
+  signal, effect, html, render, on, isSignal, read, computed,
 } from '../src/runtime';
 
 describe('Runtime', () => {
@@ -32,6 +32,24 @@ describe('Runtime', () => {
 
     expect(read(plain)).to.eql(9);
     expect(read(wrapped)).to.eql(3);
+  });
+
+  it('should expose .value getter/setter on signals', () => {
+    const count = signal(1);
+
+    expect(count.value).to.eql(1);
+    count.value = 5;
+    expect(count.get()).to.eql(5);
+    expect(count.value).to.eql(5);
+  });
+
+  it('should support computed values via runtime exports', () => {
+    const count = signal(2);
+    const doubled = computed(() => count.value * 2);
+
+    expect(doubled.value).to.eql(4);
+    count.value = 7;
+    expect(doubled.value).to.eql(14);
   });
 
   it('should render html views and bind events', () => {
