@@ -74,6 +74,22 @@ function inferRuntimeType(value) {
   return 'unknown';
 }
 
+function compactResultText(value, max = 180) {
+  const text = String(value ?? '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  if (!text) return '';
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(1, max - 1)).trim()}…`;
+}
+
+function formatRuntimeError(error) {
+  const message = String(error?.message || error || 'Runtime error');
+  return compactResultText(message, 160);
+}
+
+function normalizeUnitLiterals(source) {
+  return String(source || '').replace(/\b(\d+(?:\.\d+)?)([A-Za-z]{1,5})\b/g, '$1 $2');
+}
+
 function tokenClass(token) {
   const n = SYMBOL_NAME(token.type);
   switch (n) {
@@ -494,7 +510,43 @@ function renderTokens(source) {
 
   try {
     const tokens = Parser.getAST(source, 'raw');
-    for (const token of tokens) appendToken(frag, token);
+    let onDirectiveArgIndex = -1;
+    for (const token of tokens) {
+      const name = SYMBOL_NAME(token?.type);
+
+      if (name === 'DIRECTIVE' && String(token.value || '').toLowerCase() === 'on') {
+        onDirectiveArgIndex = 0;
+        appendToken(frag, token);
+        continue;
+      }
+
+      if (name === 'EOL') {
+        onDirectiveArgIndex = -1;
+        appendToken(frag, token);
+        continue;
+      }
+
+      if (onDirectiveArgIndex >= 0 && name === 'TEXT') {
+        appendToken(frag, token);
+        continue;
+      }
+
+      if (
+        onDirectiveArgIndex >= 0
+        && onDirectiveArgIndex < 2
+        && name === 'LITERAL'
+        && typeof token.value === 'string'
+      ) {
+        appendText(frag, token.value, 'xt-string', 'String');
+        onDirectiveArgIndex += 1;
+        continue;
+      }
+
+      if (onDirectiveArgIndex >= 0 && name !== 'TEXT') onDirectiveArgIndex += 1;
+      if (onDirectiveArgIndex >= 2) onDirectiveArgIndex = -1;
+
+      appendToken(frag, token);
+    }
   } catch (_) {
     // Parse fallback: keep raw text editable when tokenization fails.
     appendPlainTextWithBreaks(frag, source);
@@ -1067,6 +1119,13 @@ class XEditor extends HTMLElement {
       if (node === this._editable) {
         node = this._editable.lastChild;
         while (node && node.lastChild) node = node.lastChild;
+        if (
+          node
+          && node.nodeType === Node.TEXT_NODE
+          && !node.parentElement?.closest('[data-result], [data-inline-result]')
+        ) {
+          return node;
+        }
       }
       while (node && node !== this._editable) {
         if (node.previousSibling) {
@@ -1367,7 +1426,8 @@ class XEditor extends HTMLElement {
         this._pendingResultIds.add(statement.statementId);
         this._injectResults();
         try {
-          const result = await execute(statement.source, env);
+          const statementSource = normalizeUnitLiterals(statement.source);
+          const result = await execute(statementSource, env);
           this._resultsById.delete(statement.statementId);
           Array.from(this._inlineResultsById.keys()).forEach(inlineId => {
             if (inlineId.startsWith(`${statement.statementId}:`)) {
@@ -1375,7 +1435,7 @@ class XEditor extends HTMLElement {
             }
           });
 
-          if (isFunctionDefinitionSource(statement.source)) {
+          if (isFunctionDefinitionSource(statementSource)) {
             const functionBadge = {
               statementId: statement.statementId,
               resultText: 'ƒ',
@@ -1387,12 +1447,12 @@ class XEditor extends HTMLElement {
             const resultText = serialize(result);
             this._resultsById.set(statement.statementId, {
               statementId: statement.statementId,
-              resultText,
+              resultText: compactResultText(resultText),
               typeText: inferRuntimeType(result),
             });
           }
 
-          const inlineExpressions = extractInlineExpressions(statement.source, statement.statementId);
+          const inlineExpressions = extractInlineExpressions(statementSource, statement.statementId);
           for (const inline of inlineExpressions) {
             if (!inline.expr) continue;
             try {
@@ -1400,19 +1460,24 @@ class XEditor extends HTMLElement {
               if (inlineResult === undefined || inlineResult === null) continue;
               this._inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
-                resultText: serialize(inlineResult),
+                resultText: compactResultText(serialize(inlineResult), 120),
                 typeText: inferRuntimeType(inlineResult),
               });
             } catch (error) {
               this._inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
                 resultText: '!',
-                errorText: String(error?.message || error),
+                errorText: formatRuntimeError(error),
               });
             }
           }
-        } catch (_) {
-          // Scoped behavior: skip statement failures silently.
+        } catch (error) {
+          this._resultsById.set(statement.statementId, {
+            statementId: statement.statementId,
+            resultText: `! ${formatRuntimeError(error)}`,
+            errorText: formatRuntimeError(error),
+            typeText: 'error',
+          });
         }
 
         this._pendingResultIds.delete(statement.statementId);

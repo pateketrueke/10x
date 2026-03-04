@@ -59,6 +59,22 @@ function inferRuntimeType(value) {
   return 'unknown';
 }
 
+function compactResultText(value, max = 180) {
+  const text = String(value ?? '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  if (!text) return '';
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(1, max - 1)).trim()}…`;
+}
+
+function formatRuntimeError(error) {
+  const message = String(error?.message || error || 'Runtime error');
+  return compactResultText(message, 160);
+}
+
+function normalizeUnitLiterals(source) {
+  return String(source || '').replace(/\b(\d+(?:\.\d+)?)([A-Za-z]{1,5})\b/g, '$1 $2');
+}
+
 function isFunctionDefinitionSource(source) {
   const normalized = String(source || '').replace(/\s+/g, ' ').trim();
   return /^[^=]+=\s*.*->/.test(normalized);
@@ -115,8 +131,9 @@ self.addEventListener('message', async ({ data }) => {
       };
 
       try {
-        const result = await execute(statement.source, env);
-        if (isFunctionDefinitionSource(statement.source)) {
+        const statementSource = normalizeUnitLiterals(statement.source);
+        const result = await execute(statementSource, env);
+        if (isFunctionDefinitionSource(statementSource)) {
           partial.statementResult = {
             statementId: statement.statementId,
             resultText: 'ƒ',
@@ -126,13 +143,13 @@ self.addEventListener('message', async ({ data }) => {
         } else if (result !== undefined && result !== null) {
           partial.statementResult = {
             statementId: statement.statementId,
-            resultText: serialize(result),
+            resultText: compactResultText(serialize(result)),
             typeText: inferRuntimeType(result),
           };
         }
 
         const inlineResults = [];
-        const inlineExpressions = extractInlineExpressions(statement.source, statement.statementId);
+        const inlineExpressions = extractInlineExpressions(statementSource, statement.statementId);
         for (const inline of inlineExpressions) {
           if (!inline.expr) continue;
           try {
@@ -140,14 +157,14 @@ self.addEventListener('message', async ({ data }) => {
             if (inlineResult === undefined || inlineResult === null) continue;
             inlineResults.push({
               inlineId: inline.inlineId,
-              resultText: serialize(inlineResult),
+              resultText: compactResultText(serialize(inlineResult), 120),
               typeText: inferRuntimeType(inlineResult),
             });
           } catch (error) {
             inlineResults.push({
               inlineId: inline.inlineId,
               resultText: '!',
-              errorText: String(error?.message || error),
+              errorText: formatRuntimeError(error),
             });
           }
         }
@@ -155,8 +172,13 @@ self.addEventListener('message', async ({ data }) => {
         if (inlineResults.length) {
           partial.inlineResults = inlineResults;
         }
-      } catch (_) {
-        // keep old behavior: skip failed statements
+      } catch (error) {
+        partial.statementResult = {
+          statementId: statement.statementId,
+          resultText: `! ${formatRuntimeError(error)}`,
+          errorText: formatRuntimeError(error),
+          typeText: 'error',
+        };
       }
 
       self.postMessage(partial);

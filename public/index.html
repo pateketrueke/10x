@@ -380,7 +380,7 @@
 
     /* ── compiler split ─────────────────────────────────────────── */
     .compiler-split {
-      display: grid; grid-template-columns: 1fr 1fr; gap: .75rem;
+      display: grid; grid-template-columns: 1fr; gap: .95rem;
     }
     .compiler-split .side-label {
       font: 700 .7rem var(--mono); letter-spacing: .15em; text-transform: uppercase;
@@ -1082,14 +1082,14 @@ Runtime.on(<span class="xt-string">"click"</span>,
     /* ── snippets ──────────────────────────────────────────────────── */
     const SNIPPETS = {
       hero: `double = n -> n * 2.
-[1..5] |> map(double).
+double(5).
 
 fib = n ->
   @if (< n 2) 1, (< n 1) 0
   @else fib(n - 1) + fib(n - 2).
 fib!(10).
 
-5 cm to :in.`,
+2cm to :in.`,
 
       lang: `1/2.
 5 cm to :in.
@@ -1098,49 +1098,71 @@ fib!(10).
 :ok.`,
 
       sig: `count = @signal 0.
+@style "
+  .sig-root { padding: 1.5rem; font-family: system-ui, sans-serif; }
+  .sig-value { font-size: 3rem; font-weight: 700; color: #2dd4bf; line-height: 1; margin-bottom: .6rem; }
+  .sig-actions { display: flex; gap: .5rem; }
+  .sig-inc { padding: .5rem 1.1rem; background: #2dd4bf; border: 0; border-radius: 8px; cursor: pointer; font-size: .9rem; color: #090c12; font-weight: 600; }
+  .sig-reset { padding: .5rem 1rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; cursor: pointer; font-size: .9rem; color: #94a3b8; }
+".
 @render @shadow @html
-  <div style="padding:1.5rem;font-family:sans-serif">
-    <div style="font-size:3rem;font-weight:700;color:#2dd4bf;line-height:1;margin-bottom:.6rem">{count}</div>
-    <div style="display:flex;gap:.5rem">
-      <button id="inc" style="padding:.5rem 1.1rem;background:#2dd4bf;border:none;border-radius:8px;cursor:pointer;font-size:.9rem;color:#090c12;font-weight:600">increment</button>
-      <button id="reset" style="padding:.5rem 1rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;cursor:pointer;font-size:.9rem;color:#94a3b8">reset</button>
+  <div class="sig-root">
+    <div class="sig-value">{count}</div>
+    <div class="sig-actions">
+      <button id="inc" class="sig-inc">increment</button>
+      <button id="reset" class="sig-reset">reset</button>
     </div>
   </div>.
-@on "click" "#inc" count = count + 1.
-@on "click" "#reset" count = 0.`,
+@on click "#inc" count = count + 1.
+@on click "#reset" count = 0.`,
 
       xctr: `count = @signal @prop "start" 0.
+@style "
+  .ctr-root { padding: 1.5rem; font-family: system-ui, sans-serif; }
+  .ctr-value { font-size: 3.5rem; font-weight: 700; color: #818cf8; line-height: 1; margin-bottom: .75rem; }
+  .ctr-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .ctr-dec { padding: .5rem 1rem; background: rgba(129,140,248,.12); border: 1px solid rgba(129,140,248,.3); border-radius: 8px; cursor: pointer; color: #818cf8; font-size: 1.1rem; font-weight: 700; }
+  .ctr-inc { padding: .5rem 1rem; background: #818cf8; border: 0; border-radius: 8px; cursor: pointer; color: #090c12; font-size: 1.1rem; font-weight: 700; }
+  .ctr-reset { padding: .5rem 1rem; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; cursor: pointer; color: #475569; font-size: .85rem; }
+".
 @render @shadow @html
-  <div style="padding:1.5rem;font-family:sans-serif">
-    <div style="font-size:3.5rem;font-weight:700;color:#818cf8;line-height:1;margin-bottom:.75rem">{count}</div>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-      <button id="dec" style="padding:.5rem 1rem;background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.3);border-radius:8px;cursor:pointer;color:#818cf8;font-size:1.1rem;font-weight:700">−</button>
-      <button id="inc" style="padding:.5rem 1rem;background:#818cf8;border:none;border-radius:8px;cursor:pointer;color:#090c12;font-size:1.1rem;font-weight:700">+</button>
-      <button id="reset" style="padding:.5rem 1rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;color:#475569;font-size:.85rem">reset</button>
+  <div class="ctr-root">
+    <div class="ctr-value">{count}</div>
+    <div class="ctr-actions">
+      <button id="dec" class="ctr-dec">−</button>
+      <button id="inc" class="ctr-inc">+</button>
+      <button id="reset" class="ctr-reset">reset</button>
     </div>
   </div>.
-@on "click" "#inc" count = count + 1.
-@on "click" "#dec" count = count - 1.
-@on "click" "#reset" count = @prop "start" 0.`,
+@on click "#inc" count = count + 1.
+@on click "#dec" count = count - 1.
+@on click "#reset" count = @prop "start" 0.`,
 
       todo: `todos = @signal "Write parser regression tests".
 count = @signal 1.
+@style "
+  .todo-wrap { padding: 1.5rem; font-family: system-ui, sans-serif; }
+  .todo-title { margin: 0 0 .25rem; color: #e2e8f0; font-size: 1.05rem; font-weight: 700; }
+  .todo-meta { opacity: .45; font-size: .8rem; margin-bottom: .5rem; font-family: monospace; }
+  .todo-items { color: #94a3b8; font-size: .9rem; line-height: 1.6; margin-bottom: .75rem; }
+  .todo-add { padding: .4rem .85rem; background: #2dd4bf; border: 0; border-radius: 6px; cursor: pointer; font-size: .85rem; color: #090c12; font-weight: 600; }
+".
 @render @shadow @html
-  <section style="padding:1.5rem;font-family:sans-serif">
-    <h2 style="margin:0 0 .25rem;color:#e2e8f0;font-size:1.05rem;font-weight:700">TodoList</h2>
-    <div style="opacity:.45;font-size:.8rem;margin-bottom:.5rem;font-family:monospace">{count} items</div>
-    <div style="color:#94a3b8;font-size:.9rem;line-height:1.6;margin-bottom:.75rem">{todos}</div>
-    <button id="add" style="padding:.4rem .85rem;background:#2dd4bf;border:none;border-radius:6px;cursor:pointer;font-size:.85rem;color:#090c12;font-weight:600">+ add item</button>
+  <section class="todo-wrap">
+    <h2 class="todo-title">TodoList</h2>
+    <div class="todo-meta">{count} items</div>
+    <div class="todo-items">{todos}</div>
+    <button id="add" class="todo-add">+ add item</button>
   </section>.
-@on "click" "#add" todos = todos + ", task " + count.
-@on "click" "#add" count = count + 1.`,
+@on click "#add" todos = todos + ", task " + count.
+@on click "#add" count = count + 1.`,
 
       fns: `add    = (a b) -> a + b.
 double = n -> n * 2.
 square = n -> n * n.
 
-[1..5] |> map(double).
-[1..5] |> map(square).
+double(5).
+square(5).
 add(3, 4).
 
 fib = n ->
