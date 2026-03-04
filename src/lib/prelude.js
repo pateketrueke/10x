@@ -9,9 +9,55 @@ import {
 
 import Expr from './tree/expr';
 import { renderTag } from './tag';
+import Range from './range';
 
 const RE_PLACEHOLDER = /(?<!\{)\{([^{}]*)\}/g;
 const RE_FORMATTING = /^([^:]*?)(?::(.*?[<^>](?=\d)|)(\d+|)([?bxo]|)(\.\d+|)([$^]|))?$/;
+
+function isRangeLike(input) {
+  return input instanceof Range || (input && typeof input.getIterator === 'function' && typeof input.run === 'function');
+}
+
+function asRange(input) {
+  if (isRangeLike(input)) return input;
+
+  if (input && input.value) {
+    return asRange(input.value);
+  }
+
+  if (
+    input
+    && Array.isArray(input.begin)
+    && Array.isArray(input.end)
+    && input.begin.length
+  ) {
+    const begin = input.begin[0];
+    const end = input.end.length ? input.end[0] : undefined;
+    return Range.from(begin, end);
+  }
+
+  return null;
+}
+
+function collectRange(range, limit = Infinity, offset = 0) {
+  const seq = [];
+  let index = 0;
+
+  if (range.infinite && limit === Infinity) {
+    raise('Infinite range requires explicit limit');
+  }
+
+  const iterator = range.getIterator();
+
+  for (let next = iterator.next(); next.done !== true; next = iterator.next(), index++) {
+    if (index < offset) continue;
+
+    seq.push(range.alpha ? String.fromCharCode(next.value) : next.value);
+    if (seq.length >= limit) break;
+  }
+
+  return seq;
+}
 
 export function equals(a, b, weak) {
   if (typeof a === 'undefined') raise('Missing left value');
@@ -125,8 +171,12 @@ export function list(input) {
 
   let data;
 
+  const range = asRange(input);
+
   if (Array.isArray(input)) {
     data = input;
+  } else if (range) {
+    data = collectRange(range);
   } else {
     if (!input.isIterable) raise('Input is not iterable');
 
@@ -137,18 +187,51 @@ export function list(input) {
 }
 
 export function head(input) {
+  const range = asRange(input);
+
+  if (range) {
+    return collectRange(range, 1)[0];
+  }
+
   return list(input)[0];
 }
 
 export function tail(input) {
+  const range = asRange(input);
+
+  if (range) {
+    return collectRange(range, Infinity, 1);
+  }
+
   return list(input).slice(1);
 }
 
 export function take(input, length) {
+  const range = asRange(input);
+
+  if (range) {
+    return collectRange(range, length || 1);
+  }
+
   return list(input).slice(0, length || 1);
 }
 
 export function drop(input, length, offset) {
+  const range = asRange(input);
+
+  if (range) {
+    const max = range.infinite
+      ? (offset
+        ? offset.valueOf() + (length ? length.valueOf() : 1)
+        : (length ? length.valueOf() : 1) + 1)
+      : Infinity;
+    const arr = collectRange(range, max);
+    const b = length ? length.valueOf() : 1;
+    const a = offset ? offset.valueOf() : arr.length - b;
+    arr.splice(a, b);
+    return arr;
+  }
+
   const arr = list(input);
   const b = length ? length.valueOf() : 1;
   const a = offset ? offset.valueOf() : arr.length - b;

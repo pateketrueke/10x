@@ -703,6 +703,20 @@ describe('Eval', () => {
         Expr.value(4),
         Expr.value(5),
       ]);
+
+      expect(await run(`
+        @import (head, take) @from "Prelude".
+        head(1..), take(1.., 5)
+      `)).to.eql([
+        Expr.value(1),
+        Expr.array([
+          Expr.value(1),
+          Expr.value(2),
+          Expr.value(3),
+          Expr.value(4),
+          Expr.value(5),
+        ]),
+      ]);
     });
 
     it('should allow consecutive values', async () => {
