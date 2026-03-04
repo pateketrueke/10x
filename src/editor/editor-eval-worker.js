@@ -1,4 +1,4 @@
-import { Env, execute, serialize, applyAdapter } from '../main.js';
+import { Env, execute, compact, applyAdapter } from '../main.js';
 import { createBrowserAdapter } from '../adapters/browser/index.js';
 
 applyAdapter(createBrowserAdapter());
@@ -164,7 +164,7 @@ self.addEventListener('message', async ({ data }) => {
         } else if (result !== undefined && result !== null) {
           partial.statementResult = {
             statementId: statement.statementId,
-            resultText: compactResultText(serialize(result)),
+            resultText: compact(result, 180),
             typeText: inferRuntimeType(result),
           };
         }
@@ -178,7 +178,7 @@ self.addEventListener('message', async ({ data }) => {
             if (inlineResult === undefined || inlineResult === null) continue;
             inlineResults.push({
               inlineId: inline.inlineId,
-              resultText: compactResultText(serialize(inlineResult), 120),
+              resultText: compact(inlineResult, 120),
               typeText: inferRuntimeType(inlineResult),
             });
           } catch (error) {

@@ -404,6 +404,117 @@ export function quote(s) {
   return `"${s.replace(/"/g, '\\"')}"`;
 }
 
+function compactText(text, maxLen = 120) {
+  const normalized = String(text ?? '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  if (!normalized) return '';
+  if (normalized.length <= maxLen) return normalized;
+  return `${normalized.slice(0, Math.max(1, maxLen - 1)).trim()}…`;
+}
+
+export function compact(token, maxLen = 120, depth = 0) {
+  if (typeof token === 'undefined') return '';
+  if (token === null) return ':nil';
+  if (token === true) return ':on';
+  if (token === false) return ':off';
+
+  if (depth > 4) return '…';
+
+  if (typeof token === 'number') return String(token);
+  if (typeof token === 'symbol') return token.toString().match(/\((.+?)\)/)?.[1] || 'symbol';
+  if (typeof token === 'string') return compactText(quote(token), maxLen);
+  if (typeof token === 'function') return `${token.name || 'fn'}(…)`;
+
+  if (token instanceof Date) return token.toISOString();
+  if (token instanceof RegExp) return `/${token.source}/${token.flags}`;
+
+  if (Array.isArray(token)) {
+    if (token.length === 1) return compact(token[0], maxLen, depth + 1);
+    if (!token.length) return '[ ]';
+    const preview = token.slice(0, 3).map(entry => compact(entry, 24, depth + 1)).join(' ');
+    const more = token.length > 3 ? ` … ${token.length} items` : '';
+    return compactText(`[ ${preview}${more} ]`, maxLen);
+  }
+
+  if (token && typeof token === 'object' && token.__tag && Object.prototype.hasOwnProperty.call(token, 'value')) {
+    return compact(token.value, maxLen, depth + 1);
+  }
+
+  if (isUnit(token)) {
+    const text = token && token.value && typeof token.value.toString === 'function'
+      ? token.value.toString()
+      : String(token);
+    return compactText(text, maxLen);
+  }
+
+  if (isNumber(token)) {
+    const value = typeof token.valueOf === 'function' ? token.valueOf() : token.value;
+    return String(value);
+  }
+
+  if (isSymbol(token)) return String(token.value ?? token.valueOf?.() ?? '');
+
+  if (isString(token)) {
+    if (typeof token.value === 'string') return compactText(quote(token.value), maxLen);
+    const raw = typeof token.valueOf === 'function' ? token.valueOf() : token.value;
+    return compactText(quote(typeof raw === 'string' ? raw : '…'), maxLen);
+  }
+
+  if (isLiteral(token)) {
+    if (token.isTag) {
+      const rendered = renderTag(token.value);
+      const match = rendered.match(/^<\s*([^\s/>]+)/);
+      return match ? `<${match[1]} …>` : '<…>';
+    }
+
+    if (token.isFunction || token.isCallable) {
+      const name = token.value?.label || token.value?.name || token.getName?.() || token.name || 'fn';
+      return `${name}(…)`;
+    }
+
+    if (token.isObject) {
+      const data = token.valueOf();
+      const keys = Object.keys(data || {});
+      if (!keys.length) return '{ }';
+      if (keys.length <= 6) return `{ ${keys.join(' ')} }`;
+      return `{ ${keys.slice(0, 6).join(' ')} … ${keys.length} keys }`;
+    }
+  }
+
+  if (isRange(token)) {
+    if (Array.isArray(token.value)) {
+      if (!token.value.length) return '[ ]';
+      const preview = token.value.slice(0, 3).map(entry => compact(entry, 24, depth + 1)).join(' ');
+      const more = token.value.length > 3 ? ` … ${token.value.length} items` : '';
+      return compactText(`[ ${preview}${more} ]`, maxLen);
+    }
+
+    const begin = compact(token.value?.begin, 24, depth + 1);
+    const end = compact(token.value?.end, 24, depth + 1);
+    return compactText(`${begin}..${end}`, maxLen);
+  }
+
+  if (token && typeof token === 'object') {
+    if (token.isTag && token.value) {
+      const rendered = renderTag(token.value);
+      const match = rendered.match(/^<\s*([^\s/>]+)/);
+      return match ? `<${match[1]} …>` : '<…>';
+    }
+
+    if (token.isFunction || token.isCallable) {
+      const name = token.value?.label || token.value?.name || token.name || 'fn';
+      return `${name}(…)`;
+    }
+
+    const keys = Object.keys(token);
+    if (keys.length) {
+      if (keys.length <= 6) return `{ ${keys.join(' ')} }`;
+      return `{ ${keys.slice(0, 6).join(' ')} … ${keys.length} keys }`;
+    }
+  }
+
+  return compactText(String(token), maxLen);
+}
+
 export function split(s) {
   return s.split(/(?=[\W\x00-\x7F])/); // eslint-disable-line
 }

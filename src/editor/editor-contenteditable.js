@@ -14,7 +14,7 @@
  *   el.addEventListener('error',  e => e.detail.error)
  */
 
-import { Parser, Env, execute, serialize, applyAdapter } from '../main.js';
+import { Parser, Env, execute, compact, applyAdapter } from '../main.js';
 import { createBrowserAdapter } from '../adapters/browser/index.js';
 
 applyAdapter(createBrowserAdapter());
@@ -915,6 +915,7 @@ const STYLES = `
   }
 
   [data-type-hint] {
+    white-space: nowrap;
     display: inline-block;
     padding: 0 4px;
     border-radius: 3px;
@@ -1536,10 +1537,9 @@ class XEditor extends HTMLElement {
             };
             this._resultsById.set(statement.statementId, functionBadge);
           } else if (result !== undefined && result !== null) {
-            const resultText = serialize(result);
             this._resultsById.set(statement.statementId, {
               statementId: statement.statementId,
-              resultText: compactResultText(resultText),
+              resultText: compact(result, 180),
               typeText: inferRuntimeType(result),
             });
           }
@@ -1552,7 +1552,7 @@ class XEditor extends HTMLElement {
               if (inlineResult === undefined || inlineResult === null) continue;
               this._inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
-                resultText: compactResultText(serialize(inlineResult), 120),
+                resultText: compact(inlineResult, 120),
                 typeText: inferRuntimeType(inlineResult),
               });
             } catch (error) {

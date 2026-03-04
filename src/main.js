@@ -38,6 +38,6 @@ export function createEnv(adapter, options) {
 }
 
 export {
-  Token, debug, serialize, deindent, hasDiff,
+  Token, debug, serialize, compact, deindent, hasDiff,
   copy, repr, raise, assert, check, argv, only,
 } from './lib/helpers';
