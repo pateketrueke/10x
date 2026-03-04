@@ -17,7 +17,7 @@ const OPERATOR = new Map([
   [GREATER_EQ, '>='],
   [NOT_EQ, '!='],
   [EXACT_EQ, '==='],
-  [OR, '|'],
+  [OR, '||'],
   [LIKE, '~'],
   [PIPE, '|>'],
 ]);
@@ -193,6 +193,50 @@ function splitArgGroups(args) {
   return groups;
 }
 
+function unwrapSingleBodyBlock(token) {
+  let current = token;
+
+  while (
+    current
+    && current.type === BLOCK
+    && current.hasBody
+    && !current.hasArgs
+    && current.getBody().length === 1
+  ) {
+    [current] = current.getBody();
+  }
+
+  return current;
+}
+
+function extractPostUpdatePartsFromArgs(args, ctx) {
+  if (!Array.isArray(args)) return null;
+  if (args.length !== 2) return null;
+
+  const [targetToken, updateToken] = args;
+  if (!(targetToken && targetToken.isLiteral && typeof targetToken.value === 'string')) return null;
+
+  const target = String(targetToken.value);
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(target)) return null;
+
+  if (!(updateToken && updateToken.isObject && updateToken.value && updateToken.value.let && updateToken.value.let.hasBody)) return null;
+
+  const [entryRaw] = updateToken.value.let.getBody();
+  const entry = unwrapSingleBodyBlock(entryRaw);
+  if (!(entry && entry.isCallable && entry.getName && entry.getName() === target && entry.hasBody)) return null;
+
+  const rhs = compileExpression(entry.getBody(), { ...ctx, autoPrintExpressions: false, exportDefinitions: false });
+  return { target, rhs };
+}
+
+function isQuestionToken(token) {
+  return !!token && (token.type === SOME || (token.isLiteral && token.value === '?'));
+}
+
+function isPipeChoiceToken(token) {
+  return !!token && (token.type === OR || (token.isLiteral && token.value === '|'));
+}
+
 function collectImportSpecs(statements, runtimePath) {
   const imports = [];
   const globals = [];
@@ -327,7 +371,36 @@ function compileTag(node) {
 function compileArgs(args, ctx) {
   if (!Array.isArray(args) || !args.length) return '';
   const groups = splitArgGroups(args);
+
+  const hasObjectPair = groups.some(group => group.length === 2 && (group[0].type === SYMBOL || group[0].isString));
+  const isObjectArg = hasObjectPair
+    && groups.every(group =>
+      (group.length === 2 && (group[0].type === SYMBOL || group[0].isString))
+      || (group.length === 1 && (group[0].isObject || (group[0].isLiteral && typeof group[0].value === 'object')))
+    );
+
+  if (isObjectArg) {
+    return `{ ${groups.map(group => {
+      if (group.length === 1) return `...${compileToken(group[0], ctx)}`;
+      const keyRaw = String(group[0].value || '').replace(/^:/, '');
+      return `${JSON.stringify(keyRaw)}: ${compileToken(group[1], ctx)}`;
+    }).join(', ')} }`;
+  }
+
   return groups.map(group => {
+    const post = extractPostUpdatePartsFromArgs(group, ctx);
+    if (post) {
+      return `(() => { const __prev = ${post.target}; ${post.target} = ${post.rhs}; return __prev; })()`;
+    }
+
+    if (group.some(token => token.type === EOL)) {
+      const nested = splitByEol(group);
+      const localCtx = { ...ctx, autoPrintExpressions: false, exportDefinitions: false };
+      const head = nested.slice(0, -1).map(stmt => compileStatement(stmt, localCtx, -1));
+      const tail = compileStatement(nested[nested.length - 1], localCtx, -1).replace(/;\s*$/, '');
+      return `(() => { ${head.join(' ')} return ${tail}; })()`;
+    }
+
     const hasOperator = group.some(token => OPERATOR.get(token.type));
     const hasCall = group.some(token => token.type === BLOCK && token.hasArgs);
     if (!hasOperator && !hasCall && group.length > 1) {
@@ -395,7 +468,17 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
   }
 
   if (token.type === BLOCK && token.hasBody && !token.isCallable) {
-    return `(${compileExpression(token.getBody(), ctx)})`;
+    const body = token.getBody();
+    const keyValuePair = body.length === 2
+      && (body[0].type === SYMBOL || body[0].isString)
+      && (body[1].type === SYMBOL || body[1].isString || body[1].isLiteral);
+
+    if (keyValuePair) {
+      const keyRaw = String(body[0].value || '').replace(/^:/, '');
+      return `{ ${JSON.stringify(keyRaw)}: ${compileToken(body[1], ctx)} }`;
+    }
+
+    return `(${compileExpression(body, ctx)})`;
   }
 
   if (token.type === SYMBOL) {
@@ -431,6 +514,8 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
     if (token.value === true) return 'true';
     if (token.value === false) return 'false';
     if (typeof token.value === 'string') {
+      if (token.value === '|') return '||';
+      if (token.value === '?') return '?';
       if (ctx.signalVars.has(token.value)) return `Runtime.read(${token.value})`;
       return token.value;
     }
@@ -462,6 +547,15 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
     return '!';
   }
 
+  if (token.type === LIKE && Array.isArray(token.value) && token.value.length >= 2) {
+    const parts = token.value.map(toTokenLike).filter(Boolean);
+    const leftTokens = parts.length > 2 ? parts.slice(0, -1) : [parts[0]];
+    const rightToken = parts.length > 2 ? parts[parts.length - 1] : parts[1];
+    const left = leftTokens.length > 1 ? compileExpression(leftTokens, ctx) : compileToken(leftTokens[0], ctx);
+    const right = compileToken(rightToken, ctx);
+    return `(String(${left}).includes(String(${right})))`;
+  }
+
   const op = OPERATOR.get(token.type);
   if (op) {
     if (Array.isArray(token.value)) {
@@ -474,6 +568,17 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
 }
 
 function compileExpression(tokens, ctx = { signalVars: new Set() }) {
+  const qIndex = tokens.findIndex(isQuestionToken);
+  if (qIndex > 0) {
+    const elseIndex = tokens.findIndex((token, index) => index > qIndex && isPipeChoiceToken(token));
+    if (elseIndex > qIndex) {
+      const cond = tokens.slice(0, qIndex);
+      const thenBranch = tokens.slice(qIndex + 1, elseIndex);
+      const elseBranch = tokens.slice(elseIndex + 1);
+      return `((${compileExpression(cond, ctx)}) ? (${compileExpression(thenBranch, ctx)}) : (${compileExpression(elseBranch, ctx)}))`;
+    }
+  }
+
   const out = [];
 
   for (let i = 0; i < tokens.length; i++) {
@@ -514,6 +619,13 @@ function compileExpression(tokens, ctx = { signalVars: new Set() }) {
         continue;
       }
       out[out.length - 1] = `${out[out.length - 1]}(${compileArgs(token.getArgs(), ctx)})`;
+      continue;
+    }
+
+    if (token.type === SYMBOL && token.value === ':' && next && next.type === BLOCK && next.hasArgs && out.length) {
+      const key = compileArgs(next.getArgs(), ctx);
+      out[out.length - 1] = `${out[out.length - 1]}[${key}]`;
+      i += 1;
       continue;
     }
 
@@ -935,19 +1047,6 @@ function collectSignalBindings(statements) {
 
 export function compile(source, options = {}) {
   const normalized = String(source || '').replace(/\r\n/g, '\n');
-
-  if (options.module !== false && options.templateFallback !== false && normalized.includes('@template')) {
-    const literal = JSON.stringify(normalized);
-    return [
-      '// Generated by 10x compiler (template fallback)',
-      'import { spawnSync } from "node:child_process";',
-      `const source = ${literal};`,
-      'const run = spawnSync("node", ["bin/cli"], { input: source, stdio: ["pipe", "inherit", "inherit"] });',
-      'if (run.error) throw run.error;',
-      'if (typeof run.status === "number") process.exit(run.status);',
-    ].join('\n');
-  }
-
   const ast = Parser.getAST(normalized, 'parse');
   const statements = splitStatements(ast);
   const hasShadow = collectShadowFlag(statements);
