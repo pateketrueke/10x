@@ -3,6 +3,68 @@ import { effect } from './core.js';
 
 export { h };
 
+function hashStr(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (Math.imul(31, hash) + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function dashCase(input) {
+  return String(input || '').replace(/[A-Z]/g, char => `-${char.toLowerCase()}`);
+}
+
+function objectToCss(value, selector = ':host') {
+  if (!value || typeof value !== 'object') return '';
+
+  const declarations = [];
+  const nested = [];
+
+  Object.entries(value).forEach(([key, entry]) => {
+    if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+      const nestedSelector = selector === ':host' ? key : `${selector} ${key}`;
+      const nestedCss = objectToCss(entry, nestedSelector);
+      if (nestedCss) nested.push(nestedCss);
+      return;
+    }
+    declarations.push(`  ${dashCase(key)}: ${entry};`);
+  });
+
+  const block = declarations.length
+    ? `${selector} {\n${declarations.join('\n')}\n}`
+    : '';
+
+  return [block].concat(nested).filter(Boolean).join('\n');
+}
+
+export function style(hostOrCss, css) {
+  if (typeof document === 'undefined') return;
+
+  const hasHost = css !== undefined;
+  const host = hasHost ? hostOrCss : null;
+  const raw = hasHost ? css : hostOrCss;
+  const cssText = typeof raw === 'string' ? raw : objectToCss(raw);
+
+  if (!cssText || !cssText.trim()) return;
+
+  if (hasHost) {
+    const shadow = host.shadowRoot || host.attachShadow({ mode: 'open' });
+    const element = document.createElement('style');
+    element.textContent = cssText;
+    shadow.insertBefore(element, shadow.firstChild);
+    return;
+  }
+
+  const id = `tenx-${hashStr(cssText)}`;
+  if (document.getElementById(id)) return;
+
+  const element = document.createElement('style');
+  element.id = id;
+  element.textContent = cssText;
+  document.head.appendChild(element);
+}
+
 export function render(selectorOrElement, view) {
   if (typeof document === 'undefined') {
     return () => {};

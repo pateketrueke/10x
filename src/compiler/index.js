@@ -1,4 +1,5 @@
 import Parser from '../lib/tree/parser';
+import { generateAtomicCss } from './atoms.js';
 import {
   BLOCK, COMMA, DIV, DOT, EOL, EQUAL, GREATER, GREATER_EQ, LESS, LESS_EQ, LIKE, MINUS, MOD, MUL, NOT_EQ, EXACT_EQ, OR, PIPE, PLUS,
   TEXT, COMMENT, COMMENT_MULTI, EOF, RANGE, SOME, EVERY, SYMBOL, NOT,
@@ -313,7 +314,7 @@ function collectNeedsDom(statements) {
     if (tokens.length !== 1) return false;
     const [token] = tokens;
     if (!token.isObject || !token.value) return false;
-    return !!(token.value.render || token.value.on || token.value.shadow);
+    return !!(token.value.render || token.value.on || token.value.shadow || token.value.style);
   });
 }
 
@@ -420,7 +421,7 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
   if (token && token.isObject) {
     const value = token.value || {};
     const keys = Object.keys(value);
-    const isDirective = keys.some(k => ['render', 'on', 'html', 'signal', 'prop', 'if', 'else', 'do', 'let', 'match', 'while', 'loop', 'try', 'rescue', 'export', 'import', 'from'].includes(k));
+    const isDirective = keys.some(k => ['render', 'on', 'html', 'signal', 'prop', 'if', 'else', 'do', 'let', 'match', 'while', 'loop', 'try', 'rescue', 'export', 'import', 'from', 'style'].includes(k));
 
     if (isDirective) return compileDirectiveObject(token, ctx);
 
@@ -819,6 +820,12 @@ function compileHtmlDirective(body) {
   return `Runtime.html(() => ${compileToken(template)})`;
 }
 
+function compileStyleDirective(body, ctx) {
+  const [arg] = body;
+  const hostArg = ctx.shadow ? 'host, ' : '';
+  return `Runtime.style(${hostArg}${compileToken(arg, ctx)})`;
+}
+
 function compileRenderDirective(body, value, ctx) {
   const htmlExpr = value.html instanceof Object ? compileHtmlDirective(value.html.getBody()) : 'undefined';
   if (value.shadow) {
@@ -943,6 +950,10 @@ function compileDirectiveObject(token, ctx) {
     return compileSignalDirective(value.signal.getBody(), ctx);
   }
 
+  if (value.style) {
+    return compileStyleDirective(value.style.getBody(), ctx);
+  }
+
   throw new Error(`Unsupported directive object: ${Object.keys(value).join(', ')}`);
 }
 
@@ -1045,6 +1056,53 @@ function collectSignalBindings(statements) {
   return signalVars;
 }
 
+function collectAtomicClasses(statements) {
+  const classes = new Set();
+
+  function pushClassAttr(value) {
+    if (typeof value !== 'string') return;
+    value.split(/\s+/).filter(Boolean).forEach(name => classes.add(name));
+  }
+
+  function walkTagNode(node) {
+    if (!node || typeof node !== 'object') return;
+    pushClassAttr(node.attrs && node.attrs.class);
+    (node.children || []).forEach(child => {
+      if (child && typeof child === 'object' && !Array.isArray(child) && child.name) {
+        walkTagNode(child);
+      }
+    });
+  }
+
+  function walkToken(token) {
+    if (!token || typeof token !== 'object') return;
+
+    if (token.isTag && token.value) {
+      walkTagNode(token.value);
+    }
+
+    if (token.hasArgs) token.getArgs().forEach(walkToken);
+    if (token.hasBody) token.getBody().forEach(walkToken);
+
+    if (token.isObject && token.value) {
+      Object.values(token.value).forEach(value => {
+        if (value && value.getBody) value.getBody().forEach(walkToken);
+      });
+    }
+
+    if (token.type === RANGE && Array.isArray(token.value)) {
+      token.value.forEach(walkToken);
+    }
+
+    if (token.isString && Array.isArray(token.value)) {
+      token.value.forEach(walkToken);
+    }
+  }
+
+  statements.forEach(tokens => tokens.forEach(walkToken));
+  return classes;
+}
+
 function collectImportSources(statements) {
   const sources = [];
 
@@ -1112,6 +1170,12 @@ export function compile(source, options = {}) {
     if (compiled) prev.push(compiled);
     return prev;
   }, []);
+
+  const atomicCss = generateAtomicCss(collectAtomicClasses(statements));
+  if (atomicCss) {
+    const hostArg = hasShadow ? 'host, ' : '';
+    lines.unshift(`Runtime.style(${hostArg}${JSON.stringify(atomicCss)});`);
+  }
 
   const requiresRuntime = lines.some(line => line.includes('Runtime.'));
   const usesRange = lines.some(line => line.includes('range('));

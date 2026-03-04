@@ -216,4 +216,29 @@ describe('Compiler', () => {
     expect(output).to.not.contain('import { fib }');
   });
 
+  it('should compile @style directives for global and shadow contexts', () => {
+    const globalOut = compile('@style "body { color: red; }".');
+    expect(globalOut).to.contain('Runtime.style("body { color: red; }");');
+
+    const shadowOut = compile([
+      '@render @shadow @html <div class="box">hello</div>.',
+      '@style "div { color: red; }".',
+    ].join('\n'));
+    expect(shadowOut).to.contain('Runtime.style(host, "div { color: red; }");');
+  });
+
+  it('should inject atomic css rules from class attributes', () => {
+    const output = compile([
+      '@render "#app" @html <div class="flex items-center gap-4 p-2 text-blue-500">x</div>.',
+    ].join('\n'));
+
+    expect(output).to.contain('Runtime.style(');
+    expect(output).to.contain('.flex{display:flex}');
+    expect(output).to.contain('.items-center{align-items:center}');
+    expect(output).to.contain('.gap-4{gap:16px}');
+    expect(output).to.contain('.p-2{padding:8px}');
+    expect(output).to.contain('.text-blue-500{color:#3b82f6}');
+    expect(output.indexOf('Runtime.style(')).to.be.lessThan(output.indexOf('Runtime.render('));
+  });
+
 });
