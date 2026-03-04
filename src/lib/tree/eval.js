@@ -75,6 +75,20 @@ export default class Eval {
     return changed ? normalized : args;
   }
 
+  static tableCellToken(value, tokenInfo) {
+    const input = typeof value === 'string' ? value.trim() : value;
+
+    if (input === '' || input === null || typeof input === 'undefined') {
+      return Expr.value(null, tokenInfo);
+    }
+
+    if (typeof input === 'string' && /^-?\d+(?:\.\d+)?$/.test(input)) {
+      return Expr.value(parseFloat(input), tokenInfo);
+    }
+
+    return Expr.value(input, tokenInfo);
+  }
+
   static splitMatchCases(tokens) {
     const output = [];
     let current = [];
@@ -158,6 +172,9 @@ export default class Eval {
     this.derive = !!(noInheritance && environment);
     this.expr = tokens;
     this.env = !this.derive ? new Env(environment) : environment;
+    this.rootEnv = this.env;
+    this.namespaceStack = [];
+    this.namespaceRoots = {};
 
     this.descriptor = 'Root';
     this.result = [];
@@ -165,6 +182,53 @@ export default class Eval {
 
     this.key = null;
     this.ctx = null;
+  }
+
+  enterNamespace(name, level, tokenInfo) {
+    while (this.namespaceStack.length >= level) this.namespaceStack.pop();
+
+    const parent = this.namespaceStack[this.namespaceStack.length - 1] || null;
+    let node;
+
+    if (parent) {
+      node = parent.children[name];
+    } else {
+      node = this.namespaceRoots[name];
+    }
+
+    if (!node) {
+      const parentScope = parent ? parent.scope : this.rootEnv;
+      const exports = {};
+      const scope = new Env(parentScope);
+
+      node = {
+        name,
+        level,
+        scope,
+        exports,
+        children: {},
+      };
+
+      if (parent) {
+        parent.children[name] = node;
+        parent.exports[name] = Expr.map(exports, tokenInfo);
+        parent.scope.def(name, Expr.map(exports, tokenInfo));
+      } else {
+        this.namespaceRoots[name] = node;
+        this.rootEnv.def(name, Expr.map(exports, tokenInfo));
+      }
+    }
+
+    this.namespaceStack.push(node);
+    this.env = node.scope;
+  }
+
+  registerNamespaceExport(name) {
+    if (!this.namespaceStack.length) return;
+    if (!this.env.locals[name]) return;
+
+    const current = this.namespaceStack[this.namespaceStack.length - 1];
+    current.exports[name] = this.env.locals[name];
   }
 
   replace(v, ctx) {
@@ -338,6 +402,25 @@ export default class Eval {
 
       // handle method-calls, e.g. `foo.bar()`
       const newToken = this.newerToken();
+      const entry = map[key];
+
+      if (isPlain(entry) && Array.isArray(entry.body) && isBlock(newToken) && newToken.hasArgs) {
+        const callable = entry.body[0] && entry.body[0].isCallable
+          ? entry.body[0]
+          : Expr.callable({
+            type: BLOCK,
+            value: {
+              args: entry.args || [],
+              body: entry.body,
+              name: key,
+            },
+          }, this.ctx.tokenInfo);
+
+        this.discard()
+          .append(...await Eval.do([callable, newToken], this.env, 'Fn', false, this.ctx.tokenInfo))
+          .move(2);
+        return true;
+      }
 
       if (typeof map[key] === 'function' && isBlock(newToken) && newToken.hasArgs) {
         const fixedArgs = await Eval.do(newToken.getArgs(), this.env, 'Args', false, this.ctx.tokenInfo);
@@ -355,7 +438,9 @@ export default class Eval {
 
       // extract or convert from resolved value, otherwise update props, e.g. `foo.bar = 42`
       if (!isBlock(next)) {
-        if (map[key] instanceof Expr) {
+        if (isPlain(entry) && Array.isArray(entry.body)) {
+          this.discard().append(...await Eval.do(entry.body, this.env, `:${key}`, false, this.ctx.tokenInfo)).move();
+        } else if (map[key] instanceof Expr) {
           this.discard().append(...await Eval.do(map[key].getBody(), this.env, `:${key}`, false, this.ctx.tokenInfo)).move();
         } else {
           this.replace(Expr.value(map[key])).move();
@@ -809,6 +894,7 @@ export default class Eval {
         }
 
         this.env.defn(name, { args, body: call }, this.ctx.tokenInfo);
+        this.registerNamespaceExport(name);
       } else {
         this.append(this.ctx);
       }
@@ -1002,10 +1088,13 @@ export default class Eval {
       let fixedToken = next;
 
       if (isLiteral(next) && this.env.has(next.value)) {
-        fixedToken = this.env.get(next.value).ctx;
+        const resolved = this.env.get(next.value);
+        if (resolved && resolved.ctx) {
+          fixedToken = resolved.ctx;
+        }
       }
 
-      if (fixedToken.type === SYMBOL) {
+      if (fixedToken && fixedToken.type === SYMBOL) {
         const num = prev.valueOf();
         const kind = fixedToken.value;
         const retval = Env.register(num, kind.substr(1));
@@ -1100,7 +1189,7 @@ export default class Eval {
 
         if (prev && !(isEnd(prev) || isResult(prev))) check(prev);
 
-        this.append(...await Eval.map(this.ctx, descriptor, this.env, this.ctx.tokenInfo));
+        this.append(...await Eval.map(this.ctx, descriptor, this.env, this.ctx.tokenInfo, this));
         return;
       }
 
@@ -1316,7 +1405,7 @@ export default class Eval {
     });
   }
 
-  static async map(token, descriptor, environment, parentTokenInfo) {
+  static async map(token, descriptor, environment, parentTokenInfo, state) {
     const { value } = token;
     const subTree = [];
 
@@ -1395,6 +1484,41 @@ export default class Eval {
         }
       }
 
+      isDone = true;
+    }
+
+    if (value.namespace instanceof Expr.NamespaceStatement) {
+      const [nameToken, levelToken] = value.namespace.getBody();
+      const name = (nameToken && nameToken.valueOf && nameToken.valueOf()) || '';
+      const level = (levelToken && levelToken.valueOf && levelToken.valueOf()) || 1;
+
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+        raise(`Invalid namespace \`${name}\``, parentTokenInfo);
+      }
+
+      if (state && typeof state.enterNamespace === 'function') {
+        state.enterNamespace(name, Math.max(1, parseInt(level, 10) || 1), parentTokenInfo);
+      }
+      isDone = true;
+    }
+
+    if (value.table instanceof Expr.TableStatement) {
+      const [metaToken] = value.table.getBody();
+      const meta = (metaToken && metaToken.valueOf && metaToken.valueOf()) || {};
+      const headers = Array.isArray(meta.headers) ? meta.headers : [];
+      const rows = Array.isArray(meta.rows) ? meta.rows : [];
+
+      const items = rows.map(row => {
+        const entry = {};
+
+        headers.forEach((header, i) => {
+          entry[header] = Expr.body([Eval.tableCellToken(row[i], parentTokenInfo)], parentTokenInfo);
+        });
+
+        return Expr.map(entry, parentTokenInfo);
+      });
+
+      subTree.push(Expr.array(items, parentTokenInfo));
       isDone = true;
     }
 

@@ -1,5 +1,5 @@
 import {
-  EOF, EOL, TEXT, HEADING, BLOCKQUOTE, OL_ITEM, UL_ITEM, REF,
+  EOF, EOL, TEXT, HEADING, BLOCKQUOTE, OL_ITEM, UL_ITEM, REF, TABLE,
   OPEN, CLOSE, COMMA, BEGIN, DONE, CODE,
   MINUS, PLUS, MUL, DIV, MOD,
   OR, DOT, PIPE, BLOCK, RANGE, SOME, EVERY,
@@ -231,6 +231,8 @@ export default class Scanner {
       // extract markdown block-tags, e.g. `#...` OR `>...`, etc.
       if (char === '#' && this.parseBlock(char)) return;
       if (char === '>' && this.peek() === ' ' && this.parseBlock(char)) return;
+      if (char === '[' && this.parseLinkLine()) return;
+      if (char === '|' && this.parseTableLine()) return;
 
       // prevent text-phrases to be parsed as tokens, e.g. `a b` OR `A, b`, etc.
       // skip prose detection on the line immediately following an EOL (code context)
@@ -525,6 +527,53 @@ export default class Scanner {
     this.appendText();
     this.parseLine();
     this.appendText(char);
+    return true;
+  }
+
+  parseLinkLine() {
+    const start = this.start;
+    const lineCol = this.col - 1;
+    let end = this.offset;
+
+    while (end < this.chars.length && this.chars[end] !== '\n') end++;
+
+    const line = this.source.substring(start, end);
+    const matches = line.match(/^\[([^\]]+)\]\(([^)]+)\)\s*$/);
+
+    if (!matches) return false;
+
+    this.offset = end;
+    this.col = lineCol + line.length;
+    this.appendText();
+    this.tokens.push(new Token(REF, {
+      image: false,
+      text: line,
+      href: matches[2],
+      cap: null,
+      alt: matches[1],
+    }, null, { line: this.line, col: lineCol, kind: 'raw' }));
+    return true;
+  }
+
+  parseTableLine() {
+    const start = this.start;
+    const lineCol = this.col - 1;
+    let end = this.offset;
+
+    while (end < this.chars.length && this.chars[end] !== '\n') end++;
+
+    const line = this.source.substring(start, end);
+
+    // Require a pipe-delimited row with starting/ending pipe.
+    if (!/^\|.+\|\s*$/.test(line)) return false;
+
+    this.offset = end;
+    this.col = lineCol + line.length;
+    this.appendText();
+    this.tokens.push(new Token(TEXT, {
+      kind: TABLE,
+      buffer: [line],
+    }, null, { line: this.line, col: lineCol }));
     return true;
   }
 

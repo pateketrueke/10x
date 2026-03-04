@@ -11,6 +11,7 @@ export const OL_ITEM = Symbol('OL_ITEM');
 export const UL_ITEM = Symbol('UL_ITEM');
 export const HEADING = Symbol('HEADING');
 export const BLOCKQUOTE = Symbol('BLOCKQUOTE');
+export const TABLE = Symbol('TABLE');
 
 export const OPEN = Symbol('OPEN');
 export const CLOSE = Symbol('CLOSE');
@@ -63,6 +64,7 @@ export const DERIVE_METHODS = [
 ];
 
 export const CONTROL_TYPES = [
+  '@namespace', '@table',
   '@if', '@else',
   '@ok', '@err',
   '@try', '@check', '@rescue',

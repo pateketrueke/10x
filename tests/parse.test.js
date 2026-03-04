@@ -148,6 +148,36 @@ describe('Parser', () => {
     ]);
   });
 
+  it('should parse heading namespaces', () => {
+    expect(Parser.getAST('# Math::')).to.eql([
+      Expr.map({
+        namespace: Expr.stmt('@namespace', [Expr.value('Math'), Expr.value(1)]),
+      }),
+    ]);
+
+    expect(Parser.getAST('# Math')).to.eql([Expr.value('# Math')]);
+  });
+
+  it('should parse markdown tables as table statements', () => {
+    expect(Parser.getAST('| name | age |\n|---|---|\n| Alice | 30 |')).to.eql([
+      Expr.map({
+        table: Expr.stmt('@table', [Expr.value({
+          headers: ['name', 'age'],
+          rows: [['Alice', '30']],
+        })]),
+      }),
+    ]);
+  });
+
+  it('should parse standalone markdown links as imports', () => {
+    expect(Parser.getAST('[utils](./utils.md)')).to.eql([
+      Expr.map({
+        import: Expr.stmt('@import', [Expr.local('utils')]),
+        from: Expr.stmt('@from', [Expr.value('./utils.md')]),
+      }),
+    ]);
+  });
+
   it('should sum consecutive numbers', () => {
     expect(Parser.getAST('.\n1 2 3')).to.eql([
       Expr.from(EOL),

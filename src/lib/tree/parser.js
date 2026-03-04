@@ -4,7 +4,7 @@ import { parseTag } from '../tag';
 
 import {
   CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME, DOT,
-  HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM,
+  HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM, TABLE,
 } from './symbols';
 
 import {
@@ -307,7 +307,8 @@ export default class Parser {
   }
 
   blank() {
-    return isText(this.peek()) && !hasBreaks(this.peek());
+    const token = this.peek();
+    return isText(token) && !(token.value && token.value.kind) && !hasBreaks(token);
   }
 
   skip(raw) {
@@ -550,6 +551,14 @@ export default class Parser {
         }
       }
 
+      if (isRef(token) && token.isRaw && token.value && token.value.alt && token.value.href) {
+        push(Expr.map({
+          import: Expr.stmt('@import', [Expr.local(token.value.alt.trim(), tokenInfo)], tokenInfo),
+          from: Expr.stmt('@from', [Expr.value(token.value.href.trim(), tokenInfo)], tokenInfo),
+        }, tokenInfo));
+        continue;
+      }
+
       // validate functions after literals
       if (!isLiteral(token) && isBlock(curToken) && !(isOpen(token) || isComma(token))) {
         raise(`Expecting literal but found \`${token.value}\``, tokenInfo);
@@ -613,6 +622,44 @@ export default class Parser {
           root = stack.pop();
           offsets.pop();
         }
+      } else if (isText(token) && token.value.kind === TABLE) {
+        const rows = [token];
+
+        while (!this.isDone()) {
+          const nextRow = this.peek();
+
+          if (isText(nextRow) && nextRow.value.kind === TABLE) {
+            rows.push(this.next(true));
+            continue;
+          }
+
+          if (this.isBlankTextToken(nextRow)) {
+            this.next(true);
+            continue;
+          }
+
+          break;
+        }
+
+        const table = this.tableFromTokens(rows, tokenInfo);
+
+        if (table) {
+          push(table);
+        } else {
+          rows.forEach(row => {
+            if (this.isTextConvertible(row)) {
+              push(this.convertTextToString(row, tokenInfo));
+            }
+          });
+        }
+      } else if (isText(token) && token.value.kind === HEADING) {
+        const namespace = this.namespaceFromHeading(token, tokenInfo);
+
+        if (namespace) {
+          push(namespace);
+        } else if (this.isTextConvertible(token)) {
+          push(this.convertTextToString(token, tokenInfo));
+        }
       } else if (isText(token) && this.isTextConvertible(token)) {
         push(this.convertTextToString(token, tokenInfo));
       } else if (!(isText(token) || isCode(token) || isRef(token))) {
@@ -662,6 +709,11 @@ export default class Parser {
     });
   }
 
+  isBlankTextToken(token) {
+    if (!isText(token) || !token.value || !Array.isArray(token.value.buffer)) return false;
+    return token.value.buffer.every(chunk => typeof chunk === 'string' && !chunk.trim().length);
+  }
+
   textChunkToSource(chunk) {
     if (typeof chunk === 'string') return chunk;
     if (Array.isArray(chunk)) return `${chunk[1]}${chunk[2]}${chunk[1]}`;
@@ -688,6 +740,58 @@ export default class Parser {
     if (value.kind === OL_ITEM) return `${value.style || value.level || 1}. `;
     if (value.kind === UL_ITEM) return `${value.style || '-'} `;
     return '';
+  }
+
+  textTokenToSource(token) {
+    if (!token || !token.value || !Array.isArray(token.value.buffer)) return '';
+    return token.value.buffer.map(chunk => this.textChunkToSource(chunk)).join('');
+  }
+
+  namespaceFromHeading(token, tokenInfo) {
+    if (!isText(token) || token.value.kind !== HEADING) return null;
+
+    const source = this.textTokenToSource(token).trim();
+    const matches = source.match(/^([A-Za-z_][A-Za-z0-9_]*)::$/);
+
+    if (!matches) return null;
+
+    return Expr.map({
+      namespace: Expr.stmt('@namespace', [
+        Expr.value(matches[1], tokenInfo),
+        Expr.value(token.value.level || 1, tokenInfo),
+      ], tokenInfo),
+    }, tokenInfo);
+  }
+
+  tableFromTokens(rows, tokenInfo) {
+    if (!rows || rows.length < 2) return null;
+
+    const parseRow = token => {
+      const source = this.textTokenToSource(token).trim();
+
+      if (!source.startsWith('|') || !source.endsWith('|')) return null;
+
+      return source
+        .slice(1, -1)
+        .split('|')
+        .map(cell => cell.trim());
+    };
+
+    const header = parseRow(rows[0]);
+    const separator = parseRow(rows[1]);
+
+    if (!header || !separator || header.length !== separator.length) return null;
+    if (!separator.every(cell => /^:?-{3,}:?$/.test(cell))) return null;
+
+    const dataRows = rows.slice(2).map(parseRow);
+
+    if (dataRows.some(row => !row || row.length !== header.length)) return null;
+
+    return Expr.map({
+      table: Expr.stmt('@table', [
+        Expr.value({ headers: header, rows: dataRows }, tokenInfo),
+      ], tokenInfo),
+    }, tokenInfo);
   }
 
   split() {

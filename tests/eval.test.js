@@ -373,6 +373,42 @@ describe('Eval', () => {
     });
   });
 
+  describe('Markdown Native', () => {
+    it('should evaluate heading namespaces with dot access', async () => {
+      expect(await run('# Math::\npi=3.\narea=r->pi*r*r.\nMath.area(2)')).to.eql([Expr.value(12)]);
+    });
+
+    it('should evaluate markdown tables as list-of-records', async () => {
+      expect(await run(`
+        @import head @from "Prelude".
+        people = (
+| name | age |
+|------|-----|
+| Alice | 30 |
+| Bob | 25 |
+        ).
+        head(people).age
+      `)).to.eql([Expr.value(30)]);
+    });
+
+    it('should evaluate standalone markdown links as imports', async () => {
+      const resolve = Env.resolve;
+
+      try {
+        Env.resolve = source => {
+          if (source === './utils.md') {
+            return { utils: { format: input => `ok:${input}` } };
+          }
+          return null;
+        };
+
+        expect(await run('[utils](./utils.md)\nutils.format("x")')).to.eql([Expr.value('ok:x')]);
+      } finally {
+        Env.resolve = resolve;
+      }
+    });
+  });
+
   describe('Functions', () => {
     it('should evaluate lambda expressions', async () => {
       expect(await run('x=->42.\nx()')).to.eql([Expr.value(42)]);

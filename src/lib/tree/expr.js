@@ -368,6 +368,9 @@ export default class Expr {
 
     const params = { type: BLOCK, value: { body } };
 
+    if (type === '@namespace') return Expr.namespaceStatement(params, tokenInfo);
+    if (type === '@table') return Expr.tableStatement(params, tokenInfo);
+
     if (type === '@if') return Expr.ifStatement(params, tokenInfo);
     if (type === '@else') return Expr.elseStatement(params, tokenInfo);
     if (type === '@ok') return Expr.okStatement(params, tokenInfo);
@@ -780,6 +783,9 @@ Expr.define('function', class Function_ extends Expr {});
 Expr.define('callable', class Callable extends Expr {});
 Expr.define('statement', class Statement extends Expr {});
 Expr.define('expression', class Expression extends Expr {});
+
+Expr.define('namespaceStatement', class NamespaceStatement extends Expr.Statement {});
+Expr.define('tableStatement', class TableStatement extends Expr.Statement {});
 
 Expr.define('ifStatement', class IfStatement extends Expr.Statement {});
 Expr.define('elseStatement', class ElseStatement extends Expr.Statement {});
