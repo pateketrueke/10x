@@ -9,6 +9,7 @@
   <meta property="og:title" content="10x Language">
   <meta property="og:description" content="Markdown-native language, reactive runtime, and portable ESM compiler.">
   <meta property="og:url" content="https://soypache.co/10x">
+  <script type="module" src="./dist/editor.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -120,6 +121,17 @@
       background: rgba(255, 255, 255, 0.03);
     }
 
+    .btn-link {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font: inherit;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      font-size: 0.85rem;
+    }
+
     .btn:hover { transform: translateY(-2px); }
 
     .demo-strip {
@@ -135,13 +147,16 @@
 
     .demo-tile {
       display: block;
-      text-decoration: none;
       color: var(--ink);
       border: 1px solid var(--line);
       border-radius: 10px;
       padding: 0.65rem 0.8rem;
       font-size: 0.9rem;
       background: #10151b;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      font: inherit;
     }
 
     .cards {
@@ -203,6 +218,14 @@
       line-height: 1.52;
     }
 
+    pre [class^="xt-"] { font-weight: 500; }
+    pre .xt-number { color: #b5cea8; }
+    pre .xt-string { color: #ce9178; }
+    pre .xt-symbol { color: #dcdcaa; }
+    pre .xt-op { color: #c586c0; }
+    pre .xt-comment { color: #6a9955; }
+    pre .xt-literal { color: #9cdcfe; }
+
     .mono {
       font-family: "IBM Plex Mono", monospace;
       font-size: 0.88rem;
@@ -212,14 +235,6 @@
       border: 1px solid var(--line);
       border-radius: 12px;
       overflow: hidden;
-      background: #0f1217;
-    }
-
-    .demo-frame {
-      width: 100%;
-      height: 265px;
-      border: 0;
-      display: block;
       background: #0f1217;
     }
 
@@ -281,6 +296,45 @@
       transform: translateY(0);
     }
 
+    #demo-overlay {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      padding: 0;
+      width: min(900px, 94vw);
+      max-height: 90dvh;
+      overflow: hidden;
+      color: var(--ink);
+    }
+
+    #demo-overlay::backdrop {
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+    }
+
+    .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .overlay-content {
+      padding: 1rem;
+      overflow: auto;
+      max-height: calc(90dvh - 3rem);
+    }
+
     @media (max-width: 960px) {
       .span-4, .span-6, .span-12 { grid-column: span 12; }
       .hero { padding-top: 2.2rem; }
@@ -306,23 +360,23 @@
         same <span class="mono">.md</span> source file.
       </p>
       <div class="cta">
-        <a class="btn primary" href="./editor.html">Try editor</a>
-        <a class="btn secondary" href="./x-counter.html">x-counter demo</a>
+        <button class="btn primary" id="open-editor-cta">Try editor</button>
+        <button class="btn secondary" id="open-xcounter-cta">x-counter demo</button>
         <a class="btn secondary" href="https://github.com/soypache/10x#readme">View on GitHub</a>
       </div>
     </section>
 
     <section class="demo-strip reveal">
-      <a class="demo-tile" href="./editor.html">📝 Editor demo</a>
-      <a class="demo-tile" href="./todolist.html">✓ TodoList</a>
-      <a class="demo-tile" href="./x-counter.html">⚡ x-counter</a>
+      <button class="demo-tile" data-demo="editor">📝 Editor demo</button>
+      <button class="demo-tile" data-demo="todolist">✓ TodoList</button>
+      <button class="demo-tile" data-demo="xcounter">⚡ x-counter</button>
     </section>
 
     <section class="cards">
       <article class="card span-4 reveal">
         <h2>Language</h2>
         <p>Numbers, units, ranges, symbols.</p>
-<pre>1/2.
+<pre data-lang="10x">1/2.
 5 cm to :in.
 [1..5].
 :ok.</pre>
@@ -331,25 +385,26 @@
       <article class="card span-4 reveal">
         <h2>Functions</h2>
         <p>Lambdas, closures, and pipe composition.</p>
-<pre>add = (a b) -&gt; a + b.
+<pre data-lang="10x">add = (a b) -&gt; a + b.
 double = n -&gt; n * 2.
 [1..5] |&gt; map(double).</pre>
       </article>
 
       <article class="card span-4 reveal">
         <h2>Live Editor</h2>
-        <p>Compile/eval in the browser.</p>
+        <p>Compile/eval in the browser. <button class="btn-link" id="open-editor">Open full editor →</button></p>
         <div class="demo-wrap">
-          <iframe class="demo-frame" src="./editor.html" title="10x editor demo"></iframe>
+          <x-editor id="landing-editor" style="height:220px;display:block;"></x-editor>
         </div>
       </article>
 
       <article class="card span-6 reveal">
         <h2>Signals & Reactivity</h2>
-        <p>Reactive state with automatic re-render.</p>
-<pre>count = @signal 0.
+        <p>Reactive state, derived values, and automatic re-render.</p>
+<pre data-lang="10x">count = @signal 0.
+double = @computed count * 2.
 @render "#app" @html
-  &lt;h1&gt;{count}&lt;/h1&gt;.
+  [&lt;h1&gt;{count}&lt;/h1&gt;, &lt;p&gt;{double}&lt;/p&gt;].
 @on "click" "#inc"
   count = count + 1.</pre>
       </article>
@@ -357,7 +412,7 @@ double = n -&gt; n * 2.
       <article class="card span-6 reveal">
         <h2>Web Components</h2>
         <p>Shadow DOM components compile to <span class="mono">setup(host)</span>.</p>
-<pre>count = @signal @prop "start" 0.
+<pre data-lang="10x">count = @signal @prop "start" 0.
 @render @shadow @html
   &lt;div&gt;&lt;h1&gt;{count}&lt;/h1&gt;&lt;/div&gt;.
 @on "click", "#inc",
@@ -367,21 +422,38 @@ double = n -&gt; n * 2.
       <article class="card span-6 reveal">
         <h2>Compiler</h2>
         <p>Compile <span class="mono">.md</span> to portable ESM.</p>
-<pre># source                    # compiled
+<pre data-lang="10x"># source                    # compiled
 count = @signal 0.      -&gt; export const count = Runtime.signal(0);
 @render "#app" @html    -&gt; Runtime.render("#app", Runtime.html(() =&gt; ...));
 @on "click" "#btn"      -&gt; Runtime.on("click", "#btn", () =&gt; ...);</pre>
       </article>
 
       <article class="card span-6 reveal">
-        <h2>Cross Runtime</h2>
-        <p>Compile once, run in Bun/Node/browser.</p>
-<pre>10x compile examples/fib_memo.md --out fib.js
-bun run fib.js
-node fib.js
+        <h2>CSS</h2>
+        <p>Raw CSS, object styles, and auto atomic utilities.</p>
+<pre data-lang="10x">@style "body { margin: 0; }".
+@style (:host { backgroundColor: "#0f1217" }).
+@render "#app" @html
+  &lt;div class="flex items-center gap-2 p-4"&gt;x&lt;/div&gt;.</pre>
+      </article>
 
-@import fib @from "./fib.js".
-fib(20).</pre>
+      <article class="card span-6 reveal">
+        <h2>VDOM Directives</h2>
+        <p>Native somedom attrs: <span class="mono">d:*</span>, <span class="mono">s:*</span>, and <span class="mono">ref</span>.</p>
+<pre data-lang="10x">open = @signal :on.
+name = @signal "".
+el = @signal :nil.
+@render "#app" @html
+  &lt;input d:model={name} d:show={open} ref={el} /&gt;.</pre>
+      </article>
+
+      <article class="card span-6 reveal">
+        <h2>Bundler</h2>
+        <p>Bundle local modules and aliases into a single app artifact.</p>
+<pre data-lang="sh">10x compile app/main.md --bundle --out app.js
+10x compile app/main.md --bundle --alias "@app=./src"
+bun run app.js
+node app.js</pre>
       </article>
 
       <article class="card span-12 reveal">
@@ -392,7 +464,7 @@ fib(20).</pre>
             <h3>10x/runtime/core</h3>
             <ul>
               <li>signal, effect, read</li>
-              <li>html, prop, isSignal</li>
+              <li>computed, batch, untracked</li>
               <li>Pure JS, no DOM</li>
             </ul>
           </div>
@@ -400,7 +472,7 @@ fib(20).</pre>
             <h3>10x/runtime/dom</h3>
             <ul>
               <li>render, renderShadow</li>
-              <li>on, h</li>
+              <li>on, style, h</li>
               <li>Browser-only layer</li>
             </ul>
           </div>
@@ -435,25 +507,126 @@ fib(20).</pre>
 
       <article class="card span-6 reveal">
         <h2>Quick Start</h2>
-<pre><span class="tok-cmd">bun</span> install
-<span class="tok-cmd">bun</span> run repl
-<span class="tok-cmd">node</span> <span class="tok-path">bin/cli</span> <span class="tok-path">examples/fib_memo.md</span>
-<span class="tok-cmd">10x</span> compile <span class="tok-path">examples/x-counter.md</span>
-<span class="tok-cmd">10x</span> compile <span class="tok-path">examples/fib_memo.md</span> | <span class="tok-cmd">bun</span> run -
-<span class="tok-cmd">make</span> demo</pre>
+<pre data-lang="sh">bun install
+bun run repl
+node bin/cli examples/fib_memo.md
+10x compile examples/x-counter.md
+10x compile examples/fib_memo.md | bun run -
+make demo</pre>
       </article>
 
-      <article class="card span-12 coming-soon reveal">
+      <article class="card span-12 reveal">
         <h2>Tooling Ecosystem</h2>
-        <p>Tree-sitter grammar, LSP, Zed extension, Vite plugin, and runtime devtools are planned in sequence.</p>
-<pre>tree-sitter -&gt; highlight queries -&gt; LSP -&gt; Zed extension
+        <p>Tree-sitter grammar, LSP, Zed extension, Vite plugin, and runtime devtools.</p>
+<pre data-lang="10x">tree-sitter -&gt; highlight queries -&gt; LSP -&gt; Zed extension
 compiler -&gt; Vite plugin
 runtime signal registry -&gt; DevTools overlay</pre>
       </article>
     </section>
   </div>
 
+  <dialog id="demo-overlay">
+    <div class="overlay-header">
+      <span id="overlay-title" class="mono"></span>
+      <button class="overlay-close" id="overlay-close">×</button>
+    </div>
+    <div class="overlay-content" id="overlay-body"></div>
+  </dialog>
+
   <script>
+    const escapeHtml = text => String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    function highlight10x(src) {
+      const out = [];
+      let i = 0;
+      while (i < src.length) {
+        let m;
+        if (src.startsWith('"""', i)) {
+          const end = src.indexOf('"""', i + 3);
+          const value = end < 0 ? src.slice(i) : src.slice(i, end + 3);
+          out.push(['xt-string', value]);
+          i += value.length;
+          continue;
+        }
+        if (src[i] === '"') {
+          const end = src.indexOf('"', i + 1);
+          const value = end < 0 ? src.slice(i) : src.slice(i, end + 1);
+          out.push(['xt-string', value]);
+          i += value.length;
+          continue;
+        }
+        if (src.startsWith('//', i) || src.startsWith('#', i)) {
+          const end = src.indexOf('\n', i);
+          const value = end < 0 ? src.slice(i) : src.slice(i, end);
+          out.push(['xt-comment', value]);
+          i += value.length;
+          continue;
+        }
+        if (src[i] === '@' && (m = src.slice(i).match(/^@[a-z]+/i))) {
+          out.push(['xt-op', m[0]]);
+          i += m[0].length;
+          continue;
+        }
+        if (src[i] === ':' && (m = src.slice(i).match(/^:[a-z_][a-z0-9_]*/i))) {
+          out.push(['xt-symbol', m[0]]);
+          i += m[0].length;
+          continue;
+        }
+        if ((m = src.slice(i).match(/^\d+(\.\d+)?/)) && (i === 0 || /[\s(,\[+\-*]/.test(src[i - 1]))) {
+          out.push(['xt-number', m[0]]);
+          i += m[0].length;
+          continue;
+        }
+        if (src.startsWith('->', i) || src.startsWith('|>', i)) {
+          out.push(['xt-op', src.slice(i, i + 2)]);
+          i += 2;
+          continue;
+        }
+        if (/[+\-*/%=<>!~]/.test(src[i])) {
+          out.push(['xt-op', src[i]]);
+          i++;
+          continue;
+        }
+        if (/[A-Za-z_][A-Za-z0-9_]*/.test(src.slice(i, i + 1)) && (m = src.slice(i).match(/^[A-Za-z_][A-Za-z0-9_]*/))) {
+          const kw = m[0];
+          if (['if', 'else', 'while', 'loop', 'try', 'rescue', 'match'].includes(kw)) {
+            out.push(['xt-literal', kw]);
+            i += kw.length;
+            continue;
+          }
+        }
+
+        const last = out[out.length - 1];
+        if (last && last[0] === '') {
+          last[1] += src[i];
+        } else {
+          out.push(['', src[i]]);
+        }
+        i++;
+      }
+
+      return out.map(([cls, text]) => (cls
+        ? `<span class="${cls}">${escapeHtml(text)}</span>`
+        : escapeHtml(text))).join('');
+    }
+
+    function highlightSh(src) {
+      return escapeHtml(src).replace(/^([a-z0-9._-]+)(\s+.+)?$/gim, (_, cmd, rest = '') => {
+        const withPath = rest.replace(/(\s|^)([./~][\w./-]+)/g, '$1<span class="xt-symbol">$2</span>');
+        return `<span class="xt-literal">${cmd}</span>${withPath}`;
+      });
+    }
+
+    document.querySelectorAll('pre[data-lang]').forEach(pre => {
+      const src = pre.textContent || '';
+      const lang = pre.getAttribute('data-lang');
+      if (lang === '10x') pre.innerHTML = highlight10x(src);
+      if (lang === 'sh') pre.innerHTML = highlightSh(src);
+    });
+
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) entry.target.classList.add('show');
@@ -463,6 +636,81 @@ runtime signal registry -&gt; DevTools overlay</pre>
     document.querySelectorAll('.reveal').forEach((el, i) => {
       el.style.transitionDelay = `${i * 65}ms`;
       observer.observe(el);
+    });
+
+    const overlay = document.getElementById('demo-overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayBody = document.getElementById('overlay-body');
+    const overlayClose = document.getElementById('overlay-close');
+
+    const DEMO_SNIPPETS = {
+      editor: {
+        title: 'Editor',
+        height: 520,
+        src: 'count = @signal 0.\\n@render "#app" @html\\n  <h1>{count}</h1>.\\n@on "click" "#inc" count = count + 1.',
+      },
+      todolist: {
+        title: 'TodoList',
+        height: 500,
+        src: 'todos = @signal "Write parser regression tests".\\ncount = @signal 1.\\n@render "#app" @html\\n  <section class="todo-card">\\n    <h1>TodoList</h1>\\n    <p class="meta">items added: {count}</p>\\n    <p class="items">{todos}</p>\\n    <button id="add">+ add item</button>\\n  </section>.\\n@on "click" "#add" todos = todos + ", ship feature " + count.\\n@on "click" "#add" count = count + 1.',
+      },
+      xcounter: {
+        title: 'x-counter',
+        height: 500,
+        src: 'count = @signal @prop "start" 0.\\n@render @shadow @html\\n  <div class="counter">\\n    <h1>{count}</h1>\\n    <button id="inc">+</button>\\n  </div>.\\n@on "click" "#inc" count = count + 1.',
+      },
+    };
+
+    function openOverlay(title, buildFn) {
+      overlayTitle.textContent = title;
+      overlayBody.innerHTML = '';
+      overlayBody.style.padding = '';
+      buildFn(overlayBody);
+      if (typeof overlay.showModal === 'function') {
+        overlay.showModal();
+      } else {
+        overlay.setAttribute('open', 'open');
+      }
+    }
+
+    function closeOverlay() {
+      if (typeof overlay.close === 'function') overlay.close();
+      else overlay.removeAttribute('open');
+      overlayBody.innerHTML = '';
+    }
+
+    function openEditorDemo(key) {
+      const demo = DEMO_SNIPPETS[key];
+      if (!demo) return;
+      openOverlay(demo.title, body => {
+        body.style.padding = '0';
+        const ed = document.createElement('x-editor');
+        ed.style.cssText = `height:${demo.height}px;display:block;`;
+        body.appendChild(ed);
+        customElements.whenDefined('x-editor').then(() => {
+          if (demo.src) ed.value = demo.src;
+        });
+      });
+    }
+
+    overlayClose.addEventListener('click', closeOverlay);
+    overlay.addEventListener('click', event => {
+      if (event.target === overlay) closeOverlay();
+    });
+
+    document.getElementById('open-editor').addEventListener('click', () => openEditorDemo('editor'));
+    document.getElementById('open-editor-cta').addEventListener('click', () => openEditorDemo('editor'));
+    document.getElementById('open-xcounter-cta').addEventListener('click', () => openEditorDemo('xcounter'));
+
+    document.querySelectorAll('[data-demo]').forEach(button => {
+      button.addEventListener('click', () => openEditorDemo(button.getAttribute('data-demo')));
+    });
+
+    customElements.whenDefined('x-editor').then(() => {
+      const ed = document.getElementById('landing-editor');
+      if (ed) {
+        ed.value = 'count = @signal 0.\\n@render "#app" @html\\n  <h1>{count}</h1>.';
+      }
     });
   </script>
 </body>
