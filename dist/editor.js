@@ -1939,6 +1939,7 @@ var OL_ITEM = Symbol("OL_ITEM");
 var UL_ITEM = Symbol("UL_ITEM");
 var HEADING = Symbol("HEADING");
 var BLOCKQUOTE = Symbol("BLOCKQUOTE");
+var TABLE = Symbol("TABLE");
 var OPEN = Symbol("OPEN");
 var CLOSE = Symbol("CLOSE");
 var COMMA = Symbol("COMMA");
@@ -1988,8 +1989,12 @@ var DERIVE_METHODS = [
   "Match"
 ];
 var CONTROL_TYPES = [
+  "@namespace",
+  "@table",
   "@if",
   "@else",
+  "@ok",
+  "@err",
   "@try",
   "@check",
   "@rescue",
@@ -3054,8 +3059,14 @@ function serialize(token, shorten, colorize = (_, x) => typeof x === "undefined"
       let args = "";
       const parent = token.isStatement || descriptor === "Stmt" ? "Stmt" : "Block";
       if (!token.hasSource) {
-        if (token.hasArgs)
-          args += serialize(token.getArgs(), shorten, colorize, parent);
+        if (token.hasArgs) {
+          const renderedArgs = serialize(token.getArgs(), shorten, colorize, parent);
+          if (token.hasBody && token.getArgs().length > 1) {
+            args += `${colorize(OPEN)}${renderedArgs.replace(/,\s*/g, " ")}${colorize(CLOSE)}`;
+          } else {
+            args += renderedArgs;
+          }
+        }
         if (token.hasName)
           block2 += `${colorize(LITERAL, token.getName())}${args} ${colorize(EQUAL)} `;
       }
@@ -3131,6 +3142,16 @@ function serialize(token, shorten, colorize = (_, x) => typeof x === "undefined"
       return `${colorize(BEGIN, "[")}${!shorten ? serialize(token.value, shorten, colorize, descriptor) : colorize(RANGE, "..")}${colorize(DONE, "]")}`;
     }
     return colorize(token.type, token.value);
+  }
+  if (isPlain2(token) && token.__tag && token.value && typeof token.__tag.getBody === "function" && typeof token.value.getBody === "function") {
+    const [tag] = token.__tag.getBody();
+    const payload = token.value.getBody();
+    if (isSymbol(tag) && [":ok", ":err"].includes(tag.value)) {
+      const kind = tag.value.substr(1);
+      if (!payload.length)
+        return colorize(SYMBOL, `@${kind}`);
+      return `${colorize(SYMBOL, `@${kind}`)} ${payload.length === 1 ? serialize(payload[0], shorten, colorize, descriptor) : serialize(payload, shorten, colorize, descriptor)}`;
+    }
   }
   const separator = !hasStatements(token) ? `${colorize(COMMA)} ` : " ";
   if (shorten) {
@@ -3489,10 +3510,18 @@ class Expr {
       type = null;
     }
     const params = { type: BLOCK, value: { body } };
+    if (type === "@namespace")
+      return Expr.namespaceStatement(params, tokenInfo);
+    if (type === "@table")
+      return Expr.tableStatement(params, tokenInfo);
     if (type === "@if")
       return Expr.ifStatement(params, tokenInfo);
     if (type === "@else")
       return Expr.elseStatement(params, tokenInfo);
+    if (type === "@ok")
+      return Expr.okStatement(params, tokenInfo);
+    if (type === "@err")
+      return Expr.errStatement(params, tokenInfo);
     if (type === "@while")
       return Expr.whileStatement(params, tokenInfo);
     if (type === "@do")
@@ -3846,9 +3875,17 @@ Expr.define("statement", class Statement extends Expr {
 });
 Expr.define("expression", class Expression extends Expr {
 });
+Expr.define("namespaceStatement", class NamespaceStatement extends Expr.Statement {
+});
+Expr.define("tableStatement", class TableStatement extends Expr.Statement {
+});
 Expr.define("ifStatement", class IfStatement extends Expr.Statement {
 });
 Expr.define("elseStatement", class ElseStatement extends Expr.Statement {
+});
+Expr.define("okStatement", class OkStatement extends Expr.Statement {
+});
+Expr.define("errStatement", class ErrStatement extends Expr.Statement {
 });
 Expr.define("doStatement", class DoStatement extends Expr.Statement {
 });
@@ -4880,6 +4917,10 @@ class Scanner {
         return;
       if (char === ">" && this.peek() === " " && this.parseBlock(char))
         return;
+      if (char === "[" && this.parseLinkLine())
+        return;
+      if (char === "|" && this.parseTableLine())
+        return;
       if (this.afterEOL !== 1 && (isAlphaNumeric(char) && char !== "@" || char === "*") && this.parseText(char))
         return;
       if (char === "`" && char === this.peek() && char === this.peekNext() && this.parseFence(char))
@@ -5146,6 +5187,48 @@ class Scanner {
     this.appendText();
     this.parseLine();
     this.appendText(char);
+    return true;
+  }
+  parseLinkLine() {
+    const start = this.start;
+    const lineCol = this.col - 1;
+    let end = this.offset;
+    while (end < this.chars.length && this.chars[end] !== `
+`)
+      end++;
+    const line = this.source.substring(start, end);
+    const matches = line.match(/^\[([^\]]+)\]\(([^)]+)\)\s*$/);
+    if (!matches)
+      return false;
+    this.offset = end;
+    this.col = lineCol + line.length;
+    this.appendText();
+    this.tokens.push(new Token(REF, {
+      image: false,
+      text: line,
+      href: matches[2],
+      cap: null,
+      alt: matches[1]
+    }, null, { line: this.line, col: lineCol, kind: "raw" }));
+    return true;
+  }
+  parseTableLine() {
+    const start = this.start;
+    const lineCol = this.col - 1;
+    let end = this.offset;
+    while (end < this.chars.length && this.chars[end] !== `
+`)
+      end++;
+    const line = this.source.substring(start, end);
+    if (!/^\|.+\|\s*$/.test(line))
+      return false;
+    this.offset = end;
+    this.col = lineCol + line.length;
+    this.appendText();
+    this.tokens.push(new Token(TEXT, {
+      kind: TABLE,
+      buffer: [line]
+    }, null, { line: this.line, col: lineCol }));
     return true;
   }
   parseFence(char) {
@@ -5725,7 +5808,8 @@ class Parser {
     return this.tokens[this.offset];
   }
   blank() {
-    return isText(this.peek()) && !hasBreaks(this.peek());
+    const token = this.peek();
+    return isText(token) && !(token.value && token.value.kind) && !hasBreaks(token);
   }
   skip(raw) {
     this.current = this.peek();
@@ -5884,7 +5968,7 @@ class Parser {
           push2(Expr.callable(this.definition(token), tokenInfo));
           continue;
         }
-        if ((isComma(curToken) || isBlock(curToken)) && this.has(BLOCK)) {
+        if (isBlock(curToken) && this.has(BLOCK)) {
           const args = Expr.args([Expr.from(token)].concat(this.statement([BLOCK])));
           const body = this.expression();
           args.forEach((x) => {
@@ -5899,7 +5983,14 @@ class Parser {
           continue;
         }
       }
-      if (!isLiteral(token) && isBlock(curToken) && !(isOpen(token) || isComma(token))) {
+      if (isRef(token) && token.isRaw && token.value && token.value.alt && token.value.href) {
+        push2(Expr.map({
+          import: Expr.stmt("@import", [Expr.local(token.value.alt.trim(), tokenInfo)], tokenInfo),
+          from: Expr.stmt("@from", [Expr.value(token.value.href.trim(), tokenInfo)], tokenInfo)
+        }, tokenInfo));
+        continue;
+      }
+      if (!isLiteral(token) && isBlock(curToken) && !(isOpen(token) || isClose(token) || isComma(token))) {
         raise(`Expecting literal but found \`${token.value}\``, tokenInfo);
       }
       if (isLiteral(token) && isNot(curToken)) {
@@ -5944,6 +6035,66 @@ class Parser {
           }
           root = stack.pop();
           offsets.pop();
+          if (isClose(token) && isBlock(curToken)) {
+            const leaf = get2();
+            const group = leaf[leaf.length - 1];
+            if (isBlock(group) && group.hasArgs) {
+              let args = group.getArgs();
+              if (args.length === 1 && isRange(args[0]) && args[0].value && Array.isArray(args[0].value.begin) && (!args[0].value.end || !args[0].value.end.length)) {
+                args = args[0].value.begin.concat([Expr.from(LITERAL, "..", args[0].tokenInfo || tokenInfo)]);
+              }
+              args = args.map((arg) => {
+                if (isRange(arg)) {
+                  arg = arg.clone();
+                  arg.type = LITERAL;
+                }
+                return arg;
+              });
+              if (args.length && args.every((arg) => isLiteral(arg))) {
+                this.next();
+                const body = this.subTree(this.statement([OR, PIPE]));
+                leaf[leaf.length - 1] = Expr.callable({
+                  type: BLOCK,
+                  value: {
+                    args: Expr.args(args),
+                    body
+                  }
+                }, args[0] && args[0].tokenInfo || group.tokenInfo || curToken.tokenInfo || tokenInfo);
+                continue;
+              }
+            }
+          }
+        }
+      } else if (isText(token) && token.value.kind === TABLE) {
+        const rows = [token];
+        while (!this.isDone()) {
+          const nextRow = this.peek();
+          if (isText(nextRow) && nextRow.value.kind === TABLE) {
+            rows.push(this.next(true));
+            continue;
+          }
+          if (this.isBlankTextToken(nextRow)) {
+            this.next(true);
+            continue;
+          }
+          break;
+        }
+        const table = this.tableFromTokens(rows, tokenInfo);
+        if (table) {
+          push2(table);
+        } else {
+          rows.forEach((row) => {
+            if (this.isTextConvertible(row)) {
+              push2(this.convertTextToString(row, tokenInfo));
+            }
+          });
+        }
+      } else if (isText(token) && token.value.kind === HEADING) {
+        const namespace = this.namespaceFromHeading(token, tokenInfo);
+        if (namespace) {
+          push2(namespace);
+        } else if (this.isTextConvertible(token)) {
+          push2(this.convertTextToString(token, tokenInfo));
         }
       } else if (isText(token) && this.isTextConvertible(token)) {
         push2(this.convertTextToString(token, tokenInfo));
@@ -5985,6 +6136,11 @@ class Parser {
       return true;
     });
   }
+  isBlankTextToken(token) {
+    if (!isText(token) || !token.value || !Array.isArray(token.value.buffer))
+      return false;
+    return token.value.buffer.every((chunk) => typeof chunk === "string" && !chunk.trim().length);
+  }
   textChunkToSource(chunk) {
     if (typeof chunk === "string")
       return chunk;
@@ -6016,6 +6172,49 @@ class Parser {
     if (value.kind === UL_ITEM)
       return `${value.style || "-"} `;
     return "";
+  }
+  textTokenToSource(token) {
+    if (!token || !token.value || !Array.isArray(token.value.buffer))
+      return "";
+    return token.value.buffer.map((chunk) => this.textChunkToSource(chunk)).join("");
+  }
+  namespaceFromHeading(token, tokenInfo) {
+    if (!isText(token) || token.value.kind !== HEADING)
+      return null;
+    const source = this.textTokenToSource(token).trim();
+    const matches = source.match(/^([A-Za-z_][A-Za-z0-9_]*)::$/);
+    if (!matches)
+      return null;
+    return Expr.map({
+      namespace: Expr.stmt("@namespace", [
+        Expr.value(matches[1], tokenInfo),
+        Expr.value(token.value.level || 1, tokenInfo)
+      ], tokenInfo)
+    }, tokenInfo);
+  }
+  tableFromTokens(rows, tokenInfo) {
+    if (!rows || rows.length < 2)
+      return null;
+    const parseRow = (token) => {
+      const source = this.textTokenToSource(token).trim();
+      if (!source.startsWith("|") || !source.endsWith("|"))
+        return null;
+      return source.slice(1, -1).split("|").map((cell) => cell.trim());
+    };
+    const header = parseRow(rows[0]);
+    const separator = parseRow(rows[1]);
+    if (!header || !separator || header.length !== separator.length)
+      return null;
+    if (!separator.every((cell) => /^:?-{3,}:?$/.test(cell)))
+      return null;
+    const dataRows = rows.slice(2).map(parseRow);
+    if (dataRows.some((row) => !row || row.length !== header.length))
+      return null;
+    return Expr.map({
+      table: Expr.stmt("@table", [
+        Expr.value({ headers: header, rows: dataRows }, tokenInfo)
+      ], tokenInfo)
+    }, tokenInfo);
   }
   split() {
     const statements = [];
@@ -6118,6 +6317,55 @@ var OPS_MUL_DIV = new Set([MUL, DIV]);
 var OPS_PLUS_MINUS_MOD = new Set([PLUS, MINUS, MOD]);
 
 class Eval {
+  static getResultTagToken(token) {
+    if (!isObject(token))
+      return null;
+    const value = token.valueOf();
+    const tag = value && value.__tag;
+    const payload = value && value.value;
+    if (!tag || !payload || typeof tag.getBody !== "function" || typeof payload.getBody !== "function") {
+      return null;
+    }
+    const [head2] = tag.getBody();
+    if (!isSymbol(head2))
+      return null;
+    if (![":ok", ":err"].includes(head2.valueOf()))
+      return null;
+    return head2;
+  }
+  static async buildResultToken(kind, body, environment, parentTokenInfo) {
+    const values = await Eval.do(body, environment, "Result", true, parentTokenInfo);
+    return Expr.map({
+      __tag: Expr.body([Expr.symbol(`:${kind}`, false, parentTokenInfo)], parentTokenInfo),
+      value: Expr.body(values, parentTokenInfo)
+    }, parentTokenInfo);
+  }
+  static normalizeBraceRecordArgs(args) {
+    const normalized = [];
+    let changed = false;
+    for (let i = 0, c = args.length;i < c; i++) {
+      const cur = args[i];
+      const next = args[i + 1];
+      if (isString(cur) && isSymbol(next) && next.value === ":") {
+        normalized.push(Expr.symbol(`:${cur.value}`, false, cur.tokenInfo || cur));
+        changed = true;
+        i++;
+        continue;
+      }
+      normalized.push(cur);
+    }
+    return changed ? normalized : args;
+  }
+  static tableCellToken(value, tokenInfo) {
+    const input = typeof value === "string" ? value.trim() : value;
+    if (input === "" || input === null || typeof input === "undefined") {
+      return Expr.value(null, tokenInfo);
+    }
+    if (typeof input === "string" && /^-?\d+(?:\.\d+)?$/.test(input)) {
+      return Expr.value(parseFloat(input), tokenInfo);
+    }
+    return Expr.value(input, tokenInfo);
+  }
   static splitMatchCases(tokens) {
     const output = [];
     let current2 = [];
@@ -6136,6 +6384,7 @@ class Eval {
     return output;
   }
   static async resolveMatchBody(input, cases, environment, parentTokenInfo) {
+    const target = Eval.getResultTagToken(input) || input;
     for (let i = 0, c = cases.length;i < c; i++) {
       const [head2, ...body] = cases[i];
       if (!head2)
@@ -6148,7 +6397,7 @@ class Eval {
       }
       if (isBlock(head2) && isLogic(head2.getArg(0))) {
         const [kind, ...others] = head2.getArgs();
-        const newBody = Expr.expression({ type: kind.type, value: [input].concat(others) }, parentTokenInfo);
+        const newBody = Expr.expression({ type: kind.type, value: [target].concat(others) }, parentTokenInfo);
         const [result] = await Eval.do([newBody], environment, "Expr", true, parentTokenInfo);
         if (result && result.value === true) {
           return body;
@@ -6161,11 +6410,11 @@ class Eval {
             if (isRange(subBody.value[0])) {
               subBody = await subBody.value[0].value.run(true);
             }
-            if (subBody.valueOf().some((x) => !hasDiff(x, input))) {
+            if (subBody.valueOf().some((x) => !hasDiff(x, target))) {
               return body;
             }
           }
-          if (!hasDiff(input, subBody)) {
+          if (!hasDiff(target, subBody)) {
             return body;
           }
         }
@@ -6181,11 +6430,55 @@ class Eval {
     this.derive = !!(noInheritance && environment);
     this.expr = tokens;
     this.env = !this.derive ? new Env(environment) : environment;
+    this.rootEnv = this.env;
+    this.namespaceStack = [];
+    this.namespaceRoots = {};
     this.descriptor = "Root";
     this.result = [];
     this.offset = 0;
     this.key = null;
     this.ctx = null;
+  }
+  enterNamespace(name, level, tokenInfo) {
+    while (this.namespaceStack.length >= level)
+      this.namespaceStack.pop();
+    const parent = this.namespaceStack[this.namespaceStack.length - 1] || null;
+    let node;
+    if (parent) {
+      node = parent.children[name];
+    } else {
+      node = this.namespaceRoots[name];
+    }
+    if (!node) {
+      const parentScope = parent ? parent.scope : this.rootEnv;
+      const exports = {};
+      const scope = new Env(parentScope);
+      node = {
+        name,
+        level,
+        scope,
+        exports,
+        children: {}
+      };
+      if (parent) {
+        parent.children[name] = node;
+        parent.exports[name] = Expr.map(exports, tokenInfo);
+        parent.scope.def(name, Expr.map(exports, tokenInfo));
+      } else {
+        this.namespaceRoots[name] = node;
+        this.rootEnv.def(name, Expr.map(exports, tokenInfo));
+      }
+    }
+    this.namespaceStack.push(node);
+    this.env = node.scope;
+  }
+  registerNamespaceExport(name) {
+    if (!this.namespaceStack.length)
+      return;
+    if (!this.env.locals[name])
+      return;
+    const current2 = this.namespaceStack[this.namespaceStack.length - 1];
+    current2.exports[name] = this.env.locals[name];
   }
   replace(v, ctx) {
     if (!ctx) {
@@ -6335,6 +6628,19 @@ class Eval {
         raise(`Missing property \`${next}\` in ${info}`, next.tokenInfo);
       }
       const newToken = this.newerToken();
+      const entry = map2[key];
+      if (isPlain2(entry) && Array.isArray(entry.body) && isBlock(newToken) && newToken.hasArgs) {
+        const callable = entry.body[0] && entry.body[0].isCallable ? entry.body[0] : Expr.callable({
+          type: BLOCK,
+          value: {
+            args: entry.args || [],
+            body: entry.body,
+            name: key
+          }
+        }, this.ctx.tokenInfo);
+        this.discard().append(...await Eval.do([callable, newToken], this.env, "Fn", false, this.ctx.tokenInfo)).move(2);
+        return true;
+      }
       if (typeof map2[key] === "function" && isBlock(newToken) && newToken.hasArgs) {
         const fixedArgs = await Eval.do(newToken.getArgs(), this.env, "Args", false, this.ctx.tokenInfo);
         const result = await map2[key](...Expr.plain(fixedArgs, this.convert, `<${key}>`));
@@ -6346,7 +6652,9 @@ class Eval {
         return true;
       }
       if (!isBlock(next)) {
-        if (map2[key] instanceof Expr) {
+        if (isPlain2(entry) && Array.isArray(entry.body)) {
+          this.discard().append(...await Eval.do(entry.body, this.env, `:${key}`, false, this.ctx.tokenInfo)).move();
+        } else if (map2[key] instanceof Expr) {
           this.discard().append(...await Eval.do(map2[key].getBody(), this.env, `:${key}`, false, this.ctx.tokenInfo)).move();
         } else {
           this.replace(Expr.value(map2[key])).move();
@@ -6693,18 +7001,23 @@ class Eval {
           call[0].source = name;
         }
         this.env.defn(name, { args, body: call }, this.ctx.tokenInfo);
+        this.registerNamespaceExport(name);
       } else {
         this.append(this.ctx);
       }
     } else {
-      const fixedBody = args || body;
+      let fixedBody = args || body;
+      if (args && this.ctx.tokenInfo && this.ctx.tokenInfo.value === "{") {
+        fixedBody = Eval.normalizeBraceRecordArgs(args);
+      }
       const derived = this.derive || fixedBody[0] && fixedBody[0].isObject;
-      this.append(...await Eval.do(args || body, this.env, derived ? this.descriptor : "...", derived, this.ctx.tokenInfo));
+      this.append(...await Eval.do(fixedBody, this.env, derived ? this.descriptor : "...", derived, this.ctx.tokenInfo));
     }
     return true;
   }
   async evalUnary() {
     const prev = this.getPrev();
+    const older = this.getOlder();
     if (prev && prev.type === MINUS && !isNumber(this.getOlder())) {
       if (!isNumber(this.ctx)) {
         assert(this.ctx, false, NUMBER);
@@ -6721,6 +7034,37 @@ class Eval {
       }
       this.replace(Expr.value(!this.ctx.valueOf(), this.ctx.tokenInfo));
       return true;
+    }
+    if (isSome(this.ctx) && isResult(prev)) {
+      const tag = Eval.getResultTagToken(prev);
+      if (tag) {
+        const payloadBody = prev.valueOf().value.getBody();
+        if (tag.valueOf() === ":ok") {
+          if (payloadBody.length === 1) {
+            this.replace(payloadBody[0]);
+          } else {
+            this.replace(Expr.array(payloadBody));
+          }
+          this.move(Expr.chunk(this.expr, this.offset + 1).offset);
+        } else {
+          this.discard();
+        }
+        return true;
+      }
+    }
+    if (isResult(prev) && isOR(this.ctx) && isObject(prev) && !isSome(older)) {
+      const { body, offset } = Expr.chunk(this.expr, this.offset + 1);
+      if (body.length) {
+        const merged = await Eval.do(body, this.env, "Or", false, this.ctx.tokenInfo);
+        if (merged.length === 1 && isObject(merged[0])) {
+          this.discard().append(Expr.map({
+            ...prev.valueOf(),
+            ...merged[0].valueOf()
+          }, this.ctx.tokenInfo));
+          this.move(offset);
+          return true;
+        }
+      }
     }
     if (isResult(prev) && (isOR(this.ctx) || isSome(this.ctx))) {
       if (isSome(this.ctx) ? !prev.valueOf() : prev.valueOf()) {
@@ -6803,9 +7147,12 @@ class Eval {
     if (isNumber(prev) && this.ctx.type === MUL && (isLiteral(next) || isSymbol(next))) {
       let fixedToken = next;
       if (isLiteral(next) && this.env.has(next.value)) {
-        fixedToken = this.env.get(next.value).ctx;
+        const resolved = this.env.get(next.value);
+        if (resolved && resolved.ctx) {
+          fixedToken = resolved.ctx;
+        }
       }
-      if (fixedToken.type === SYMBOL) {
+      if (fixedToken && fixedToken.type === SYMBOL) {
         const num = prev.valueOf();
         const kind = fixedToken.value;
         const retval = Env.register(num, kind.substr(1));
@@ -6878,7 +7225,7 @@ class Eval {
         const prev = this.getPrev();
         if (prev && !(isEnd(prev) || isResult(prev)))
           check(prev);
-        this.append(...await Eval.map(this.ctx, descriptor, this.env, this.ctx.tokenInfo));
+        this.append(...await Eval.map(this.ctx, descriptor, this.env, this.ctx.tokenInfo, this));
         return;
       }
       if (await this.evalUnary() || await this.evalTags() || await this.evalSymbols() || await this.evalStrings() || await this.evalDotProps() || await this.evalRangeSets() || await this.evalInfixCalls() || isBlock(this.ctx) && await this.evalBlocks() || this.ctx.isExpression && await this.evalLogic() || isLiteral(this.ctx) && typeof this.ctx.value === "string" && this.ctx.value !== "_" && await this.evalLiterals())
@@ -7063,7 +7410,7 @@ class Eval {
       return body.length ? Eval.run(body, scope, "It", true, parentTokenInfo) : [token];
     });
   }
-  static async map(token, descriptor, environment, parentTokenInfo) {
+  static async map(token, descriptor, environment, parentTokenInfo, state) {
     const { value } = token;
     const subTree = [];
     let isDone2;
@@ -7119,6 +7466,41 @@ class Eval {
           break;
         }
       }
+      isDone2 = true;
+    }
+    if (value.namespace instanceof Expr.NamespaceStatement) {
+      const [nameToken, levelToken] = value.namespace.getBody();
+      const name = nameToken && nameToken.valueOf && nameToken.valueOf() || "";
+      const level = levelToken && levelToken.valueOf && levelToken.valueOf() || 1;
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+        raise(`Invalid namespace \`${name}\``, parentTokenInfo);
+      }
+      if (state && typeof state.enterNamespace === "function") {
+        state.enterNamespace(name, Math.max(1, parseInt(level, 10) || 1), parentTokenInfo);
+      }
+      isDone2 = true;
+    }
+    if (value.table instanceof Expr.TableStatement) {
+      const [metaToken] = value.table.getBody();
+      const meta = metaToken && metaToken.valueOf && metaToken.valueOf() || {};
+      const headers = Array.isArray(meta.headers) ? meta.headers : [];
+      const rows = Array.isArray(meta.rows) ? meta.rows : [];
+      const items2 = rows.map((row) => {
+        const entry = {};
+        headers.forEach((header, i) => {
+          entry[header] = Expr.body([Eval.tableCellToken(row[i], parentTokenInfo)], parentTokenInfo);
+        });
+        return Expr.map(entry, parentTokenInfo);
+      });
+      subTree.push(Expr.array(items2, parentTokenInfo));
+      isDone2 = true;
+    }
+    if (value.ok instanceof Expr.OkStatement) {
+      subTree.push(await Eval.buildResultToken("ok", value.ok.getBody(), environment, parentTokenInfo));
+      isDone2 = true;
+    }
+    if (value.err instanceof Expr.ErrStatement) {
+      subTree.push(await Eval.buildResultToken("err", value.err.getBody(), environment, parentTokenInfo));
       isDone2 = true;
     }
     if (value.loop instanceof Expr.LoopStatement) {
@@ -7335,7 +7717,7 @@ function ensureBuiltins() {
     return;
   builtinsReady = true;
   const mappings = ensureDefaultMappings();
-  Expr.Unit.to = Parser.sub("a, b -> a.to(b)");
+  Expr.Unit.to = Parser.sub("(a b) -> a.to(b)");
   Object.keys(mappings).forEach((kind) => {
     Expr.Unit[kind] = Parser.sub(`:${mappings[kind]}`);
   });
@@ -7388,6 +7770,26 @@ function applyAdapter(runtime, adapter, options = {}) {
     adapter.setup(runtime, options);
   }
 }
+// src/compiler/index.js
+var OPERATOR = new Map([
+  [PLUS, "+"],
+  [MINUS, "-"],
+  [MUL, "*"],
+  [DIV, "/"],
+  [MOD, "%"],
+  [EQUAL, "="],
+  [LESS, "<"],
+  [LESS_EQ, "<="],
+  [GREATER, ">"],
+  [GREATER_EQ, ">="],
+  [NOT_EQ, "!="],
+  [EXACT_EQ, "==="],
+  [OR, "|"],
+  [LIKE, "~"],
+  [PIPE, "|>"]
+]);
+// src/runtime/index.js
+var SIGNAL = Symbol("10x.signal");
 // src/lib/ansi.js
 var CODES = {
   bold: [1, 22],
@@ -7462,6 +7864,62 @@ var SYMBOL_NAME = (sym) => {
     return "";
   return sym.toString().match(/Symbol\((.+)\)/)?.[1] ?? "";
 };
+function inferTokenType(token) {
+  if (!token)
+    return "unknown";
+  if (token.isCallable || token.isFunction)
+    return "fn";
+  if (token.isTag)
+    return "tag";
+  if (token.isObject) {
+    const shape = token.valueOf ? token.valueOf() : token.value;
+    if (shape && typeof shape === "object" && shape.__tag && shape.value)
+      return "result";
+    return "record";
+  }
+  if (token.isRange)
+    return Array.isArray(token.value) ? "list" : "range";
+  if (token.isNumber)
+    return "number";
+  if (token.isString)
+    return "string";
+  if (token.isSymbol)
+    return "symbol";
+  const n = SYMBOL_NAME(token.type);
+  return n ? n.toLowerCase() : "unknown";
+}
+function inferRuntimeType(value) {
+  if (value === null)
+    return "nil";
+  if (value === undefined)
+    return "unknown";
+  if (typeof value === "number")
+    return "number";
+  if (typeof value === "string")
+    return "string";
+  if (typeof value === "boolean")
+    return "boolean";
+  if (typeof value === "function")
+    return "fn";
+  if (Array.isArray(value)) {
+    if (!value.length)
+      return "list<unknown>";
+    if (value.length === 1)
+      return inferRuntimeType(value[0]);
+    const sample = value.find(Boolean);
+    const inner = sample ? inferRuntimeType(sample) : "unknown";
+    return `list<${inner}>`;
+  }
+  if (value && typeof value === "object" && typeof value.type === "symbol") {
+    return inferTokenType(value);
+  }
+  if (value && typeof value === "object") {
+    if (value.__tag && value.value)
+      return "result";
+    return "record";
+  }
+  return "unknown";
+}
 function tokenClass(token) {
   const n = SYMBOL_NAME(token.type);
   switch (n) {
@@ -8057,7 +8515,9 @@ var STYLES = `
 
   [data-result] {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 1px 6px;
     border-radius: 3px;
     background: #1e3a2f;
@@ -8157,6 +8617,23 @@ var STYLES = `
     outline: none;
   }
 
+  [data-type-hint] {
+    display: inline-block;
+    padding: 0 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #9aa8b5;
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    opacity: 0.92;
+  }
+
+  [data-result].error [data-type-hint] {
+    color: #d3a59d;
+    border-color: rgba(244, 135, 113, 0.28);
+  }
+
   [data-result][data-copy-state="copied"]::after,
   [data-result][data-copy-state="error"]::after {
     content: attr(data-copy-label);
@@ -8227,6 +8704,10 @@ class TenXEditor extends HTMLElement {
     this._copyFeedbackTimer = null;
     this._history = [];
     this._historyIndex = -1;
+    this._replHistory = [];
+    this._replHistoryIndex = -1;
+    this._replDraft = "";
+    this._showTypeHints = true;
     this._debounce = null;
     this._evaluating = false;
     this._worker = null;
@@ -8261,6 +8742,8 @@ class TenXEditor extends HTMLElement {
     this._editable.addEventListener("mouseleave", () => this._hideTooltip());
     this._editable.addEventListener("scroll", () => this._hideTooltip());
     this._setupWorker();
+    this._loadUIState();
+    this._loadReplHistory();
     const initial = this.textContent || this.getAttribute("value") || "";
     if (initial) {
       this._applySource(initial);
@@ -8371,6 +8854,13 @@ class TenXEditor extends HTMLElement {
       const label = document.createElement("span");
       label.textContent = result.kind === "function" ? "ƒ" : `→ ${text}`;
       widget.appendChild(label);
+      if (this._showTypeHints && result.typeText) {
+        const typeHint = document.createElement("span");
+        typeHint.dataset.typeHint = "";
+        typeHint.textContent = result.typeText;
+        typeHint.title = `runtime type: ${result.typeText}`;
+        widget.appendChild(typeHint);
+      }
       if (result.kind !== "function") {
         widget.dataset.copyValue = text;
         const copyBtn = document.createElement("button");
@@ -8510,6 +9000,9 @@ class TenXEditor extends HTMLElement {
       badge.textContent = `= ${inlineResult.resultText}`;
       if (inlineResult.errorText)
         badge.classList.add("error");
+      if (this._showTypeHints && inlineResult.typeText) {
+        badge.title = `runtime type: ${inlineResult.typeText}`;
+      }
       this._insertWidgetAtOffset(inlineAnchor.offset, badge);
     }
   }
@@ -8665,12 +9158,17 @@ class TenXEditor extends HTMLElement {
             const functionBadge = {
               statementId: statement.statementId,
               resultText: "ƒ",
-              kind: "function"
+              kind: "function",
+              typeText: "fn"
             };
             this._resultsById.set(statement.statementId, functionBadge);
           } else if (result !== undefined && result !== null) {
             const resultText = serialize(result);
-            this._resultsById.set(statement.statementId, { statementId: statement.statementId, resultText });
+            this._resultsById.set(statement.statementId, {
+              statementId: statement.statementId,
+              resultText,
+              typeText: inferRuntimeType(result)
+            });
           }
           const inlineExpressions = extractInlineExpressions(statement.source, statement.statementId);
           for (const inline of inlineExpressions) {
@@ -8682,7 +9180,8 @@ class TenXEditor extends HTMLElement {
                 continue;
               this._inlineResultsById.set(inline.inlineId, {
                 inlineId: inline.inlineId,
-                resultText: serialize(inlineResult)
+                resultText: serialize(inlineResult),
+                typeText: inferRuntimeType(inlineResult)
               });
             } catch (error) {
               this._inlineResultsById.set(inline.inlineId, {
@@ -8740,6 +9239,85 @@ class TenXEditor extends HTMLElement {
     this._applySource(text, cursor);
     this._scheduleEval();
   }
+  _isReplMode() {
+    return this.hasAttribute("repl");
+  }
+  _storageKey(name) {
+    const explicit = this.getAttribute("storage-key");
+    const base = explicit || `tenx-editor-ce:${this.id || "default"}`;
+    return `${base}:${name}`;
+  }
+  _loadUIState() {
+    try {
+      const raw = localStorage.getItem(this._storageKey("ui"));
+      if (!raw)
+        return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.showTypeHints === "boolean") {
+        this._showTypeHints = parsed.showTypeHints;
+      }
+    } catch (_) {}
+  }
+  _saveUIState() {
+    try {
+      localStorage.setItem(this._storageKey("ui"), JSON.stringify({
+        showTypeHints: this._showTypeHints
+      }));
+    } catch (_) {}
+  }
+  _loadReplHistory() {
+    if (!this._isReplMode())
+      return;
+    try {
+      const raw = localStorage.getItem(this._storageKey("repl-history"));
+      if (!raw)
+        return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed))
+        return;
+      this._replHistory = parsed.filter((entry) => typeof entry === "string").slice(-100);
+      this._replHistoryIndex = this._replHistory.length;
+    } catch (_) {}
+  }
+  _saveReplHistory() {
+    if (!this._isReplMode())
+      return;
+    try {
+      localStorage.setItem(this._storageKey("repl-history"), JSON.stringify(this._replHistory.slice(-100)));
+    } catch (_) {}
+  }
+  _commitReplEntry() {
+    if (!this._isReplMode())
+      return;
+    const text = this._extractText().trim();
+    if (!text)
+      return;
+    if (!this._replHistory.length || this._replHistory[this._replHistory.length - 1] !== text) {
+      this._replHistory.push(text);
+      if (this._replHistory.length > 100)
+        this._replHistory.shift();
+      this._saveReplHistory();
+    }
+    this._replHistoryIndex = this._replHistory.length;
+    this._replDraft = "";
+  }
+  _browseReplHistory(delta) {
+    if (!this._isReplMode())
+      return false;
+    if (!this._replHistory.length)
+      return false;
+    const current2 = this._extractText();
+    if (this._replHistoryIndex === this._replHistory.length) {
+      this._replDraft = current2;
+    }
+    const nextIndex = Math.min(this._replHistory.length, Math.max(0, this._replHistoryIndex + delta));
+    if (nextIndex === this._replHistoryIndex)
+      return false;
+    this._replHistoryIndex = nextIndex;
+    const nextText = this._replHistoryIndex === this._replHistory.length ? this._replDraft : this._replHistory[this._replHistoryIndex];
+    this._applySource(nextText, nextText.length);
+    return true;
+  }
   _onBeforeInput() {
     const text = this._extractText();
     const cursor = getCursorOffset(this._editable, this._shadow);
@@ -8772,8 +9350,24 @@ class TenXEditor extends HTMLElement {
     }
     if (meta && e.key === "Enter") {
       e.preventDefault();
+      this._commitReplEntry();
       clearTimeout(this._debounce);
       this._requestEval();
+      return;
+    }
+    if (meta && (e.key === "t" || e.key === "T")) {
+      e.preventDefault();
+      this._showTypeHints = !this._showTypeHints;
+      this._saveUIState();
+      this._injectResults();
+      return;
+    }
+    if (this._isReplMode() && !meta && !e.shiftKey && e.key === "ArrowUp" && this._browseReplHistory(-1)) {
+      e.preventDefault();
+      return;
+    }
+    if (this._isReplMode() && !meta && !e.shiftKey && e.key === "ArrowDown" && this._browseReplHistory(1)) {
+      e.preventDefault();
       return;
     }
     if (e.key === "Tab") {
