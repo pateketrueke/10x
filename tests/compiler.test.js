@@ -37,4 +37,21 @@ describe('Compiler', () => {
     expect(output).to.contain('const count = Runtime.signal(0);');
     expect(output).to.contain('Runtime.on("click", "#btn", () => { count.set(Runtime.read(count) + 1); });');
   });
+
+  it('should compile shadow components to setup(host)', () => {
+    const output = compile([
+      'count = @signal @prop "start" 0.',
+      '@render @shadow @html <h1>{count}</h1>.',
+      '@on "click", "#inc", count = count + 1.',
+      '@on "click", "#reset", count = @prop "start" 0.',
+    ].join('\n'));
+
+    expect(output).to.contain('export function setup(host) {');
+    expect(output).to.contain('Runtime.signal(Runtime.prop(host, "start", 0))');
+    expect(output).to.contain('Runtime.renderShadow(host,');
+    expect(output).to.contain('Runtime.on("click", "#inc",');
+    expect(output).to.contain(', host.shadowRoot)');
+    expect(output).to.contain('Runtime.prop(host, "start", 0)');
+    expect(output).to.contain('}');
+  });
 });

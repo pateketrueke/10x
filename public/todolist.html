@@ -167,15 +167,30 @@ count = @signal 1.
       render(selector, view) {
         const target = document.querySelector(selector);
         let prev = null;
+        let root = null;
+        const remount = next => {
+          target.innerHTML = '';
+          mount(target, next);
+          root = target.firstChild;
+          prev = next;
+        };
+
         const run = () => {
           currentEffect = run;
           const next = view.render();
           if (!prev) {
             mount(target, next);
+            root = target.firstChild;
+            prev = next;
           } else {
-            patch(target, prev, next);
+            Promise.resolve()
+              .then(() => patch(root, prev, next))
+              .then(node => {
+                root = node || root || target.firstChild;
+                prev = next;
+              })
+              .catch(() => remount(next));
           }
-          prev = next;
           currentEffect = null;
         };
         run();

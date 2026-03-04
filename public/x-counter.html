@@ -119,77 +119,7 @@ count = <span class="dir">@signal</span> <span class="dir">@prop</span> <span cl
   </main>
 
   <script type="module">
-    import { h, mount, patch } from 'https://unpkg.com/somedom/dist/somedom.mjs';
-
-    const SIGNAL = Symbol('10x.signal');
-
-    function makeRuntime(host) {
-      let currentEffect = null;
-
-      return {
-        signal(initial) {
-          const s = {
-            [SIGNAL]: true,
-            value: initial,
-            subs: new Set(),
-            get() {
-              if (currentEffect) this.subs.add(currentEffect);
-              return this.value;
-            },
-            set(next) {
-              this.value = next;
-              this.subs.forEach(fn => fn());
-            },
-            peek() {
-              return this.value;
-            },
-          };
-          return s;
-        },
-
-        prop(name, fallback) {
-          const raw = host.getAttribute(name);
-          return raw !== null ? Number(raw) || raw : fallback;
-        },
-
-        read(v) {
-          return v && v[SIGNAL] ? v.get() : v;
-        },
-
-        h,
-
-        html(renderFn) {
-          return { render: renderFn };
-        },
-
-        renderShadow(shadow, styles, view) {
-          // inject styles once
-          const styleEl = document.createElement('style');
-          styleEl.textContent = styles.replace(/<\/?style>/g, '');
-          shadow.appendChild(styleEl);
-
-          let prev = null;
-          const run = () => {
-            currentEffect = run;
-            const next = view.render();
-            if (!prev) {
-              mount(shadow, next);
-            } else {
-              patch(shadow, prev, next);
-            }
-            prev = next;
-            currentEffect = null;
-          };
-          run();
-        },
-
-        on(shadow, event, selector, handler) {
-          shadow.addEventListener(event, e => {
-            if (e.target && e.target.closest(selector)) handler(e);
-          });
-        },
-      };
-    }
+    import * as Runtime from '/10x/src/runtime/index.js';
 
     const STYLES = `
         :host {
@@ -239,29 +169,26 @@ count = <span class="dir">@signal</span> <span class="dir">@prop</span> <span cl
     class XCounter extends HTMLElement {
       connectedCallback() {
         const shadow = this.attachShadow({ mode: 'open' });
-        const R = makeRuntime(this);
+        const styleEl = document.createElement('style');
+        styleEl.textContent = STYLES;
+        shadow.appendChild(styleEl);
 
-        // count = @signal @prop "start" 0.
-        const count = R.signal(R.prop('start', 0));
+        const count = Runtime.signal(Runtime.prop(this, 'start', 0));
 
-        // @render @shadow @html ...
-        R.renderShadow(shadow, STYLES, R.html(() =>
-          R.h('div', { 'class': 'counter' },
-            R.h('h1', null, String(R.read(count))),
-            R.h('div', { 'class': 'actions' },
-              R.h('button', { id: 'dec' }, '−'),
-              R.h('button', { id: 'inc' }, '+'),
-              R.h('button', { id: 'reset' }, 'reset'),
+        Runtime.renderShadow(this, Runtime.html(() =>
+          Runtime.h('div', { 'class': 'counter' },
+            Runtime.h('h1', null, String(Runtime.read(count))),
+            Runtime.h('div', { 'class': 'actions' },
+              Runtime.h('button', { id: 'dec' }, '−'),
+              Runtime.h('button', { id: 'inc' }, '+'),
+              Runtime.h('button', { id: 'reset' }, 'reset'),
             ),
           )
         ));
 
-        // @on "click" "#inc"   count = count + 1.
-        R.on(shadow, 'click', '#inc',   () => count.set(R.read(count) + 1));
-        // @on "click" "#dec"   count = count - 1.
-        R.on(shadow, 'click', '#dec',   () => count.set(R.read(count) - 1));
-        // @on "click" "#reset" count = @prop "start" 0.
-        R.on(shadow, 'click', '#reset', () => count.set(R.prop('start', 0)));
+        Runtime.on('click', '#inc',   () => { count.set(Runtime.read(count) + 1); }, shadow);
+        Runtime.on('click', '#dec',   () => { count.set(Runtime.read(count) - 1); }, shadow);
+        Runtime.on('click', '#reset', () => { count.set(Runtime.prop(this, 'start', 0)); }, shadow);
       }
     }
 

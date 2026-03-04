@@ -168,8 +168,11 @@ function compileHtmlDirective(body) {
 }
 
 function compileRenderDirective(body, value, ctx) {
-  const selector = body.length ? compileExpression(body, ctx) : 'undefined';
   const htmlExpr = value.html instanceof Object ? compileHtmlDirective(value.html.getBody()) : 'undefined';
+  if (value.shadow) {
+    return `Runtime.renderShadow(host, ${htmlExpr})`;
+  }
+  const selector = body.length ? compileExpression(body, ctx) : 'undefined';
   return `Runtime.render(${selector}, ${htmlExpr})`;
 }
 
@@ -178,7 +181,31 @@ function compileOnDirective(body, ctx) {
   const eventName = compileToken(eventToken, ctx);
   const selector = compileToken(selectorToken, ctx);
   const handler = compileHandler(handlerToken, ctx);
-  return `Runtime.on(${eventName}, ${selector}, ${handler})`;
+  const rootArg = ctx.shadow ? ', host.shadowRoot' : '';
+  return `Runtime.on(${eventName}, ${selector}, ${handler}${rootArg})`;
+}
+
+function compileOnPropDirective(onBody, propBody, ctx) {
+  const [eventToken, selectorToken, handlerToken] = onBody;
+  const eventName = compileToken(eventToken, ctx);
+  const selector = compileToken(selectorToken, ctx);
+
+  // handler is a BLOCK containing the assignment callable (e.g. count =)
+  let signalName;
+  if (handlerToken.type === BLOCK && handlerToken.hasBody) {
+    const [first] = handlerToken.getBody();
+    signalName = first && first.getName ? first.getName() : String(first && first.value);
+  } else if (handlerToken.isCallable) {
+    signalName = handlerToken.getName();
+  } else {
+    signalName = String(handlerToken.value);
+  }
+
+  const propArgs = propBody[0].getBody();
+  const propName = compileToken(propArgs[0], ctx);
+  const fallback = compileToken(propArgs[1], ctx);
+  const rootArg = ctx.shadow ? ', host.shadowRoot' : '';
+  return `Runtime.on(${eventName}, ${selector}, () => { ${signalName}.set(Runtime.prop(host, ${propName}, ${fallback})); }${rootArg})`;
 }
 
 function compileDirectiveObject(token, ctx) {
@@ -186,6 +213,10 @@ function compileDirectiveObject(token, ctx) {
 
   if (value.render) {
     return compileRenderDirective(value.render.getBody(), value, ctx);
+  }
+
+  if (value.on && value.prop) {
+    return compileOnPropDirective(value.on.getBody(), value.prop.getBody(), ctx);
   }
 
   if (value.on) {
@@ -217,6 +248,13 @@ function compileDefinition(token, asStatement = false, ctx = { signalVars: new S
   }
 
   if (head.isObject && head.value && head.value.signal) {
+    if (head.value.prop) {
+      const propArgs = head.value.prop.getBody()[0].getBody();
+      const propName = compileToken(propArgs[0], ctx);
+      const fallback = compileToken(propArgs[1], ctx);
+      const out = `const ${name} = Runtime.signal(Runtime.prop(host, ${propName}, ${fallback}))`;
+      return asStatement ? `${out};` : out;
+    }
     const out = `const ${name} = ${compileSignalDirective(head.value.signal.getBody(), ctx)}`;
     return asStatement ? `${out};` : out;
   }
@@ -245,6 +283,14 @@ function compileStatement(tokens, ctx) {
   return `${compileExpression(tokens, ctx)};`;
 }
 
+function collectShadowFlag(statements) {
+  return statements.some(tokens => {
+    if (tokens.length !== 1) return false;
+    const [token] = tokens;
+    return token.isObject && token.value && token.value.shadow;
+  });
+}
+
 function collectSignalBindings(statements) {
   const signalVars = new Set();
 
@@ -267,10 +313,11 @@ export function compile(source, options = {}) {
   const normalized = String(source || '').replace(/\r\n/g, '\n');
   const ast = Parser.getAST(normalized, 'parse');
   const statements = splitStatements(ast);
-  const ctx = { signalVars: collectSignalBindings(statements) };
+  const hasShadow = collectShadowFlag(statements);
+  const ctx = { signalVars: collectSignalBindings(statements), shadow: hasShadow };
   const lines = statements.map(tokens => compileStatement(tokens, ctx)).filter(Boolean);
 
-  const requiresRuntime = lines.some(line => line.startsWith('Runtime.'));
+  const requiresRuntime = lines.some(line => line.includes('Runtime.'));
   const output = [];
 
   if (options.module !== false) {
@@ -280,7 +327,14 @@ export function compile(source, options = {}) {
     }
   }
 
-  output.push(...lines);
+  if (hasShadow) {
+    output.push('export function setup(host) {');
+    output.push(...lines.map(l => '  ' + l));
+    output.push('}');
+  } else {
+    output.push(...lines);
+  }
+
   return output.join('\n');
 }
 
