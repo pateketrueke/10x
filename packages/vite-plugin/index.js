@@ -3,7 +3,7 @@ import { compile } from '../../src/compiler/index.js';
 export default function plugin(options = {}) {
   const {
     runtimePath = '10x/runtime',
-    uno = false,
+    atomicCss = true,
     hmr = true,
     include,
     exclude,
@@ -27,7 +27,7 @@ export default function plugin(options = {}) {
       return {
         code: compile(code, {
           runtimePath,
-          atomicCss: !uno,
+          atomicCss,
           hmr,
           ...compileOptions,
         }),
