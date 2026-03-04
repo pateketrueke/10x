@@ -346,6 +346,17 @@ describe('Eval', () => {
 
       expect(await run('fn=x->x.\nfn(:foo "bar").foo')).to.eql([Expr.value('bar')]);
     });
+
+    it('should support JSON-style string keys and record merge', async () => {
+      expect(await run('{"name": "Alice", "age": 30}.name')).to.eql([Expr.value('Alice')]);
+      expect(await run('{:a 1} | {"b": 2}')).to.eql([Expr.map({
+        a: Expr.body([Expr.value(1)]),
+        b: Expr.body([Expr.value(2)]),
+      })]);
+      expect(await run('{"a": 1} | {:a 2}')).to.eql([Expr.map({
+        a: Expr.body([Expr.value(2)]),
+      })]);
+    });
   });
 
   describe('Functions', () => {

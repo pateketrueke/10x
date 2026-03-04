@@ -26,6 +26,27 @@ const OPS_MUL_DIV = new Set([MUL, DIV]);
 const OPS_PLUS_MINUS_MOD = new Set([PLUS, MINUS, MOD]);
 
 export default class Eval {
+  static normalizeBraceRecordArgs(args) {
+    const normalized = [];
+    let changed = false;
+
+    for (let i = 0, c = args.length; i < c; i++) {
+      const cur = args[i];
+      const next = args[i + 1];
+
+      if (isString(cur) && isSymbol(next) && next.value === ':') {
+        normalized.push(Expr.symbol(`:${cur.value}`, false, cur.tokenInfo || cur));
+        changed = true;
+        i++;
+        continue;
+      }
+
+      normalized.push(cur);
+    }
+
+    return changed ? normalized : args;
+  }
+
   static splitMatchCases(tokens) {
     const output = [];
     let current = [];
@@ -762,16 +783,23 @@ export default class Eval {
         this.append(this.ctx);
       }
     } else {
-      const fixedBody = args || body;
+      let fixedBody = args || body;
+
+      // Brace blocks are used as record literals; normalize {"k": v} to :k v form.
+      if (args && this.ctx.tokenInfo && this.ctx.tokenInfo.value === '{') {
+        fixedBody = Eval.normalizeBraceRecordArgs(args);
+      }
+
       const derived = this.derive || (fixedBody[0] && fixedBody[0].isObject);
 
-      this.append(...await Eval.do(args || body, this.env, derived ? this.descriptor : '...', derived, this.ctx.tokenInfo));
+      this.append(...await Eval.do(fixedBody, this.env, derived ? this.descriptor : '...', derived, this.ctx.tokenInfo));
     }
     return true;
   }
 
   async evalUnary() {
     const prev = this.getPrev();
+    const older = this.getOlder();
 
     // evaluate negative numbers that are lone, e.g. `-1` BUT NOT `1-2`
     if (prev && prev.type === MINUS && !isNumber(this.getOlder())) {
@@ -797,6 +825,24 @@ export default class Eval {
 
       this.replace(Expr.value(!this.ctx.valueOf(), this.ctx.tokenInfo));
       return true;
+    }
+
+    // merge records, e.g. `{:a 1} | {"b": 2}`
+    if (isResult(prev) && isOR(this.ctx) && isObject(prev) && !isSome(older)) {
+      const { body, offset } = Expr.chunk(this.expr, this.offset + 1);
+
+      if (body.length) {
+        const merged = await Eval.do(body, this.env, 'Or', false, this.ctx.tokenInfo);
+
+        if (merged.length === 1 && isObject(merged[0])) {
+          this.discard().append(Expr.map({
+            ...prev.valueOf(),
+            ...merged[0].valueOf(),
+          }, this.ctx.tokenInfo));
+          this.move(offset);
+          return true;
+        }
+      }
     }
 
     // evaluate if-then/else-operator, e.g. `x ? y | z`
