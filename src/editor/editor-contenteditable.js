@@ -167,6 +167,63 @@ function quoteStringDisplay(text) {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
+function tokenSourceText(token) {
+  if (!token) return '';
+  const n = SYMBOL_NAME(token.type);
+
+  if (n === 'TEXT' && token.value && typeof token.value === 'object' && Array.isArray(token.value.buffer)) {
+    return token.value.buffer.map((chunk) => {
+      if (typeof chunk === 'string') return chunk;
+      if (chunk && typeof chunk === 'object') return tokenSourceText(chunk);
+      return '';
+    }).join('');
+  }
+
+  if (Array.isArray(token.value)) {
+    return token.value.map(part => tokenSourceText(part)).join('');
+  }
+
+  if (n === 'STRING' && typeof token.value === 'string') {
+    return token.value;
+  }
+
+  return tokenText(token);
+}
+
+function interpolatedStringBody(token) {
+  if (!Array.isArray(token?.value)) return '';
+
+  const parts = token.value;
+  let out = '';
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const kind = SYMBOL_NAME(part?.type);
+
+    if (kind === 'PLUS') continue;
+
+    if (kind === 'OPEN' && part?.value === '#{') {
+      out += '#{';
+      i += 1;
+      while (i < parts.length) {
+        const inner = parts[i];
+        const innerKind = SYMBOL_NAME(inner?.type);
+        if (innerKind === 'CLOSE' && inner?.value === '}') {
+          out += '}';
+          break;
+        }
+        out += tokenSourceText(inner);
+        i += 1;
+      }
+      continue;
+    }
+
+    out += tokenSourceText(part);
+  }
+
+  return out;
+}
+
 function hasTextBody(buffer) {
   return buffer.some(chunk => (
     typeof chunk === 'string' ? chunk.length > 0 : !!chunk
@@ -418,9 +475,9 @@ function appendHtmlTaggedText(parent, text, baseClass = '', fallbackTooltip = ''
   if (tail) appendText(parent, tail, baseClass || null, fallbackTooltip);
 }
 
-function appendInterpolatedText(parent, text, fallbackClass = '') {
+function appendInterpolatedText(parent, text, fallbackClass = '', fallbackTooltip = '') {
   if (!text || !text.includes('#{')) {
-    appendText(parent, text, fallbackClass || null);
+    appendText(parent, text, fallbackClass || null, fallbackTooltip);
     return;
   }
 
@@ -430,27 +487,37 @@ function appendInterpolatedText(parent, text, fallbackClass = '') {
 
   while ((match = re.exec(text))) {
     const before = text.slice(cursor, match.index);
-    if (before) appendText(parent, before, fallbackClass || null);
+    if (before) appendText(parent, before, fallbackClass || null, fallbackTooltip);
 
     const delimClass = [fallbackClass, 'xt-interp-delim'].filter(Boolean).join(' ');
-    appendText(parent, '#{', delimClass || null);
+    appendText(parent, '#{', delimClass || null, 'Interpolation delimiter');
 
     const expr = (match[1] || '').trim();
     if (expr) {
       try {
-        const exprTokens = Parser.getAST(expr, 'raw');
+        // Force code-context scanning inside interpolation so unit/symbol
+        // expressions are not downgraded to markdown prose TEXT tokens.
+        const exprTokens = Parser.getAST(`.\n${expr}`, 'raw').filter((tok, idx) => {
+          const kind = SYMBOL_NAME(tok?.type);
+          if (kind === 'EOF') return false;
+          if (idx === 0 && kind === 'EOL') return false;
+          if (idx === 1 && kind === 'TEXT' && Array.isArray(tok?.value?.buffer) && tok.value.buffer.join('') === '\n') {
+            return false;
+          }
+          return true;
+        });
         for (const exprToken of exprTokens) appendToken(parent, exprToken);
       } catch (_) {
         appendText(parent, expr, fallbackClass || null);
       }
     }
 
-    appendText(parent, '}', delimClass || null);
+    appendText(parent, '}', delimClass || null, 'Interpolation delimiter');
     cursor = match.index + match[0].length;
   }
 
   const tail = text.slice(cursor);
-  if (tail) appendText(parent, tail, fallbackClass || null);
+  if (tail) appendText(parent, tail, fallbackClass || null, fallbackTooltip);
 }
 
 function appendToken(parent, token) {
@@ -475,6 +542,13 @@ function appendToken(parent, token) {
     if (typeof token.line === 'number') eol.dataset.line = String(token.line);
     eol.textContent = '.';
     parent.appendChild(eol);
+    return;
+  }
+
+  if (n === 'STRING' && Array.isArray(token.value)) {
+    const text = quoteStringDisplay(interpolatedStringBody(token));
+    const cls = tokenClass(token);
+    appendInterpolatedText(parent, text, cls, tooltip);
     return;
   }
 
