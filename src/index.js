@@ -22,6 +22,7 @@ let useCurrencies;
 let createEnv;
 let applyAdapter;
 let compile;
+let compileBundle;
 
 const runtimeReady = import('./main.js')
   .catch(() => import('../dist/main.js'))
@@ -41,6 +42,7 @@ const runtimeReady = import('./main.js')
       createEnv,
       applyAdapter,
       compile,
+      compileBundle,
     } = x10);
   });
 
@@ -49,7 +51,7 @@ const HISTORY_FILE = path.join(os.homedir(), '.tenx_history');
 const MAX_HISTORY = 1000;
 
 const argv = wargs(process.argv.slice(2), {
-  boolean: ['trace', 'color', 'print', 'inline', 'source', 'lint'],
+  boolean: ['trace', 'color', 'print', 'inline', 'source', 'lint', 'bundle'],
 });
 const nodeAdapter = createNodeAdapter(process.argv.slice(2));
 
@@ -179,6 +181,43 @@ async function readStdin() {
   });
 }
 
+function toAliasEntries(rawAlias) {
+  const list = Array.isArray(rawAlias) ? rawAlias : (rawAlias ? [rawAlias] : []);
+  return list
+    .flatMap(item => String(item).split(','))
+    .map(item => item.trim())
+    .filter(Boolean)
+    .map(entry => {
+      const idx = entry.indexOf('=');
+      if (idx <= 0) return null;
+      const key = entry.slice(0, idx).trim();
+      const target = entry.slice(idx + 1).trim();
+      if (!key || !target) return null;
+      return [key, target];
+    })
+    .filter(Boolean);
+}
+
+function resolveWithAliases(specifier, importerPath, aliasEntries) {
+  const importerDir = path.dirname(path.resolve(importerPath));
+  const resolvePath = value => {
+    const withExt = path.extname(value) ? value : `${value}.md`;
+    return path.resolve(importerDir, withExt);
+  };
+
+  if (specifier.startsWith('.')) return resolvePath(specifier);
+
+  for (const [key, rawTarget] of aliasEntries) {
+    if (specifier === key || specifier.startsWith(`${key}/`)) {
+      const tail = specifier === key ? '' : specifier.slice(key.length);
+      const mapped = rawTarget.endsWith('/') && tail.startsWith('/') ? `${rawTarget}${tail.slice(1)}` : `${rawTarget}${tail}`;
+      return resolvePath(mapped);
+    }
+  }
+
+  throw new Error(`Cannot resolve bundled import "${specifier}" from ${importerPath}. Use --alias <prefix=path> or keep it as runtime import.`);
+}
+
 async function cli() {
   await runtimeReady;
 
@@ -210,13 +249,20 @@ async function cli() {
     const outputArg = _[2];
 
     if (!inputArg) {
-      throw new Error('Missing input file. Usage: 10x compile <input.md> [output.mjs] [--runtime ./runtime]');
+      throw new Error('Missing input file. Usage: 10x compile <input.md> [output.mjs] [--runtime ./runtime] [--bundle] [--alias @app=./src]');
     }
 
     const inputFile = inputArg.includes('.') ? inputArg : `${inputArg}.md`;
-    const source = fs.readFileSync(inputFile, 'utf8');
     const runtimePath = argv.flags.runtime || './runtime';
-    const compiled = compile(source, { runtimePath });
+    const aliasEntries = toAliasEntries(argv.flags.alias);
+    const compiled = argv.flags.bundle
+      ? compileBundle(inputFile, {
+        runtimePath,
+        readFile: modulePath => fs.readFileSync(modulePath, 'utf8'),
+        shouldBundleImport: specifier => specifier.startsWith('.') || aliasEntries.some(([key]) => specifier === key || specifier.startsWith(`${key}/`)),
+        resolveModule: (specifier, importerPath) => resolveWithAliases(specifier, importerPath, aliasEntries),
+      })
+      : compile(fs.readFileSync(inputFile, 'utf8'), { runtimePath });
 
     if (outputArg) {
       fs.writeFileSync(outputArg, `${compiled}\n`, 'utf8');

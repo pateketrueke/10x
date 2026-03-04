@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { compile } from '../src/compiler';
+import { compile, compileBundle } from '../src/compiler';
 
 describe('Compiler', () => {
   it('should compile single-arg definitions', () => {
@@ -154,6 +154,66 @@ describe('Compiler', () => {
     expect(output).to.contain('for (const x of items)');
     expect(output).to.contain('try { return (x / 0); } catch (e) { return 0; }');
     expect(output).to.contain('export { n, safe };');
+  });
+
+  it('should bundle local .md modules into a single output', () => {
+    const files = {
+      '/app/fib.md': 'fib = n -> @if (< n 2) n @else fib(n - 1) + fib(n - 2).',
+      '/app/main.md': '@import fib @from "./fib".\nfib!(6).',
+    };
+
+    const output = compileBundle('/app/main.md', {
+      readFile: modulePath => files[modulePath],
+      resolveModule: (specifier, importerPath) => {
+        const base = importerPath.slice(0, importerPath.lastIndexOf('/'));
+        return `${base}/${specifier.replace('./', '')}.md`;
+      },
+    });
+
+    expect(output).to.contain('// Module: /app/fib.md');
+    expect(output).to.contain('const fib = (n) => (');
+    expect(output).to.contain('// Module: /app/main.md');
+    expect(output).to.contain('console.log(fib(6));');
+    expect(output).to.not.contain('export const fib');
+  });
+
+  it('should dedupe runtime imports when bundling multiple local modules', () => {
+    const files = {
+      '/app/helper.md': 'count = @signal 1.',
+      '/app/main.md': '@import count @from "./helper".\ncount = @signal 2.',
+    };
+
+    const output = compileBundle('/app/main.md', {
+      readFile: modulePath => files[modulePath],
+      resolveModule: (specifier, importerPath) => {
+        const base = importerPath.slice(0, importerPath.lastIndexOf('/'));
+        return `${base}/${specifier.replace('./', '')}.md`;
+      },
+    });
+
+    const runtimeImports = output.match(/import \* as Runtime from "\.\/runtime";/g) || [];
+    expect(runtimeImports).to.have.length(1);
+    expect(output).to.contain('// Module: /app/helper.md');
+    expect(output).to.contain('// Module: /app/main.md');
+    expect(output).to.not.contain('export const count');
+  });
+
+  it('should bundle aliased non-local imports when resolver rules allow it', () => {
+    const files = {
+      '/app/lib/fib.md': 'fib = n -> @if (< n 2) n @else fib(n - 1) + fib(n - 2).',
+      '/app/main.md': '@import fib @from "@app/lib/fib".\nfib!(7).',
+    };
+
+    const output = compileBundle('/app/main.md', {
+      readFile: modulePath => files[modulePath],
+      shouldBundleImport: specifier => specifier.startsWith('@app/'),
+      resolveModule: specifier => `/app/${specifier.replace(/^@app\//, '')}.md`,
+    });
+
+    expect(output).to.contain('// Module: /app/lib/fib.md');
+    expect(output).to.contain('// Module: /app/main.md');
+    expect(output).to.contain('console.log(fib(7));');
+    expect(output).to.not.contain('import { fib }');
   });
 
 });
