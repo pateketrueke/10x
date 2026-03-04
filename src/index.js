@@ -21,6 +21,7 @@ let evaluate;
 let useCurrencies;
 let createEnv;
 let applyAdapter;
+let compile;
 
 const runtimeReady = import('./main.js')
   .catch(() => import('../dist/main.js'))
@@ -39,6 +40,7 @@ const runtimeReady = import('./main.js')
       useCurrencies,
       createEnv,
       applyAdapter,
+      compile,
     } = x10);
   });
 
@@ -202,6 +204,28 @@ async function cli() {
   }
 
   const { _, raw, ...flags } = argv;
+
+  if (_[0] === 'compile') {
+    const inputArg = _[1];
+    const outputArg = _[2];
+
+    if (!inputArg) {
+      throw new Error('Missing input file. Usage: 10x compile <input.md> [output.mjs] [--runtime ./runtime]');
+    }
+
+    const inputFile = inputArg.includes('.') ? inputArg : `${inputArg}.md`;
+    const source = fs.readFileSync(inputFile, 'utf8');
+    const runtimePath = argv.flags.runtime || './runtime';
+    const compiled = compile(source, { runtimePath });
+
+    if (outputArg) {
+      fs.writeFileSync(outputArg, `${compiled}\n`, 'utf8');
+    } else {
+      process.stdout.write(`${compiled}\n`);
+    }
+
+    return;
+  }
 
   let code = '';
 

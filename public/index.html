@@ -5,25 +5,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>10x Language</title>
-  <meta name="description" content="10x — a toy programming language with markdown-native syntax, units, fractions, ranges, and first-class markup. Run from CLI, REPL, or browser.">
+  <meta name="description" content="10x is a markdown-native language with a reactive runtime and an ESM compiler.">
   <meta property="og:title" content="10x Language">
-  <meta property="og:description" content="10x — a toy programming language with markdown-native syntax, units, fractions, ranges, and first-class markup. Run from CLI, REPL, or browser.">
+  <meta property="og:description" content="Markdown-native language, reactive runtime, and portable ESM compiler.">
   <meta property="og:url" content="https://soypache.co/10x">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0f0f0f;
-      --ink: #d4d4d4;
-      --muted: #8a8f9b;
-      --accent: #4ec9b0;
-      --accent-2: #569cd6;
-      --card: #171717;
-      --line: #2a2a2a;
-      --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      --bg: #0e1114;
+      --ink: #d8dde4;
+      --muted: #8c95a3;
+      --accent: #53d0b5;
+      --accent-2: #7bc2ff;
+      --card: #151b22;
+      --line: #2a3442;
+      --shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
       --radius: 18px;
-      --max: 1120px;
+      --max: 1140px;
     }
 
     * { box-sizing: border-box; }
@@ -32,20 +32,20 @@
       margin: 0;
       color: var(--ink);
       background:
-        radial-gradient(80rem 40rem at -10% -10%, #10322d 0%, transparent 60%),
-        radial-gradient(60rem 30rem at 110% 10%, #1d2f48 0%, transparent 60%),
+        radial-gradient(78rem 38rem at -12% -14%, #16352f 0%, transparent 62%),
+        radial-gradient(62rem 32rem at 112% 6%, #1e3552 0%, transparent 64%),
         var(--bg);
       font-family: "Space Grotesk", "Avenir Next", sans-serif;
       line-height: 1.45;
     }
 
     .shell {
-      width: min(var(--max), 92vw);
+      width: min(var(--max), 93vw);
       margin: 0 auto;
     }
 
     .topbar {
-      padding: 1.15rem 0;
+      padding: 1.1rem 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -64,9 +64,9 @@
     }
 
     .hero {
-      padding: 3.6rem 0 2.2rem;
+      padding: 3.5rem 0 1.8rem;
       display: grid;
-      gap: 1.2rem;
+      gap: 1.1rem;
     }
 
     .eyebrow {
@@ -79,23 +79,23 @@
 
     h1 {
       margin: 0;
-      font-size: clamp(2rem, 5vw, 4.6rem);
+      font-size: clamp(2rem, 5vw, 4.5rem);
       line-height: 0.95;
       max-width: 13ch;
     }
 
     .lead {
       margin: 0;
-      max-width: 62ch;
+      max-width: 68ch;
       color: var(--muted);
-      font-size: clamp(1rem, 1.7vw, 1.2rem);
+      font-size: clamp(1rem, 1.65vw, 1.18rem);
     }
 
     .cta {
       display: flex;
       flex-wrap: wrap;
       gap: 0.7rem;
-      margin-top: 0.4rem;
+      margin-top: 0.45rem;
     }
 
     .btn {
@@ -105,31 +105,54 @@
       font: inherit;
       text-decoration: none;
       font-weight: 600;
-      transition: transform 180ms ease, background-color 180ms ease, color 180ms ease;
+      transition: transform 180ms ease, background-color 180ms ease;
     }
 
     .btn.primary {
       background: var(--accent);
-      color: #0f0f0f;
+      color: #08110f;
       box-shadow: var(--shadow);
     }
 
     .btn.secondary {
       border-color: var(--line);
       color: var(--ink);
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.03);
     }
 
     .btn:hover { transform: translateY(-2px); }
 
+    .demo-strip {
+      margin: 0.8rem 0 1.2rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.7rem;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    .demo-tile {
+      display: block;
+      text-decoration: none;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.65rem 0.8rem;
+      font-size: 0.9rem;
+      background: #10151b;
+    }
+
     .cards {
-      padding: 1.8rem 0 4rem;
+      padding: 0.4rem 0 4rem;
       display: grid;
       grid-template-columns: repeat(12, 1fr);
       gap: 1rem;
     }
 
     .card {
+      position: relative;
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -138,10 +161,46 @@
     }
 
     .card h2 {
-      margin: 0 0 0.45rem;
+      margin: 0 0 0.42rem;
       font-size: 1rem;
       letter-spacing: 0.03em;
       text-transform: uppercase;
+    }
+
+    .card p {
+      margin: 0.2rem 0 0.7rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .card.coming-soon::after {
+      content: 'coming soon';
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      padding: 0.2rem 0.6rem;
+      text-transform: uppercase;
+    }
+
+    .span-4 { grid-column: span 4; }
+    .span-6 { grid-column: span 6; }
+    .span-12 { grid-column: span 12; }
+
+    pre {
+      margin: 0;
+      overflow: auto;
+      background: #10151b;
+      color: #d4d4d4;
+      border-radius: 12px;
+      padding: 0.95rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.83rem;
+      line-height: 1.52;
     }
 
     .mono {
@@ -149,64 +208,64 @@
       font-size: 0.88rem;
     }
 
-    .pipeline { grid-column: span 7; }
-    .snippet { grid-column: span 5; }
-    .features { grid-column: span 6; }
-    .commands { grid-column: span 6; }
+    .demo-wrap {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0f1217;
+    }
+
+    .demo-frame {
+      width: 100%;
+      height: 265px;
+      border: 0;
+      display: block;
+      background: #0f1217;
+    }
 
     .flow {
       display: flex;
       flex-wrap: wrap;
       gap: 0.42rem;
       color: var(--muted);
+      margin-bottom: 0.6rem;
     }
 
     .chip {
       border: 1px solid var(--line);
-      background: #111;
+      background: #10151b;
       border-radius: 999px;
       padding: 0.35rem 0.62rem;
       font-size: 0.82rem;
     }
 
-    pre {
-      margin: 0;
-      overflow: auto;
-      background: #111;
-      color: #d4d4d4;
-      border-radius: 12px;
-      padding: 0.95rem;
-      font-family: "IBM Plex Mono", monospace;
-      font-size: 0.84rem;
-      line-height: 1.52;
-    }
-
-    .demo-wrap {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      overflow: hidden;
-      background: #111;
-    }
-
-    .demo-frame {
-      width: 100%;
-      height: 260px;
-      border: 0;
-      display: block;
-      background: #0f0f0f;
-    }
-
-    .tok-key { color: #569cd6; }
-    .tok-fn { color: #dcdcaa; }
-    .tok-op { color: #c586c0; }
-    .tok-num { color: #b5cea8; }
-    .tok-sym { color: #4ec9b0; }
     .tok-cmd { color: #9cdcfe; }
     .tok-arg { color: #ce9178; }
     .tok-path { color: #d7ba7d; }
 
+    .runtime-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.7rem;
+      margin-top: 0.2rem;
+    }
+
+    .runtime-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.7rem;
+      background: #10151b;
+    }
+
+    .runtime-box h3 {
+      margin: 0 0 0.5rem;
+      font-size: 0.84rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
     ul {
-      margin: 0.5rem 0 0;
+      margin: 0;
       padding-left: 1rem;
       color: var(--muted);
     }
@@ -222,10 +281,12 @@
       transform: translateY(0);
     }
 
-    @media (max-width: 920px) {
-      .pipeline, .snippet, .features, .commands { grid-column: span 12; }
+    @media (max-width: 960px) {
+      .span-4, .span-6, .span-12 { grid-column: span 12; }
       .hero { padding-top: 2.2rem; }
       h1 { max-width: 100%; }
+      .demo-strip { grid-template-columns: 1fr; }
+      .runtime-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -237,60 +298,157 @@
     </header>
 
     <section class="hero reveal">
-      <div class="eyebrow">Language + Runtime</div>
+      <div class="eyebrow">Toy language · Reactive runtime · Compiler</div>
       <h1>Write code that reads like notes.</h1>
       <p class="lead">
-        10x is a toy language in JavaScript with units, ranges, fractions, symbols, and a markdown-first source format.
-        Build expressions inline, keep prose around them, and execute from CLI, REPL, or browser demo.
+        10x is a markdown-native language that interprets expressions inline,
+        compiles to ESM modules, and renders reactive web components from the
+        same <span class="mono">.md</span> source file.
       </p>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/soypache/10x#readme">Read the docs</a>
-        <a class="btn secondary" href="./editor.html">Open editor demo</a>
-        <a class="btn secondary" href="./todolist.html">Open TodoList demo</a>
+        <a class="btn primary" href="./editor.html">Try editor</a>
+        <a class="btn secondary" href="./x-counter.html">x-counter demo</a>
+        <a class="btn secondary" href="https://github.com/soypache/10x#readme">View on GitHub</a>
       </div>
     </section>
 
+    <section class="demo-strip reveal">
+      <a class="demo-tile" href="./editor.html">📝 Editor demo</a>
+      <a class="demo-tile" href="./todolist.html">✓ TodoList</a>
+      <a class="demo-tile" href="./x-counter.html">⚡ x-counter</a>
+    </section>
+
     <section class="cards">
-      <article class="card pipeline reveal">
-        <h2>Execution Pipeline</h2>
-        <div class="flow mono">
-          <span class="chip">source text</span>
-          <span class="chip">scanner</span>
-          <span class="chip">parser</span>
-          <span class="chip">AST eval</span>
-          <span class="chip">result</span>
-        </div>
-        <ul>
-          <li>Markdown-aware syntax with `.md` source files.</li>
-          <li>Shared environment supports chained statements and imports.</li>
-          <li>Built-in unit and currency conversion support.</li>
-        </ul>
+      <article class="card span-4 reveal">
+        <h2>Language</h2>
+        <p>Numbers, units, ranges, symbols.</p>
+<pre>1/2.
+5 cm to :in.
+[1..5].
+:ok.</pre>
       </article>
 
-      <article class="card snippet reveal">
-        <h2>Live Demo</h2>
+      <article class="card span-4 reveal">
+        <h2>Functions</h2>
+        <p>Lambdas, closures, and pipe composition.</p>
+<pre>add = (a b) -&gt; a + b.
+double = n -&gt; n * 2.
+[1..5] |&gt; map(double).</pre>
+      </article>
+
+      <article class="card span-4 reveal">
+        <h2>Live Editor</h2>
+        <p>Compile/eval in the browser.</p>
         <div class="demo-wrap">
           <iframe class="demo-frame" src="./editor.html" title="10x editor demo"></iframe>
         </div>
       </article>
 
-      <article class="card features reveal">
-        <h2>Core Ideas</h2>
+      <article class="card span-6 reveal">
+        <h2>Signals & Reactivity</h2>
+        <p>Reactive state with automatic re-render.</p>
+<pre>count = @signal 0.
+@render "#app" @html
+  &lt;h1&gt;{count}&lt;/h1&gt;.
+@on "click" "#inc"
+  count = count + 1.</pre>
+      </article>
+
+      <article class="card span-6 reveal">
+        <h2>Web Components</h2>
+        <p>Shadow DOM components compile to <span class="mono">setup(host)</span>.</p>
+<pre>count = @signal @prop "start" 0.
+@render @shadow @html
+  &lt;div&gt;&lt;h1&gt;{count}&lt;/h1&gt;&lt;/div&gt;.
+@on "click", "#inc",
+  count = count + 1.</pre>
+      </article>
+
+      <article class="card span-6 reveal">
+        <h2>Compiler</h2>
+        <p>Compile <span class="mono">.md</span> to portable ESM.</p>
+<pre># source                    # compiled
+count = @signal 0.      -&gt; export const count = Runtime.signal(0);
+@render "#app" @html    -&gt; Runtime.render("#app", Runtime.html(() =&gt; ...));
+@on "click" "#btn"      -&gt; Runtime.on("click", "#btn", () =&gt; ...);</pre>
+      </article>
+
+      <article class="card span-6 reveal">
+        <h2>Cross Runtime</h2>
+        <p>Compile once, run in Bun/Node/browser.</p>
+<pre>10x compile examples/fib_memo.md --out fib.js
+bun run fib.js
+node fib.js
+
+@import fib @from "./fib.js".
+fib(20).</pre>
+      </article>
+
+      <article class="card span-12 reveal">
+        <h2>Modular Runtime</h2>
+        <p>Import only what you need.</p>
+        <div class="runtime-grid">
+          <div class="runtime-box">
+            <h3>10x/runtime/core</h3>
+            <ul>
+              <li>signal, effect, read</li>
+              <li>html, prop, isSignal</li>
+              <li>Pure JS, no DOM</li>
+            </ul>
+          </div>
+          <div class="runtime-box">
+            <h3>10x/runtime/dom</h3>
+            <ul>
+              <li>render, renderShadow</li>
+              <li>on, h</li>
+              <li>Browser-only layer</li>
+            </ul>
+          </div>
+          <div class="runtime-box">
+            <h3>10x/prelude</h3>
+            <ul>
+              <li>head, tail, map, filter</li>
+              <li>take, range, concat</li>
+              <li>Works in JS runtimes</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="card span-6 reveal">
+        <h2>Execution Pipeline</h2>
+        <div class="flow mono">
+          <span class="chip">.md source</span>
+          <span class="chip">scanner</span>
+          <span class="chip">parser</span>
+          <span class="chip">eval</span>
+          <span class="chip">result</span>
+          <span class="chip">compiler</span>
+          <span class="chip">.js ESM</span>
+        </div>
         <ul>
-          <li>Four primitives: <span class="mono">string</span>, <span class="mono">number</span>, <span class="mono">symbol</span>, <span class="mono">range</span>.</li>
-          <li>Units as first-class numeric wrappers with conversion methods.</li>
-          <li>Inline interpolation across strings and markup.</li>
-          <li>REPL and CLI with import/export across markdown modules.</li>
+          <li>Markdown prose is ignored by eval and emitted as comments by compile.</li>
+          <li>Interpreter and compiler share parser semantics.</li>
+          <li>Runtime split: pure core + browser DOM layer.</li>
         </ul>
       </article>
 
-      <article class="card commands reveal">
+      <article class="card span-6 reveal">
         <h2>Quick Start</h2>
-        <pre><span class="tok-cmd">bun</span> install
-<span class="tok-cmd">make</span> repl
-<span class="tok-cmd">make</span> eval <span class="tok-arg">code="1 + 2"</span>
-<span class="tok-cmd">node</span> <span class="tok-path">bin/cli</span> <span class="tok-path">examples/fib_loop.md</span>
-<span class="tok-cmd">bun</span> test <span class="tok-path">tests/</span></pre>
+<pre><span class="tok-cmd">bun</span> install
+<span class="tok-cmd">bun</span> run repl
+<span class="tok-cmd">node</span> <span class="tok-path">bin/cli</span> <span class="tok-path">examples/fib_memo.md</span>
+<span class="tok-cmd">10x</span> compile <span class="tok-path">examples/x-counter.md</span>
+<span class="tok-cmd">10x</span> compile <span class="tok-path">examples/fib_memo.md</span> | <span class="tok-cmd">bun</span> run -
+<span class="tok-cmd">make</span> demo</pre>
+      </article>
+
+      <article class="card span-12 coming-soon reveal">
+        <h2>Tooling Ecosystem</h2>
+        <p>Tree-sitter grammar, LSP, Zed extension, Vite plugin, and runtime devtools are planned in sequence.</p>
+<pre>tree-sitter -&gt; highlight queries -&gt; LSP -&gt; Zed extension
+compiler -&gt; Vite plugin
+runtime signal registry -&gt; DevTools overlay</pre>
       </article>
     </section>
   </div>
@@ -298,12 +456,12 @@
   <script>
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        if (entry.isIntersecting) entry.target.classList.add("show");
+        if (entry.isIntersecting) entry.target.classList.add('show');
       }
     }, { threshold: 0.15 });
 
-    document.querySelectorAll(".reveal").forEach((el, i) => {
-      el.style.transitionDelay = `${i * 70}ms`;
+    document.querySelectorAll('.reveal').forEach((el, i) => {
+      el.style.transitionDelay = `${i * 65}ms`;
       observer.observe(el);
     });
   </script>

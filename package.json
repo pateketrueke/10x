@@ -14,6 +14,27 @@
       "require": "./dist/main.cjs",
       "types": "./dist/main.d.ts"
     },
+    "./runtime": {
+      "import": "./dist/runtime.js"
+    },
+    "./runtime/core": {
+      "import": "./dist/runtime-core.js"
+    },
+    "./runtime/dom": {
+      "import": "./dist/runtime-dom.js"
+    },
+    "./prelude": {
+      "import": "./dist/prelude.js"
+    },
+    "./seq": {
+      "import": "./dist/seq.js"
+    },
+    "./io": {
+      "import": "./dist/io.js"
+    },
+    "./proc": {
+      "import": "./dist/proc.js"
+    },
     "./editor": {
       "import": "./dist/editor.js"
     }
@@ -24,7 +45,7 @@
     "watch": "bun test --watch tests/",
     "bench": "node bench/plan05.mjs --compare bench/plan05-baseline.json --save bench/results/latest.json",
     "bench:plan05": "node bench/plan05.mjs --compare bench/plan05-baseline.json --save bench/results/latest.json",
-    "build": "bun build src/main.js --outfile=dist/main.js --format=esm --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;' && bun build src/main.js --outfile=dist/main.cjs --format=cjs --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;' && bun build src/editor.js --outfile=dist/editor.js --format=esm --banner 'var global=globalThis;' && bun build src/editor/editor-eval-worker.js --outfile=dist/editor-eval-worker.js --format=esm --banner 'var global=globalThis;'",
+    "build": "bun build src/main.js --outfile=dist/main.js --format=esm --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;' && bun build src/main.js --outfile=dist/main.cjs --format=cjs --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;' && bun build src/runtime/core.js --outfile=dist/runtime-core.js --format=esm --banner 'var global=globalThis;' && bun build src/runtime/dom.js --outfile=dist/runtime-dom.js --format=esm --banner 'var global=globalThis;' && bun build src/runtime/index.js --outfile=dist/runtime.js --format=esm --banner 'var global=globalThis;' && bun build src/runtime/prelude.js --outfile=dist/prelude.js --format=esm --banner 'var global=globalThis;' && bun build src/runtime/seq.js --outfile=dist/seq.js --format=esm --banner 'var global=globalThis;' && bun build src/runtime/io.js --outfile=dist/io.js --format=esm --external=fs --banner 'var global=globalThis;' && bun build src/runtime/proc.js --outfile=dist/proc.js --format=esm --banner 'var global=globalThis;' && bun build src/editor.js --outfile=dist/editor.js --format=esm --banner 'var global=globalThis;' && bun build src/editor/editor-eval-worker.js --outfile=dist/editor-eval-worker.js --format=esm --banner 'var global=globalThis;'",
     "build:bin": "bun build --compile --target=bun-darwin-arm64 src/cli.js --outfile=dist/bin/10x",
     "build:bin:linux": "bun build --compile --target=bun-linux-x64 src/cli.js --outfile=dist/bin/10x-linux-x64",
     "build:bin:macos": "bun build --compile --target=bun-darwin-x64 src/cli.js --outfile=dist/bin/10x-macos-x64",

@@ -1,6 +1,7 @@
 import Parser from '../lib/tree/parser';
 import {
   BLOCK, COMMA, DIV, DOT, EOL, EQUAL, GREATER, GREATER_EQ, LESS, LESS_EQ, LIKE, MINUS, MOD, MUL, NOT_EQ, EXACT_EQ, OR, PIPE, PLUS,
+  TEXT, COMMENT, COMMENT_MULTI, EOF, RANGE, SOME, EVERY, SYMBOL, NOT,
 } from '../lib/tree/symbols';
 
 const OPERATOR = new Map([
@@ -9,7 +10,7 @@ const OPERATOR = new Map([
   [MUL, '*'],
   [DIV, '/'],
   [MOD, '%'],
-  [EQUAL, '='],
+  [EQUAL, '==='],
   [LESS, '<'],
   [LESS_EQ, '<='],
   [GREATER, '>'],
@@ -39,6 +40,265 @@ function splitStatements(tokens) {
   return out;
 }
 
+function stripMarkdownPrefix(line) {
+  return line
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/^>\s+/, '')
+    .replace(/^[-*+]\s+/, '')
+    .replace(/^\d+\.\s+/, '')
+    .replace(/^```+.*$/, '')
+    .trim();
+}
+
+function textTokenToSource(token) {
+  if (!token || !token.value || !Array.isArray(token.value.buffer)) return '';
+
+  return token.value.buffer.reduce((prev, cur) => {
+    if (typeof cur === 'string') return prev + cur;
+    if (Array.isArray(cur) && typeof cur[2] === 'string') return prev + cur[2];
+    return prev;
+  }, '');
+}
+
+function normalizeDirectiveArgs(body) {
+  if (!Array.isArray(body)) return [];
+
+  const flat = body.length === 1
+    && body[0]
+    && body[0].type === BLOCK
+    && body[0].hasBody
+    ? body[0].getBody()
+    : body;
+
+  return flat.filter(token => token && token.type !== COMMA);
+}
+
+function collectProseComments(source, statementCount) {
+  const raw = Parser.getAST(source, null);
+  const commentsByStatement = Array.from({ length: statementCount }, () => []);
+
+  let pending = [];
+  let statementIndex = 0;
+  let inStatement = false;
+
+  raw.forEach(token => {
+    if (token.type === EOF) return;
+
+    if (token.type === EOL) {
+      if (inStatement) {
+        statementIndex++;
+        inStatement = false;
+      }
+      return;
+    }
+
+    if (token.type === TEXT && !inStatement) {
+      textTokenToSource(token)
+        .split('\n')
+        .map(stripMarkdownPrefix)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .forEach(line => pending.push(line));
+      return;
+    }
+
+    if (token.type === COMMENT || token.type === COMMENT_MULTI) return;
+
+    if (!inStatement) {
+      if (pending.length && statementIndex < commentsByStatement.length) {
+        commentsByStatement[statementIndex].push(...pending);
+      }
+      pending = [];
+      inStatement = true;
+    }
+  });
+
+  return commentsByStatement;
+}
+
+function splitByEol(tokens) {
+  const out = [];
+  let current = [];
+
+  (tokens || []).forEach(token => {
+    if (token.type === EOL) {
+      if (current.length) out.push(current);
+      current = [];
+      return;
+    }
+    current.push(token);
+  });
+
+  if (current.length) out.push(current);
+  return out;
+}
+
+function getRuntimeSiblingPath(runtimePath, moduleName) {
+  if (runtimePath.endsWith('/runtime')) {
+    return `${runtimePath.slice(0, -'/runtime'.length) || '.'}/${moduleName}`.replace('//', '/');
+  }
+  if (runtimePath.endsWith('/runtime/index.js')) {
+    return `${runtimePath.slice(0, -'/runtime/index.js'.length) || '.'}/${moduleName}`.replace('//', '/');
+  }
+  if (runtimePath === './runtime') return `./${moduleName}`;
+  if (runtimePath === '10x/runtime') return `10x/${moduleName}`;
+  return `./${moduleName}`;
+}
+
+function getPreludePath(runtimePath) {
+  return getRuntimeSiblingPath(runtimePath, 'prelude');
+}
+
+function getCoreRuntimePath(runtimePath) {
+  if (runtimePath.startsWith('./') || runtimePath.startsWith('../')) return runtimePath;
+  if (runtimePath.endsWith('/runtime')) return `${runtimePath}/core`;
+  if (runtimePath.endsWith('/runtime/index.js')) return `${runtimePath.slice(0, -'/index.js'.length)}/core.js`;
+  return runtimePath;
+}
+
+function toTokenLike(node) {
+  if (!node) return node;
+  if (node.type) return node;
+
+  if (typeof node === 'string') {
+    if (/^-?\d+(\.\d+)?$/.test(node)) return { isNumber: true, value: node };
+    return { isLiteral: true, value: node };
+  }
+
+  if (typeof node === 'number') {
+    return { isNumber: true, value: String(node) };
+  }
+
+  if (typeof node === 'object' && Object.prototype.hasOwnProperty.call(node, 'value')) {
+    return toTokenLike(node.value);
+  }
+
+  return node;
+}
+
+function splitArgGroups(args) {
+  const groups = [];
+  let current = [];
+
+  (args || []).forEach(token => {
+    if (token.type === COMMA) {
+      if (current.length) groups.push(current);
+      current = [];
+      return;
+    }
+    current.push(token);
+  });
+
+  if (current.length) groups.push(current);
+  return groups;
+}
+
+function collectImportSpecs(statements, runtimePath) {
+  const imports = [];
+  const globals = [];
+  const seenImport = new Set();
+  const seenGlobal = new Set();
+
+  statements.forEach(tokens => {
+    if (tokens.length !== 1) return;
+    const [token] = tokens;
+    if (!token.isObject || !token.value || !token.value.import) return;
+
+    const fromBody = token.value.from && token.value.from.getBody ? token.value.from.getBody() : [];
+    const source = fromBody[0] && typeof fromBody[0].value === 'string' ? fromBody[0].value : null;
+    const importToken = token.value.import;
+    const importBodyRaw = importToken && importToken.getBody ? importToken.getBody() : [];
+    const importBody = importBodyRaw.length === 1
+      && importBodyRaw[0]
+      && importBodyRaw[0].type === BLOCK
+      && importBodyRaw[0].hasBody
+      ? importBodyRaw[0].getBody()
+      : importBodyRaw;
+    const specifiers = (importBody.length
+      ? importBody.filter(x => x && x.type !== COMMA).map(x => x.value)
+      : [importToken && importToken.value]
+    ).filter(Boolean);
+
+    if (!specifiers.length) return;
+
+    if (source === 'Prelude' || source === 'IO' || source === 'Proc' || (source === 'Array' && specifiers.includes('concat'))) {
+      const modulePath = source === 'Prelude'
+        ? getPreludePath(runtimePath)
+        : source === 'IO'
+          ? getRuntimeSiblingPath(runtimePath, 'io')
+          : source === 'Proc'
+            ? getRuntimeSiblingPath(runtimePath, 'proc')
+            : getPreludePath(runtimePath);
+      const preludeSpecifiers = source === 'Prelude'
+        ? specifiers
+        : source === 'IO' || source === 'Proc'
+          ? specifiers
+        : specifiers.filter(x => x === 'concat');
+      const key = `${modulePath}::${specifiers.join(',')}`;
+      if (!seenImport.has(key)) {
+        imports.push({ source: modulePath, specifiers: preludeSpecifiers });
+        seenImport.add(key);
+      }
+      if (source === 'Array') {
+        const remaining = specifiers.filter(x => x !== 'concat');
+        if (!remaining.length) return;
+        const gKey = `${source}::${remaining.join(',')}`;
+        if (!seenGlobal.has(gKey)) {
+          globals.push({ source, specifiers: remaining });
+          seenGlobal.add(gKey);
+        }
+        return;
+      }
+      return;
+    }
+
+    if (source && /^[A-Z][A-Za-z0-9_]*$/.test(source)) {
+      const key = `${source}::${specifiers.join(',')}`;
+      if (!seenGlobal.has(key)) {
+        globals.push({ source, specifiers });
+        seenGlobal.add(key);
+      }
+    }
+  });
+
+  return { imports, globals };
+}
+
+function collectNeedsDom(statements) {
+  return statements.some(tokens => {
+    if (tokens.length !== 1) return false;
+    const [token] = tokens;
+    if (!token.isObject || !token.value) return false;
+    return !!(token.value.render || token.value.on || token.value.shadow);
+  });
+}
+
+function collectPrintStatements(source) {
+  const raw = Parser.getAST(source, null);
+  const printIdx = new Set();
+  let idx = 0;
+  let seenCode = false;
+  let seenPrint = false;
+
+  raw.forEach(token => {
+    if (token.type === EOF) return;
+    if (token.type === EOL) {
+      if (seenCode) {
+        if (seenPrint) printIdx.add(idx);
+        idx++;
+      }
+      seenCode = false;
+      seenPrint = false;
+      return;
+    }
+    if (token.type === TEXT || token.type === COMMENT || token.type === COMMENT_MULTI) return;
+    seenCode = true;
+    if (token.type === NOT) seenPrint = true;
+  });
+
+  return printIdx;
+}
+
 function quote(value) {
   return JSON.stringify(String(value));
 }
@@ -66,7 +326,15 @@ function compileTag(node) {
 
 function compileArgs(args, ctx) {
   if (!Array.isArray(args) || !args.length) return '';
-  return args.filter(token => token.type !== COMMA).map(token => compileToken(token, ctx)).join(', ');
+  const groups = splitArgGroups(args);
+  return groups.map(group => {
+    const hasOperator = group.some(token => OPERATOR.get(token.type));
+    const hasCall = group.some(token => token.type === BLOCK && token.hasArgs);
+    if (!hasOperator && !hasCall && group.length > 1) {
+      return `[${group.map(token => compileToken(token, ctx)).join(', ')}]`;
+    }
+    return compileExpression(group, ctx);
+  }).join(', ');
 }
 
 function compileLambda(token, ctx) {
@@ -76,6 +344,21 @@ function compileLambda(token, ctx) {
 }
 
 function compileToken(token, ctx = { signalVars: new Set() }) {
+  if (token && token.isObject) {
+    const value = token.value || {};
+    const keys = Object.keys(value);
+    const isDirective = keys.some(k => ['render', 'on', 'html', 'signal', 'prop', 'if', 'else', 'do', 'let', 'match', 'while', 'loop', 'try', 'rescue', 'export', 'import', 'from'].includes(k));
+
+    if (isDirective) return compileDirectiveObject(token, ctx);
+
+    const pairs = keys.map(key => {
+      const body = value[key] && value[key].getBody ? value[key].getBody() : [];
+      const rhs = body.length ? compileExpression(body, ctx) : 'undefined';
+      return `${JSON.stringify(key)}: ${rhs}`;
+    });
+    return `{ ${pairs.join(', ')} }`;
+  }
+
   if (token.isTag) {
     return compileTag(token.value);
   }
@@ -89,7 +372,58 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
   }
 
   if (token.isString) {
+    if (Array.isArray(token.value)) {
+      return compileExpression(token.value, ctx);
+    }
     return quote(token.value);
+  }
+
+  if (token.type === BLOCK && token.hasArgs && !token.hasBody) {
+    const groups = splitArgGroups(token.getArgs());
+    const objectLike = groups.length
+      && groups.every(group => group.length === 2 && (group[0].type === SYMBOL || group[0].isString));
+
+    if (objectLike) {
+      const pairs = groups.map(group => {
+        const keyRaw = String(group[0].value || '').replace(/^:/, '');
+        return `${JSON.stringify(keyRaw)}: ${compileToken(group[1], ctx)}`;
+      });
+      return `{ ${pairs.join(', ')} }`;
+    }
+
+    return `(${compileArgs(token.getArgs(), ctx)})`;
+  }
+
+  if (token.type === BLOCK && token.hasBody && !token.isCallable) {
+    return `(${compileExpression(token.getBody(), ctx)})`;
+  }
+
+  if (token.type === SYMBOL) {
+    const value = String(token.value || '').replace(/^:/, '');
+    return quote(value);
+  }
+
+  if (token.type === RANGE) {
+    if (Array.isArray(token.value)) {
+      const items = token.value
+        .map(toTokenLike)
+        .filter(x => {
+          if (!x) return false;
+          if (x.type === COMMA) return false;
+          return !(x.isLiteral && x.value === ',');
+        });
+      if (items.some(x => x.type === DOT)) {
+        return `(${compileExpression(items, ctx)})`;
+      }
+      return `[${items.map(x => compileToken(x, ctx)).join(', ')}]`;
+    }
+    if (token.value && Array.isArray(token.value.begin)) {
+      const begin = token.value.begin.map(x => compileToken(x, ctx)).join(', ');
+      const end = Array.isArray(token.value.end) && token.value.end.length
+        ? `, ${token.value.end.map(x => compileToken(x, ctx)).join(', ')}`
+        : '';
+      return `range(${begin}${end})`;
+    }
   }
 
   if (token.isLiteral) {
@@ -100,15 +434,41 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
       if (ctx.signalVars.has(token.value)) return `Runtime.read(${token.value})`;
       return token.value;
     }
+    if (token.value && typeof token.value === 'object') {
+      if (Object.prototype.hasOwnProperty.call(token.value, 'value')) {
+        return compileToken(token.value, ctx);
+      }
+      if (Array.isArray(token.value.body)) {
+        return compileExpression(token.value.body, ctx);
+      }
+      if (Array.isArray(token.value.args)) {
+        return `(${compileArgs(token.value.args, ctx)})`;
+      }
+    }
     return JSON.stringify(token.value);
   }
 
-  if (token.type === BLOCK && token.hasArgs && !token.hasBody) {
-    return `(${compileArgs(token.getArgs(), ctx)})`;
+  if (token.type === SOME) {
+    const target = compileToken(token.value, ctx);
+    return `(${target} != null)`;
+  }
+
+  if (token.type === EVERY) {
+    const target = compileToken(token.value, ctx);
+    return `${target}.every(Boolean)`;
+  }
+
+  if (token.type === NOT && token.value !== '!') {
+    return '!';
   }
 
   const op = OPERATOR.get(token.type);
-  if (op) return op;
+  if (op) {
+    if (Array.isArray(token.value)) {
+      return token.value.map(x => compileToken(x, ctx)).join(` ${op} `);
+    }
+    return op;
+  }
 
   throw new Error(`Unsupported token in compiler: ${String(token.type)}`);
 }
@@ -121,6 +481,25 @@ function compileExpression(tokens, ctx = { signalVars: new Set() }) {
     const next = tokens[i + 1];
     const prev = tokens[i - 1];
 
+    if (token.type === PIPE) {
+      const left = out.pop();
+      const rhs = tokens[i + 1];
+      const rhsNext = tokens[i + 2];
+
+      if (rhs && rhs.isLiteral && rhsNext && rhsNext.type === BLOCK && rhsNext.hasArgs) {
+        const args = rhsNext.getArgs().filter(x => x.type !== COMMA).map(x => compileToken(x, ctx));
+        out.push(`${compileToken(rhs, ctx)}(${[left].concat(args).join(', ')})`);
+        i += 2;
+        continue;
+      }
+
+      if (rhs && rhs.isLiteral) {
+        out.push(`${compileToken(rhs, ctx)}(${left})`);
+        i += 1;
+        continue;
+      }
+    }
+
     if (
       token.type === BLOCK
       && token.hasArgs
@@ -128,6 +507,12 @@ function compileExpression(tokens, ctx = { signalVars: new Set() }) {
       && prev
       && (prev.isLiteral || prev.isTag || (prev.type === BLOCK && prev.hasArgs))
     ) {
+      if (prev.isString && prev.value === '' && out.length >= 2) {
+        const indexExpr = compileArgs(token.getArgs(), ctx);
+        out.pop();
+        out[out.length - 1] = `${out[out.length - 1]}[${indexExpr}]`;
+        continue;
+      }
       out[out.length - 1] = `${out[out.length - 1]}(${compileArgs(token.getArgs(), ctx)})`;
       continue;
     }
@@ -144,15 +529,25 @@ function compileExpression(tokens, ctx = { signalVars: new Set() }) {
 }
 
 function compileHandler(token, ctx) {
-  if (token && token.type === BLOCK && token.hasBody) {
-    const [first] = token.getBody();
-    if (first && first.isCallable && first.getName()) {
-      if (ctx.signalVars.has(first.getName())) {
-        return `() => { ${first.getName()}.set(${compileExpression(first.getBody(), ctx)}); }`;
-      }
-
-      return `() => { ${compileDefinition(first, true, ctx)} }`;
+  const callable = (() => {
+    if (token && token.isCallable && token.getName()) return token;
+    if (token && token.type === BLOCK && token.hasBody) {
+      const [first] = token.getBody();
+      if (first && first.isCallable && first.getName()) return first;
     }
+    return null;
+  })();
+
+  if (callable) {
+    if (ctx.signalVars.has(callable.getName())) {
+      return `() => { ${callable.getName()}.set(${compileExpression(callable.getBody(), ctx)}); }`;
+    }
+
+    return `() => { ${compileDefinition(callable, true, { ...ctx, exportDefinitions: false, autoPrintExpressions: false })} }`;
+  }
+
+  if (token && token.type === BLOCK && token.hasBody) {
+    return `() => (${compileExpression(token.getBody(), ctx)})`;
   }
 
   return `() => (${compileToken(token, ctx)})`;
@@ -160,6 +555,151 @@ function compileHandler(token, ctx) {
 
 function compileSignalDirective(body, ctx) {
   return `Runtime.signal(${compileExpression(body, ctx)})`;
+}
+
+function compileIfDirective(value, ctx) {
+  const branches = value.if && value.if.getBody ? value.if.getBody() : [];
+  const elseBody = value.else && value.else.getBody ? value.else.getBody() : [];
+
+  const branchExprs = branches.map(branch => {
+    const body = branch && branch.hasBody ? branch.getBody() : [];
+    const [cond, ...rest] = body;
+    return {
+      cond: cond ? compileExpression([cond], ctx) : 'false',
+      thenExpr: rest.length ? compileExpression(rest, ctx) : 'undefined',
+    };
+  });
+
+  let out = elseBody.length ? compileExpression(elseBody, ctx) : 'undefined';
+  for (let i = branchExprs.length - 1; i >= 0; i--) {
+    out = `((${branchExprs[i].cond}) ? (${branchExprs[i].thenExpr}) : (${out}))`;
+  }
+
+  return out;
+}
+
+function compileDoDirective(body, ctx) {
+  const [block] = body;
+  const statements = block && block.hasBody ? splitByEol(block.getBody()) : [];
+  if (!statements.length) return '(() => undefined)()';
+
+  const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false };
+  const head = statements.slice(0, -1).map(stmt => compileStatement(stmt, localCtx, -1));
+  const tail = compileStatement(statements[statements.length - 1], localCtx, -1).replace(/;\s*$/, '');
+  return `(() => { ${head.join(' ')} return ${tail}; })()`;
+}
+
+function compileLetDirective(body, ctx) {
+  const items = (body || []).flatMap(part => (part && part.hasBody ? part.getBody() : [part])).filter(Boolean);
+  if (!items.length) return 'undefined';
+
+  const mode = ctx.letMode || 'declare';
+  const assignOne = entry => {
+    if (entry && entry.isCallable && entry.getName()) {
+      const left = entry.getName();
+      const rhs = compileExpression(entry.getBody(), { ...ctx, exportDefinitions: false, autoPrintExpressions: false });
+      if (mode === 'assign') return `(${left} = ${rhs})`;
+      return `let ${left} = ${rhs}`;
+    }
+    return compileToken(entry, { ...ctx, autoPrintExpressions: false });
+  };
+
+  const exprs = items.map(assignOne);
+  if (mode === 'assign') {
+    return exprs[exprs.length - 1];
+  }
+
+  return exprs.join('; ');
+}
+
+function compileMatchDirective(body, ctx) {
+  const [block] = body;
+  const tokens = block && block.hasBody ? block.getBody() : [];
+  if (!tokens.length) return 'undefined';
+
+  const key = compileToken(tokens[0], ctx);
+  const pairs = [];
+  let elseExpr = 'undefined';
+
+  for (let i = 1; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.type === COMMA) continue;
+    if (token.isObject && token.value && token.value.else) {
+      elseExpr = compileExpression(token.value.else.getBody(), ctx);
+      continue;
+    }
+    const next = tokens[i + 1];
+    if (!next) break;
+    pairs.push({ when: compileToken(token, ctx), thenExpr: compileToken(next, ctx) });
+    i++;
+  }
+
+  let out = elseExpr;
+  for (let i = pairs.length - 1; i >= 0; i--) {
+    out = `(${key} === ${pairs[i].when} ? ${pairs[i].thenExpr} : ${out})`;
+  }
+  return out;
+}
+
+function compileWhileDirective(body, ctx) {
+  const tokens = (body || []).flatMap(part => (part && part.hasBody ? part.getBody() : [part])).filter(Boolean);
+  const [cond, ...rest] = tokens;
+  const condition = cond ? compileExpression([cond], { ...ctx, letMode: 'assign', autoPrintExpressions: false }) : 'false';
+  const innerParts = rest.map(token => {
+    if (token && token.isCallable && token.getName()) {
+      return `${token.getName()} = ${compileExpression(token.getBody(), { ...ctx, autoPrintExpressions: false })};`;
+    }
+    return `${compileToken(token, { ...ctx, letMode: 'assign', autoPrintExpressions: false })};`;
+  });
+
+  const tail = innerParts.length ? innerParts[innerParts.length - 1].replace(/;\s*$/, '') : 'undefined';
+  const bodyLines = innerParts.slice(0, -1).join(' ');
+
+  return `(() => { let __whileResult; while (${condition}) { ${bodyLines} __whileResult = ${tail}; } return __whileResult; })()`;
+}
+
+function compileLoopDirective(body, ctx) {
+  const [block] = body;
+  const tokens = block && block.hasBody ? block.getBody() : [];
+  const [iterableToken, fnToken] = tokens;
+  const iterable = iterableToken && iterableToken.hasArgs
+    ? compileArgs(iterableToken.getArgs(), ctx)
+    : compileToken(iterableToken, ctx);
+
+  if (!fnToken || !fnToken.isCallable) return `for (const _ of ${iterable}) {}`;
+
+  const args = fnToken.hasArgs ? fnToken.getArgs().map(arg => compileToken(arg, ctx)).join(', ') : '_';
+  const bodyExpr = fnToken.hasBody ? compileExpression(fnToken.getBody(), { ...ctx, autoPrintExpressions: false }) : 'undefined';
+  return `for (const ${args} of ${iterable}) { ${bodyExpr}; }`;
+}
+
+function compileTryDirective(value, ctx) {
+  const tryBody = value.try && value.try.getBody ? value.try.getBody() : [];
+  const rescueBody = value.rescue && value.rescue.getBody ? value.rescue.getBody() : [];
+
+  const tryExpr = tryBody.length ? compileExpression(tryBody, { ...ctx, autoPrintExpressions: false }) : 'undefined';
+  let rescueArg = 'error';
+  let rescueExpr = 'undefined';
+
+  if (rescueBody.length) {
+    let [first] = rescueBody;
+    if (first && first.type === BLOCK && first.hasBody && first.getBody().length === 1) {
+      [first] = first.getBody();
+    }
+    if (first && first.isCallable) {
+      rescueArg = first.hasArgs && first.getArgs().length ? compileToken(first.getArgs()[0], ctx) : rescueArg;
+      rescueExpr = first.hasBody ? compileExpression(first.getBody(), { ...ctx, autoPrintExpressions: false }) : rescueExpr;
+    } else {
+      rescueExpr = compileExpression(rescueBody, { ...ctx, autoPrintExpressions: false });
+    }
+  }
+
+  return `(() => { try { return ${tryExpr}; } catch (${rescueArg}) { return ${rescueExpr}; } })()`;
+}
+
+function compileExportDirective(body, ctx) {
+  const names = normalizeDirectiveArgs(body).map(token => compileToken(token, ctx));
+  return `export { ${names.join(', ')} }`;
 }
 
 function compileHtmlDirective(body) {
@@ -177,7 +717,7 @@ function compileRenderDirective(body, value, ctx) {
 }
 
 function compileOnDirective(body, ctx) {
-  const [eventToken, selectorToken, handlerToken] = body;
+  const [eventToken, selectorToken, handlerToken] = normalizeDirectiveArgs(body);
   const eventName = compileToken(eventToken, ctx);
   const selector = compileToken(selectorToken, ctx);
   const handler = compileHandler(handlerToken, ctx);
@@ -186,7 +726,7 @@ function compileOnDirective(body, ctx) {
 }
 
 function compileOnPropDirective(onBody, propBody, ctx) {
-  const [eventToken, selectorToken, handlerToken] = onBody;
+  const [eventToken, selectorToken, handlerToken] = normalizeDirectiveArgs(onBody);
   const eventName = compileToken(eventToken, ctx);
   const selector = compileToken(selectorToken, ctx);
 
@@ -210,6 +750,26 @@ function compileOnPropDirective(onBody, propBody, ctx) {
 
 function compileDirectiveObject(token, ctx) {
   const { value } = token;
+  const keys = Object.keys(value || {});
+
+  if (keys.length > 1 && !value.try && !value.if && !value.match && (value.let || value.while || value.loop || value.do)) {
+    const statements = [];
+    let tail = 'undefined';
+
+    keys.forEach((key, idx) => {
+      if (key === 'rescue' && value.try) return;
+      const single = { [key]: value[key] };
+      const out = compileDirectiveObject({ value: single }, { ...ctx, autoPrintExpressions: false });
+      if (!out) return;
+      if (idx === keys.length - 1) {
+        tail = out.replace(/;\s*$/, '');
+      } else {
+        statements.push(`${out.replace(/;\s*$/, '')};`);
+      }
+    });
+
+    return `(() => { ${statements.join(' ')} return ${tail}; })()`;
+  }
 
   if (value.render) {
     return compileRenderDirective(value.render.getBody(), value, ctx);
@@ -221,6 +781,46 @@ function compileDirectiveObject(token, ctx) {
 
   if (value.on) {
     return compileOnDirective(value.on.getBody(), ctx);
+  }
+
+  if (value.if) {
+    return compileIfDirective(value, ctx);
+  }
+
+  if (value.do) {
+    return compileDoDirective(value.do.getBody(), ctx);
+  }
+
+  if (value.let) {
+    return compileLetDirective(value.let.getBody(), ctx);
+  }
+
+  if (value.match) {
+    return compileMatchDirective(value.match.getBody(), ctx);
+  }
+
+  if (value.while) {
+    return compileWhileDirective(value.while.getBody(), ctx);
+  }
+
+  if (value.loop) {
+    return compileLoopDirective(value.loop.getBody(), ctx);
+  }
+
+  if (value.try) {
+    return compileTryDirective(value, ctx);
+  }
+
+  if (value.export) {
+    return compileExportDirective(value.export.getBody(), ctx);
+  }
+
+  if (value.else) {
+    return compileExpression(value.else.getBody(), ctx);
+  }
+
+  if (value.import) {
+    return '';
   }
 
   if (value.html) {
@@ -237,13 +837,15 @@ function compileDirectiveObject(token, ctx) {
 function compileDefinition(token, asStatement = false, ctx = { signalVars: new Set() }) {
   const name = token.getName();
   const [head] = token.getBody();
+  const declConst = ctx.exportDefinitions ? 'export const' : 'const';
+  const declLet = ctx.exportDefinitions ? 'export let' : 'let';
 
-  if (!head) return asStatement ? `const ${name} = undefined;` : `const ${name} = undefined`;
+  if (!head) return asStatement ? `${declConst} ${name} = undefined;` : `${declConst} ${name} = undefined`;
 
   if (head.isCallable) {
     const args = head.hasArgs ? head.getArgs().map(arg => compileToken(arg, ctx)).join(', ') : '';
     const body = head.hasBody ? compileExpression(head.getBody(), ctx) : 'undefined';
-    const out = `const ${name} = (${args}) => (${body})`;
+    const out = `${declConst} ${name} = (${args}) => (${body})`;
     return asStatement ? `${out};` : out;
   }
 
@@ -252,19 +854,22 @@ function compileDefinition(token, asStatement = false, ctx = { signalVars: new S
       const propArgs = head.value.prop.getBody()[0].getBody();
       const propName = compileToken(propArgs[0], ctx);
       const fallback = compileToken(propArgs[1], ctx);
-      const out = `const ${name} = Runtime.signal(Runtime.prop(host, ${propName}, ${fallback}))`;
+      const out = `${declConst} ${name} = Runtime.signal(Runtime.prop(host, ${propName}, ${fallback}), ${JSON.stringify(name)})`;
       return asStatement ? `${out};` : out;
     }
-    const out = `const ${name} = ${compileSignalDirective(head.value.signal.getBody(), ctx)}`;
+    const out = `${declConst} ${name} = Runtime.signal(${compileExpression(head.value.signal.getBody(), ctx)}, ${JSON.stringify(name)})`;
     return asStatement ? `${out};` : out;
   }
 
-  const out = `let ${name} = ${compileExpression(token.getBody(), ctx)}`;
+  const out = `${declLet} ${name} = ${compileExpression(token.getBody(), ctx)}`;
   return asStatement ? `${out};` : out;
 }
 
-function compileStatement(tokens, ctx) {
+function compileStatement(tokens, ctx, statementIndex) {
   if (!tokens.length) return '';
+
+  const shouldPrint = ctx.printStatements && ctx.printStatements.has(statementIndex);
+  const autoPrint = !!ctx.autoPrintExpressions;
 
   if (tokens.length === 1) {
     const [token] = tokens;
@@ -274,13 +879,32 @@ function compileStatement(tokens, ctx) {
     }
 
     if (token.isObject) {
-      return `${compileDirectiveObject(token, ctx)};`;
+      const out = compileDirectiveObject(token, ctx);
+      if (!out) return '';
+      return `${out};`;
     }
 
-    return `${compileToken(token, ctx)};`;
+    const out = compileToken(token, ctx);
+    if (shouldPrint || autoPrint) return `console.log(${out});`;
+    return `${out};`;
   }
 
-  return `${compileExpression(tokens, ctx)};`;
+  const hasOperator = tokens.some(token => OPERATOR.get(token.type));
+  const looksLikeCall = tokens.length === 2
+    && tokens[0].isLiteral
+    && tokens[1].type === BLOCK
+    && tokens[1].hasArgs
+    && !tokens[1].hasBody;
+
+  if (!hasOperator && !looksLikeCall) {
+    const exprs = tokens.map(token => compileToken(token, ctx)).join(', ');
+    if (shouldPrint || autoPrint) return `console.log(${exprs});`;
+    return `${exprs};`;
+  }
+
+  const out = compileExpression(tokens, ctx);
+  if (shouldPrint || autoPrint) return `console.log(${out});`;
+  return `${out};`;
 }
 
 function collectShadowFlag(statements) {
@@ -311,19 +935,60 @@ function collectSignalBindings(statements) {
 
 export function compile(source, options = {}) {
   const normalized = String(source || '').replace(/\r\n/g, '\n');
+
+  if (options.module !== false && options.templateFallback !== false && normalized.includes('@template')) {
+    const literal = JSON.stringify(normalized);
+    return [
+      '// Generated by 10x compiler (template fallback)',
+      'import { spawnSync } from "node:child_process";',
+      `const source = ${literal};`,
+      'const run = spawnSync("node", ["bin/cli"], { input: source, stdio: ["pipe", "inherit", "inherit"] });',
+      'if (run.error) throw run.error;',
+      'if (typeof run.status === "number") process.exit(run.status);',
+    ].join('\n');
+  }
+
   const ast = Parser.getAST(normalized, 'parse');
   const statements = splitStatements(ast);
   const hasShadow = collectShadowFlag(statements);
-  const ctx = { signalVars: collectSignalBindings(statements), shadow: hasShadow };
-  const lines = statements.map(tokens => compileStatement(tokens, ctx)).filter(Boolean);
+  const needsDom = collectNeedsDom(statements);
+  const runtimePath = options.runtimePath || './runtime';
+  const { imports, globals } = collectImportSpecs(statements, runtimePath);
+  const ctx = {
+    signalVars: collectSignalBindings(statements),
+    shadow: hasShadow,
+    exportDefinitions: options.module !== false && !hasShadow && options.exportAll !== false,
+    printStatements: collectPrintStatements(normalized),
+    autoPrintExpressions: options.autoPrintExpressions !== false && options.module !== false && !hasShadow,
+  };
+  const proseComments = collectProseComments(normalized, statements.length);
+  const lines = statements.reduce((prev, tokens, index) => {
+    const compiled = compileStatement(tokens, ctx, index);
+    const comments = (proseComments[index] || []).map(line => `// ${line}`);
+
+    if (comments.length) prev.push(...comments);
+    if (compiled) prev.push(compiled);
+    return prev;
+  }, []);
 
   const requiresRuntime = lines.some(line => line.includes('Runtime.'));
+  const usesRange = lines.some(line => line.includes('range('));
   const output = [];
 
   if (options.module !== false) {
     output.push('// Generated by 10x compiler (experimental AST backend)');
+    if (usesRange && !imports.some(x => x.source === getPreludePath(runtimePath) && x.specifiers.includes('range'))) {
+      imports.push({ source: getPreludePath(runtimePath), specifiers: ['range'] });
+    }
+    imports.forEach(({ source: importSource, specifiers }) => {
+      output.push(`import { ${specifiers.join(', ')} } from ${JSON.stringify(importSource)};`);
+    });
+    globals.forEach(({ source: globalSource, specifiers }) => {
+      output.push(`const { ${specifiers.join(', ')} } = ${globalSource};`);
+    });
     if (requiresRuntime) {
-      output.push("import * as Runtime from '../runtime/index.js';");
+      const importPath = needsDom ? runtimePath : getCoreRuntimePath(runtimePath);
+      output.push(`import * as Runtime from ${JSON.stringify(importPath)};`);
     }
   }
 
