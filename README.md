@@ -3,7 +3,7 @@
 
 > ...slower than JavaScript!
 
-A toy programming language written in JavaScript, with a markdown-native syntax — source files are `.md` files, so code blocks are optional and most text is just text.
+A toy programming language written in JavaScript, with a literate syntax — source files are `.md` files, so prose is prose and code is just code. Code blocks are optional; most text is ignored.
 
 ## Why?
 
@@ -48,9 +48,12 @@ make demo   # builds and serves at http://localhost:3131
 bun test tests/
 ```
 
-### Tooling (Plan 07 WIP)
+### Tooling
 
 ```sh
+# Install tooling dependencies (LSP + tree-sitter)
+npm run tooling:install
+
 # Build language server bundle
 npm run lsp:build
 
@@ -58,7 +61,7 @@ npm run lsp:build
 npm run ts:generate
 npm run ts:test
 
-# End-to-end tooling smoke check (LSP + tree-sitter + zed wiring)
+# End-to-end tooling smoke check (LSP + tree-sitter + Zed wiring)
 npm run tooling:smoke
 ```
 
@@ -83,47 +86,44 @@ BENCH_TERMS=4000 BENCH_ITERS=800 npm run bench
 
 10x has four basic types: `string`, `number`, `symbol`, and `range`. Everything else is built on top of them.
 
-Statements are separated by semicolons (`;`). Source files are Markdown — prose, headings, and fenced code blocks are ignored; only indented blocks and inline expressions are evaluated.
+Statements end with a period followed by a newline (`.\n`). Source files are Markdown — prose, headings, and fenced code blocks are ignored; only indented blocks and inline expressions are evaluated.
 
 ### Blocks (functions)
 
-The arrow operator (`->`) defines a block. Literals on the left are arguments; everything to the right (before `;`) is the body.
+The arrow operator (`->`) defines a block. Literals on the left are arguments; everything to the right (before `.`) is the body.
 
 ```
-sum = a -> b -> a + b;
-sum(2, 3);
+sum = a -> b -> a + b.
+sum(2, 3).
 ```
 
 > Result: `5`
 
-Arguments can also be comma-separated:
+Multiple arguments use space-separated names in parentheses before `->`:
 
 ```
-sum = a, b -> a + b;
+sum = (a b) -> a + b.
+sum(2, 3).
 ```
+
+> Result: `5`
 
 A block with exactly two arguments can be used as an infix operator:
 
 ```
-adds = a, b -> a + b;
-3 adds 5;
+adds = (a b) -> a + b.
+3 adds 5.
 ```
 
 > Result: `8`
-
-Parentheses create a new context and bind values positionally:
-
-```
-(2, 3) => (a, b -> a + b)
-```
 
 ### Numbers
 
 Decimals, leading-dot, consecutive addition, and parenthesized multiplication all work:
 
 ```
-.5;
-1 2 3 (4 5);
+.5.
+1 2 3 (4 5).
 ```
 
 > Results: `0.5`, `30`
@@ -131,9 +131,9 @@ Decimals, leading-dot, consecutive addition, and parenthesized multiplication al
 Fractions are preserved when written as `1/3` (no spaces):
 
 ```
-1/2;
-1 /2;
-1 / 2;
+1/2.
+1 /2.
+1 / 2.
 ```
 
 > Results: `1/2`, `0.5`, `0.5`
@@ -141,8 +141,8 @@ Fractions are preserved when written as `1/3` (no spaces):
 A literal (identifier) prefixed by a number is multiplied by that number:
 
 ```
-x = 42;
-3x;
+x = 42.
+3x.
 ```
 
 > Result: `126`
@@ -152,8 +152,8 @@ x = 42;
 Units are special literals that wrap numeric values and support conversion:
 
 ```
-to = a, b -> a.to(b);
-5cm to :in;
+to = (a b) -> a.to(b).
+5cm to :in.
 ```
 
 > Result: `~1.969 in`
@@ -163,9 +163,9 @@ to = a, b -> a.to(b);
 Strings use double-quotes. Regular expressions and HTML tags are also string-like values:
 
 ```
-"Hello World";
-/test/i;
-<b>I am just markup</b>;
+"Hello World".
+/test/i.
+<b>I am just markup</b>.
 ```
 
 > Results: `"Hello World"`, `/test/i`, `<b>I am just markup</b>`
@@ -173,9 +173,9 @@ Strings use double-quotes. Regular expressions and HTML tags are also string-lik
 Interpolation works in strings and HTML with `#{expr}`:
 
 ```
-name = "World";
-"Hello #{name}!";
-<p>Hello #{name}!</p>;
+name = "World".
+"Hello #{name}!".
+<p>Hello #{name}!</p>.
 ```
 
 Regular expressions don't allow spaces or newlines — use `\s` and `\n` instead.
@@ -185,9 +185,9 @@ Regular expressions don't allow spaces or newlines — use `\s` and `\n` instead
 Symbols are prefixed with `:`. They behave like strings when used as values, and are used as keys in maps and for control flow:
 
 ```
-:hello;
-:(3 - 2);
-:\"test-#{:key}\";
+:hello.
+:(3 - 2).
+:\"test-#{:key}\".
 ```
 
 > Results: `:hello`, `:1`, `:test-key`
@@ -201,14 +201,14 @@ Mix named symbols (`:key`) with values to build a map:
 ```
 user =
   :name "John", "Doe",
-  :email "john@doe.com";
+  :email "john@doe.com".
 ```
 
 Access values with the dot operator or bracket notation:
 
 ```
-user.name;
-[user]:email;
+user.name.
+[user]:email.
 ```
 
 > Results: `"John"`, `"Doe"`, `"john@doe.com"`
@@ -224,7 +224,7 @@ Bracket notation is preferred for dynamic key access:
 Lists use `[` and `]`. Items can be any value or expression:
 
 ```
-[0, [(< 1 2), (:three 3)]]
+[0, [(< 1 2), (:three 3)]].
 ```
 
 > Result: `[0, [:on, (:three 3)]]`
@@ -232,7 +232,7 @@ Lists use `[` and `]`. Items can be any value or expression:
 Ranges are lazy sequences using `..`:
 
 ```
-[1..3, "a".."c"]:
+[1..3, "a".."c"]:.
 ```
 
 > Result: `1, 2, 3, "a", "b", "c"`
@@ -251,7 +251,7 @@ Named symbol selectors configure list access:
 Direct block children are flattened:
 
 ```
-[(1..3, "a".."c", (4, (5)))];
+[(1..3, "a".."c", (4, (5)))].
 ```
 
 > Result: `[[1, 2, 3], ["a", "b", "c"], 4, 5]`
@@ -259,10 +259,10 @@ Direct block children are flattened:
 ### Control Flow
 
 ```
-@if (:on) "yes" "no";
-@while (condition) body;
-@let x = 1;
-:return value;
+@if (:on) "yes" "no".
+@while (condition) body.
+@let x = 1.
+:return value.
 ```
 
 Short-circuit operators: `|` (or), `&` (and), `?` (ternary-like).
@@ -272,13 +272,13 @@ Short-circuit operators: `|` (or), `&` (and), `?` (ternary-like).
 Extend operators with `@template`:
 
 ```
-@template ++ (a, b -> a.concat(b));
+@template ++ ((a b) -> a.concat(b)).
 ```
 
 Import from built-in modules:
 
 ```
-@import concat @from "Array";
+@import concat @from "Array".
 ```
 
 Markdown links are also module imports, but only in standalone form:
@@ -298,8 +298,10 @@ See the [`examples/`](examples/) directory:
 - [`fib_loop.md`](examples/fib_loop.md) — Fibonacci with mutable loop state
 - [`fib_memo.md`](examples/fib_memo.md) — Fibonacci with memoization
 - [`concat.md`](examples/concat.md) — Custom operator + import
+- [`sorting.md`](examples/sorting.md) — Classic sorting algorithms compared
 - [`lulz.md`](examples/lulz.md) — Range + pipe + `@match` + map-heavy toy program
 - [`markdown.md`](examples/markdown.md) — Prose mixed with code
 - [`todolist.md`](examples/todolist.md) — Reactive directives demo (`@signal`, `@html`, `@render`, `@on`)
+- [`x-counter.md`](examples/x-counter.md) — Reactive web component with state, view, and events
 - [`prompt.md`](examples/prompt.md) — Interactive input
 - [`stdin.md`](examples/stdin.md) — Reading from stdin
