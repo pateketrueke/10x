@@ -265,15 +265,8 @@ describe('Scanner', () => {
       ]);
     });
 
-    it('should handle line-breaks', () => {
-      expect(getTokens('"\nx\n"y', true).slice(0, -1)).to.eql([
-        {
-          col: 0, line: 0, type: STRING, value: '\nx\n',
-        },
-        {
-          col: 1, line: 2, type: LITERAL, value: 'y',
-        },
-      ]);
+    it('should reject line-breaks in single-line strings', () => {
+      expect(() => getTokens('"\nx\n"y', true)).to.throw('Unterminated string');
     });
 
     it('should handle markup-strings', () => {
@@ -336,73 +329,13 @@ describe('Scanner', () => {
       }]);
     });
 
-    it('should handle interpolation + line-breaks', () => {
-      expect(getTokens('\n="\n#{x}"', true).slice(0, -1)).to.eql([
-        {
-          col: 0,
-          line: 0,
-          type: TEXT,
-          value: {
-            buffer: ['\n'],
-          },
-        },
-        {
-          col: 0, line: 1, type: EQUAL, value: '=',
-        },
-        {
-          col: 1,
-          line: 1,
-          type: STRING,
-          value: [
-            {
-              col: 2, line: 1, type: STRING, value: '\n', kind: 'raw',
-            },
-            {
-              col: 2, line: 2, type: PLUS, value: '+',
-            },
-            {
-              col: 2, line: 2, type: OPEN, value: '#{', kind: 'raw',
-            },
-            {
-              col: 2, line: 2, type: LITERAL, value: 'x',
-            },
-            {
-              col: 2, line: 2, type: CLOSE, value: '}', kind: 'raw',
-            },
-          ],
-        },
-      ]);
+    it('should allow line-breaks inside interpolation blocks', () => {
+      const [token] = getTokens('"#{x\n+ y}"', true);
+      expect(token.type).to.eql(STRING);
     });
 
-    it('should handle string + line-breaks + interpolation', () => {
-      expect(getTokens('"a\nb#{x}c"', true).slice(0, -1)).to.eql([{
-        col: 0,
-        line: 0,
-        type: STRING,
-        value: [
-          {
-            col: 1, line: 0, type: STRING, value: 'a\nb', kind: 'raw',
-          },
-          {
-            col: 3, line: 1, type: PLUS, value: '+',
-          },
-          {
-            col: 3, line: 1, type: OPEN, value: '#{', kind: 'raw',
-          },
-          {
-            col: 3, line: 1, type: LITERAL, value: 'x',
-          },
-          {
-            col: 3, line: 1, type: CLOSE, value: '}', kind: 'raw',
-          },
-          {
-            col: 5, line: 1, type: PLUS, value: '+',
-          },
-          {
-            col: 5, line: 1, type: STRING, value: 'c', kind: 'raw',
-          },
-        ],
-      }]);
+    it('should reject line-breaks before interpolation in single-line strings', () => {
+      expect(() => getTokens('"a\nb#{x}c"', true)).to.throw('Unterminated string');
     });
 
     it('should extract interpolation tokens from markdown text buffers', () => {

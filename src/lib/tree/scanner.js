@@ -838,6 +838,7 @@ export default class Scanner {
 
     while (!this.isDone()) {
       if (this.peek() === '\n') {
+        if (!stack.length) raise('Unterminated string', this);
         this.col = -1;
         this.line++;
       }
