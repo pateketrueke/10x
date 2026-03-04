@@ -213,11 +213,11 @@ function getCursorOffset(root, shadowRoot) {
   const visibleTextLen = node => {
     if (!node) return 0;
     if (node.nodeType === Node.TEXT_NODE) {
-      if (node.parentElement?.closest('[data-result], [data-inline-result]')) return 0;
+      if (node.parentElement?.closest('[data-result]')) return 0;
       return node.textContent.length;
     }
     if (node.nodeType === Node.ELEMENT_NODE) {
-      if ('result' in (node.dataset ?? {}) || 'inlineResult' in (node.dataset ?? {})) return 0;
+      if ('result' in (node.dataset ?? {})) return 0;
       if (node.tagName === 'BR') return 1;
       let len = 0;
       node.childNodes.forEach(child => { len += visibleTextLen(child); });
@@ -239,12 +239,12 @@ function getCursorOffset(root, shadowRoot) {
     }
 
     if (node.nodeType === Node.TEXT_NODE) {
-      if (!node.parentElement?.closest('[data-result], [data-inline-result]')) offset += node.textContent.length;
+      if (!node.parentElement?.closest('[data-result]')) offset += node.textContent.length;
       return false;
     }
 
     if (node.nodeType === Node.ELEMENT_NODE) {
-      if ('result' in (node.dataset ?? {}) || 'inlineResult' in (node.dataset ?? {})) return false;
+      if ('result' in (node.dataset ?? {})) return false;
       if (node.tagName === 'BR') {
         offset += 1;
         return false;
@@ -270,11 +270,11 @@ function setCursorOffset(root, shadowRoot, offset) {
     {
       acceptNode(node) {
         if (node.nodeType === Node.ELEMENT_NODE) {
-          if ('result' in (node.dataset ?? {}) || 'inlineResult' in (node.dataset ?? {})) return NodeFilter.FILTER_REJECT;
+          if ('result' in (node.dataset ?? {})) return NodeFilter.FILTER_REJECT;
           if (node.tagName === 'BR') return NodeFilter.FILTER_ACCEPT;
           return NodeFilter.FILTER_SKIP;
         }
-        if (node.parentElement?.closest('[data-result], [data-inline-result]')) return NodeFilter.FILTER_REJECT;
+        if (node.parentElement?.closest('[data-result]')) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       },
     }
@@ -856,25 +856,6 @@ const STYLES = `
     color: #ffe4e4;
   }
 
-  [data-inline-result] {
-    display: inline-block;
-    margin-left: 4px;
-    padding: 0 5px;
-    border-radius: 3px;
-    background: #243244;
-    color: #9cdcfe;
-    font-size: 11px;
-    line-height: 1.6;
-    vertical-align: middle;
-    user-select: none;
-    pointer-events: none;
-  }
-
-  [data-inline-result].error {
-    background: #4a2d2d;
-    color: #f48771;
-  }
-
   [data-tooltip-layer] {
     position: absolute;
     z-index: 20;
@@ -986,13 +967,13 @@ class XEditor extends HTMLElement {
       {
         acceptNode(node) {
           if (node.nodeType === Node.ELEMENT_NODE) {
-            if ('result' in (node.dataset ?? {}) || 'inlineResult' in (node.dataset ?? {})) {
+            if ('result' in (node.dataset ?? {})) {
               return NodeFilter.FILTER_REJECT;
             }
             if (node.tagName === 'BR') return NodeFilter.FILTER_ACCEPT;
             return NodeFilter.FILTER_SKIP;
           }
-          if (node.parentElement?.closest('[data-result], [data-inline-result]')) {
+          if (node.parentElement?.closest('[data-result]')) {
             return NodeFilter.FILTER_REJECT;
           }
           return NodeFilter.FILTER_ACCEPT;
@@ -1025,8 +1006,79 @@ class XEditor extends HTMLElement {
 
   // ── inject result widgets at statement EOL anchors ───────────────────────
 
+  _makeResultWidget({
+    result = null,
+    pending = false,
+    fallbackText = '',
+    statementId = '',
+    inlineId = '',
+    source = '',
+  } = {}) {
+    if (pending) {
+      const widget = document.createElement('span');
+      widget.dataset.result = '';
+      if (statementId) widget.dataset.statementId = statementId;
+      if (inlineId) widget.dataset.inlineId = inlineId;
+      widget.setAttribute('contenteditable', 'false');
+      widget.classList.add('loading');
+      const label = document.createElement('span');
+      label.textContent = '…';
+      widget.appendChild(label);
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.dataset.cancelBtn = '';
+      cancelBtn.setAttribute('aria-label', 'Cancel evaluation');
+      cancelBtn.title = 'Cancel evaluation';
+      cancelBtn.textContent = '×';
+      widget.appendChild(cancelBtn);
+      return widget;
+    }
+
+    const text = (result && result.resultText) || fallbackText || '';
+    if (!text?.trim()) return null;
+
+    const widget = document.createElement('span');
+    widget.dataset.result = '';
+    if (statementId) widget.dataset.statementId = statementId;
+    if (inlineId) widget.dataset.inlineId = inlineId;
+    widget.setAttribute('contenteditable', 'false');
+
+    const label = document.createElement('span');
+    label.dataset.resultLabel = '';
+    label.textContent = result?.kind === 'function' ? 'ƒ' : `→ ${text}`;
+    widget.appendChild(label);
+
+    if (this._showTypeHints && result?.typeText) {
+      const typeHint = document.createElement('span');
+      typeHint.dataset.typeHint = '';
+      typeHint.textContent = result.typeText;
+      typeHint.title = `runtime type: ${result.typeText}`;
+      widget.appendChild(typeHint);
+    }
+
+    if (result?.kind !== 'function') {
+      widget.dataset.copyValue = text;
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.dataset.copyBtn = '';
+      copyBtn.setAttribute('aria-label', 'Copy result');
+      copyBtn.title = 'Copy result';
+      copyBtn.textContent = '⧉';
+      widget.appendChild(copyBtn);
+    }
+
+    if (result?.errorText) widget.classList.add('error');
+    if (result?.kind === 'function') {
+      widget.classList.add('function-anchor');
+      const meta = getFunctionDefinitionMeta(source || '');
+      widget.dataset.tooltip = meta?.signature || 'Function definition';
+    }
+    return widget;
+  }
+
   _injectResults() {
-    this._editable.querySelectorAll('[data-result], [data-inline-result]').forEach(el => el.remove());
+    this._editable.querySelectorAll('[data-result]').forEach(el => el.remove());
     if (!this._anchors.length && !this._inlineAnchors.length) return;
 
     const byLine = new Map();
@@ -1044,72 +1096,6 @@ class XEditor extends HTMLElement {
       });
     });
 
-    if (!byLine.size) {
-      this._injectInlineResults();
-      return;
-    }
-
-    const makeWidget = ({ result, anchor, pending, fallbackUnitText }) => {
-      if (pending) {
-        const widget = document.createElement('span');
-        widget.dataset.result = '';
-        widget.dataset.statementId = anchor.id;
-        widget.setAttribute('contenteditable', 'false');
-        widget.classList.add('loading');
-        const label = document.createElement('span');
-        label.textContent = '…';
-        widget.appendChild(label);
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.dataset.cancelBtn = '';
-        cancelBtn.setAttribute('aria-label', 'Cancel evaluation');
-        cancelBtn.title = 'Cancel evaluation';
-        cancelBtn.textContent = '×';
-        widget.appendChild(cancelBtn);
-        return widget;
-      }
-
-      const text = (result && result.resultText) || fallbackUnitText || '';
-      if (!text?.trim()) return null;
-
-      const widget = document.createElement('span');
-      widget.dataset.result = '';
-      widget.dataset.statementId = anchor.id;
-      widget.setAttribute('contenteditable', 'false');
-      const label = document.createElement('span');
-      label.dataset.resultLabel = '';
-      label.textContent = result?.kind === 'function' ? 'ƒ' : `→ ${text}`;
-      widget.appendChild(label);
-
-      if (this._showTypeHints && result?.typeText) {
-        const typeHint = document.createElement('span');
-        typeHint.dataset.typeHint = '';
-        typeHint.textContent = result.typeText;
-        typeHint.title = `runtime type: ${result.typeText}`;
-        widget.appendChild(typeHint);
-      }
-
-      if (result?.kind !== 'function') {
-        widget.dataset.copyValue = text;
-        const copyBtn = document.createElement('button');
-        copyBtn.type = 'button';
-        copyBtn.dataset.copyBtn = '';
-        copyBtn.setAttribute('aria-label', 'Copy result');
-        copyBtn.title = 'Copy result';
-        copyBtn.textContent = '⧉';
-        widget.appendChild(copyBtn);
-      }
-
-      if (result?.errorText) widget.classList.add('error');
-      if (result?.kind === 'function') {
-        widget.classList.add('function-anchor');
-        const meta = getFunctionDefinitionMeta(anchor?.source || '');
-        widget.dataset.tooltip = meta?.signature || 'Function definition';
-      }
-      return widget;
-    };
-
     const eolByLine = new Map();
     this._editable.querySelectorAll('[data-eol]').forEach(node => {
       const line = Number(node.dataset.line);
@@ -1126,7 +1112,13 @@ class XEditor extends HTMLElement {
 
       for (let i = 0; i < lineResults.length; i++) {
         const entry = lineResults[i];
-        const widget = makeWidget(entry);
+        const widget = this._makeResultWidget({
+          result: entry.result,
+          pending: entry.pending,
+          fallbackText: entry.fallbackUnitText,
+          statementId: entry.anchor.id,
+          source: entry.anchor.source,
+        });
         if (!widget) continue;
 
         const eol = eols[Math.min(i, Math.max(0, eols.length - 1))];
@@ -1151,13 +1143,13 @@ class XEditor extends HTMLElement {
       {
         acceptNode(node) {
           if (node.nodeType === Node.ELEMENT_NODE) {
-            if ('result' in (node.dataset ?? {}) || 'inlineResult' in (node.dataset ?? {})) {
+            if ('result' in (node.dataset ?? {})) {
               return NodeFilter.FILTER_REJECT;
             }
             if (node.tagName === 'BR') return NodeFilter.FILTER_ACCEPT;
             return NodeFilter.FILTER_SKIP;
           }
-          if (node.parentElement?.closest('[data-result], [data-inline-result]')) {
+          if (node.parentElement?.closest('[data-result]')) {
             return NodeFilter.FILTER_REJECT;
           }
           return NodeFilter.FILTER_ACCEPT;
@@ -1197,16 +1189,12 @@ class XEditor extends HTMLElement {
     for (const inlineAnchor of this._inlineAnchors) {
       const inlineResult = this._inlineResultsById.get(inlineAnchor.id);
       if (!inlineResult?.resultText?.trim()) continue;
-
-      const badge = document.createElement('span');
-      badge.dataset.inlineResult = '';
-      badge.setAttribute('contenteditable', 'false');
-      badge.textContent = `= ${inlineResult.resultText}`;
-      if (inlineResult.errorText) badge.classList.add('error');
-      if (this._showTypeHints && inlineResult.typeText) {
-        badge.title = `runtime type: ${inlineResult.typeText}`;
-      }
-      this._insertWidgetAtOffset(inlineAnchor.offset, badge);
+      const widget = this._makeResultWidget({
+        result: inlineResult,
+        inlineId: inlineAnchor.id,
+      });
+      if (!widget) continue;
+      this._insertWidgetAtOffset(inlineAnchor.offset, widget);
     }
   }
 
