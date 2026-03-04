@@ -7,6 +7,7 @@ import {
   normalizeUnitLiterals,
   unitLiteralDisplay,
   hasUnitSuffix,
+  annotationTypeForSource,
   isFunctionDefinitionSource,
   extractInlineExpressions,
   bootstrapEnv,
@@ -61,10 +62,11 @@ self.addEventListener('message', async ({ data }) => {
         } else if (result !== undefined && result !== null) {
           const resultText = formatRuntimeValue(result, 180);
           const displayText = unitDisplay && !hasUnitSuffix(resultText) ? unitDisplay : resultText;
+          const annotationType = annotationTypeForSource(statement.source, env);
           partial.statementResult = {
             statementId: statement.statementId,
             resultText: displayText,
-            typeText: inferRuntimeType(result),
+            typeText: annotationType || inferRuntimeType(result),
           };
         }
 

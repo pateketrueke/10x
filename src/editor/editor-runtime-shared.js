@@ -147,6 +147,19 @@ export function isFunctionDefinitionSource(source) {
   return /^[^=]+=\s*.*->/.test(normalized);
 }
 
+export function assignedNameFromSource(source) {
+  const text = String(source || '');
+  const match = text.match(/^\s*([A-Za-z_][A-Za-z0-9_!?-]*)\s*=/);
+  return match ? match[1] : '';
+}
+
+export function annotationTypeForSource(source, env) {
+  const name = assignedNameFromSource(source);
+  if (!name || !env || typeof env.getAnnotation !== 'function') return '';
+  const ann = env.getAnnotation(name);
+  return ann ? String(ann) : '';
+}
+
 export function extractInlineExpressions(source, statementId = '') {
   const text = String(source || '');
   const expressions = [];

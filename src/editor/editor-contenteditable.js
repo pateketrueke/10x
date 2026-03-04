@@ -23,6 +23,7 @@ import {
   normalizeUnitLiterals,
   unitLiteralDisplay,
   hasUnitSuffix,
+  annotationTypeForSource,
   catalogSymbolHint,
   isFunctionDefinitionSource,
   extractInlineExpressions,
@@ -1466,10 +1467,11 @@ class XEditor extends HTMLElement {
           } else if (result !== undefined && result !== null) {
             const resultText = formatRuntimeValue(result, 180);
             const displayText = unitDisplay && !hasUnitSuffix(resultText) ? unitDisplay : resultText;
+            const annotationType = annotationTypeForSource(statement.source, env);
             this._resultsById.set(statement.statementId, {
               statementId: statement.statementId,
               resultText: displayText,
-              typeText: inferRuntimeType(result),
+              typeText: annotationType || inferRuntimeType(result),
             });
           }
 

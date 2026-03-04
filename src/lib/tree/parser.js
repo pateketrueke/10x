@@ -10,7 +10,7 @@ import {
 import {
   Token, check, raise, assert, hasBreaks, hasStatements, isStatement, isSpecial, isComment, isRange, isSlice, isComma, isNumber,
   isString, isSymbol, isDirective, isLogic, isUnit, isSome, isOpen, isClose, isBegin, isDone, isBlock, isText, isCode,
-  isRef, isLiteral, isList, isEqual, isMath, isNot, isEnd, isEOF, isEOL, quote,
+  isRef, isLiteral, isList, isEqual, isMath, isNot, isEnd, isEOF, isEOL, quote, literal as tokenLiteral,
 } from '../helpers';
 
 export default class Parser {
@@ -383,6 +383,54 @@ export default class Parser {
     return this.subTree(this.statement([OR, PIPE, SOME, COMMA, SYMBOL]), true);
   }
 
+  nextSignificantIndex(offset = this.offset) {
+    let idx = offset;
+    while (idx < this.tokens.length && isText(this.tokens[idx])) idx++;
+    return idx;
+  }
+
+  tokenSourceText(token) {
+    if (!token) return '';
+    if (isText(token) && token.value && Array.isArray(token.value.buffer)) {
+      return token.value.buffer.map(part => (typeof part === 'string' ? part : '')).join('');
+    }
+    if (token.type === STRING) {
+      return `"${String(token.value || '')}"`;
+    }
+    return tokenLiteral(token);
+  }
+
+  parseAnnotation(token, tokenInfo) {
+    const colon1 = this.nextSignificantIndex(this.offset);
+    const first = this.tokens[colon1];
+    if (!isSymbol(first) || first.value !== ':') return null;
+
+    const colon2 = this.nextSignificantIndex(colon1 + 1);
+    const second = this.tokens[colon2];
+    if (!isSymbol(second) || second.value !== ':') return null;
+
+    let i = colon2 + 1;
+    const parts = [];
+
+    while (i < this.tokens.length && !isEOL(this.tokens[i]) && !isEOF(this.tokens[i])) {
+      parts.push(this.tokenSourceText(this.tokens[i]));
+      i++;
+    }
+
+    const typeText = parts.join('').trim();
+    if (!typeText) return null;
+
+    this.offset = i;
+    this.current = this.tokens[Math.min(i, this.tokens.length - 1)];
+
+    return Expr.map({
+      annot: Expr.stmt('@annot', [
+        Expr.local(token.value, tokenInfo),
+        Expr.value(typeText, tokenInfo),
+      ], tokenInfo),
+    }, tokenInfo);
+  }
+
   pull() {
     return this.buffer.splice(0, this.buffer.length);
   }
@@ -548,6 +596,12 @@ export default class Parser {
 
       // handle regular definitions and function-shortcuts
       if (isLiteral(token)) {
+        const annotation = this.parseAnnotation(token, tokenInfo);
+        if (annotation) {
+          push(annotation);
+          continue;
+        }
+
         if (isComma(curToken) && this.has(EQUAL)) {
           const parsed = this.destructure(tokenInfo);
 

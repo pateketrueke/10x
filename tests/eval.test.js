@@ -75,6 +75,12 @@ describe('Eval', () => {
       expect(await run('a=1 2.\na')).to.eql([Expr.value(3)]);
     });
 
+    it('should store binding type annotations without affecting runtime', async () => {
+      const env = new Env();
+      expect(await run('a :: num.\na=1.\na', env)).to.eql([Expr.value(1)]);
+      expect(env.getAnnotation('a')).to.eql('num');
+    });
+
     it('should invoke definitions', async () => {
       expect(await run('x=3.\n3x')).to.eql([Expr.value(9)]);
       expect(await run('a=b->1+b.\na(3)')).to.eql([Expr.value(4)]);

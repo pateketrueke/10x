@@ -16,6 +16,7 @@ const SAFE_PRELUDE = Object.keys(Prelude).reduce((prev, cur) => {
 export default class Env {
   constructor(value) {
     this.locals = {};
+    this.annotations = {};
     this.resolved = new Set();
     this.templates = {};
 
@@ -79,6 +80,16 @@ export default class Env {
 
   def(name, ...values) {
     this.set(name, { body: [].concat(values) });
+  }
+
+  annotate(name, typeText) {
+    this.annotations[name] = String(typeText || '').trim();
+  }
+
+  getAnnotation(name, recursive = true) {
+    if (this.annotations[name]) return this.annotations[name];
+    if (recursive && this.parent) return this.parent.getAnnotation(name, recursive);
+    return null;
   }
 
   defn(name, params, tokenInfo) {

@@ -1499,6 +1499,17 @@ export default class Eval {
     let isDone;
 
     // derive local scope for further calls
+    if (value.annot instanceof Expr.Statement) {
+      const [nameToken, typeToken] = value.annot.getBody();
+      const name = nameToken && nameToken.valueOf ? String(nameToken.valueOf()) : '';
+      const typeText = typeToken && typeToken.valueOf ? String(typeToken.valueOf()) : '';
+
+      if (name) {
+        environment.annotate(name, typeText);
+      }
+      isDone = true;
+    }
+
     if (value.let instanceof Expr.LetStatement) {
       subTree.push(...await Eval.do(value.let.getBody(), environment, 'Let', true, parentTokenInfo));
       isDone = true;
