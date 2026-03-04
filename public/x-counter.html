@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="/10x/" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10x · x-counter web component</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #101417;
+      --card: #182026;
+      --ink: #e7ecf0;
+      --muted: #9aa7b1;
+      --line: #2d3944;
+      --accent: #58d3a8;
+      --accent-2: #6eb4ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background:
+        radial-gradient(70rem 30rem at 10% -20%, rgba(88, 211, 168, 0.18), transparent 60%),
+        radial-gradient(60rem 35rem at 120% 10%, rgba(110, 180, 255, 0.18), transparent 60%),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Space Grotesk", "Avenir Next", sans-serif;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .wrap {
+      width: min(960px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    h2 {
+      margin: 0 0 0.4rem;
+      font-size: 1rem;
+      color: var(--muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+
+    .instances {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    pre {
+      margin: 0;
+      padding: 0.9rem;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #11181f;
+      color: #c9d5df;
+      overflow: auto;
+      font-size: 0.83rem;
+      line-height: 1.5;
+      font-family: "IBM Plex Mono", "SF Mono", monospace;
+    }
+
+    .tag { color: #9cdcfe; }
+    .dir { color: #58d3a8; }
+    .str { color: #ce9178; }
+    .num { color: #b5cea8; }
+    .cmt { color: #6a9955; font-style: italic; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+
+    <div class="card">
+      <h2>x-counter — three independent instances</h2>
+      <div class="instances">
+        <x-counter></x-counter>
+        <x-counter start="10"></x-counter>
+        <x-counter start="100"></x-counter>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Source · examples/x-counter.md</h2>
+      <pre><span class="cmt"># x-counter</span>
+
+count = <span class="dir">@signal</span> <span class="dir">@prop</span> <span class="str">"start"</span> <span class="num">0</span>.
+
+<span class="dir">@render</span> <span class="dir">@shadow</span> <span class="dir">@html</span>
+  <span class="tag">&lt;div class="counter"&gt;</span>
+    <span class="tag">&lt;h1&gt;</span>{count}<span class="tag">&lt;/h1&gt;</span>
+    <span class="tag">&lt;div class="actions"&gt;</span>
+      <span class="tag">&lt;button id="dec"&gt;</span>−<span class="tag">&lt;/button&gt;</span>
+      <span class="tag">&lt;button id="inc"&gt;</span>+<span class="tag">&lt;/button&gt;</span>
+      <span class="tag">&lt;button id="reset"&gt;</span>reset<span class="tag">&lt;/button&gt;</span>
+    <span class="tag">&lt;/div&gt;</span>
+  <span class="tag">&lt;/div&gt;</span>.
+
+<span class="dir">@on</span> <span class="str">"click"</span> <span class="str">"#inc"</span>   count = count + <span class="num">1</span>.
+<span class="dir">@on</span> <span class="str">"click"</span> <span class="str">"#dec"</span>   count = count - <span class="num">1</span>.
+<span class="dir">@on</span> <span class="str">"click"</span> <span class="str">"#reset"</span> count = <span class="dir">@prop</span> <span class="str">"start"</span> <span class="num">0</span>.</pre>
+    </div>
+
+  </main>
+
+  <script type="module">
+    const SIGNAL = Symbol('10x.signal');
+
+    function makeRuntime(host) {
+      let currentEffect = null;
+
+      return {
+        signal(initial) {
+          const s = {
+            [SIGNAL]: true,
+            value: initial,
+            subs: new Set(),
+            get() {
+              if (currentEffect) this.subs.add(currentEffect);
+              return this.value;
+            },
+            set(next) {
+              this.value = next;
+              this.subs.forEach(fn => fn());
+            },
+          };
+          return s;
+        },
+
+        prop(name, fallback) {
+          const raw = host.getAttribute(name);
+          return raw !== null ? Number(raw) || raw : fallback;
+        },
+
+        read(v) {
+          return v && v[SIGNAL] ? v.get() : v;
+        },
+
+        html(renderFn) {
+          return { render: renderFn };
+        },
+
+        renderShadow(shadow, styles, view) {
+          const run = () => {
+            currentEffect = run;
+            shadow.innerHTML = styles + String(view.render());
+            currentEffect = null;
+          };
+          run();
+        },
+
+        on(shadow, event, selector, handler) {
+          shadow.addEventListener(event, e => {
+            if (e.target && e.target.closest(selector)) handler(e);
+          });
+        },
+      };
+    }
+
+    const STYLES = `
+      <style>
+        :host {
+          display: inline-block;
+          font-family: "Space Grotesk", sans-serif;
+        }
+        .counter {
+          border: 1px solid #2d3944;
+          background: #182026;
+          border-radius: 16px;
+          padding: 1.5rem 2rem;
+          text-align: center;
+          min-width: 140px;
+        }
+        h1 {
+          margin: 0 0 1rem;
+          font-size: 3rem;
+          font-weight: 700;
+          color: #58d3a8;
+          font-variant-numeric: tabular-nums;
+        }
+        .actions {
+          display: flex;
+          gap: 0.5rem;
+          justify-content: center;
+        }
+        button {
+          border: 1px solid #2d3944;
+          background: rgba(255,255,255,0.04);
+          color: #e7ecf0;
+          border-radius: 999px;
+          padding: 0.4rem 0.8rem;
+          font: inherit;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 120ms, transform 120ms;
+        }
+        button:hover {
+          background: rgba(255,255,255,0.1);
+          transform: translateY(-1px);
+        }
+        #inc { border-color: #58d3a8; color: #58d3a8; }
+        #dec { border-color: #6eb4ff; color: #6eb4ff; }
+      </style>
+    `;
+
+    // Compiled from examples/x-counter.md
+    class XCounter extends HTMLElement {
+      connectedCallback() {
+        const shadow = this.attachShadow({ mode: 'open' });
+        const R = makeRuntime(this);
+
+        // count = @signal @prop "start" 0.
+        const count = R.signal(R.prop('start', 0));
+
+        // @render @shadow @html ...
+        R.renderShadow(shadow, STYLES, R.html(() =>
+          `<div class="counter">
+            <h1>${R.read(count)}</h1>
+            <div class="actions">
+              <button id="dec">−</button>
+              <button id="inc">+</button>
+              <button id="reset">reset</button>
+            </div>
+          </div>`
+        ));
+
+        // @on "click" "#inc"   count = count + 1.
+        R.on(shadow, 'click', '#inc',   () => count.set(R.read(count) + 1));
+        // @on "click" "#dec"   count = count - 1.
+        R.on(shadow, 'click', '#dec',   () => count.set(R.read(count) - 1));
+        // @on "click" "#reset" count = @prop "start" 0.
+        R.on(shadow, 'click', '#reset', () => count.set(R.prop('start', 0)));
+      }
+    }
+
+    customElements.define('x-counter', XCounter);
+  </script>
+</body>
+</html>
