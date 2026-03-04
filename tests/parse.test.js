@@ -155,7 +155,7 @@ describe('Parser', () => {
       }),
     ]);
 
-    expect(Parser.getAST('# Math')).to.eql([Expr.value('# Math')]);
+    expect(Parser.getAST('# Math')).to.eql([]);
   });
 
   it('should parse markdown tables as table statements', () => {

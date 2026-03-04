@@ -756,7 +756,7 @@ export default class Parser {
 
         if (namespace) {
           push(namespace);
-        } else if (this.isTextConvertible(token)) {
+        } else if (this.hasInterpolation(token)) {
           push(this.convertTextToString(token, tokenInfo));
         }
       } else if (isText(token) && this.isTextConvertible(token)) {
@@ -805,6 +805,15 @@ export default class Parser {
       if (typeof chunk === 'string') return chunk.trim().length > 0;
       if (Array.isArray(chunk)) return !!chunk[2];
       return true;
+    });
+  }
+
+  hasInterpolation(token) {
+    if (!token || !token.value || !Array.isArray(token.value.buffer)) return false;
+    return token.value.buffer.some(chunk => {
+      if (Array.isArray(chunk)) return !!chunk[2];
+      if (typeof chunk === 'object' && chunk !== null) return chunk.kind !== 'raw';
+      return false;
     });
   }
 
