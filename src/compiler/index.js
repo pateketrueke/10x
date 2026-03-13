@@ -379,8 +379,7 @@ function compileArgs(args, ctx) {
 
   const hasObjectPair = groups.some(group => group.length === 2 && (group[0].type === SYMBOL || group[0].isString));
   const isObjectArg = hasObjectPair
-    && groups.every(group =>
-      (group.length === 2 && (group[0].type === SYMBOL || group[0].isString))
+    && groups.every(group => (group.length === 2 && (group[0].type === SYMBOL || group[0].isString))
       || (group.length === 1 && (group[0].isObject || (group[0].isLiteral && typeof group[0].value === 'object')))
     );
 
@@ -425,7 +424,11 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
   if (token && token.isObject) {
     const value = token.value || {};
     const keys = Object.keys(value);
-    const isDirective = keys.some(k => ['render', 'on', 'html', 'signal', 'computed', 'prop', 'if', 'else', 'do', 'let', 'match', 'while', 'loop', 'try', 'rescue', 'export', 'import', 'from', 'style'].includes(k));
+    const directiveKeys = [
+      'render', 'on', 'html', 'signal', 'computed', 'prop', 'if', 'else', 'do', 'let',
+      'match', 'while', 'loop', 'try', 'rescue', 'export', 'import', 'from', 'style',
+    ];
+    const isDirective = keys.some(k => directiveKeys.includes(k));
 
     if (isDirective) return compileDirectiveObject(token, ctx);
 

@@ -32,20 +32,20 @@ export function tail(list) {
 
 export function filter(list, fn) {
   if (Array.isArray(list)) return list.filter(fn);
-  return (function* () {
+  return (function* () { // eslint-disable-line func-names
     for (const item of list || []) {
       if (fn(item)) yield item;
     }
-  })();
+  }());
 }
 
 export function map(list, fn) {
   if (Array.isArray(list)) return list.map(fn);
-  return (function* () {
+  return (function* () { // eslint-disable-line func-names
     for (const item of list || []) {
       yield fn(item);
     }
-  })();
+  }());
 }
 
 export function take(list, n) {

@@ -1,1 +1,4 @@
 dist
+tests/md_elements_test.js
+tests/md_elements2_test.js
+tests/prose_parens_test.js
