@@ -259,7 +259,8 @@ async function cli() {
       ? compileBundle(inputFile, {
         runtimePath,
         readFile: modulePath => fs.readFileSync(modulePath, 'utf8'),
-        shouldBundleImport: specifier => specifier.startsWith('.') || aliasEntries.some(([key]) => specifier === key || specifier.startsWith(`${key}/`)),
+        shouldBundleImport: specifier => specifier.startsWith('.')
+          || aliasEntries.some(([key]) => specifier === key || specifier.startsWith(`${key}/`)),
         resolveModule: (specifier, importerPath) => resolveWithAliases(specifier, importerPath, aliasEntries),
       })
       : compile(fs.readFileSync(inputFile, 'utf8'), { runtimePath });

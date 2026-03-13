@@ -360,7 +360,7 @@ function appendHtmlTagToken(parent, tag, baseClass = '') {
   const attrSliceEnd = Math.max(attrSliceStart, tag.length - (selfClosing ? 2 : 1));
   const attrs = tag.slice(attrSliceStart, attrSliceEnd);
   let cursor = 0;
-  const attrRegex = /(\s+)([^\s=/>]+)(?:\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s\"'=<>`]+))?/g;
+  const attrRegex = /(\s+)([^\s=/>]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g;
   let match;
   while ((match = attrRegex.exec(attrs))) {
     const chunk = attrs.slice(cursor, match.index);

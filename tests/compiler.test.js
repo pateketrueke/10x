@@ -293,5 +293,4 @@ describe('Compiler', () => {
     expect(output).to.contain('Runtime.html(() => [Runtime.h("h1"');
     expect(output).to.contain('Runtime.h("p"');
   });
-
 });

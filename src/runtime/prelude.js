@@ -36,7 +36,7 @@ export function filter(list, fn) {
     for (const item of list || []) {
       if (fn(item)) yield item;
     }
-  })();
+  }());
 }
 
 export function map(list, fn) {
@@ -45,7 +45,7 @@ export function map(list, fn) {
     for (const item of list || []) {
       yield fn(item);
     }
-  })();
+  }());
 }
 
 export function take(list, n) {
