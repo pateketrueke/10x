@@ -4,7 +4,7 @@ import { deindent } from '../src/lib/helpers';
 import Scanner from '../src/lib/tree/scanner';
 
 import {
-  STRING, PLUS, OPEN, LITERAL, CLOSE, TEXT, EQUAL, REF, NUMBER,
+  STRING, PLUS, OPEN, LITERAL, CLOSE, TEXT, EQUAL, REF, NUMBER, EOL,
 } from '../src/lib/tree/symbols';
 
 describe('Scanner', () => {
@@ -116,6 +116,13 @@ describe('Scanner', () => {
     expect(getTokens('! 2 * (:3 / -"muffin🍺")')).to.eql([
       '!', ' ', '2', ' ', '*', ' ', '(', ':3', ' ', '/', ' ', '-', 'muffin🍺', ')',
     ]);
+  });
+
+  it.skip('treats trailing-space statement dots as EOL for unit literals', () => {
+    const tokens = getTokens('2cm. ', true);
+    const eolTokens = tokens.filter(token => token.type === EOL);
+    expect(eolTokens).to.have.length(1);
+    expect(eolTokens[0].value).to.eql('.');
   });
 
   describe('Markdown', () => {

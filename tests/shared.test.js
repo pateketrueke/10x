@@ -152,7 +152,7 @@ describe('Shared', () => {
       it('puts(...) — will print to the stdout', async () => {
         stdout.start();
 
-        await run('@import puts @from "IO".\nputs("OK\n")');
+        await run('@import puts @from "IO".\nputs("OK\\n")');
 
         stdout.stop();
         expect(stdout.output).to.eql('OK\n');
@@ -161,7 +161,7 @@ describe('Shared', () => {
       it('err(...) — will print to the stderr', async () => {
         stderr.start();
 
-        await run('@import err @from "IO".\nerr("ERR\n")');
+        await run('@import err @from "IO".\nerr("ERR\\n")');
 
         stderr.stop();
         expect(stderr.output).to.eql('ERR\n');

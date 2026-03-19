@@ -564,6 +564,10 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
     return `(String(${left}).includes(String(${right})))`;
   }
 
+  if (token.type === BLOCK && token.hasBody && token.isCallable) {
+    return compileLambda(token, ctx);
+  }
+
   const op = OPERATOR.get(token.type);
   if (op) {
     if (Array.isArray(token.value)) {

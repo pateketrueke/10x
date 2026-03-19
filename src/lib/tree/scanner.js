@@ -60,19 +60,7 @@ export default class Scanner {
       if (value.indexOf('#{') === -1) {
         this.chunks.push(new Token(STRING, value, null, { ...tokenInfo, kind: 'raw' }));
       } else {
-        const re = /#\{([^{}]+)\}/g;
-        let cursor = 0;
-        let match;
-
-        while ((match = re.exec(value))) {
-          const before = value.slice(cursor, match.index);
-          if (before) this.append(before, tokenInfo);
-          this.append(new Scanner(match[1], tokenInfo).scanTokens(), tokenInfo);
-          cursor = match.index + match[0].length;
-        }
-
-        const tail = value.slice(cursor);
-        if (tail) this.append(tail, tokenInfo);
+        this.chunks.push(...new Scanner(quote(value), { line: 0, col: 3 }).scanTokens()[0].value);
       }
     } else {
       value.pop();
@@ -679,7 +667,7 @@ export default class Scanner {
       } else if (!isAlphaNumeric(this.chars[i], true)) break;
 
       // break on ordered list-items, e.g. `1. ...`
-      if (this.chars[i] === '.' && isDigit(this.blank)) break;
+      if (this.chars[i] === '.' && /^\d+$/.test(this.blank)) break;
 
       this.pushToken(this.chars[i]);
     }
@@ -688,13 +676,13 @@ export default class Scanner {
     const nextToken = this.chars[i + 1];
 
     // break on numbers followed by words, e.g. `1 x ...`
-    if (isDigit(this.blank) && token === ' ' && isAlphaNumeric(nextToken)) {
+    if (/^\d+$/.test(this.blank) && token === ' ' && isAlphaNumeric(nextToken)) {
       this.blank = '';
       return;
     }
 
     // extract ordered list-items, e.g. `1. ...`
-    if (isDigit(this.blank) && token === '.' && nextToken === ' ') {
+    if (/^\d+$/.test(this.blank) && token === '.' && nextToken === ' ') {
       this.parseItem(this.blank);
       return true;
     }
@@ -710,10 +698,11 @@ export default class Scanner {
     }
 
     // consume words and embedded formatting, e.g. `abc...[:,.] def...` OR `foo*bar*`
+    const looksLikeUnitLiteral = /^\d+[A-Za-z_][A-Za-z0-9_]*$/.test(this.blank);
     if (
       (isReadable(this.blank) && token === '*')
-      || (nextToken === ' ' && ');:.,'.includes(token))
-      || (token === ' ' && (nextToken === '*' || isAlphaNumeric(nextToken)))
+      || (nextToken === ' ' && ');:.,'.includes(token) && !(token === '.' && looksLikeUnitLiteral))
+      || (token === ' ' && (nextToken === '*' || (nextToken && isAlphaNumeric(nextToken))))
     ) {
       this.pushToken(token, nextToken);
       this.offset = this.start = i + 2;
@@ -835,16 +824,20 @@ export default class Scanner {
   parseString() {
     const stack = [];
     const info = { line: this.line, col: this.col - 1 };
+    let hadInterpolation = false;
 
     while (!this.isDone()) {
       if (this.peek() === '\n') {
-        if (!stack.length) raise('Unterminated string', this);
+        if (!stack.length && !hadInterpolation) raise('Unterminated string', this);
         this.col = -1;
         this.line++;
       }
 
       // keep strings within nested interpolation, e.g. `"foo#{bar + "baz"}"`
-      if (this.peek() === '#' && this.peekNext() === '{') stack.push(OPEN);
+      if (this.peek() === '#' && this.peekNext() === '{') {
+        stack.push(OPEN);
+        hadInterpolation = true;
+      }
       if (this.peek() === '}' && stack[stack.length - 1] === OPEN) stack.pop();
 
       // keep pairs of quotes safely from interpolation!

@@ -75,4 +75,8 @@ export const CONTROL_TYPES = [
 
 export const SYMBOL_TYPES = [
   ':nil', ':on', ':off',
+  ':click', ':focus', ':blur', ':input', ':change', ':submit', ':load', ':error',
+  ':mouseenter', ':mouseleave', ':mousedown', ':mouseup', ':mouseover', ':mouseout',
+  ':keydown', ':keyup', ':keypress',
+  ':touchstart', ':touchend', ':touchmove', ':touchcancel',
 ];

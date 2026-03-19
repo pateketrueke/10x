@@ -259,8 +259,8 @@ describe('Prelude', () => {
         test = (desc block) -> (
           output = block() | :nil.
           failed = (? output :nil).
-          puts("# #{failed ? "not ok" | "ok"} — #{desc}\n").
-          @if (failed) puts("  - ", items(output).join("\n  - "), "\n").
+          puts("# #{failed ? "not ok" | "ok"} — #{desc}\\n").
+          @if (failed) puts("  - ", items(output).join("\\n  - "), "\\n").
         ).
 
         @let
