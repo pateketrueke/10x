@@ -1,19 +1,19 @@
-import { expect } from 'chai';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
 import {
   signal, effect, html, render, on, isSignal, read, computed,
 } from '../src/runtime';
 
 describe('Runtime', () => {
-  it('should create and update signals', () => {
+  test('should create and update signals', () => {
     const count = signal(0);
 
-    expect(isSignal(count)).to.eql(true);
-    expect(count.get()).to.eql(0);
-    expect(count.set(2)).to.eql(2);
-    expect(count.get()).to.eql(2);
+    expect(isSignal(count)).toEqual(true);
+    expect(count.get()).toEqual(0);
+    expect(count.set(2)).toEqual(2);
+    expect(count.get()).toEqual(2);
   });
 
-  it('should re-run effects when signals change', () => {
+  test('should re-run effects when signals change', () => {
     const count = signal(0);
     let seen = null;
 
@@ -21,38 +21,38 @@ describe('Runtime', () => {
       seen = count.get();
     });
 
-    expect(seen).to.eql(0);
+    expect(seen, 0);
     count.set(7);
-    expect(seen).to.eql(7);
+    expect(seen, 7);
   });
 
-  it('should read plain values and signals transparently', () => {
+  test('should read plain values and signals transparently', () => {
     const plain = 9;
     const wrapped = signal(3);
 
-    expect(read(plain)).to.eql(9);
-    expect(read(wrapped)).to.eql(3);
+    expect(read(plain)).toEqual(9);
+    expect(read(wrapped)).toEqual(3);
   });
 
-  it('should expose .value getter/setter on signals', () => {
+  test('should expose .value getter/setter on signals', () => {
     const count = signal(1);
 
-    expect(count.value).to.eql(1);
+    expect(count.value, 1);
     count.value = 5;
-    expect(count.get()).to.eql(5);
-    expect(count.value).to.eql(5);
+    expect(count.get()).toEqual(5);
+    expect(count.value, 5);
   });
 
-  it('should support computed values via runtime exports', () => {
+  test('should support computed values via runtime exports', () => {
     const count = signal(2);
     const doubled = computed(() => count.value * 2);
 
-    expect(doubled.value).to.eql(4);
+    expect(doubled.value, 4);
     count.value = 7;
-    expect(doubled.value).to.eql(14);
+    expect(doubled.value, 14);
   });
 
-  it('should render html views and bind events', () => {
+  test('should render html views and bind events', () => {
     const nodeListeners = {};
     const documentListeners = {};
     const node = {
@@ -74,16 +74,16 @@ describe('Runtime', () => {
       const view = html(() => `<button id="btn">${count.get()}</button>`);
       render('#app', view);
 
-      expect(node.innerHTML).to.eql('<button id="btn">1</button>');
+      expect(node.innerHTML, '<button id="btn">1</button>');
 
       const dispose = on('click', '#btn', () => count.set(count.get() + 1));
       documentListeners.click({ target: { closest: selector => (selector === '#btn' ? {} : null) } });
       documentListeners.click({ target: { closest: selector => (selector === '#btn' ? {} : null) } });
 
-      expect(node.innerHTML).to.eql('<button id="btn">3</button>');
+      expect(node.innerHTML, '<button id="btn">3</button>');
 
       dispose();
-      expect(documentListeners.click).to.equal(undefined);
+      expect(documentListeners.click).toBe(undefined);
     } finally {
       globalThis.document = originalDocument;
     }

@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-expressions */
 
-import { expect } from 'chai';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
 
 import { stdin } from 'mock-stdin';
 import { stdout, stderr } from 'stdout-stderr';
@@ -22,7 +22,7 @@ shared({ Env }, process.argv.slice(2));
 
 describe('Shared', () => {
   describe('Proc', () => {
-    it('cwd() and chdir(p)', async () => {
+    test('cwd() and chdir(p)', async () => {
       const result = await run(deindent(`
         @import cwd, chdir @from "Proc".
         is = (a b) -> (== a b).
@@ -32,10 +32,10 @@ describe('Shared', () => {
         cwd() is "${path.dirname(process.cwd())}".
       `));
 
-      expect(serialize(result)).to.eql(':on, :on');
+      expect(serialize(result)).toEqual(':on, :on');
     });
 
-    it('getenv(k), setenv(k, v) and unsetenv(k)', async () => {
+    test('getenv(k), setenv(k, v) and unsetenv(k)', async () => {
       process.env.TRUTH = Math.random().toString(36).substr(2);
       process.env.FIXED = 'OK';
       process.env.TEXT = '';
@@ -52,10 +52,10 @@ describe('Shared', () => {
         getenv(:TRUTH) is "${process.env.TRUTH}".
       `));
 
-      expect(serialize(result)).to.eql('1, :on, :on, :on');
+      expect(serialize(result)).toEqual('1, :on, :on, :on');
     });
 
-    it('homedir() and tmpdir()', async () => {
+    test('homedir() and tmpdir()', async () => {
       const result = await run(deindent(`
         @import homedir, tmpdir @from "Proc".
         is = (a b) -> (== a b).
@@ -65,10 +65,10 @@ describe('Shared', () => {
         tmpdir() isin "${process.env.TMPDIR}".
       `));
 
-      expect(serialize(result)).to.eql(`:on, :${process.env.CI ? 'off' : 'on'}`);
+      expect(serialize(result)).toEqual(`:on, :${process.env.CI ? 'off' : 'on'}`);
     });
 
-    it('exit() and wait()', async () => {
+    test('exit() and wait()', async () => {
       td.replace(process, 'exit', td.func());
 
       await run(deindent(`
@@ -77,12 +77,12 @@ describe('Shared', () => {
         exit().
       `));
 
-      expect(td.explain(process.exit).callCount).to.eql(1);
+      expect(td.explain(process.exit).callCount).toEqual(1);
 
       td.reset();
     });
 
-    it('getopts(...) — returns input from argv', async () => {
+    test('getopts(...) — returns input from argv', async () => {
       const result = await run(deindent(`
         @import getopts @from "Proc".
         getopts().
@@ -91,13 +91,13 @@ describe('Shared', () => {
       const flags = ':data (:X "Y"), :flags (:b :on, :c :on)';
       const code = `(:_ ["a"], :raw ["d", "e"], ${flags}, :params (:M "N"))`;
 
-      expect(serialize(result)).to.eql(code);
+      expect(serialize(result)).toEqual(code);
     });
   });
 
   describe('IO', () => {
     describe('Printing and reading', () => {
-      it('input() — reads from the stdin', async () => {
+      test('input() — reads from the stdin', async () => {
         const x = stdin();
 
         setTimeout(() => {
@@ -110,10 +110,10 @@ describe('Shared', () => {
 
         const result = await run('@import input @from "IO".\ninput().\ninput()');
 
-        expect(serialize(result)).to.eql('"OK\n", :nil');
+        expect(serialize(result)).toEqual('"OK\n", :nil');
       });
 
-      it('input(p, ...) — asks user for input', async () => {
+      test('input(p, ...) — asks user for input', async () => {
         stdout.start();
 
         const x = stdin();
@@ -141,44 +141,44 @@ describe('Shared', () => {
 
         stdout.stop();
 
-        expect(serialize(result)).to.eql('(:a "42"), (:b "OK", :c -1)');
-        expect(stdout.output).to.eql(`${deindent(`
+        expect(serialize(result)).toEqual('(:a "42"), (:b "OK", :c -1)');
+        expect(stdout.output, `${deindent(`
           ? A? › ? A? › 4? A? › 42✔ A? … 42
           ? B? › ? B? › O? B? › OK✔ B? … OK
           ? C? › ? C? › ? C? › -1✔ C? … -1
         `)}\n`);
       });
 
-      it('puts(...) — will print to the stdout', async () => {
+      test('puts(...) — will print to the stdout', async () => {
         stdout.start();
 
-        await run('@import puts @from "IO".\nputs("OK\\n")');
+        await run('@import puts @from "IO".\nputs("""OK\n""")');
 
         stdout.stop();
-        expect(stdout.output).to.eql('OK\n');
+        expect(stdout.output).toEqual('OK\n');
       });
 
-      it('err(...) — will print to the stderr', async () => {
+      test('err(...) — will print to the stderr', async () => {
         stderr.start();
 
-        await run('@import err @from "IO".\nerr("ERR\\n")');
+        await run('@import err @from "IO".\nerr("""ERR\n""")');
 
         stderr.stop();
-        expect(stderr.output).to.eql('ERR\n');
+        expect(stderr.output).toEqual('ERR\n');
       });
     });
   });
 
   describe('Fs', () => {
-    it('should allow to read filesystem', async () => {
+    test('should allow to read filesystem', async () => {
       const result = await run(deindent(`
         @import read @from "Fs".
         @rescue read("im_not_exists").
         read("${__filename}").
       `));
 
-      expect(result.length).to.eql(1);
-      expect(serialize(result)).to.contains(fs.readFileSync(__filename).toString());
+      expect(result).toHaveLength(1);
+      expect(serialize(result)).toContain(fs.readFileSync(__filename).toString());
     });
   });
 });

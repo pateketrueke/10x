@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 import tk from 'timekeeper';
-import { expect } from 'chai';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
 import { stdout } from 'stdout-stderr';
 
 import { summary } from '../src/util';
@@ -42,40 +42,40 @@ describe('Integration', () => {
   const token = { type: 'x', value: 'y' };
   const value = Symbol('OK');
 
-  it('should fail on invalid tokens', () => {
-    expect(() => Token.get()).to.throw('Invalid token');
+  test('should fail on invalid tokens', () => {
+    expect(() => Token.get()).toThrow('Invalid token');
   });
 
-  it('should wrap well-known values as tokens', () => {
-    expect(Expr.value(42)).to.eql(Expr.value(42));
-    expect(Expr.value('foo')).to.eql(Expr.value('foo'));
-    expect(Expr.value(null)).to.eql(Expr.value(null));
-    expect(Expr.value(true)).to.eql(Expr.value(true));
-    expect(Expr.value(false)).to.eql(Expr.value(false));
-    expect(Expr.value([false])).to.eql(Expr.array([Expr.value(false)]));
+  test('should wrap well-known values as tokens', () => {
+    expect(Expr.value(42)).toEqual(Expr.value(42));
+    expect(Expr.value('foo')).toEqual(Expr.value('foo'));
+    expect(Expr.value(null)).toEqual(Expr.value(null));
+    expect(Expr.value(true)).toEqual(Expr.value(true));
+    expect(Expr.value(false)).toEqual(Expr.value(false));
+    expect(Expr.value([false])).toEqual(Expr.array([Expr.value(false)]));
   });
 
-  it('should keep objects as plain literals', () => {
-    expect(Expr.value({ foo: 'bar' })).to.eql(Expr.map({ foo: 'bar' }));
+  test('should keep objects as plain literals', () => {
+    expect(Expr.value({ foo: 'bar' })).toEqual(Expr.map({ foo: 'bar' }));
   });
 
-  it('should keep instances without wrapping', () => {
+  test('should keep instances without wrapping', () => {
     class Dummy {}
     const instance = new Dummy();
 
-    expect(Expr.value(instance)).to.eql(Expr.value(instance));
+    expect(Expr.value(instance)).toEqual(Expr.value(instance));
   });
 
-  it('should wrap unknown values as LITERAL tokens', () => {
-    expect(Expr.value(value)).to.eql(Expr.value(value));
+  test('should wrap unknown values as LITERAL tokens', () => {
+    expect(Expr.value(value)).toEqual(Expr.value(value));
   });
 
-  it('should wrap lists of tokens as Expr symbols', () => {
-    expect(Expr.from([new Expr(token)])).to.eql([token]);
+  test('should wrap lists of tokens as Expr symbols', () => {
+    expect(Expr.from([new Expr(token)])).toEqual([token]);
   });
 
-  it('should parse markdown-tags within TEXT values', () => {
-    expect(Expr.text('- fun')).to.eql({
+  test('should parse markdown-tags within TEXT values', () => {
+    expect(Expr.text('- fun')).toEqual({
       type: TEXT,
       value: {
         buffer: ['fun'],
@@ -83,7 +83,7 @@ describe('Integration', () => {
       },
     });
 
-    expect(Expr.text('## fun')).to.eql({
+    expect(Expr.text('## fun')).toEqual({
       type: TEXT,
       value: {
         buffer: ['fun'],
@@ -92,7 +92,7 @@ describe('Integration', () => {
       },
     });
 
-    expect(Expr.text('> fun')).to.eql({
+    expect(Expr.text('> fun')).toEqual({
       type: TEXT,
       value: {
         buffer: ['fun'],
@@ -100,7 +100,7 @@ describe('Integration', () => {
       },
     });
 
-    expect(Expr.text('1111. fun')).to.eql({
+    expect(Expr.text('1111. fun')).toEqual({
       type: TEXT,
       value: {
         buffer: ['fun'],
@@ -110,26 +110,26 @@ describe('Integration', () => {
     });
   });
 
-  it('should allow to set/update environment locals', async () => {
+  test('should allow to set/update environment locals', async () => {
     const env = new Env();
 
     env.set('test', { body: [Expr.value(0)] });
     Env.up('test', 'Tets', () => 42, env);
 
-    expect(env.get('test')).to.eql({
+    expect(env.get('test')).toEqual({
       body: [Expr.value(42)],
     });
   });
 
-  it('should share templates through top-level environment', async () => {
+  test('should share templates through top-level environment', async () => {
     const env = new Env();
 
     await run('@template <> ((a b) -> (!= a b))', env);
 
-    expect(await run('1 <> 2', env)).to.eql([Expr.value(true)]);
+    expect(await run('1 <> 2', env)).toEqual([Expr.value(true)]);
   });
 
-  it('should allow call locals from other environments', async () => {
+  test('should allow call locals from other environments', async () => {
     stdout.start();
 
     const a = new Env();
@@ -163,38 +163,38 @@ describe('Integration', () => {
 
     if (run.failure) throw run.failure;
 
-    expect(stdout.output).to.eql(`${deindent(`
+    expect(stdout.output, `${deindent(`
       # not ok — msg
         - \`(= 1 2)\` did not passed
     `)}\n`);
 
-    expect(result).to.eql([]);
+    expect(result, []);
   });
 
   describe('Diffing', () => {
     const a = Parser.getAST('[1, :foo "bar"]');
     const b = Parser.getAST('[1, :foo "bar"]');
 
-    it('should help to strictly compare any value', () => {
-      expect(hasDiff(0, 1)).to.be.true;
-      expect(hasDiff([0], [])).to.be.true;
-      expect(hasDiff([0], [0])).to.be.false;
-      expect(hasDiff({ x: 1 }, { x: 0 })).to.be.true;
-      expect(hasDiff({ x: 0 }, { x: 0 })).to.be.false;
+    test('should help to strictly compare any value', () => {
+      expect(hasDiff(0, 1)).toBe(true);
+      expect(hasDiff([0], [])).toBe(true);
+      expect(hasDiff([0], [0])).toBe(false);
+      expect(hasDiff({ x: 1 }, { x: 0 })).toBe(true);
+      expect(hasDiff({ x: 0 }, { x: 0 })).toBe(false);
     });
 
-    it('should compare full tokens in strict-mode', () => {
-      expect(hasDiff(a, b)).to.be.false;
+    test('should compare full tokens in strict-mode', () => {
+      expect(hasDiff(a, b)).toBe(false);
     });
 
-    it('should help to compare any value in weak-mode', () => {
-      expect(hasDiff(0, '0', true)).to.be.false;
-      expect(hasDiff(a, copy(a), true)).to.be.false;
+    test('should help to compare any value in weak-mode', () => {
+      expect(hasDiff(0, '0', true)).toBe(false);
+      expect(hasDiff(a, copy(a), true)).toBe(false);
     });
 
-    it('should compare type and value from any given token', () => {
-      expect(hasDiff(Expr.value(0), Expr.value('0'))).to.be.true;
-      expect(hasDiff(Expr.value(0), Expr.value('0'), true)).to.be.false;
+    test('should compare type and value from any given token', () => {
+      expect(hasDiff(Expr.value(0), Expr.value('0'))).toBe(true);
+      expect(hasDiff(Expr.value(0), Expr.value('0'), true)).toBe(false);
     });
   });
 
@@ -208,35 +208,35 @@ describe('Integration', () => {
         Env.register = () => null;
       });
 
-      it('should allow fractions as regular units', async () => {
-        expect(await run('1/2 thing')).to.eql([Expr.unit(0.5, 'thing')]);
+      test('should allow fractions as regular units', async () => {
+        expect(await run('1/2 thing')).toEqual([Expr.unit(0.5, 'thing')]);
       });
 
-      it('should allow to register external units', async () => {
-        expect(await run('1x')).to.eql([Expr.unit(1, 'x')]);
+      test('should allow to register external units', async () => {
+        expect(await run('1x')).toEqual([Expr.unit(1, 'x')]);
       });
 
-      it('should respond to most basic math-calls', async () => {
-        expect(await run('3 - 2a')).to.eql([Expr.value(1)]);
-        expect(await run('4mm % 2')).to.eql([Expr.unit(0, 'mm')]);
-        expect(await run('3cm - 2cm')).to.eql([Expr.unit(1, 'cm')]);
-        expect(await run('1cm + 1.5in')).to.eql([Expr.unit(1.8937008, 'in')]);
-        expect(await run('7 d / 2')).to.eql([Expr.unit(3.5, 'd')]);
-        expect(await run('.\n3cm * 1.5mm')).to.eql([Expr.unit(45, 'mm')]);
+      test('should respond to most basic math-calls', async () => {
+        expect(await run('3 - 2a')).toEqual([Expr.value(1)]);
+        expect(await run('4mm % 2')).toEqual([Expr.unit(0, 'mm')]);
+        expect(await run('3cm - 2cm')).toEqual([Expr.unit(1, 'cm')]);
+        expect(await run('1cm + 1.5in')).toEqual([Expr.unit(1.8937008, 'in')]);
+        expect(await run('7 d / 2')).toEqual([Expr.unit(3.5, 'd')]);
+        expect(await run('.\n3cm * 1.5mm')).toEqual([Expr.unit(45, 'mm')]);
       });
 
-      it('should allow to work with fractions', async () => {
+      test('should allow to work with fractions', async () => {
         expect(await run(`
           @import (:default Frac) @from "Frac".
           Frac.from(12).
           Frac.from(0.5).
           Frac.from(0.005).
-        `)).to.eql([Expr.value(12), Expr.frac(1, 2), Expr.frac(1, 200)]);
+        `)).toEqual([Expr.value(12), Expr.frac(1, 2), Expr.frac(1, 200)]);
 
-        expect(await run('@import (:default fr) @from "Frac".\nfr(1, 2)')).to.eql([Expr.frac(1, 2)]);
+        expect(await run('@import (:default fr) @from "Frac".\nfr(1, 2)')).toEqual([Expr.frac(1, 2)]);
       });
 
-      it('should convert between currencies', async () => {
+      test('should convert between currencies', async () => {
         await useCurrencies({
           key: null,
           read: () => ({
@@ -250,44 +250,44 @@ describe('Integration', () => {
           resolve: () => null,
         });
 
-        expect(await run('@import to, MXN @from "Unit".\n1000USD to MXN')).to.eql([
+        expect(await run('@import to, MXN @from "Unit".\n1000USD to MXN')).toEqual([
           Expr.unit(18594.908688433865, 'MXN'),
         ]);
       });
 
-      it('should convert between values', async () => {
+      test('should convert between values', async () => {
         expect(await run(`
           @import to, inches, convert @from "Unit".
           convert(5, :cm, :in).
           2 cm to inches
-        `)).to.eql([
+        `)).toEqual([
           Expr.unit(1.9685040000000003, 'in'),
           Expr.unit(0.7874016, 'in'),
         ]);
       });
 
-      it('should allow to compare between units', async () => {
-        expect(await run('(> 1cm 2cm)')).to.eql([Expr.value(false)]);
+      test('should allow to compare between units', async () => {
+        expect(await run('(> 1cm 2cm)')).toEqual([Expr.value(false)]);
       });
 
-      it('should set value of unit-less calls', () => {
-        expect(new Expr.Unit(1, 'cm').from(-1)).to.eql(Expr.unit(-1, 'cm').value);
+      test('should set value of unit-less calls', () => {
+        expect(new Expr.Unit(1, 'cm').from(-1)).toEqual(Expr.unit(-1, 'cm').value);
       });
 
-      it('should return values from alised units', () => {
-        expect(Expr.Unit.exists('d')).to.eql('d');
-        expect(Expr.Unit.exists('day')).to.eql('d');
-        expect(Expr.Unit.exists('days')).to.eql('d');
+      test('should return values from alised units', () => {
+        expect(Expr.Unit.exists('d')).toEqual('d');
+        expect(Expr.Unit.exists('day')).toEqual('d');
+        expect(Expr.Unit.exists('days')).toEqual('d');
       });
 
-      it('should return nothing on missing units', () => {
-        expect(Expr.Unit.from(1, 'foo')).to.be.undefined;
+      test('should return nothing on missing units', () => {
+        expect(Expr.Unit.from(1, 'foo')).toBeUndefined();
       });
 
-      it('should evaluate other literals as units', async () => {
+      test('should evaluate other literals as units', async () => {
         Env.register = Expr.Unit.from;
 
-        expect(await run('@import (:MXN pesos) @from "Unit".\n15pesos')).to.eql([Expr.unit(15, 'MXN')]);
+        expect(await run('@import (:MXN pesos) @from "Unit".\n15pesos')).toEqual([Expr.unit(15, 'MXN')]);
       });
     });
   });
@@ -299,32 +299,32 @@ describe('Integration', () => {
     err.prevToken = Expr.from(TEXT, code, { line: 0, col: 0 });
     err.stack = '';
 
-    it('should repair errors before formatting', () => {
-      expect(debug(new Error('Unexpected!'))).to.eql('Unexpected!');
+    test('should repair errors before formatting', () => {
+      expect(debug(new Error('Unexpected!'))).toEqual('Unexpected!');
 
       const test = debug(err, code);
 
-      expect(test).to.contains('at `FIXME` at line 1:1');
-      expect(test).to.contains('1 | FIXME');
+      expect(test).toContain('at `FIXME` at line 1:1');
+      expect(test).toContain('1 | FIXME');
 
-      expect(debug(new Error('FIXME: at line 0:0'), '', true)).not.to.contains('at line 0:0');
+      expect(debug(new Error('FIXME: at line 0:0'), '', true)).not.toContain('at line 0:0');
     });
 
-    it('should report failures on formatting', async () => {
+    test('should report failures on formatting', async () => {
       try {
         await run('"\n"');
       } catch (e) {
-        expect(summary(e, '"\n"')).to.contains('Unterminated string at line 1:2');
+        expect(summary(e, '"\n"')).toContain('Unterminated string at line 1:2');
       }
     });
 
-    it('should report previous token from callstack', () => {
+    test('should report previous token from callstack', () => {
       err.prevToken = undefined;
       err.stack = undefined;
       err.line = 0;
       err.col = 0;
 
-      expect(debug(err, code)).to.eql(`${deindent(`
+      expect(debug(err, code)).toEqual(`${deindent(`
         Oh noes!
 
              1 | FIXME
@@ -332,7 +332,7 @@ describe('Integration', () => {
       `)}\n`);
     });
 
-    it('should allow formatting of single errors', async () => {
+    test('should allow formatting of single errors', async () => {
       let error;
 
       try {
@@ -340,8 +340,8 @@ describe('Integration', () => {
       } catch (e) {
         error = e;
       } finally {
-        expect(debug(error)).to.eql('Undeclared local `x` at line 1:1 (Eval)');
-        expect(debug(error, 'x')).to.eql([
+        expect(debug(error)).toEqual('Undeclared local `x` at line 1:1 (Eval)');
+        expect(debug(error, 'x')).toEqual([
           'Undeclared local `x` at line 1:1 (Eval)',
           '',
           '     1 | x',
@@ -351,7 +351,7 @@ describe('Integration', () => {
       }
     });
 
-    it('should allow formatting of nested errors', async () => {
+    test('should allow formatting of nested errors', async () => {
       let error;
 
       try {
@@ -359,8 +359,8 @@ describe('Integration', () => {
       } catch (e) {
         error = e;
       } finally {
-        expect(debug(error)).to.eql('Undeclared local `y` at line 1:5 (Lit)');
-        expect(debug(error, 'x = y.\nx')).to.eql([
+        expect(debug(error)).toEqual('Undeclared local `y` at line 1:5 (Lit)');
+        expect(debug(error, 'x = y.\nx')).toEqual([
           'Undeclared local `y` at line 1:5 (Lit)',
           '  at `.` at line 1:6',
           '',
@@ -372,15 +372,15 @@ describe('Integration', () => {
       }
     });
 
-    it('should report callstack if enabled', async () => {
+    test('should report callstack if enabled', async () => {
       await run('x = 42.\ny = x * 2.\n3y', null, true);
 
       const x = [Expr.value(42)];
       const y = [Expr.local('x'), Expr.from(MUL, '*'), Expr.value(2)];
 
-      expect(run.info.enabled).to.be.true;
-      expect(run.info.depth).to.eql(0);
-      expect(run.info.calls).to.eql([
+      expect(run.info.enabled).toBe(true);
+      expect(run.info.depth, 0);
+      expect(run.info.calls, [
         ['Eval', 1, [
           Expr.block({ body: x, name: 'x' }),
           Expr.from(EOL),
@@ -394,14 +394,14 @@ describe('Integration', () => {
       ]);
     });
 
-    it('should allow tu parse/format on debug', async () => {
+    test('should allow tu parse/format on debug', async () => {
       const e = new Error('OK');
 
       e.stack = e.message;
       e.line = 0;
       e.col = 1;
 
-      expect(debug(e, '1+2', false, source => Parser.getAST(source, 'raw').map(x => x.value).join(''))).to.eql(`${deindent(`
+      expect(debug(e, '1+2', false, source => Parser.getAST(source, 'raw').map(x => x.value).join(''))).toEqual(`${deindent(`
         OK
 
              1 | 1+2
@@ -409,14 +409,14 @@ describe('Integration', () => {
       `)}\n`);
     });
 
-    it('should cut around the errored line', async () => {
+    test('should cut around the errored line', async () => {
       const e = new Error('OK');
 
       e.stack = e.message;
       e.line = 6;
       e.col = 0;
 
-      expect(debug(e, '-\n-\n-\n-\n-\n-\n+\n-\n-\n-\n-\n-')).to.eql(`${deindent(`
+      expect(debug(e, '-\n-\n-\n-\n-\n-\n+\n-\n-\n-\n-\n-')).toEqual(`${deindent(`
         OK
 
              3 | -
@@ -434,7 +434,7 @@ describe('Integration', () => {
   });
 
   describe('Conversion', () => {
-    it('should allow wrapping functions to keep tokenInfo', async () => {
+    test('should allow wrapping functions to keep tokenInfo', async () => {
       const type = Expr.unsafe(t => t.type);
       const undef = Expr.unsafe(() => undefined);
       const truth = Expr.unsafe(() => Expr.value(true));
@@ -445,28 +445,28 @@ describe('Integration', () => {
 
       const result = await run('@import type, undef, truth @from "Test".\ntype(42).\ntruth().\nundef()');
 
-      expect(result).to.eql([Expr.from(LITERAL, NUMBER), Expr.value(true)]);
+      expect(result, [Expr.from(LITERAL, NUMBER), Expr.value(true)]);
     });
 
-    it('should transform tokens into plain-values', async () => {
-      expect(Expr.plain(await run('1..3'))).to.eql([[1, 2, 3]]);
-      expect(Expr.plain(await run(':foo "bar"'))).to.eql([{ foo: 'bar' }]);
-      expect(Expr.plain(await run(':foo "bar", "buzz"'))).to.eql([{ foo: ['bar', 'buzz'] }]);
-      expect(Expr.plain(await run('@import fromCharCode @from "String".\nfromCharCode'))).to.eql([String.fromCharCode]);
+    test('should transform tokens into plain-values', async () => {
+      expect(Expr.plain(await run('1..3'))).toEqual([[1, 2, 3]]);
+      expect(Expr.plain(await run(':foo "bar"'))).toEqual([{ foo: 'bar' }]);
+      expect(Expr.plain(await run(':foo "bar", "buzz"'))).toEqual([{ foo: ['bar', 'buzz'] }]);
+      expect(Expr.plain(await run('@import fromCharCode @from "String".\nfromCharCode'))).toEqual([String.fromCharCode]);
     });
 
-    it('should export definitions as functions', async () => {
+    test('should export definitions as functions', async () => {
       const env = new Env();
       const [sum] = Expr.plain(await run('sum=a->b->a+b.\nsum', env));
 
-      expect(await evaluate(sum(1, 3), env)).to.eql({
+      expect(await evaluate(sum(1, 3), env)).toEqual({
         info: { calls: [], depth: 0, enabled: undefined },
         error: undefined,
         result: [Expr.value(4)],
       });
     });
 
-    it('should run through any callback if given', async () => {
+    test('should run through any callback if given', async () => {
       const output = [];
       const source = await run('sum=(a b) -> a+b.\nsum');
       const result = Expr.plain(source, async (call, args) => {
@@ -475,7 +475,7 @@ describe('Integration', () => {
 
       await result[0]();
 
-      expect(output).to.eql([{
+      expect(output, [{
         call: Expr.from({
           source: 'sum',
           length: 2,
@@ -489,23 +489,23 @@ describe('Integration', () => {
       }]);
     });
 
-    it('should convert-back values from foreign-calls', async () => {
+    test('should convert-back values from foreign-calls', async () => {
       Env.resolve = source => ({
         Fun: { test: fn => fn(1, 2) },
         Test: { nested: { noop: () => {} } },
       })[source];
 
-      expect(await run('@import test @from "Fun".\nsum=(a b) -> a+b.\ntest(sum)')).to.eql([Expr.value(3)]);
-      expect(await run('@import nested @from "Test".\nnested.noop()')).to.eql([]);
+      expect(await run('@import test @from "Fun".\nsum=(a b) -> a+b.\ntest(sum)')).toEqual([Expr.value(3)]);
+      expect(await run('@import nested @from "Test".\nnested.noop()')).toEqual([]);
 
       expect(await run(`
         @import (:test fun) @from "Fun".
         x = fun((a b) -> [a, b]).
         @if (== x [1, 2]) 42.
-      `)).to.eql([Expr.value(42)]);
+      `)).toEqual([Expr.value(42)]);
     });
 
-    it('should allow most values as literals', async () => {
+    test('should allow most values as literals', async () => {
       const Url = require('url');
 
       Env.resolve = source => ({
@@ -515,27 +515,27 @@ describe('Integration', () => {
         },
       })[source];
 
-      expect(await run('@import obj @from "Test".\nobj.foo.nested')).to.eql([Expr.value('bar')]);
-      expect(await run('@import (:default test) @from "Test".\ntest.obj.foo.nested')).to.eql([Expr.value('bar')]);
-      expect(await run('@import mixed @from "Test".\nmixed.location.path.\nmixed.twice(21)')).to.eql([Expr.value('/'), Expr.value(42)]);
+      expect(await run('@import obj @from "Test".\nobj.foo.nested')).toEqual([Expr.value('bar')]);
+      expect(await run('@import (:default test) @from "Test".\ntest.obj.foo.nested')).toEqual([Expr.value('bar')]);
+      expect(await run('@import mixed @from "Test".\nmixed.location.path.\nmixed.twice(21)')).toEqual([Expr.value('/'), Expr.value(42)]);
     });
   });
 
   describe('Serialization', () => {
-    it('should serialize scalar values', () => {
-      expect(serialize(null)).to.eql(':nil');
-      expect(serialize(true)).to.eql(':on');
-      expect(serialize(false)).to.eql(':off');
-      expect(serialize('OK')).to.eql('OK');
-      expect(serialize(42)).to.eql(42);
+    test('should serialize scalar values', () => {
+      expect(serialize(null)).toEqual(':nil');
+      expect(serialize(true)).toEqual(':on');
+      expect(serialize(false)).toEqual(':off');
+      expect(serialize('OK')).toEqual('OK');
+      expect(serialize(42)).toEqual(42);
     });
 
-    it('should serialize string types', () => {
+    test('should serialize string types', () => {
       expect(serialize(Parser.getAST(deindent(`
         tpl = <div>
           #{42}
         </div>.
-      `)))).to.eql('tpl = <div>\n  #{42}\n</div>.\n');
+      `)))).toEqual('tpl = <div>\n  #{42}\n</div>.\n');
 
       expect(serialize(Parser.getAST(deindent(`
         tpl = """
@@ -543,65 +543,65 @@ describe('Integration', () => {
             #{42}
           </div>
         """.
-      `)))).to.eql('tpl = """<div>\n  #{42}\n</div>""".\n');
+      `)))).toEqual('tpl = """<div>\n  #{42}\n</div>""".\n');
 
-      expect(Parser.getAST('"EXAMPLE"').join('')).to.eql('"..."');
+      expect(Parser.getAST('"EXAMPLE"').join('')).toEqual('"..."');
 
-      expect(serialize(Parser.getAST('<div>X</div>'))).to.eql('<div>X</div>');
-      expect(serialize(Parser.getAST('<div>X</div>'), true)).to.eql('<.../>');
+      expect(serialize(Parser.getAST('<div>X</div>'))).toEqual('<div>X</div>');
+      expect(serialize(Parser.getAST('<div>X</div>'), true)).toEqual('<.../>');
 
-      expect(serialize(Parser.getAST('"#{bar}"'))).to.eql('"#{bar}"');
-      expect(serialize(Parser.getAST('"#{42}x"'))).to.eql('"#{42}x"');
-      expect(serialize(Parser.getAST('"x:#{1+2}"'))).to.eql('"x:#{1 + 2}"');
-      expect(serialize(Parser.getAST('"foo"+"bar"'))).to.eql('"foo" + "bar"');
-      expect(serialize(Parser.getAST('"foo: #{bar}"'))).to.eql('"foo: #{bar}"');
-      expect(serialize(Parser.getAST('"#{foo}: bar"'))).to.eql('"#{foo}: bar"');
+      expect(serialize(Parser.getAST('"#{bar}"'))).toEqual('"#{bar}"');
+      expect(serialize(Parser.getAST('"#{42}x"'))).toEqual('"#{42}x"');
+      expect(serialize(Parser.getAST('"x:#{1+2}"'))).toEqual('"x:#{1 + 2}"');
+      expect(serialize(Parser.getAST('"foo"+"bar"'))).toEqual('"foo" + "bar"');
+      expect(serialize(Parser.getAST('"foo: #{bar}"'))).toEqual('"foo: #{bar}"');
+      expect(serialize(Parser.getAST('"#{foo}: bar"'))).toEqual('"#{foo}: bar"');
 
-      expect(serialize('"foo#{1 2 3 4}!!"')).to.eql('"foo#{1 2 3 4}!!"');
-      expect(serialize('"foo#{bar / 2 + "BUZZ"}!!"')).to.eql('"foo#{bar / 2 + "BUZZ"}!!"');
-      expect(serialize('"foo#{bar / 2 + "BUZZ" + 2}!!"')).to.eql('"foo#{bar / 2 + "BUZZ" + 2}!!"');
+      expect(serialize('"foo#{1 2 3 4}!!"')).toEqual('"foo#{1 2 3 4}!!"');
+      expect(serialize('"foo#{bar / 2 + "BUZZ"}!!"')).toEqual('"foo#{bar / 2 + "BUZZ"}!!"');
+      expect(serialize('"foo#{bar / 2 + "BUZZ" + 2}!!"')).toEqual('"foo#{bar / 2 + "BUZZ" + 2}!!"');
     });
 
-    it('should serialize mixed values', () => {
+    test('should serialize mixed values', () => {
       const F = () => 42;
       F.x = () => -1;
       F.y = 2;
 
-      expect(serialize(F)).to.eql('F()[:x :y]');
-      expect(serialize(Symbol('TEST'))).to.eql('TEST');
-      expect(serialize(new Date())).to.eql('"2020-01-01T06:00:00.000Z"');
-      expect(serialize(() => -1)).to.eql('()');
-      expect(serialize(/xxx/i)).to.eql('/xxx/i');
-      expect(serialize(class X { constructor(a, b) { return [a, b]; } })).to.eql('X(a, b)');
+      expect(serialize(F)).toEqual('F()[:x :y]');
+      expect(serialize(Symbol('TEST'))).toEqual('TEST');
+      expect(serialize(new Date())).toEqual('"2020-01-01T06:00:00.000Z"');
+      expect(serialize(() => -1)).toEqual('()');
+      expect(serialize(/xxx/i)).toEqual('/xxx/i');
+      expect(serialize(class X { constructor(a, b) { return [a, b]; } })).toEqual('X(a, b)');
     });
 
-    it('should serialize other values', () => {
-      expect(serialize({ foo: 'BAR' }, true)).to.eql(':foo');
-      expect(serialize({ type: LITERAL, value: 'TEST' })).to.eql('TEST');
+    test('should serialize other values', () => {
+      expect(serialize({ foo: 'BAR' }, true)).toEqual(':foo');
+      expect(serialize({ type: LITERAL, value: 'TEST' })).toEqual('TEST');
     });
 
-    it('should serialize on toString() calls', async () => {
-      expect(Expr.value(undefined).toString()).to.eql('undefined');
+    test('should serialize on toString() calls', async () => {
+      expect(Expr.value(undefined).toString()).toEqual('undefined');
 
-      expect(Expr.fn(x => x).toString()).to.eql('(x)');
-      expect(Expr.fn(function $(x) { return x; }).toString()).to.eql('$(x)');
+      expect(Expr.fn(x => x).toString()).toEqual('(x)');
+      expect(Expr.fn(function $(x) { return x; }).toString()).toEqual('$(x)');
 
-      expect(Parser.getAST(':x?').join('')).to.eql(':x?');
-      expect(Parser.getAST(':x? y').join('')).to.eql(':x?');
+      expect(Parser.getAST(':x?').join('')).toEqual(':x?');
+      expect(Parser.getAST(':x? y').join('')).toEqual(':x?');
 
-      expect(Parser.getAST('(< 1 2)').join('')).to.eql('(<)');
-      expect(Parser.getAST('[1, 2, 3]').join('')).to.eql('[..]');
-      expect(Parser.getAST('x=y->fn(y,..).\n').join('')).to.eql('x = y -> fn(y, ..).\n');
+      expect(Parser.getAST('(< 1 2)').join('')).toEqual('(<)');
+      expect(Parser.getAST('[1, 2, 3]').join('')).toEqual('[..]');
+      expect(Parser.getAST('x=y->fn(y,..).\n').join('')).toEqual('x = y -> fn(y, ..).\n');
 
-      expect((await run('@import map @from "Array".\nmap')).join('')).to.eql('Array/map');
+      expect((await run('@import map @from "Array".\nmap')).join('')).toEqual('Array/map');
 
-      expect(serialize(Parser.getAST('[1, 2, 3]'))).to.eql('[1, 2, 3]');
-      expect(serialize(Parser.getAST('[1..3:1]'))).to.eql('[1..3:1]');
-      expect(serialize(Parser.getAST('[..,x]'))).to.eql('[.., x]');
-      expect(serialize(Parser.getAST(':t 42'))).to.eql(':t 42');
-      expect(serialize(Parser.getAST('1..3'))).to.eql('1..3');
+      expect(serialize(Parser.getAST('[1, 2, 3]'))).toEqual('[1, 2, 3]');
+      expect(serialize(Parser.getAST('[1..3:1]'))).toEqual('[1..3:1]');
+      expect(serialize(Parser.getAST('[..,x]'))).toEqual('[.., x]');
+      expect(serialize(Parser.getAST(':t 42'))).toEqual(':t 42');
+      expect(serialize(Parser.getAST('1..3'))).toEqual('1..3');
 
-      expect((await run('[1..3]')).join('')).to.eql('[..]');
+      expect((await run('[1..3]')).join('')).toEqual('[..]');
 
       const fixedEnv = new Env();
 
@@ -615,127 +615,127 @@ describe('Integration', () => {
         Other: fixedEnv,
       })[source];
 
-      expect(serialize(await run('@import x @from "Other".\nx'))).to.eql('Other/x');
+      expect(serialize(await run('@import x @from "Other".\nx'))).toEqual('Other/x');
     });
 
-    it('should serialize well-known symbols', () => {
-      expect(serialize(Expr.from(OPEN))).to.eql('(');
-      expect(serialize(Expr.from(CLOSE))).to.eql(')');
-      expect(serialize(Expr.from(COMMA))).to.eql(',');
-      expect(serialize(Expr.from(BEGIN))).to.eql('[');
-      expect(serialize(Expr.from(DONE))).to.eql(']');
-      expect(serialize(Expr.from(EOL))).to.eql('.');
-      expect(serialize(Expr.from(DOT))).to.eql('.');
-      expect(serialize(Expr.from(MINUS))).to.eql('-');
-      expect(serialize(Expr.from(PLUS))).to.eql('+');
-      expect(serialize(Expr.from(MOD))).to.eql('%');
-      expect(serialize(Expr.from(MUL))).to.eql('*');
-      expect(serialize(Expr.from(DIV))).to.eql('/');
-      expect(serialize(Expr.from(PIPE))).to.eql('|>');
-      expect(serialize(Expr.from(BLOCK))).to.eql('->');
-      expect(serialize(Expr.from(RANGE))).to.eql('..');
-      expect(serialize(Expr.from(SYMBOL))).to.eql(':');
-      expect(serialize(Expr.from(NOT_EQ))).to.eql('!=');
-      expect(serialize(Expr.from(SOME))).to.eql('?');
-      expect(serialize(Expr.from(EVERY))).to.eql('$');
-      expect(serialize(Expr.from(OR))).to.eql('|');
-      expect(serialize(Expr.from(NOT))).to.eql('!');
-      expect(serialize(Expr.from(LIKE))).to.eql('~');
-      expect(serialize(Expr.from(EXACT_EQ))).to.eql('==');
-      expect(serialize(Expr.from(EQUAL))).to.eql('=');
-      expect(serialize(Expr.from(LESS_EQ))).to.eql('<=');
-      expect(serialize(Expr.from(LESS))).to.eql('<');
-      expect(serialize(Expr.from(GREATER_EQ))).to.eql('>=');
-      expect(serialize(Expr.from(GREATER))).to.eql('>');
+    test('should serialize well-known symbols', () => {
+      expect(serialize(Expr.from(OPEN))).toEqual('(');
+      expect(serialize(Expr.from(CLOSE))).toEqual(')');
+      expect(serialize(Expr.from(COMMA))).toEqual(',');
+      expect(serialize(Expr.from(BEGIN))).toEqual('[');
+      expect(serialize(Expr.from(DONE))).toEqual(']');
+      expect(serialize(Expr.from(EOL))).toEqual('.');
+      expect(serialize(Expr.from(DOT))).toEqual('.');
+      expect(serialize(Expr.from(MINUS))).toEqual('-');
+      expect(serialize(Expr.from(PLUS))).toEqual('+');
+      expect(serialize(Expr.from(MOD))).toEqual('%');
+      expect(serialize(Expr.from(MUL))).toEqual('*');
+      expect(serialize(Expr.from(DIV))).toEqual('/');
+      expect(serialize(Expr.from(PIPE))).toEqual('|>');
+      expect(serialize(Expr.from(BLOCK))).toEqual('->');
+      expect(serialize(Expr.from(RANGE))).toEqual('..');
+      expect(serialize(Expr.from(SYMBOL))).toEqual(':');
+      expect(serialize(Expr.from(NOT_EQ))).toEqual('!=');
+      expect(serialize(Expr.from(SOME))).toEqual('?');
+      expect(serialize(Expr.from(EVERY))).toEqual('$');
+      expect(serialize(Expr.from(OR))).toEqual('|');
+      expect(serialize(Expr.from(NOT))).toEqual('!');
+      expect(serialize(Expr.from(LIKE))).toEqual('~');
+      expect(serialize(Expr.from(EXACT_EQ))).toEqual('==');
+      expect(serialize(Expr.from(EQUAL))).toEqual('=');
+      expect(serialize(Expr.from(LESS_EQ))).toEqual('<=');
+      expect(serialize(Expr.from(LESS))).toEqual('<');
+      expect(serialize(Expr.from(GREATER_EQ))).toEqual('>=');
+      expect(serialize(Expr.from(GREATER))).toEqual('>');
     });
 
-    it('should return literal values on unknown types', () => {
-      expect(literal({ value: 'OK' })).to.eql('OK');
+    test('should return literal values on unknown types', () => {
+      expect(literal({ value: 'OK' })).toEqual('OK');
     });
   });
 
   describe('Formatting', () => {
-    it('should add commas between values', () => {
-      expect(serialize(Parser.getAST('x = a b c'))).to.eql('x = a, b, c');
+    test('should add commas between values', () => {
+      expect(serialize(Parser.getAST('x = a b c'))).toEqual('x = a, b, c');
     });
 
-    it('should add white-space around operators', () => {
-      expect(serialize(Parser.getAST('1 2 3'))).to.eql('1 + 2 + 3');
+    test('should add white-space around operators', () => {
+      expect(serialize(Parser.getAST('1 2 3'))).toEqual('1 + 2 + 3');
     });
 
-    it('should add white-space around single operators', () => {
-      expect(serialize(Parser.getAST('n-1'))).to.eql('n - 1');
+    test('should add white-space around single operators', () => {
+      expect(serialize(Parser.getAST('n-1'))).toEqual('n - 1');
     });
 
-    it('should add white-space around mixed operators', () => {
-      expect(serialize(Parser.getAST('a>>b'))).to.eql('a>> b');
-      expect(serialize(Parser.getAST('a+=b'))).to.eql('a += b');
+    test('should add white-space around mixed operators', () => {
+      expect(serialize(Parser.getAST('a>>b'))).toEqual('a>> b');
+      expect(serialize(Parser.getAST('a+=b'))).toEqual('a += b');
 
-      expect(serialize(Parser.getAST('[1,2]~4..6'))).to.eql('[1, 2] ~ 4..6');
-      expect(serialize(Parser.getAST('[1,2]++4..6'))).to.eql('[1, 2] ++ 4..6');
+      expect(serialize(Parser.getAST('[1,2]~4..6'))).toEqual('[1, 2] ~ 4..6');
+      expect(serialize(Parser.getAST('[1,2]++4..6'))).toEqual('[1, 2] ++ 4..6');
 
-      expect(serialize(Parser.getAST('i+=j.\ni-=j'))).to.eql('i += j.\ni -= j');
+      expect(serialize(Parser.getAST('i+=j.\ni-=j'))).toEqual('i += j.\ni -= j');
     });
 
-    it('should keep repeated-operators around literals', () => {
-      expect(serialize(Parser.getAST('a ++ b'))).to.eql('a++ b');
-      expect(serialize(Parser.getAST('1 ++ b'))).to.eql('1 ++b');
+    test('should keep repeated-operators around literals', () => {
+      expect(serialize(Parser.getAST('a ++ b'))).toEqual('a++ b');
+      expect(serialize(Parser.getAST('1 ++ b'))).toEqual('1 ++b');
 
-      expect(serialize(Parser.getAST('n -- 0'))).to.eql('n-- 0');
-      expect(serialize(Parser.getAST('(> n -- 0)'))).to.eql('(> n-- 0)');
+      expect(serialize(Parser.getAST('n -- 0'))).toEqual('n-- 0');
+      expect(serialize(Parser.getAST('(> n -- 0)'))).toEqual('(> n-- 0)');
 
-      expect(serialize(Parser.getAST('n --.\n-- n'))).to.eql('n--.\n--n');
-      expect(serialize(Parser.getAST('n ++.\n++ n'))).to.eql('n++.\n++n');
+      expect(serialize(Parser.getAST('n --.\n-- n'))).toEqual('n--.\n--n');
+      expect(serialize(Parser.getAST('n ++.\n++ n'))).toEqual('n++.\n++n');
     });
 
-    it('should add no white-space around range-expressions', () => {
-      expect(serialize(Parser.getAST('[ - 1 ..3 ]'))).to.eql('[-1..3]');
-      expect(serialize(Parser.getAST('1 .. 3'))).to.eql('1..3');
-      expect(serialize(Parser.getAST('[ 1 .. 3 ] , 4 , 5'))).to.eql('[1..3], 4, 5');
+    test('should add no white-space around range-expressions', () => {
+      expect(serialize(Parser.getAST('[ - 1 ..3 ]'))).toEqual('[-1..3]');
+      expect(serialize(Parser.getAST('1 .. 3'))).toEqual('1..3');
+      expect(serialize(Parser.getAST('[ 1 .. 3 ] , 4 , 5'))).toEqual('[1..3], 4, 5');
 
-      expect(serialize(Parser.getAST('[ - 10 .. 10 ] :-19..3'))).to.eql('[-10..10]:-19..3');
-      expect(serialize(Parser.getAST('[ [ - 10 .. 10 ] :1..3 ]'))).to.eql('[[-10..10]:1..3]');
+      expect(serialize(Parser.getAST('[ - 10 .. 10 ] :-19..3'))).toEqual('[-10..10]:-19..3');
+      expect(serialize(Parser.getAST('[ [ - 10 .. 10 ] :1..3 ]'))).toEqual('[[-10..10]:1..3]');
     });
 
-    it('should add no white-space around function-calls', () => {
-      expect(serialize(Parser.getAST('fact(n-1)'))).to.eql('fact(n - 1)');
-      expect(serialize(Parser.getAST('foo.bar()'))).to.eql('foo.bar()');
+    test('should add no white-space around function-calls', () => {
+      expect(serialize(Parser.getAST('fact(n-1)'))).toEqual('fact(n - 1)');
+      expect(serialize(Parser.getAST('foo.bar()'))).toEqual('foo.bar()');
     });
 
-    it('should add delimiters where appropriate', () => {
-      expect(serialize(Parser.getAST('[1 2 3]'))).to.eql('[1 + 2 + 3]');
-      expect(serialize(Parser.getAST('@import a, b @from "c".\n'))).to.eql('@import a, b @from "c".\n');
+    test('should add delimiters where appropriate', () => {
+      expect(serialize(Parser.getAST('[1 2 3]'))).toEqual('[1 + 2 + 3]');
+      expect(serialize(Parser.getAST('@import a, b @from "c".\n'))).toEqual('@import a, b @from "c".\n');
     });
 
-    it('should add white-space between units', () => {
+    test('should add white-space between units', () => {
       Env.register = Expr.Unit.from;
 
-      expect(serialize(Parser.getAST('1cm'))).to.eql('1 cm');
+      expect(serialize(Parser.getAST('1cm'))).toEqual('1 cm');
 
       Env.register = () => null;
     });
 
-    it('should keep markdown formatting', () => {
-      expect(stringify(example('markdown.md'))).to.eql(example('markdown.md'));
+    test('should keep markdown formatting', () => {
+      expect(stringify(example('markdown.md'))).toEqual(example('markdown.md'));
     });
 
-    it('should run concat.md example', async () => {
-      expect(await run(example('concat.md'))).to.eql([Expr.array([1, 2, 4, 5, 6, 7, 8, 9].map(Expr.value))]);
+    test('should run concat.md example', async () => {
+      expect(await run(example('concat.md'))).toEqual([Expr.array([1, 2, 4, 5, 6, 7, 8, 9].map(Expr.value))]);
     });
 
-    it('should run fib_loop.md example', async () => {
+    test('should run fib_loop.md example', async () => {
       const result = await run(example('fib_loop.md'));
-      expect(result.map(r => r.value)).to.eql([
+      expect(result.map(r => r.value)).toEqual([
         '1', '1', '2', '3', '5', '8', '13', '21', '34', '55',
         '89', '144', '233', '377', '610', '987', '1597', '2584', '4181', '6765', '10946',
       ]);
     });
 
-    it('should run fib_memo.md example', async () => {
-      expect(await run(example('fib_memo.md'))).to.eql([Expr.value(10946)]);
+    test('should run fib_memo.md example', async () => {
+      expect(await run(example('fib_memo.md'))).toEqual([Expr.value(10946)]);
     });
 
-    it('should order sibling items in ordered lists', () => {
+    test('should order sibling items in ordered lists', () => {
       expect(stringify(deindent(`
         1. a
         1. b
@@ -756,7 +756,7 @@ describe('Integration', () => {
 
         1. baz
         1. buzz
-      `), {})).to.eql(deindent(`
+      `), {})).toEqual(deindent(`
         1. a
         2. b
         3. c
@@ -779,7 +779,7 @@ describe('Integration', () => {
       `));
     });
 
-    it('should apply formatting on foreign values', async () => {
+    test('should apply formatting on foreign values', async () => {
       Env.resolve = source => ({
         Test: {
           sample: {
@@ -794,10 +794,10 @@ describe('Integration', () => {
 
       const result = await run('@import sample @from "Test".\nsample');
 
-      expect(serialize(result)).to.eql('(:num 42, :str "OK", :arr [1, 2, 3], :obj (:k "v"), :undef undefined)');
+      expect(serialize(result)).toEqual('(:num 42, :str "OK", :arr [1, 2, 3], :obj (:k "v"), :undef undefined)');
     });
 
-    it('should apply formatting on callstack chunks', async () => {
+    test('should apply formatting on callstack chunks', async () => {
       await run('sum=a->b->a+b.\nadd3=sum(3).\nadd3', null, true);
 
       const chunks = [
@@ -807,15 +807,15 @@ describe('Integration', () => {
       ];
 
       run.info.calls.forEach((ast, i) => {
-        expect(serialize(ast[2], true)).to.eql(chunks[i]);
+        expect(serialize(ast[2], true)).toEqual(chunks[i]);
       });
     });
 
-    it('should apply formatting on results', async () => {
-      expect(serialize(await run('[1, 2], 3'))).to.eql('[1, 2], 3');
+    test('should apply formatting on results', async () => {
+      expect(serialize(await run('[1, 2], 3'))).toEqual('[1, 2], 3');
     });
 
-    it('should inline formatted code', () => {
+    test('should inline formatted code', () => {
       const sample = deindent(`
         fib = n ->
           @if (< n 2) 1, (< n 1) 0
@@ -827,12 +827,12 @@ describe('Integration', () => {
 
       const result = 'fib = n -> @if (< n 2) 1, (< n 1) 0 @else fib(n - 1) + fib(n - 2).\nfib!(20).\n';
 
-      expect(serialize(Parser.getAST(sample))).to.eql(result);
-      expect(serialize(Parser.getAST(sample, 'raw'))).to.eql(sample);
-      expect(serialize(Parser.getAST(sample, 'inline'))).to.eql(result);
+      expect(serialize(Parser.getAST(sample))).toEqual(result);
+      expect(serialize(Parser.getAST(sample, 'raw'))).toEqual(sample);
+      expect(serialize(Parser.getAST(sample, 'inline'))).toEqual(result);
     });
 
-    it('should inline formatted code', () => {
+    test('should inline formatted code', () => {
       const sample = deindent(`
         @template >> ((a b) -> [a, b], 42).
 
@@ -843,12 +843,12 @@ describe('Integration', () => {
 
       const resolved = '@template >> ((a b) -> [a, b], 42).\n-1 >> 2.\n';
 
-      expect(serialize(Parser.getAST(sample))).to.eql(result);
-      expect(serialize(Parser.getAST(sample, 'raw'))).to.eql(sample);
-      expect(serialize(Parser.getAST(sample, 'inline'))).to.eql(resolved);
+      expect(serialize(Parser.getAST(sample))).toEqual(result);
+      expect(serialize(Parser.getAST(sample, 'raw'))).toEqual(sample);
+      expect(serialize(Parser.getAST(sample, 'inline'))).toEqual(resolved);
     });
 
-    it.skip('should inline formatted code (basic templates)', () => {
+    test.skip('should inline formatted code (basic templates)', () => {
       const sample1 = deindent(`
         @import puts, err, input @from "IO".
 
@@ -864,9 +864,9 @@ describe('Integration', () => {
 
       const result1 = `@import puts, err, input @from "IO".\n@let buffer = input().\n${logic}`;
 
-      expect(serialize(Parser.getAST(sample1))).to.eql(result1);
-      expect(serialize(Parser.getAST(sample1, 'raw'))).to.eql(sample1);
-      expect(serialize(Parser.getAST(sample1, 'inline'))).to.eql(result1);
+      expect(serialize(Parser.getAST(sample1))).toEqual(result1);
+      expect(serialize(Parser.getAST(sample1, 'raw'))).toEqual(sample1);
+      expect(serialize(Parser.getAST(sample1, 'inline'))).toEqual(result1);
 
       const sample2 = deindent(`
         @template
@@ -892,12 +892,12 @@ describe('Integration', () => {
 
       const inline = `@template += ((a b) -> @let a = a + b), -- (a -> @let a = a - 1).\n${result}`;
 
-      expect(serialize(Parser.getAST(sample2))).to.eql(resolved);
-      expect(serialize(Parser.getAST(sample2, 'raw'))).to.eql(sample2);
-      expect(serialize(Parser.getAST(sample2, 'inline'))).to.eql(inline);
+      expect(serialize(Parser.getAST(sample2))).toEqual(resolved);
+      expect(serialize(Parser.getAST(sample2, 'raw'))).toEqual(sample2);
+      expect(serialize(Parser.getAST(sample2, 'inline'))).toEqual(inline);
     });
 
-    it.skip('should inline formatted code (advanced templates)', async () => {
+    test.skip('should inline formatted code (advanced templates)', async () => {
       const sample = deindent(`
         @import puts, input @from "IO".
         @import getopts @from "Proc".
@@ -948,11 +948,11 @@ describe('Integration', () => {
         + `messageOutput = :help => usageInfo | :ask => (${asks}) | "\\nMissing input.\\n#{usageInfo}".\n`
         + 'puts(messageOutput, "\\n").\n';
 
-      expect(serialize(Parser.getAST(sample))).to.eql(resolved);
-      expect(serialize(Parser.getAST(sample, 'raw'))).to.eql(sample);
-      expect(serialize(Parser.getAST(sample, 'inline'))).to.eql(result);
+      expect(serialize(Parser.getAST(sample))).toEqual(resolved);
+      expect(serialize(Parser.getAST(sample, 'raw'))).toEqual(sample);
+      expect(serialize(Parser.getAST(sample, 'inline'))).toEqual(result);
       expect(serialize(Parser.getAST(sample), true))
-        .to.eql('@import @from.\n@import @from.\n@let.\nusageInfo = "...".\nmessageOutput = (@if) | (@if) | "...".\nputs(messageOutput, "...").\n');
+        .toEqual('@import @from.\n@import @from.\n@let.\nusageInfo = "...".\nmessageOutput = (@if) | (@if) | "...".\nputs(messageOutput, "...").\n');
     });
   });
 });

@@ -1,4 +1,4 @@
-import { expect } from 'chai';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
 import { deindent } from '../src/lib/helpers';
 
 import Scanner from '../src/lib/tree/scanner';
@@ -35,157 +35,157 @@ describe('Scanner', () => {
     }, []).slice(0, -1);
   };
 
-  it('can scan emojis', () => {
-    expect(getTokens('⚓')).to.eql(['⚓']);
-    expect(getTokens('"⚓"')).to.eql(['⚓']);
+  test('can scan emojis', () => {
+    expect(getTokens('⚓')).toEqual(['⚓']);
+    expect(getTokens('"⚓"')).toEqual(['⚓']);
   });
 
-  it('can scan unicode', () => {
-    expect(getTokens('"ÿ"')).to.eql(['ÿ']);
+  test('can scan unicode', () => {
+    expect(getTokens('"ÿ"')).toEqual(['ÿ']);
   });
 
-  it('can scan literals', () => {
-    expect(getTokens('in?')).to.eql(['in', '?']);
+  test('can scan literals', () => {
+    expect(getTokens('in?')).toEqual(['in', '?']);
   });
 
-  it('can scan numbers', () => {
-    expect(getTokens('1')).to.eql(['1']);
-    expect(getTokens('1.3')).to.eql(['1.3']);
+  test('can scan numbers', () => {
+    expect(getTokens('1')).toEqual(['1']);
+    expect(getTokens('1.3')).toEqual(['1.3']);
 
-    expect(getTokens('-0.3')).to.eql(['-', '0.3']);
+    expect(getTokens('-0.3')).toEqual(['-', '0.3']);
   });
 
-  it('can scan fractions', () => {
-    expect(getTokens('1/2')).to.eql(['1/2']);
-    expect(getTokens('1/ 2')).to.eql(['1', '/', ' ', '2']);
-    expect(getTokens('1 / 2')).to.eql(['1', ' ', '/', ' ', '2']);
+  test('can scan fractions', () => {
+    expect(getTokens('1/2')).toEqual(['1/2']);
+    expect(getTokens('1/ 2')).toEqual(['1', '/', ' ', '2']);
+    expect(getTokens('1 / 2')).toEqual(['1', ' ', '/', ' ', '2']);
   });
 
-  it('can scan symbols', () => {
-    expect(getTokens('::foo')).to.eql([':', ':foo']);
-    expect(getTokens(':1..2')).to.eql([':1..2']);
-    expect(getTokens(':1/2')).to.eql([':1/2']);
-    expect(getTokens(':foo')).to.eql([':foo']);
-    expect(getTokens(':📦')).to.eql([':📦']);
+  test('can scan symbols', () => {
+    expect(getTokens('::foo')).toEqual([':', ':foo']);
+    expect(getTokens(':1..2')).toEqual([':1..2']);
+    expect(getTokens(':1/2')).toEqual([':1/2']);
+    expect(getTokens(':foo')).toEqual([':foo']);
+    expect(getTokens(':📦')).toEqual([':📦']);
   });
 
-  it('can scan strings', () => {
-    expect(getTokens('"4:20"')).to.eql(['4:20']);
-    expect(getTokens('"foo\\"bar"')).to.eql(['foo\\"bar']);
-    expect(getTokens('"foo\\n bar"')).to.eql(['foo\\n bar']);
+  test('can scan strings', () => {
+    expect(getTokens('"4:20"')).toEqual(['4:20']);
+    expect(getTokens('"foo\\"bar"')).toEqual(['foo\\"bar']);
+    expect(getTokens('"foo\\n bar"')).toEqual(['foo\\n bar']);
   });
 
-  it('can scan regexps', () => {
-    expect(getTokens('/x/')).to.eql(['/x/']);
-    expect(getTokens('/x/.\n')).to.eql(['/x/', '.', '\n']);
-    expect(getTokens('/x\\/y/')).to.eql(['/x\\/y/']);
-    expect(getTokens('/x\\/y/ig')).to.eql(['/x\\/y/gi']);
-    expect(getTokens('/x/i.x(y)')).to.eql(['/x/i', '.', 'x', '(', 'y', ')']);
+  test('can scan regexps', () => {
+    expect(getTokens('/x/')).toEqual(['/x/']);
+    expect(getTokens('/x/.\n')).toEqual(['/x/', '.', '\n']);
+    expect(getTokens('/x\\/y/')).toEqual(['/x\\/y/']);
+    expect(getTokens('/x\\/y/ig')).toEqual(['/x\\/y/gi']);
+    expect(getTokens('/x/i.x(y)')).toEqual(['/x/i', '.', 'x', '(', 'y', ')']);
   });
 
-  it('can scan markup', () => {
-    expect(getTokens('<foo />')).to.eql(['<foo />']);
-    expect(getTokens('a<a />a')).to.eql(['a', '<a />', 'a']);
-    expect(getTokens('a<bar/>c')).to.eql(['a', '<bar/>', 'c']);
-    expect(getTokens('a<bar />c')).to.eql(['a', '<bar />', 'c']);
-    expect(getTokens('<baz>OK<buzz /></baz>')).to.eql(['<baz>OK<buzz /></baz>']);
-    expect(getTokens('<foo><bar><baz>x</baz></bar></foo>')).to.eql(['<foo><bar><baz>x</baz></bar></foo>']);
-    expect(getTokens('[<div><div><div>x</div></div></div>]')).to.eql(['[', '<div><div><div>x</div></div></div>', ']']);
+  test('can scan markup', () => {
+    expect(getTokens('<foo />')).toEqual(['<foo />']);
+    expect(getTokens('a<a />a')).toEqual(['a', '<a />', 'a']);
+    expect(getTokens('a<bar/>c')).toEqual(['a', '<bar/>', 'c']);
+    expect(getTokens('a<bar />c')).toEqual(['a', '<bar />', 'c']);
+    expect(getTokens('<baz>OK<buzz /></baz>')).toEqual(['<baz>OK<buzz /></baz>']);
+    expect(getTokens('<foo><bar><baz>x</baz></bar></foo>')).toEqual(['<foo><bar><baz>x</baz></bar></foo>']);
+    expect(getTokens('[<div><div><div>x</div></div></div>]')).toEqual(['[', '<div><div><div>x</div></div></div>', ']']);
   });
 
-  it('can scan interpolation', () => {
-    expect(getTokens('"foo#{bar/ 2+"BUZZ"}!!"')).to.eql(['foo', '+', '#{', 'bar', '/', ' ', '2', '+', 'BUZZ', '}', '+', '!!']);
-    expect(getTokens('<foo>#{bar}</foo>')).to.eql(['<foo>', '+', '#{', 'bar', '}', '+', '</foo>']);
+  test('can scan interpolation', () => {
+    expect(getTokens('"foo#{bar/ 2+"BUZZ"}!!"')).toEqual(['foo', '+', '#{', 'bar', '/', ' ', '2', '+', 'BUZZ', '}', '+', '!!']);
+    expect(getTokens('<foo>#{bar}</foo>')).toEqual(['<foo>', '+', '#{', 'bar', '}', '+', '</foo>']);
   });
 
-  it('can scan comments', () => {
-    expect(getTokens('// this\nis real')).to.eql(['// this', '\n', 'is real']);
-    expect(getTokens('/* a \n multi-line \n comment */')).to.eql(['/* a \n multi-line \n comment */']);
+  test('can scan comments', () => {
+    expect(getTokens('// this\nis real')).toEqual(['// this', '\n', 'is real']);
+    expect(getTokens('/* a \n multi-line \n comment */')).toEqual(['/* a \n multi-line \n comment */']);
   });
 
-  it('can scan operators', () => {
-    expect(getTokens('<= >= -> ! = ~ < | .. |> $ ? > != ==').filter(x => x !== ' ').length).to.eql(15);
+  test('can scan operators', () => {
+    expect(getTokens('<= >= -> ! = ~ < | .. |> $ ? > != ==').filter(x => x !== ' ').length).toEqual(15);
   });
 
-  it('can scan identifiers', () => {
-    expect(getTokens("osoms\n isn't?")).to.eql(['osoms', '\n', ' ', "isn't", '?']);
+  test('can scan identifiers', () => {
+    expect(getTokens("osoms\n isn't?")).toEqual(['osoms', '\n', ' ', "isn't", '?']);
   });
 
-  it('can scan mixed expressions', () => {
-    expect(getTokens('*!')).to.eql(['*', '!']);
-    expect(getTokens('! 2 * (:3 / -"muffin🍺")')).to.eql([
+  test('can scan mixed expressions', () => {
+    expect(getTokens('*!')).toEqual(['*', '!']);
+    expect(getTokens('! 2 * (:3 / -"muffin🍺")')).toEqual([
       '!', ' ', '2', ' ', '*', ' ', '(', ':3', ' ', '/', ' ', '-', 'muffin🍺', ')',
     ]);
   });
 
-  it.skip('treats trailing-space statement dots as EOL for unit literals', () => {
+  test.skip('treats trailing-space statement dots as EOL for unit literals', () => {
     const tokens = getTokens('2cm. ', true);
     const eolTokens = tokens.filter(token => token.type === EOL);
-    expect(eolTokens).to.have.length(1);
-    expect(eolTokens[0].value).to.eql('.');
+    expect(eolTokens).toHaveLength(1);
+    expect(eolTokens[0].value, '.');
   });
 
   describe('Markdown', () => {
-    it('can scan text blocks', () => {
-      expect(getTokens('x')).to.eql(['x']);
-      expect(getTokens('x y')).to.eql(['x y']);
-      expect(getTokens('1, 2')).to.eql(['1, 2']);
-      expect(getTokens('a) b')).to.eql(['a) b']);
-      expect(getTokens('e.g. x')).to.eql(['e.g. x']);
+    test('can scan text blocks', () => {
+      expect(getTokens('x')).toEqual(['x']);
+      expect(getTokens('x y')).toEqual(['x y']);
+      expect(getTokens('1, 2')).toEqual(['1, 2']);
+      expect(getTokens('a) b')).toEqual(['a) b']);
+      expect(getTokens('e.g. x')).toEqual(['e.g. x']);
     });
 
-    it('can scan headings', () => {
-      expect(getTokens('# OK')).to.eql(['OK']);
-      expect(getTokens('## OK')).to.eql(['OK']);
-      expect(getTokens('#NOT OK')).to.eql(['#NOT OK']);
-      expect(getTokens('\n# OK\n')).to.eql(['\n', 'OK', '\n']);
-      expect(getTokens(' #NOT OK')).to.eql([' ', '#NOT', ' ', 'OK']);
+    test('can scan headings', () => {
+      expect(getTokens('# OK')).toEqual(['OK']);
+      expect(getTokens('## OK')).toEqual(['OK']);
+      expect(getTokens('#NOT OK')).toEqual(['#NOT OK']);
+      expect(getTokens('\n# OK\n')).toEqual(['\n', 'OK', '\n']);
+      expect(getTokens(' #NOT OK')).toEqual([' ', '#NOT', ' ', 'OK']);
     });
 
-    it('can scan blockquotes', () => {
-      expect(getTokens('> OK')).to.eql(['OK']);
-      expect(getTokens('>NOT OK')).to.eql(['>', 'NOT', ' ', 'OK']);
-      expect(getTokens(' >NOT OK')).to.eql([' ', '>', 'NOT', ' ', 'OK']);
+    test('can scan blockquotes', () => {
+      expect(getTokens('> OK')).toEqual(['OK']);
+      expect(getTokens('>NOT OK')).toEqual(['>', 'NOT', ' ', 'OK']);
+      expect(getTokens(' >NOT OK')).toEqual([' ', '>', 'NOT', ' ', 'OK']);
     });
 
-    it('can scan ordered list-items', () => {
-      expect(getTokens('1. osoms')).to.eql(['osoms']);
-      expect(getTokens('11. osoms')).to.eql(['osoms']);
-      expect(getTokens('111. osoms')).to.eql(['osoms']);
-      expect(getTokens('  22. osoms')).to.eql(['osoms']);
-      expect(getTokens('  222. osoms')).to.eql(['osoms']);
-      expect(getTokens('\n111. osoms\n')).to.eql(['\n', 'osoms', '\n']);
+    test('can scan ordered list-items', () => {
+      expect(getTokens('1. osoms')).toEqual(['osoms']);
+      expect(getTokens('11. osoms')).toEqual(['osoms']);
+      expect(getTokens('111. osoms')).toEqual(['osoms']);
+      expect(getTokens('  22. osoms')).toEqual(['osoms']);
+      expect(getTokens('  222. osoms')).toEqual(['osoms']);
+      expect(getTokens('\n111. osoms\n')).toEqual(['\n', 'osoms', '\n']);
     });
 
-    it('can scan unordered list-items', () => {
-      expect(getTokens('- osoms')).to.eql(['osoms']);
-      expect(getTokens('  * osoms')).to.eql(['osoms']);
-      expect(getTokens('    + osoms')).to.eql(['osoms']);
-      expect(getTokens('\n  * osoms\n')).to.eql(['\n', 'osoms', '\n']);
+    test('can scan unordered list-items', () => {
+      expect(getTokens('- osoms')).toEqual(['osoms']);
+      expect(getTokens('  * osoms')).toEqual(['osoms']);
+      expect(getTokens('    + osoms')).toEqual(['osoms']);
+      expect(getTokens('\n  * osoms\n')).toEqual(['\n', 'osoms', '\n']);
     });
 
-    it('can scan emphasis/bold tags', () => {
-      expect(getTokens('*x* y')).to.eql(['x', ' y']);
-      expect(getTokens('**x** y')).to.eql(['x', ' y']);
-      expect(getTokens('foo*bar*buzz')).to.eql(['foo', 'bar', 'buzz']);
-      expect(getTokens('foo**bar**buzz')).to.eql(['foo', 'bar', 'buzz']);
-      expect(getTokens('*have fun* bro!')).to.eql(['have fun', ' bro!']);
-      expect(getTokens('**have fun** bro!')).to.eql(['have fun', ' bro!']);
-      expect(getTokens('OK *have fun* bro!')).to.eql(['OK ', 'have fun', ' bro!']);
-      expect(getTokens('OK __have fun__ bro!')).to.eql(['OK ', 'have fun', ' bro!']);
-      expect(getTokens('\nOK __have fun__ bro!\n')).to.eql(['\n', 'OK ', 'have fun', ' bro!', '\n']);
+    test('can scan emphasis/bold tags', () => {
+      expect(getTokens('*x* y')).toEqual(['x', ' y']);
+      expect(getTokens('**x** y')).toEqual(['x', ' y']);
+      expect(getTokens('foo*bar*buzz')).toEqual(['foo', 'bar', 'buzz']);
+      expect(getTokens('foo**bar**buzz')).toEqual(['foo', 'bar', 'buzz']);
+      expect(getTokens('*have fun* bro!')).toEqual(['have fun', ' bro!']);
+      expect(getTokens('**have fun** bro!')).toEqual(['have fun', ' bro!']);
+      expect(getTokens('OK *have fun* bro!')).toEqual(['OK ', 'have fun', ' bro!']);
+      expect(getTokens('OK __have fun__ bro!')).toEqual(['OK ', 'have fun', ' bro!']);
+      expect(getTokens('\nOK __have fun__ bro!\n')).toEqual(['\n', 'OK ', 'have fun', ' bro!', '\n']);
     });
 
-    it('can scan inline-code tags', () => {
-      expect(getTokens('`this is fun`')).to.eql(['this is fun']);
-      expect(getTokens('``this `is` fun``')).to.eql(['this `is` fun']);
+    test('can scan inline-code tags', () => {
+      expect(getTokens('`this is fun`')).toEqual(['this is fun']);
+      expect(getTokens('``this `is` fun``')).toEqual(['this `is` fun']);
     });
 
-    it('can scan code blocks', () => {
-      expect(getTokens('```\nthis is fun\n```')).to.eql(['\nthis is fun\n']);
+    test('can scan code blocks', () => {
+      expect(getTokens('```\nthis is fun\n```')).toEqual(['\nthis is fun\n']);
     });
 
-    it('can scan markdown refs/links', () => {
+    test('can scan markdown refs/links', () => {
       const source = deindent(`
         Please read the docs,
         see at [this reference] [1].
@@ -209,14 +209,14 @@ describe('Scanner', () => {
         return p;
       }, []);
 
-      expect(out).to.eql([
+      expect(out, [
         '[this reference] [1]',
         '[links](. "Home")',
         '![images](icon.gif)',
         '[Google][]',
       ]);
 
-      expect(tokens[4].value.buffer[1]).to.eql({
+      expect(tokens[4].value.buffer[1], {
         type: REF,
         value: {
           image: false,
@@ -229,7 +229,7 @@ describe('Scanner', () => {
         col: 18,
       });
 
-      expect(scanner.refs).to.eql({
+      expect(scanner.refs, {
         1: {
           text: '[1]: <https://soypache.co> "OK"',
           href: 'https://soypache.co',
@@ -245,8 +245,8 @@ describe('Scanner', () => {
   });
 
   describe('tokenInfo', () => {
-    it('should handle white-space', () => {
-      expect(getTokens(' "x" y', true).slice(0, -1)).to.eql([
+    test('should handle white-space', () => {
+      expect(getTokens(' "x" y', true).slice(0, -1)).toEqual([
         {
           col: 0,
           line: 0,
@@ -272,28 +272,28 @@ describe('Scanner', () => {
       ]);
     });
 
-    it('should reject line-breaks in single-line strings', () => {
-      expect(() => getTokens('"\nx\n"y', true)).to.throw('Unterminated string');
+    test('should reject line-breaks in single-line strings', () => {
+      expect(() => getTokens('"\nx\n"y', true)).toThrow('Unterminated string');
     });
 
-    it('should handle markup-strings', () => {
-      expect(getTokens('<a/>', true).slice(0, -1)).to.eql([{
+    test('should handle markup-strings', () => {
+      expect(getTokens('<a/>', true).slice(0, -1)).toEqual([{
         col: 0, line: 0, type: STRING, value: '<a/>', kind: 'markup',
       }]);
     });
 
-    it('should handle block-strings', () => {
-      expect(getTokens('"""x"""', true).slice(0, -1)).to.eql([{
+    test('should handle block-strings', () => {
+      expect(getTokens('"""x"""', true).slice(0, -1)).toEqual([{
         col: 0, line: 0, type: STRING, value: 'x', kind: 'multi',
       }]);
 
-      expect(getTokens('"""\nx\n"""', true).slice(0, -1)).to.eql([{
+      expect(getTokens('"""\nx\n"""', true).slice(0, -1)).toEqual([{
         col: 0, line: 0, type: STRING, value: '\nx\n', kind: 'multi',
       }]);
     });
 
-    it('should handle single interpolation', () => {
-      expect(getTokens('"#{a}"', true).slice(0, -1)).to.eql([{
+    test('should handle single interpolation', () => {
+      expect(getTokens('"#{a}"', true).slice(0, -1)).toEqual([{
         col: 0,
         line: 0,
         type: STRING,
@@ -311,8 +311,8 @@ describe('Scanner', () => {
       }]);
     });
 
-    it('should handle string + interpolation', () => {
-      expect(getTokens('"x#{y}"', true).slice(0, -1)).to.eql([{
+    test('should handle string + interpolation', () => {
+      expect(getTokens('"x#{y}"', true).slice(0, -1)).toEqual([{
         col: 0,
         line: 0,
         type: STRING,
@@ -336,21 +336,21 @@ describe('Scanner', () => {
       }]);
     });
 
-    it('should allow line-breaks inside interpolation blocks', () => {
+    test('should allow line-breaks inside interpolation blocks', () => {
       const [token] = getTokens('"#{x\n+ y}"', true);
-      expect(token.type).to.eql(STRING);
+      expect(token.type, STRING);
     });
 
-    it('should reject line-breaks before interpolation in single-line strings', () => {
-      expect(() => getTokens('"a\nb#{x}c"', true)).to.throw('Unterminated string');
+    test('should reject line-breaks before interpolation in single-line strings', () => {
+      expect(() => getTokens('"a\nb#{x}c"', true)).toThrow('Unterminated string');
     });
 
-    it('should extract interpolation tokens from markdown text buffers', () => {
+    test('should extract interpolation tokens from markdown text buffers', () => {
       const [token] = getTokens('hello #{x+1}', true);
 
-      expect(token.type).to.eql(TEXT);
-      expect(token.value.buffer[0]).to.eql('hello ');
-      expect(token.value.buffer.slice(1).map(part => [part.type, part.value])).to.eql([
+      expect(token.type, TEXT);
+      expect(token.value.buffer[0], 'hello ');
+      expect(token.value.buffer.slice(1).map(part => [part.type, part.value])).toEqual([
         [OPEN, '#{'],
         [LITERAL, 'x'],
         [PLUS, '+'],

@@ -1,8 +1,8 @@
-import { expect } from 'chai';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
 import { signal, html, renderShadow } from '../src/runtime';
 
 describe('HMR', () => {
-  it('should snapshot and restore named signals across HMR cycle', () => {
+  test('should snapshot and restore named signals across HMR cycle', () => {
     const originalSignals = globalThis.__10x_signals;
 
     const before = new Map();
@@ -30,13 +30,13 @@ describe('HMR', () => {
       if (typeof k === 'string' && snap[k] !== undefined) s.set(snap[k]);
     }
 
-    expect(afterCount.get()).to.equal(5);
-    expect(afterAnon.get()).to.equal(9);
+    expect(afterCount.get()).toBe(5);
+    expect(afterAnon.get()).toBe(9);
 
     globalThis.__10x_signals = originalSignals;
   });
 
-  it('should register shadow hosts by module url and cleanup on disconnect', () => {
+  test('should register shadow hosts by module url and cleanup on disconnect', () => {
     const originalDocument = globalThis.document;
     const originalMutationObserver = globalThis.MutationObserver;
     const originalRegistry = globalThis.__10x_components;
@@ -87,13 +87,13 @@ describe('HMR', () => {
       renderShadow(host, html(() => '<h1>v1</h1>'), '/module-a');
 
       const hosts = globalThis.__10x_components.get('/module-a');
-      expect(hosts.has(host)).to.equal(true);
+      expect(hosts.has(host)).toBe(true);
 
       host.isConnected = false;
       observers.forEach(observer => observer.trigger());
 
       const afterHosts = globalThis.__10x_components.get('/module-a');
-      expect(afterHosts).to.equal(undefined);
+      expect(afterHosts).toBe(undefined);
     } finally {
       globalThis.document = originalDocument;
       globalThis.MutationObserver = originalMutationObserver;

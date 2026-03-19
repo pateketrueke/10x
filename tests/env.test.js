@@ -1,4 +1,4 @@
-import { expect } from 'chai';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
 
 import Env from '../src/lib/tree/env';
 import Expr from '../src/lib/tree/expr';
@@ -31,54 +31,54 @@ describe('Env', () => {
     Env.shared = previousShared;
   });
 
-  it('has(...) resolves names recursively when requested', () => {
+  test('has(...) resolves names recursively when requested', () => {
     const parent = new Env();
     const child = new Env(parent);
 
     parent.def('root', Expr.value(42));
 
-    expect(child.has('root')).to.eql(false);
-    expect(child.has('root', true)).to.eql(true);
+    expect(child.has('root')).toEqual(false);
+    expect(child.has('root', true)).toEqual(true);
   });
 
-  it('get(...) resolves from parent and fails on unknown names', () => {
+  test('get(...) resolves from parent and fails on unknown names', () => {
     const parent = new Env();
     const child = new Env(parent);
 
     parent.def('x', Expr.value(7));
 
-    expect(child.get('x').body[0].valueOf()).to.eql(7);
-    expect(() => child.get('missing')).to.throw('Undeclared local `missing`');
+    expect(child.get('x').body[0].valueOf()).toEqual(7);
+    expect(() => child.get('missing')).toThrow('Undeclared local `missing`');
   });
 
-  it('get(...) blocks non-callable self-references but allows callable refs', () => {
+  test('get(...) blocks non-callable self-references but allows callable refs', () => {
     const env = new Env();
 
     env.def('x', Expr.local('x', tokenInfo));
     env.get('x');
 
-    expect(() => env.get('x')).to.throw('Unexpected reference to `x`');
+    expect(() => env.get('x')).toThrow('Unexpected reference to `x`');
 
     env.locals.fn = {
       body: [Expr.callable({ type: BLOCK, value: { body: [] } }, tokenInfo)],
     };
     env.resolved.add('fn');
 
-    expect(env.get('fn')).to.eql(env.locals.fn);
+    expect(env.get('fn')).toEqual(env.locals.fn);
   });
 
-  it('def(...) and defn(...) register locals with context', () => {
+  test('def(...) and defn(...) register locals with context', () => {
     const env = new Env();
 
     env.def('a', Expr.value(1));
     env.defn('b', { body: [Expr.value(2)] }, tokenInfo);
 
-    expect(env.get('a').body[0].valueOf()).to.eql(1);
-    expect(env.get('b').body[0].valueOf()).to.eql(2);
-    expect(env.get('b').ctx).to.eql(tokenInfo);
+    expect(env.get('a').body[0].valueOf()).toEqual(1);
+    expect(env.get('b').body[0].valueOf()).toEqual(2);
+    expect(env.get('b').ctx).toEqual(tokenInfo);
   });
 
-  it('set(...) with function traverses parent scopes when inheritance is enabled', () => {
+  test('set(...) with function traverses parent scopes when inheritance is enabled', () => {
     const root = new Env();
     const child = new Env(root);
 
@@ -88,11 +88,11 @@ describe('Env', () => {
       scope.def('name', Expr.value(3));
     });
 
-    expect(root.get('name').body[0].valueOf()).to.eql(3);
-    expect(child.has('name')).to.eql(false);
+    expect(root.get('name').body[0].valueOf()).toEqual(3);
+    expect(child.has('name')).toEqual(false);
   });
 
-  it('up(...) updates existing locals preserving token metadata', () => {
+  test('up(...) updates existing locals preserving token metadata', () => {
     const env = new Env();
 
     env.defn('n', { body: [Expr.value(1, tokenInfo)] }, tokenInfo);
@@ -100,11 +100,11 @@ describe('Env', () => {
 
     const token = env.get('n').body[0];
 
-    expect(token.valueOf()).to.eql(99);
-    expect(token.tokenInfo).to.eql(tokenInfo);
+    expect(token.valueOf()).toEqual(99);
+    expect(token.tokenInfo, tokenInfo);
   });
 
-  it('sub(...) merges curried callable arguments into a child scope', () => {
+  test('sub(...) merges curried callable arguments into a child scope', () => {
     const env = new Env();
 
     const argA = Expr.local('a', tokenInfo);
@@ -124,12 +124,12 @@ describe('Env', () => {
     const args = [Expr.value(11), Expr.from(COMMA), Expr.value(22)];
     const result = Env.sub(args, target, env);
 
-    expect(result.scope.get('a').body[0].valueOf()).to.eql(11);
-    expect(result.scope.get('b').body[0].valueOf()).to.eql(22);
-    expect(result.target.args[0].value).to.eql('b');
+    expect(result.scope.get('a').body[0].valueOf()).toEqual(11);
+    expect(result.scope.get('b').body[0].valueOf()).toEqual(22);
+    expect(result.target.args[0].value, 'b');
   });
 
-  it('merge(...) supports spread keys and hygiene checks', () => {
+  test('merge(...) supports spread keys and hygiene checks', () => {
     const parent = new Env();
     const env = new Env(parent);
 
@@ -144,16 +144,16 @@ describe('Env', () => {
       Expr.local('..', tokenInfo),
     ], true, env);
 
-    expect(env.has('skip')).to.eql(false);
+    expect(env.has('skip')).toEqual(false);
 
     const spread = env.get('..').body[0];
 
-    expect(spread.isBlock).to.eql(true);
-    expect(spread.getBody()).to.have.length(1);
-    expect(spread.getBody()[0].valueOf()).to.eql(20);
+    expect(spread.isBlock, true);
+    expect(spread.getBody()).toHaveLength(1);
+    expect(spread.getBody()[0].valueOf()).toEqual(20);
   });
 
-  it('create(...) wraps plain values and keeps Expr instances', () => {
+  test('create(...) wraps plain values and keeps Expr instances', () => {
     const source = {
       a: 1,
       b: Expr.value(2),
@@ -161,33 +161,33 @@ describe('Env', () => {
 
     const scope = Env.create(source);
 
-    expect(scope.get('a').body[0].valueOf()).to.eql(1);
-    expect(scope.get('b').body[0].valueOf()).to.eql(2);
+    expect(scope.get('a').body[0].valueOf()).toEqual(1);
+    expect(scope.get('b').body[0].valueOf()).toEqual(2);
   });
 
-  it('load(...) imports from safe globals', async () => {
+  test('load(...) imports from safe globals', async () => {
     const env = new Env();
 
     await Env.load({ tokenInfo }, 'max', 'mx', 'Math', env);
 
     const target = env.get('mx').body[0].value.target;
 
-    expect(target(1, 5, 3)).to.eql(5);
+    expect(target(1, 5, 3)).toEqual(5);
   });
 
-  it('load(...) imports from shared prelude as FFI wrappers', async () => {
+  test('load(...) imports from shared prelude as FFI wrappers', async () => {
     const env = new Env();
 
     await Env.load({ tokenInfo }, 'show', 'showx', 'Prelude', env);
 
     const token = env.get('showx').body[0];
 
-    expect(token.type).to.eql(FFI);
-    expect(token.value.label).to.contain('show');
-    expect(typeof token.value.target).to.eql('function');
+    expect(token.type, FFI);
+    expect(token.value.label).toInclude('show');
+    expect(typeof token.value.target, 'function');
   });
 
-  it('load(...) imports shared objects and wraps scalar exports', async () => {
+  test('load(...) imports shared objects and wraps scalar exports', async () => {
     const env = new Env();
 
     Env.shared = {
@@ -198,10 +198,10 @@ describe('Env', () => {
 
     await Env.load({ tokenInfo }, 'value', 'x', 'Demo', env);
 
-    expect(env.get('x').body[0].valueOf()).to.eql(42);
+    expect(env.get('x').body[0].valueOf()).toEqual(42);
   });
 
-  it('load(...) imports Env exports with descriptor and alias remapping', async () => {
+  test('load(...) imports Env exports with descriptor and alias remapping', async () => {
     const root = new Env();
     const mod = new Env();
 
@@ -215,11 +215,11 @@ describe('Env', () => {
 
     const call = root.get('alias').body[0].value;
 
-    expect(call.target).to.eql('secret');
-    expect(call.label).to.eql('pkg/mod/public:alias');
+    expect(call.target, 'secret');
+    expect(call.label, 'pkg/mod/public:alias');
   });
 
-  it('load(...) wraps default exports from plain objects and functions', async () => {
+  test('load(...) wraps default exports from plain objects and functions', async () => {
     const env = new Env();
 
     Env.resolve = async source => {
@@ -230,11 +230,11 @@ describe('Env', () => {
     await Env.load({ tokenInfo }, 'default', 'objDefault', 'obj', env);
     await Env.load({ tokenInfo }, 'default', 'fnDefault', 'fn', env);
 
-    expect(env.get('objDefault').body[0].value.ok).to.eql(true);
-    expect(typeof env.get('fnDefault').body[0].valueOf()).to.eql('function');
+    expect(env.get('objDefault').body[0].value.ok).toEqual(true);
+    expect(typeof env.get('fnDefault').body[0].valueOf()).toEqual('function');
   });
 
-  it('load(...) wraps explicit FFI tuples from resolved modules', async () => {
+  test('load(...) wraps explicit FFI tuples from resolved modules', async () => {
     const env = new Env();
 
     Env.resolve = async () => ({
@@ -245,45 +245,45 @@ describe('Env', () => {
 
     const token = env.get('native').body[0];
 
-    expect(token.type).to.eql(FFI);
-    expect(token.tokenInfo.kind).to.eql('raw');
-    expect(token.value.label).to.eql('Demo/native');
-    expect(token.value.target()).to.eql('ok');
+    expect(token.type, FFI);
+    expect(token.tokenInfo.kind, 'raw');
+    expect(token.value.label, 'Demo/native');
+    expect(token.value.target()).toEqual('ok');
   });
 
-  it('load(...) reports missing exports and resolver failures', async () => {
+  test('load(...) reports missing exports and resolver failures', async () => {
     const env = new Env();
 
     Env.resolve = async () => ({});
 
     const missing = await getError(() => Env.load({ tokenInfo }, 'x', 'x', 'mod', env));
-    expect(missing.message).to.contain('Symbol `x` not exported');
+    expect(missing.message).toInclude('Symbol `x` not exported');
 
     Env.resolve = async () => null;
 
     const couldNotLoad = await getError(() => Env.load({ tokenInfo }, 'x', 'y', 'mod', env));
-    expect(couldNotLoad.message).to.contain('Could not load `x`');
+    expect(couldNotLoad.message).toInclude('Could not load `x`');
 
     Env.resolve = async () => {
       throw new Error('Boom');
     };
 
     const wrapped = await getError(() => Env.load({ tokenInfo }, 'x', 'y', 'mod', env));
-    expect(wrapped.message).to.contain('Boom (mod/x:y)');
+    expect(wrapped.message).toInclude('Boom (mod/x:y)');
   });
 
-  it('load(...) reports missing named exports on Env instances', async () => {
+  test('load(...) reports missing named exports on Env instances', async () => {
     const env = new Env();
 
     Env.resolve = async () => new Env();
 
     const err = await getError(() => Env.load({ tokenInfo }, 'x', 'y', 'pkg/mod', env));
 
-    expect(err.message).to.contain('Local `x` not exported');
+    expect(err.message).toInclude('Local `x` not exported');
   });
 
-  it('register() and resolve() keep nullish defaults', async () => {
-    expect([null, undefined]).to.include(Env.register());
-    expect([null, undefined]).to.include(await Env.resolve());
+  test('register() and resolve() keep nullish defaults', async () => {
+    expect([null, undefined]).toContain(Env.register());
+    expect([null, undefined]).toContain(await Env.resolve());
   });
 });

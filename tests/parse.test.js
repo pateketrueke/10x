@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-expressions */
 
-import { expect } from 'chai';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
 
 import Expr from '../src/lib/tree/expr';
 import Env from '../src/lib/tree/env';
@@ -12,26 +12,33 @@ import {
 } from '../src/lib/tree/symbols';
 
 describe('Parser', () => {
-  it.skip('should allow to parse raw-statements', () => {
-    const input = '1..3,\n' + 'a,b.\n' + '(j+"""m\nn""".\n' + 'k).\n' + 'x.\n' + '\n' + 'y _z_';
+  test.skip('should allow to parse raw-statements', () => {
+    const input = `1..3,
+a,b.
+(j+"""m
+n""".
+k).
+x.
+
+y _z_`;
     const ast = Parser.getAST(input, 'split');
-    expect(ast.length).to.eql(4);
+    expect(ast.length, 4);
   });
 
-  it('should keep text and white-space', () => {
-    expect(Parser.getAST('1 ?')).to.eql([Expr.value(1), Expr.from(SOME)]);
+  test('should keep text and white-space', () => {
+    expect(Parser.getAST('1 ?')).toEqual([Expr.value(1), Expr.from(SOME)]);
   });
 
-  it('should parse regex-expressions', () => {
-    expect(Parser.getAST('/x/')).to.eql([Expr.from(REGEX, /x/)]);
+  test('should parse regex-expressions', () => {
+    expect(Parser.getAST('/x/')).toEqual([Expr.from(REGEX, /x/)]);
   });
 
-  it('should parse markup tags', () => {
+  test('should parse markup tags', () => {
     expect(Parser.getAST(`
       <div (title) class="static #{dyn}">
         Hello #{name}!
       </div>
-    `)).to.eql([Expr.from(STRING, [
+    `)).toEqual([Expr.from(STRING, [
       Expr.value('<div (title) class="static '),
       Expr.from(PLUS),
       Expr.body([Expr.local('dyn')]),
@@ -44,8 +51,8 @@ describe('Parser', () => {
     ])]);
   });
 
-  it('should parse simple markup literal as tag value', () => {
-    expect(Parser.getAST('<div class="box">Hi</div>')).to.eql([
+  test('should parse simple markup literal as tag value', () => {
+    expect(Parser.getAST('<div class="box">Hi</div>')).toEqual([
       Expr.tag({
         name: 'div',
         attrs: { class: 'box' },
@@ -55,8 +62,8 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should parse tag expression attrs and children', () => {
-    expect(Parser.getAST('<div class={kind}>{x+1}</div>')).to.eql([
+  test('should parse tag expression attrs and children', () => {
+    expect(Parser.getAST('<div class={kind}>{x+1}</div>')).toEqual([
       Expr.tag({
         name: 'div',
         attrs: {
@@ -68,8 +75,8 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should parse render directive expressions in tags', () => {
-    expect(Parser.getAST('<div>{@render view()}</div>')).to.eql([
+  test('should parse render directive expressions in tags', () => {
+    expect(Parser.getAST('<div>{@render view()}</div>')).toEqual([
       Expr.tag({
         name: 'div',
         attrs: {},
@@ -79,8 +86,8 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should parse spread props in tag attrs', () => {
-    expect(Parser.getAST('<div {...props} class="ok" />')).to.eql([
+  test('should parse spread props in tag attrs', () => {
+    expect(Parser.getAST('<div {...props} class="ok" />')).toEqual([
       Expr.tag({
         name: 'div',
         attrs: { class: 'ok' },
@@ -91,8 +98,8 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should parse self-closing void tags', () => {
-    expect(Parser.getAST('<input type="text" />')).to.eql([
+  test('should parse self-closing void tags', () => {
+    expect(Parser.getAST('<input type="text" />')).toEqual([
       Expr.tag({
         name: 'input',
         attrs: { type: 'text' },
@@ -102,8 +109,8 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should parse markdown tags', () => {
-    expect(Parser.getAST('> x `y`', 'split')[0].body).to.eql([
+  test('should parse markdown tags', () => {
+    expect(Parser.getAST('> x `y`', 'split')[0].body).toEqual([
       Expr.from(TEXT, {
         buffer: ['x ', [CODE, '`', 'y']],
         kind: BLOCKQUOTE,
@@ -111,10 +118,10 @@ describe('Parser', () => {
     ]);
 
     const parsed = Parser.getAST('> x #{1+2}', 'split')[0].body[0];
-    expect(parsed.type).to.eql(TEXT);
-    expect(parsed.value.kind).to.eql(BLOCKQUOTE);
-    expect(parsed.value.buffer[0]).to.eql('x ');
-    expect(parsed.value.buffer.slice(1).map(part => [part.type, part.value])).to.eql([
+    expect(parsed.type, TEXT);
+    expect(parsed.value.kind, BLOCKQUOTE);
+    expect(parsed.value.buffer[0], 'x ');
+    expect(parsed.value.buffer.slice(1).map(part => [part.type, part.value])).toEqual([
       [OPEN, '#{'],
       [NUMBER, '1'],
       [PLUS, '+'],
@@ -123,18 +130,18 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should parse heading namespaces', () => {
-    expect(Parser.getAST('# Math::')).to.eql([
+  test('should parse heading namespaces', () => {
+    expect(Parser.getAST('# Math::')).toEqual([
       Expr.map({
         namespace: Expr.stmt('@namespace', [Expr.value('Math'), Expr.value(1)]),
       }),
     ]);
 
-    expect(Parser.getAST('# Math')).to.eql([]);
+    expect(Parser.getAST('# Math')).toEqual([]);
   });
 
-  it('should parse markdown tables as table statements', () => {
-    expect(Parser.getAST('| name | age |\n|---|---|\n| Alice | 30 |')).to.eql([
+  test('should parse markdown tables as table statements', () => {
+    expect(Parser.getAST('| name | age |\n|---|---|\n| Alice | 30 |')).toEqual([
       Expr.map({
         table: Expr.stmt('@table', [Expr.value({
           headers: ['name', 'age'],
@@ -144,15 +151,15 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should parse standalone markdown links as imports', () => {
-    expect(Parser.getAST('[utils](./utils.md)')).to.eql([
+  test('should parse standalone markdown links as imports', () => {
+    expect(Parser.getAST('[utils](./utils.md)')).toEqual([
       Expr.map({
         import: Expr.stmt('@import', [Expr.local('utils')]),
         from: Expr.stmt('@from', [Expr.value('./utils.md')]),
       }),
     ]);
 
-    expect(Parser.getAST('[ops, @template](./ops.md)')).to.eql([
+    expect(Parser.getAST('[ops, @template](./ops.md)')).toEqual([
       Expr.map({
         import: Expr.stmt('@import', [Expr.local('ops')]),
         from: Expr.stmt('@from', [Expr.value('./ops.md')]),
@@ -162,7 +169,7 @@ describe('Parser', () => {
       }),
     ]);
 
-    expect(Parser.getAST('[ops, @template >>](./ops.md)')).to.eql([
+    expect(Parser.getAST('[ops, @template >>](./ops.md)')).toEqual([
       Expr.map({
         import: Expr.stmt('@import', [Expr.local('ops')]),
         from: Expr.stmt('@from', [Expr.value('./ops.md')]),
@@ -173,8 +180,8 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should keep @export @template declarations in AST without crashing', () => {
-    expect(Parser.getAST('@export @template >>, +=.')).to.eql([
+  test('should keep @export @template declarations in AST without crashing', () => {
+    expect(Parser.getAST('@export @template >>, +=.')).toEqual([
       Expr.map({
         export: Expr.stmt('@export', []),
         template: Expr.stmt('@template', [
@@ -186,8 +193,8 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should sum consecutive numbers', () => {
-    expect(Parser.getAST('.\n1 2 3')).to.eql([
+  test('should sum consecutive numbers', () => {
+    expect(Parser.getAST('.\n1 2 3')).toEqual([
       Expr.from(EOL),
       Expr.value(1),
       Expr.from(PLUS),
@@ -197,27 +204,27 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should multiply number groups', () => {
-    expect(Parser.getAST('1(2)')).to.eql([
+  test('should multiply number groups', () => {
+    expect(Parser.getAST('1(2)')).toEqual([
       Expr.value(1),
       Expr.from(MUL),
       Expr.group([Expr.value(2)]),
     ]);
   });
 
-  it('should skip units by default', () => {
+  test('should skip units by default', () => {
     const register = Env.register;
 
     try {
       Env.register = () => null;
-      expect(Parser.getAST('1cm')).to.eql([Expr.value(1), Expr.from(MUL), Expr.local('cm')]);
+      expect(Parser.getAST('1cm')).toEqual([Expr.value(1), Expr.from(MUL), Expr.local('cm')]);
     } finally {
       Env.register = register;
     }
   });
 
-  it('should keep nested trees', () => {
-    expect(Parser.getAST('(((x=(1.\n42))))')).to.eql([
+  test('should keep nested trees', () => {
+    expect(Parser.getAST('(((x=(1.\n42))))')).toEqual([
       Expr.group([Expr.group([Expr.group([Expr.block({
         body: [Expr.group([Expr.value(1), Expr.from(EOL), Expr.value(42)])],
         name: 'x',
@@ -225,11 +232,11 @@ describe('Parser', () => {
     ]);
   });
 
-  it('should allow simple AST-transformations', () => {
+  test('should allow simple AST-transformations', () => {
     expect(Parser.getAST(`
       @template ++ (a -> @let a = a + 1).
       a++, ++b
-    `)).to.eql([
+    `)).toEqual([
       Expr.group([
         Expr.local('a'),
         Expr.let([Expr.body([
@@ -254,7 +261,7 @@ describe('Parser', () => {
     expect(Parser.getAST(`
       @template += ((a b) -> @let a = a + b).
       x.i += (2 / 5)
-    `)).to.eql([
+    `)).toEqual([
       Expr.group([
         Expr.map({
           let: Expr.body([
@@ -288,7 +295,7 @@ describe('Parser', () => {
 
       1 ++! 2.
       1 +++ 2.
-    `)).to.eql([
+    `)).toEqual([
       Expr.group([Expr.array([Expr.value(1), Expr.from(COMMA), Expr.value(2)])]),
       Expr.from(EOL),
       Expr.value(1),
@@ -301,16 +308,16 @@ describe('Parser', () => {
   });
 
   describe('BLOCK', () => {
-    it('should parse noop-functions', () => {
-      expect(Parser.getAST('->')).to.eql([Expr.block()]);
+    test('should parse noop-functions', () => {
+      expect(Parser.getAST('->')).toEqual([Expr.block()]);
     });
 
-    it('should parse functions with body', () => {
-      expect(Parser.getAST('-> x')).to.eql([Expr.body([Expr.local('x')])]);
+    test('should parse functions with body', () => {
+      expect(Parser.getAST('-> x')).toEqual([Expr.body([Expr.local('x')])]);
     });
 
-    it('should parse range arguments', () => {
-      expect(Parser.getAST('x(y,..)')).to.eql([
+    test('should parse range arguments', () => {
+      expect(Parser.getAST('x(y,..)')).toEqual([
         Expr.local('x'),
         Expr.group([
           Expr.local('y'),
@@ -319,7 +326,7 @@ describe('Parser', () => {
         ]),
       ]);
 
-      expect(Parser.getAST('x(..,y)')).to.eql([
+      expect(Parser.getAST('x(..,y)')).toEqual([
         Expr.local('x'),
         Expr.group([
           Expr.from(LITERAL, '..'),
@@ -329,8 +336,8 @@ describe('Parser', () => {
       ]);
     });
 
-    it('should parse nested arguments', () => {
-      expect(Parser.getAST('x -> y -> z')).to.eql([Expr.block({
+    test('should parse nested arguments', () => {
+      expect(Parser.getAST('x -> y -> z')).toEqual([Expr.block({
         args: [Expr.local('x')],
         body: [Expr.block({
           args: [Expr.local('y')],
@@ -339,8 +346,8 @@ describe('Parser', () => {
       })]);
     });
 
-    it('should parse multiple arguments', () => {
-      expect(Parser.getAST('.\n(a b) -> a + b')).to.eql([
+    test('should parse multiple arguments', () => {
+      expect(Parser.getAST('.\n(a b) -> a + b')).toEqual([
         Expr.from(EOL),
         Expr.block({
           args: [Expr.local('a'), Expr.local('b')],
@@ -349,22 +356,22 @@ describe('Parser', () => {
       ]);
     });
 
-    it('should parse named functions', () => {
-      expect(Parser.getAST('f=->')).to.eql([Expr.block({
+    test('should parse named functions', () => {
+      expect(Parser.getAST('f=->')).toEqual([Expr.block({
         body: [Expr.block()],
         name: 'f',
       })]);
     });
 
-    it('should parse anonymous blocks', () => {
-      expect(Parser.getAST('f(->)')).to.eql([
+    test('should parse anonymous blocks', () => {
+      expect(Parser.getAST('f(->)')).toEqual([
         Expr.local('f'),
         Expr.group([Expr.block()]),
       ]);
     });
 
-    it('should parse function-calls', () => {
-      expect(Parser.getAST('a()(1)()')).to.eql([
+    test('should parse function-calls', () => {
+      expect(Parser.getAST('a()(1)()')).toEqual([
         Expr.local('a'),
         Expr.group([]),
         Expr.group([Expr.value(1)]),
@@ -372,21 +379,21 @@ describe('Parser', () => {
       ]);
     });
 
-    it('should parse function modifiers', () => {
-      expect(Parser.getAST('def!')[0].cached).to.be.true;
+    test('should parse function modifiers', () => {
+      expect(Parser.getAST('def!')[0].cached).toBe(true);
     });
 
-    it('should parse nested calls', () => {
+    test('should parse nested calls', () => {
       const args = [Expr.local('a'), Expr.local('b')];
       const body = [Expr.local('a'), Expr.from(PLUS), Expr.local('b')];
 
       const call = Expr.block({ args, body });
       const input = [Expr.value(5), Expr.from(COMMA), Expr.value(6)];
 
-      expect(Parser.getAST('.\n(a b) -> a + b')).to.eql([Expr.from(EOL), call]);
-      expect(Parser.getAST('((a b) -> a + b)')).to.eql([Expr.group([call])]);
-      expect(Parser.getAST('((a b) -> a + b)(5, 6)')).to.eql([Expr.group([call]), Expr.group(input)]);
-      expect(Parser.getAST('((a b) -> (a + b)(5, 6))')).to.eql([Expr.group([
+      expect(Parser.getAST('.\n(a b) -> a + b')).toEqual([Expr.from(EOL), call]);
+      expect(Parser.getAST('((a b) -> a + b)')).toEqual([Expr.group([call])]);
+      expect(Parser.getAST('((a b) -> a + b)(5, 6)')).toEqual([Expr.group([call]), Expr.group(input)]);
+      expect(Parser.getAST('((a b) -> (a + b)(5, 6))')).toEqual([Expr.group([
         Expr.block({
           args,
           body: [
@@ -397,28 +404,28 @@ describe('Parser', () => {
       ])]);
     });
 
-    it('should parse logical operators', () => {
-      expect(Parser.getAST('a|b')).to.eql([
+    test('should parse logical operators', () => {
+      expect(Parser.getAST('a|b')).toEqual([
         Expr.local('a'),
         Expr.from(OR),
         Expr.local('b'),
       ]);
     });
 
-    it('should parse logical expressions', () => {
-      expect(Parser.getAST('(< 1 2)')).to.eql([Expr.group([
+    test('should parse logical expressions', () => {
+      expect(Parser.getAST('(< 1 2)')).toEqual([Expr.group([
         Expr.from(LESS, [Expr.value(1), Expr.value(2)]),
       ])]);
 
-      expect(Parser.getAST('(? a b c)')).to.eql([Expr.group([
+      expect(Parser.getAST('(? a b c)')).toEqual([Expr.group([
         Expr.from(SOME, [Expr.local('a'), Expr.local('b'), Expr.local('c')]),
       ])]);
 
-      expect(Parser.getAST('($ x y z)')).to.eql([Expr.group([
+      expect(Parser.getAST('($ x y z)')).toEqual([Expr.group([
         Expr.from(EVERY, [Expr.local('x'), Expr.local('y'), Expr.local('z')]),
       ])]);
 
-      expect(Parser.getAST('(== 1 ((1 / 3) * 3))')).to.eql([Expr.group([
+      expect(Parser.getAST('(== 1 ((1 / 3) * 3))')).toEqual([Expr.group([
         Expr.from(EXACT_EQ, [Expr.value(1), Expr.group([
           Expr.group([Expr.value(1), Expr.from(DIV), Expr.value(3)]),
           Expr.from(MUL),
@@ -427,8 +434,8 @@ describe('Parser', () => {
       ])]);
     });
 
-    it('should parse maps as statements', () => {
-      expect(Parser.getAST('@if (< n 2) 1, (< n 1) 0')).to.eql([
+    test('should parse maps as statements', () => {
+      expect(Parser.getAST('@if (< n 2) 1, (< n 1) 0')).toEqual([
         Expr.map({
           if: Expr.stmt([
             Expr.block({
@@ -442,8 +449,8 @@ describe('Parser', () => {
       ]);
     });
 
-    it('should parse assignments too', () => {
-      expect(Parser.getAST('@let\n(a = 1)')).to.eql([Expr.map({
+    test('should parse assignments too', () => {
+      expect(Parser.getAST('@let\n(a = 1)')).toEqual([Expr.map({
         let: Expr.group({
           body: [Expr.stmt([Expr.block({
             body: [Expr.value(1)],
@@ -452,7 +459,7 @@ describe('Parser', () => {
         }),
       })]);
 
-      expect(Parser.getAST('@while (>= n-- 0)\ntemp = a')).to.eql([Expr.map({
+      expect(Parser.getAST('@while (>= n-- 0)\ntemp = a')).toEqual([Expr.map({
         while: Expr.stmt([
           Expr.block({
             body: [
@@ -466,12 +473,12 @@ describe('Parser', () => {
   });
 
   describe('LITERAL', () => {
-    it('should parse definitions as functions', () => {
-      expect(Parser.getAST('a=1')).to.eql([Expr.block({ body: [Expr.value(1)], name: 'a' })]);
+    test('should parse definitions as functions', () => {
+      expect(Parser.getAST('a=1')).toEqual([Expr.block({ body: [Expr.value(1)], name: 'a' })]);
     });
 
-    it('should parse multiple definitions', () => {
-      expect(Parser.getAST('a=1.\nb=2')).to.eql([
+    test('should parse multiple definitions', () => {
+      expect(Parser.getAST('a=1.\nb=2')).toEqual([
         Expr.block({ body: [Expr.value(1)], name: 'a' }),
         Expr.from(EOL),
         Expr.block({ body: [Expr.value(2)], name: 'b' }),
@@ -480,8 +487,8 @@ describe('Parser', () => {
   });
 
   describe('STRING', () => {
-    it('should keep nested expressions within', () => {
-      expect(Parser.getAST('"Is? #{is_divisible(3, 2)?"YES"|"NO"}!"')).to.eql([Expr.from(STRING, [
+    test('should keep nested expressions within', () => {
+      expect(Parser.getAST('"Is? #{is_divisible(3, 2)?"YES"|"NO"}!"')).toEqual([Expr.from(STRING, [
         Expr.value('Is? '),
         Expr.from(PLUS),
         Expr.body([
@@ -497,10 +504,10 @@ describe('Parser', () => {
       ])]);
     });
 
-    it('should keep escaped quotes', () => {
-      expect(Parser.getAST('"foo=\\"bar\\""')).to.eql([Expr.value('foo=\\"bar\\"')]);
+    test('should keep escaped quotes', () => {
+      expect(Parser.getAST('"foo=\\"bar\\""')).toEqual([Expr.value('foo=\\"bar\\"')]);
 
-      expect(Parser.getAST('"foo=\\"#{bar}\\""')).to.eql([Expr.from(STRING, [
+      expect(Parser.getAST('"foo=\\"#{bar}\\""')).toEqual([Expr.from(STRING, [
         Expr.value('foo="'),
         Expr.from(PLUS),
         Expr.body([
@@ -511,8 +518,8 @@ describe('Parser', () => {
       ])]);
     });
 
-    it('should parse interpolated strings', () => {
-      expect(Parser.getAST('"x#{1+2}z"')).to.eql([Expr.from(STRING, [
+    test('should parse interpolated strings', () => {
+      expect(Parser.getAST('"x#{1+2}z"')).toEqual([Expr.from(STRING, [
         Expr.value('x'),
         Expr.from(PLUS),
         Expr.body([Expr.value(1), Expr.from(PLUS), Expr.value(2)]),
@@ -520,7 +527,7 @@ describe('Parser', () => {
         Expr.value('z'),
       ])]);
 
-      expect(Parser.getAST('"x#{"y{}"}z"')).to.eql([Expr.from(STRING, [
+      expect(Parser.getAST('"x#{"y{}"}z"')).toEqual([Expr.from(STRING, [
         Expr.value('x'),
         Expr.from(PLUS),
         Expr.body([Expr.value('y{}')]),
@@ -528,7 +535,7 @@ describe('Parser', () => {
         Expr.value('z'),
       ])]);
 
-      expect(Parser.getAST('"foo#{bar/2+"BUZZ"}!!"')).to.eql([Expr.from(STRING, [
+      expect(Parser.getAST('"foo#{bar/2+"BUZZ"}!!"')).toEqual([Expr.from(STRING, [
         Expr.value('foo'),
         Expr.from(PLUS),
         Expr.body([Expr.local('bar'), Expr.from(DIV), Expr.value(2), Expr.from(PLUS), Expr.value('BUZZ')]),
@@ -536,7 +543,7 @@ describe('Parser', () => {
         Expr.value('!!'),
       ])]);
 
-      expect(Parser.getAST('"foo#{bar/2+"BUZZ"+2}!!"')).to.eql([Expr.from(STRING, [
+      expect(Parser.getAST('"foo#{bar/2+"BUZZ"+2}!!"')).toEqual([Expr.from(STRING, [
         Expr.value('foo'),
         Expr.from(PLUS),
         Expr.body([Expr.local('bar'), Expr.from(DIV), Expr.value(2), Expr.from(PLUS), Expr.value('BUZZ'), Expr.from(PLUS), Expr.value(2)]),
@@ -544,44 +551,44 @@ describe('Parser', () => {
         Expr.value('!!'),
       ])]);
 
-      expect(Parser.getAST('"foo#{"bar"}"')).to.eql([Expr.from(STRING, [
+      expect(Parser.getAST('"foo#{"bar"}"')).toEqual([Expr.from(STRING, [
         Expr.value('foo'),
         Expr.from(PLUS),
         Expr.body([Expr.value('bar')]),
       ])]);
 
-      expect(Parser.getAST('"foo#{bar}buzz"')).to.eql([
+      expect(Parser.getAST('"foo#{bar}buzz"')).toEqual([
         Expr.from(STRING, [Expr.value('foo'), Expr.from(PLUS), Expr.body([Expr.local('bar')]), Expr.from(PLUS), Expr.value('buzz')]),
       ]);
 
-      expect(Parser.getAST('"foo#{bar}"')).to.eql([
+      expect(Parser.getAST('"foo#{bar}"')).toEqual([
         Expr.from(STRING, [Expr.value('foo'), Expr.from(PLUS), Expr.body([Expr.local('bar')])]),
       ]);
 
-      expect(Parser.getAST('"#{bar}"')).to.eql([
+      expect(Parser.getAST('"#{bar}"')).toEqual([
         Expr.from(STRING, [Expr.body([Expr.local('bar')])]),
       ]);
     });
   });
 
   describe('SYMBOL', () => {
-    it('should parse standalone symbols', () => {
-      expect(Parser.getAST(':x')).to.eql([Expr.symbol(':x')]);
+    test('should parse standalone symbols', () => {
+      expect(Parser.getAST(':x')).toEqual([Expr.symbol(':x')]);
     });
 
-    it('should parse lists of symbols', () => {
-      expect(Parser.getAST(':x, :y')).to.eql([Expr.symbol(':x'), Expr.from(COMMA), Expr.symbol(':y')]);
+    test('should parse lists of symbols', () => {
+      expect(Parser.getAST(':x, :y')).toEqual([Expr.symbol(':x'), Expr.from(COMMA), Expr.symbol(':y')]);
     });
   });
 
   describe('RANGE', () => {
-    it('should parse ranges', () => {
-      expect(Parser.getAST('a..b')).to.eql([Expr.range([Expr.local('a')], [Expr.local('b')])]);
-      expect(Parser.getAST('1..')).to.eql([Expr.range([Expr.value(1)], [])]);
+    test('should parse ranges', () => {
+      expect(Parser.getAST('a..b')).toEqual([Expr.range([Expr.local('a')], [Expr.local('b')])]);
+      expect(Parser.getAST('1..')).toEqual([Expr.range([Expr.value(1)], [])]);
     });
 
-    it('should parse arrays', () => {
-      expect(Parser.getAST('[1, 2], 3, [4, [5]]')).to.eql([
+    test('should parse arrays', () => {
+      expect(Parser.getAST('[1, 2], 3, [4, [5]]')).toEqual([
         Expr.array([
           Expr.value(1),
           Expr.from(COMMA),
@@ -600,26 +607,26 @@ describe('Parser', () => {
   });
 
   describe('MAP', () => {
-    it('should use symbols to store single values', () => {
-      expect(Parser.getAST(':key -1')).to.eql([
+    test('should use symbols to store single values', () => {
+      expect(Parser.getAST(':key -1')).toEqual([
         Expr.map({
           key: Expr.body([Expr.body([Expr.from(MINUS), Expr.value(1)])]),
         }),
       ]);
 
-      expect(Parser.getAST('(:key 42)')).to.eql([Expr.group([Expr.map({
+      expect(Parser.getAST('(:key 42)')).toEqual([Expr.group([Expr.map({
         key: Expr.body([Expr.value(42)]),
       })])]);
     });
 
-    it('should use symbols to store multiple values', () => {
-      expect(Parser.getAST(':key x, y')).to.eql([Expr.map({
+    test('should use symbols to store multiple values', () => {
+      expect(Parser.getAST(':key x, y')).toEqual([Expr.map({
         key: Expr.body([Expr.local('x'), Expr.local('y')]),
       })]);
     });
 
-    it('should use symbols to store multiple props/values', () => {
-      expect(Parser.getAST(':key "value" :other :finish')).to.eql([
+    test('should use symbols to store multiple props/values', () => {
+      expect(Parser.getAST(':key "value" :other :finish')).toEqual([
         Expr.map({
           key: Expr.body([Expr.value('value')]),
           other: Expr.body(),
@@ -627,7 +634,7 @@ describe('Parser', () => {
         }),
       ]);
 
-      expect(Parser.getAST('[:key "value" 42 :other :finish]')).to.eql([Expr.array([
+      expect(Parser.getAST('[:key "value" 42 :other :finish]')).toEqual([Expr.array([
         Expr.map({
           key: Expr.body([Expr.body([Expr.value('value'), Expr.value(42)])]),
           other: Expr.body(),
@@ -636,16 +643,16 @@ describe('Parser', () => {
       ])]);
     });
 
-    it('should store special symbols as values', () => {
-      expect(Parser.getAST(':key :off')).to.eql([
+    test('should store special symbols as values', () => {
+      expect(Parser.getAST(':key :off')).toEqual([
         Expr.map({
           key: Expr.body([Expr.local(false)]),
         }),
       ]);
     });
 
-    it('should break on consecutive symbols', () => {
-      expect(Parser.getAST(':key :other 42')).to.eql([
+    test('should break on consecutive symbols', () => {
+      expect(Parser.getAST(':key :other 42')).toEqual([
         Expr.symbol(':key'),
         Expr.map({
           other: Expr.body([Expr.value(42)]),
@@ -653,8 +660,8 @@ describe('Parser', () => {
       ]);
     });
 
-    it('should keep maps within nested blocks', () => {
-      expect(Parser.getAST(':key (:value 42)')).to.eql([
+    test('should keep maps within nested blocks', () => {
+      expect(Parser.getAST(':key (:value 42)')).toEqual([
         Expr.map({
           key: Expr.body([Expr.body([
             Expr.group([Expr.map({
@@ -665,8 +672,8 @@ describe('Parser', () => {
       ]);
     });
 
-    it('should parse lists, blocks and mappings', () => {
-      expect(Parser.getAST('[(:key "value" 42) :other :finish]')).to.eql([Expr.array([
+    test('should parse lists, blocks and mappings', () => {
+      expect(Parser.getAST('[(:key "value" 42) :other :finish]')).toEqual([Expr.array([
         Expr.group([Expr.map({
           key: Expr.body([Expr.body([Expr.value('value'), Expr.value(42)])]),
         })]),
@@ -674,7 +681,7 @@ describe('Parser', () => {
         Expr.symbol(':finish'),
       ])]);
 
-      expect(Parser.getAST('[:key "value" 42, :other, :finish]')).to.eql([Expr.array([
+      expect(Parser.getAST('[:key "value" 42, :other, :finish]')).toEqual([Expr.array([
         Expr.map({
           key: Expr.body([Expr.body([Expr.value('value'), Expr.value(42)])]),
           other: Expr.body(),
@@ -682,7 +689,7 @@ describe('Parser', () => {
         }),
       ])]);
 
-      expect(Parser.getAST('[(:key "value" 42), :other, :finish]')).to.eql([Expr.array([
+      expect(Parser.getAST('[(:key "value" 42), :other, :finish]')).toEqual([Expr.array([
         Expr.group([Expr.map({
           key: Expr.body([Expr.body([Expr.value('value'), Expr.value(42)])]),
         })]),
@@ -692,7 +699,7 @@ describe('Parser', () => {
         Expr.symbol(':finish'),
       ])]);
 
-      expect(Parser.getAST('[(:key "value" 42), :other, :finish]')).to.eql([Expr.array([
+      expect(Parser.getAST('[(:key "value" 42), :other, :finish]')).toEqual([Expr.array([
         Expr.group([
           Expr.map({
             key: Expr.body([Expr.body([Expr.value('value'), Expr.value(42)])]),

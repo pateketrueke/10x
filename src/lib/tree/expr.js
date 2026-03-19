@@ -75,9 +75,9 @@ export default class Expr {
   get hasInput() { return !!this.value.input; }
   get hasSource() { return !!(this.value.source || this.source); }
 
-  get isRaw() { return this.tokenInfo.kind === 'raw'; }
-  get isMulti() { return this.tokenInfo.kind === 'multi'; }
-  get isMarkup() { return this.tokenInfo.kind === 'markup'; }
+  get isRaw() { return this.tokenInfo?.kind === 'raw'; }
+  get isMulti() { return this.tokenInfo?.kind === 'multi'; }
+  get isMarkup() { return this.tokenInfo?.kind === 'markup'; }
   get isOptional() { return this.value.charAt(this.value.length - 1) === '?'; }
 
   getBody() { return this.value.body; }

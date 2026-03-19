@@ -1,44 +1,44 @@
-import { expect } from 'chai';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
 import { compile, compileBundle } from '../src/compiler';
 
 describe('Compiler', () => {
-  it('should compile single-arg definitions', () => {
+  test('should compile single-arg definitions', () => {
     const output = compile('inc = a -> a + 1.');
 
-    expect(output).to.contain('const inc = (a) => (a + 1);');
+    expect(output).toInclude('const inc = (a) => (a + 1);');
   });
 
-  it('should compile canonical multi-arg definitions', () => {
+  test('should compile canonical multi-arg definitions', () => {
     const output = compile('add = (a b) -> a + b.');
 
-    expect(output).to.contain('const add = (a, b) => (a + b);');
+    expect(output).toInclude('const add = (a, b) => (a + b);');
   });
 
-  it('should keep non-definition statements as expressions', () => {
+  test('should keep non-definition statements as expressions', () => {
     const output = compile('x = 1.\nadd(1, 2).', { module: false });
 
-    expect(output).to.contain('let x = 1;');
-    expect(output).to.contain('add(1, 2);');
+    expect(output).toInclude('let x = 1;');
+    expect(output).toInclude('add(1, 2);');
   });
 
-  it('should compile render/html directives to Runtime calls', () => {
+  test('should compile render/html directives to Runtime calls', () => {
     const output = compile('@render "#app" @html <h1>{count}</h1>.');
 
-    expect(output).to.contain('import * as Runtime from "./runtime";');
-    expect(output).to.contain('Runtime.render("#app", Runtime.html(() => Runtime.h("h1", null, Runtime.read(count))));');
+    expect(output).toInclude('import * as Runtime from "./runtime";');
+    expect(output).toInclude('Runtime.render("#app", Runtime.html(() => Runtime.h("h1", null, Runtime.read(count))));');
   });
 
-  it('should compile signal assignment and on-handler updates', () => {
+  test('should compile signal assignment and on-handler updates', () => {
     const output = compile([
       'count = @signal 0.',
       '@on :click, "#btn", count = count + 1.',
     ].join('\n'));
 
-    expect(output).to.contain('const count = Runtime.signal(0, "count");');
-    expect(output).to.contain('Runtime.on("click", "#btn", () => { count.set(Runtime.read(count) + 1); });');
+    expect(output).toInclude('const count = Runtime.signal(0, "count");');
+    expect(output).toInclude('Runtime.on("click", "#btn", () => { count.set(Runtime.read(count) + 1); });');
   });
 
-  it('should compile shadow components to setup(host)', () => {
+  test('should compile shadow components to setup(host)', () => {
     const output = compile([
       'count = @signal @prop "start" 0.',
       '@render @shadow @html <h1>{count}</h1>.',
@@ -46,42 +46,42 @@ describe('Compiler', () => {
       '@on :click, "#reset", count = @prop "start" 0.',
     ].join('\n'));
 
-    expect(output).to.contain('export function setup(host) {');
-    expect(output).to.contain('Runtime.signal(Runtime.prop(host, "start", 0), "count")');
-    expect(output).to.contain('Runtime.renderShadow(host,');
-    expect(output).to.contain('Runtime.on("click", "#inc",');
-    expect(output).to.contain(', host.shadowRoot)');
-    expect(output).to.contain('Runtime.prop(host, "start", 0)');
-    expect(output).to.contain('}');
+    expect(output).toInclude('export function setup(host) {');
+    expect(output).toInclude('Runtime.signal(Runtime.prop(host, "start", 0), "count")');
+    expect(output).toInclude('Runtime.renderShadow(host,');
+    expect(output).toInclude('Runtime.on("click", "#inc",');
+    expect(output).toInclude(', host.shadowRoot)');
+    expect(output).toInclude('Runtime.prop(host, "start", 0)');
+    expect(output).toInclude('}');
   });
 
-  it('should not emit HMR footer by default', () => {
+  test('should not emit HMR footer by default', () => {
     const output = compile('count = @signal 0.');
-    expect(output).to.not.contain('import.meta.hot');
+    expect(output).not.toInclude('import.meta.hot');
   });
 
-  it('should emit HMR footer when enabled', () => {
+  test('should emit HMR footer when enabled', () => {
     const output = compile('count = @signal 0.', { hmr: true });
-    expect(output).to.contain('if (import.meta.hot)');
-    expect(output).to.contain('import.meta.hot.dispose(data => {');
-    expect(output).to.contain('import.meta.hot.accept(newMod => {');
-    expect(output).to.contain('globalThis.__10x_components?.get(_hmrUrl)');
+    expect(output).toInclude('if (import.meta.hot)');
+    expect(output).toInclude('import.meta.hot.dispose(data => {');
+    expect(output).toInclude('import.meta.hot.accept(newMod => {');
+    expect(output).toInclude('globalThis.__10x_components?.get(_hmrUrl)');
   });
 
-  it('should pass import.meta.url to renderShadow when HMR is enabled', () => {
+  test('should pass import.meta.url to renderShadow when HMR is enabled', () => {
     const output = compile('@render @shadow @html <h1>x</h1>.', { hmr: true });
-    expect(output).to.contain('Runtime.renderShadow(host, Runtime.html(() => Runtime.h("h1", null, "x")), import.meta.url);');
+    expect(output).toInclude('Runtime.renderShadow(host, Runtime.html(() => Runtime.h("h1", null, "x")), import.meta.url);');
   });
 
-  it('should allow overriding runtime import path', () => {
+  test('should allow overriding runtime import path', () => {
     const output = compile('@render "#app" @html <h1>{count}</h1>.', {
       runtimePath: '/vendor/10x-runtime.mjs',
     });
 
-    expect(output).to.contain('import * as Runtime from "/vendor/10x-runtime.mjs";');
+    expect(output).toInclude('import * as Runtime from "/vendor/10x-runtime.mjs";');
   });
 
-  it('should emit prose lines as comments above compiled statements', () => {
+  test('should emit prose lines as comments above compiled statements', () => {
     const output = compile([
       '# Counter setup',
       'count = @signal 0.',
@@ -90,34 +90,34 @@ describe('Compiler', () => {
       '@on :click, "#inc", count = count + 1.',
     ].join('\n'));
 
-    expect(output).to.contain('// Counter setup');
-    expect(output).to.contain('const count = Runtime.signal(0, "count");');
-    expect(output).to.contain('// increment handler');
-    expect(output).to.contain('Runtime.on("click", "#inc", () => { count.set(Runtime.read(count) + 1); });');
+    expect(output).toInclude('// Counter setup');
+    expect(output).toInclude('const count = Runtime.signal(0, "count");');
+    expect(output).toInclude('// increment handler');
+    expect(output).toInclude('Runtime.on("click", "#inc", () => { count.set(Runtime.read(count) + 1); });');
   });
 
-  it('should compile @on directives without comma separators', () => {
+  test('should compile @on directives without comma separators', () => {
     const output = compile([
       'count = @signal 0.',
       '@on :click "#inc" count = count + 1.',
     ].join('\n'));
 
-    expect(output).to.contain('Runtime.on("click", "#inc", () => { count.set(Runtime.read(count) + 1); });');
+    expect(output).toInclude('Runtime.on("click", "#inc", () => { count.set(Runtime.read(count) + 1); });');
   });
 
-  it('should compile non-DOM modules with runtime core import', () => {
+  test('should compile non-DOM modules with runtime core import', () => {
     const output = compile([
       '@from "Prelude" @import (head, tail).',
       'pick = list -> head(tail(list)).',
       'count = @signal 0.',
     ].join('\n'));
 
-    expect(output).to.contain('import { head, tail } from "./prelude";');
-    expect(output).to.contain('import * as Runtime from "./runtime";');
-    expect(output).to.contain('export const pick = (list) => (head(tail(list)));');
+    expect(output).toInclude('import { head, tail } from "./prelude";');
+    expect(output).toInclude('import * as Runtime from "./runtime";');
+    expect(output).toInclude('export const pick = (list) => (head(tail(list)));');
   });
 
-  it('should compile @if/@else and @do directives', () => {
+  test('should compile @if/@else and @do directives', () => {
     const output = compile([
       'fib = n ->',
       '  @if (< n 2) 1, (< n 1) 0',
@@ -130,36 +130,36 @@ describe('Compiler', () => {
       '  ).',
     ].join('\n'));
 
-    expect(output).to.contain('export const fib = (n) => (');
-    expect(output).to.contain('n < 2');
-    expect(output).to.contain('n < 1');
-    expect(output).to.contain('n + 1');
-    expect(output).to.contain('export const sum2 = (a, b) => ((() => { let x = a + b; return x; })());');
+    expect(output).toInclude('export const fib = (n) => (');
+    expect(output).toInclude('n < 2');
+    expect(output).toInclude('n < 1');
+    expect(output).toInclude('n + 1');
+    expect(output).toInclude('export const sum2 = (a, b) => ((() => { let x = a + b; return x; })());');
   });
 
-  it('should compile print-marked calls to console.log', () => {
+  test('should compile print-marked calls to console.log', () => {
     const output = compile([
       'fib = n -> n + 1.',
       'fib!(20).',
     ].join('\n'));
 
-    expect(output).to.contain('console.log(fib(20));');
+    expect(output).toInclude('console.log(fib(20));');
   });
 
-  it('should compile @match and range pipeline expressions', () => {
+  test('should compile @match and range pipeline expressions', () => {
     const output = compile([
       '@import map, take @from "Prelude".',
       'classify = x -> @match{x 0 "zero", @else "other"}.',
       '1.. |> map(classify) |> take(3).',
     ].join('\n'));
 
-    expect(output).to.contain('import { map, take } from "./prelude";');
-    expect(output).to.contain('import { range } from "./prelude";');
-    expect(output).to.contain('export const classify = (x) => (');
-    expect(output).to.contain('console.log(take(map(range(1), classify), 3));');
+    expect(output).toInclude('import { map, take } from "./prelude";');
+    expect(output).toInclude('import { range } from "./prelude";');
+    expect(output).toInclude('export const classify = (x) => (');
+    expect(output).toInclude('console.log(take(map(range(1), classify), 3));');
   });
 
-  it('should compile while/loop/try/export directives', () => {
+  test('should compile while/loop/try/export directives', () => {
     const output = compile([
       'n = 0.',
       '@while (< n 2) n = n + 1.',
@@ -168,13 +168,13 @@ describe('Compiler', () => {
       '@export (n, safe).',
     ].join('\n'));
 
-    expect(output).to.contain('while');
-    expect(output).to.contain('for (const x of items)');
-    expect(output).to.contain('try { return (x / 0); } catch (e) { return 0; }');
-    expect(output).to.contain('export { n, safe };');
+    expect(output).toInclude('while');
+    expect(output).toInclude('for (const x of items)');
+    expect(output).toInclude('try { return (x / 0); } catch (e) { return 0; }');
+    expect(output).toInclude('export { n, safe };');
   });
 
-  it('should bundle local .md modules into a single output', () => {
+  test('should bundle local .md modules into a single output', () => {
     const files = {
       '/app/fib.md': 'fib = n -> @if (< n 2) n @else fib(n - 1) + fib(n - 2).',
       '/app/main.md': '@import fib @from "./fib".\nfib!(6).',
@@ -188,14 +188,14 @@ describe('Compiler', () => {
       },
     });
 
-    expect(output).to.contain('// Module: /app/fib.md');
-    expect(output).to.contain('const fib = (n) => (');
-    expect(output).to.contain('// Module: /app/main.md');
-    expect(output).to.contain('console.log(fib(6));');
-    expect(output).to.not.contain('export const fib');
+    expect(output).toInclude('// Module: /app/fib.md');
+    expect(output).toInclude('const fib = (n) => (');
+    expect(output).toInclude('// Module: /app/main.md');
+    expect(output).toInclude('console.log(fib(6));');
+    expect(output).not.toInclude('export const fib');
   });
 
-  it('should dedupe runtime imports when bundling multiple local modules', () => {
+  test('should dedupe runtime imports when bundling multiple local modules', () => {
     const files = {
       '/app/helper.md': 'count = @signal 1.',
       '/app/main.md': '@import count @from "./helper".\ncount = @signal 2.',
@@ -210,13 +210,13 @@ describe('Compiler', () => {
     });
 
     const runtimeImports = output.match(/import \* as Runtime from "\.\/runtime";/g) || [];
-    expect(runtimeImports).to.have.length(1);
-    expect(output).to.contain('// Module: /app/helper.md');
-    expect(output).to.contain('// Module: /app/main.md');
-    expect(output).to.not.contain('export const count');
+    expect(runtimeImports).toHaveLength(1);
+    expect(output).toInclude('// Module: /app/helper.md');
+    expect(output).toInclude('// Module: /app/main.md');
+    expect(output).not.toInclude('export const count');
   });
 
-  it('should bundle aliased non-local imports when resolver rules allow it', () => {
+  test('should bundle aliased non-local imports when resolver rules allow it', () => {
     const files = {
       '/app/lib/fib.md': 'fib = n -> @if (< n 2) n @else fib(n - 1) + fib(n - 2).',
       '/app/main.md': '@import fib @from "@app/lib/fib".\nfib!(7).',
@@ -228,47 +228,47 @@ describe('Compiler', () => {
       resolveModule: specifier => `/app/${specifier.replace(/^@app\//, '')}.md`,
     });
 
-    expect(output).to.contain('// Module: /app/lib/fib.md');
-    expect(output).to.contain('// Module: /app/main.md');
-    expect(output).to.contain('console.log(fib(7));');
-    expect(output).to.not.contain('import { fib }');
+    expect(output).toInclude('// Module: /app/lib/fib.md');
+    expect(output).toInclude('// Module: /app/main.md');
+    expect(output).toInclude('console.log(fib(7));');
+    expect(output).not.toInclude('import { fib }');
   });
 
-  it('should compile @style directives for global and shadow contexts', () => {
+  test('should compile @style directives for global and shadow contexts', () => {
     const globalOut = compile('@style "body { color: red; }".');
-    expect(globalOut).to.contain('Runtime.style("body { color: red; }");');
+    expect(globalOut).toInclude('Runtime.style("body { color: red; }");');
 
     const shadowOut = compile([
       '@render @shadow @html <div class="box">hello</div>.',
       '@style "div { color: red; }".',
     ].join('\n'));
-    expect(shadowOut).to.contain('Runtime.style(host, "div { color: red; }");');
+    expect(shadowOut).toInclude('Runtime.style(host, "div { color: red; }");');
   });
 
-  it('should inject atomic css rules from class attributes', () => {
+  test('should inject atomic css rules from class attributes', () => {
     const output = compile([
       '@render "#app" @html <div class="flex items-center gap-4 p-2 text-blue-500">x</div>.',
     ].join('\n'));
 
-    expect(output).to.contain('Runtime.style(');
-    expect(output).to.contain('.flex{display:flex}');
-    expect(output).to.contain('.items-center{align-items:center}');
-    expect(output).to.contain('.gap-4{gap:16px}');
-    expect(output).to.contain('.p-2{padding:8px}');
-    expect(output).to.contain('.text-blue-500{color:#3b82f6}');
-    expect(output.indexOf('Runtime.style(')).to.be.lessThan(output.indexOf('Runtime.render('));
+    expect(output).toInclude('Runtime.style(');
+    expect(output).toInclude('.flex{display:flex}');
+    expect(output).toInclude('.items-center{align-items:center}');
+    expect(output).toInclude('.gap-4{gap:16px}');
+    expect(output).toInclude('.p-2{padding:8px}');
+    expect(output).toInclude('.text-blue-500{color:#3b82f6}');
+    expect(output.indexOf('Runtime.style(')).toBeLessThan(output.indexOf('Runtime.render('));
   });
 
-  it('should allow disabling atomic css injection', () => {
+  test('should allow disabling atomic css injection', () => {
     const output = compile('@render "#app" @html <div class="flex p-2">x</div>.', {
       atomicCss: false,
     });
 
-    expect(output).to.not.contain('.flex{display:flex}');
-    expect(output).to.not.contain('.p-2{padding:8px}');
+    expect(output).not.toInclude('.flex{display:flex}');
+    expect(output).not.toInclude('.p-2{padding:8px}');
   });
 
-  it('should pass signal objects through directive/ref attrs in tags', () => {
+  test('should pass signal objects through directive/ref attrs in tags', () => {
     const output = compile([
       'visible = @signal :on.',
       'inputValue = @signal "x".',
@@ -276,21 +276,21 @@ describe('Compiler', () => {
       '@render "#app" @html <input d:show={visible} d:model={inputValue} ref={refObj} value={inputValue} />.',
     ].join('\n'));
 
-    expect(output).to.contain('"d:show": visible');
-    expect(output).to.contain('"d:model": inputValue');
-    expect(output).to.contain('"ref": refObj');
-    expect(output).to.contain('"value": Runtime.read(inputValue)');
+    expect(output).toInclude('"d:show": visible');
+    expect(output).toInclude('"d:model": inputValue');
+    expect(output).toInclude('"ref": refObj');
+    expect(output).toInclude('"value": Runtime.read(inputValue)');
   });
 
-  it('should compile @computed and html fragments', () => {
+  test('should compile @computed and html fragments', () => {
     const output = compile([
       'count = @signal 1.',
       'double = @computed count * 2.',
       '@render "#app" @html [<h1>{count}</h1>, <p>{double}</p>].',
     ].join('\n'));
 
-    expect(output).to.contain('const double = Runtime.computed(() => (Runtime.read(count) * 2));');
-    expect(output).to.contain('Runtime.html(() => [Runtime.h("h1"');
-    expect(output).to.contain('Runtime.h("p"');
+    expect(output).toInclude('const double = Runtime.computed(() => (Runtime.read(count) * 2));');
+    expect(output).toInclude('Runtime.html(() => [Runtime.h("h1"');
+    expect(output).toInclude('Runtime.h("p"');
   });
 });

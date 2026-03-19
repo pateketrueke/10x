@@ -1,6 +1,6 @@
 /* eslint-disable no-multi-assign */
 
-import { expect } from 'chai';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
 
 import Parser from '../src/lib/tree/parser';
 import { execute } from '../src/lib';
@@ -40,51 +40,51 @@ describe('Util', () => {
     execute.info = { calls: [] };
   });
 
-  it('print(...) writes joined text to stdout', async () => {
+  test('print(...) writes joined text to stdout', async () => {
     const output = await captureStdout(() => {
       print('A', 'B', 1);
     });
 
-    expect(output).to.eql('AB1');
+    expect(output, 'AB1');
   });
 
-  it('markers(...) only highlights bare template markers', () => {
+  test('markers(...) only highlights bare template markers', () => {
     const color = { gray: x => `<${x}>` };
     const value = markers(color, 'a{b} #{c} {{d}}');
 
-    expect(value).to.eql('a<{b}> #{c} <{{d}>}');
+    expect(value, 'a<{b}> #{c} <{{d}>}');
   });
 
-  it('colorize(...) formats known token groups and default branch', () => {
-    expect(colorize(EOF, 'x')).to.eql('');
+  test('colorize(...) formats known token groups and default branch', () => {
+    expect(colorize(EOF, 'x')).toEqual('');
 
-    expect(colorize(COMMENT, 'x')).to.eql(ansi.gray('x'));
-    expect(colorize(null, ',')).to.eql(ansi.white(','));
+    expect(colorize(COMMENT, 'x')).toEqual(ansi.gray('x'));
+    expect(colorize(null, ',')).toEqual(ansi.white(','));
 
-    expect(colorize(CODE, 'x')).to.eql(ansi.cyanBright('x'));
-    expect(colorize(BOLD, 'x')).to.eql(ansi.redBright.bold('x'));
-    expect(colorize(ITALIC, 'x')).to.eql(ansi.yellowBright.italic('x'));
+    expect(colorize(CODE, 'x')).toEqual(ansi.cyanBright('x'));
+    expect(colorize(BOLD, 'x')).toEqual(ansi.redBright.bold('x'));
+    expect(colorize(ITALIC, 'x')).toEqual(ansi.yellowBright.italic('x'));
 
-    expect(colorize(REF, 'x')).to.eql(ansi.white(ansi.underline('x')));
+    expect(colorize(REF, 'x')).toEqual(ansi.white(ansi.underline('x')));
 
-    expect(colorize(PLUS, '+')).to.eql(ansi.magenta('+'));
-    expect(colorize(SYMBOL, ':x')).to.eql(ansi.yellow(':x'));
+    expect(colorize(PLUS, '+')).toEqual(ansi.magenta('+'));
+    expect(colorize(SYMBOL, ':x')).toEqual(ansi.yellow(':x'));
 
-    expect(colorize(STRING, 'x{y}')).to.eql(ansi.blueBright(`x${ansi.gray('{y}')}`));
-    expect(colorize(REGEX, '/x/')).to.eql(ansi.blueBright('/x/'));
+    expect(colorize(STRING, 'x{y}')).toEqual(ansi.blueBright(`x${ansi.gray('{y}')}`));
+    expect(colorize(REGEX, '/x/')).toEqual(ansi.blueBright('/x/'));
 
-    expect(colorize(LITERAL)).to.eql(ansi.white(undefined));
-    expect(colorize(LITERAL, true)).to.eql(ansi.yellow(':on'));
-    expect(colorize(LITERAL, false)).to.eql(ansi.white(undefined));
-    expect(colorize(LITERAL, 'ok')).to.eql(ansi.white('ok'));
+    expect(colorize(LITERAL)).toEqual(ansi.white(undefined));
+    expect(colorize(LITERAL, true)).toEqual(ansi.yellow(':on'));
+    expect(colorize(LITERAL, false)).toEqual(ansi.white(undefined));
+    expect(colorize(LITERAL, 'ok')).toEqual(ansi.white('ok'));
 
-    expect(colorize(NUMBER, 10)).to.eql(ansi.blue(10));
-    expect(colorize(Symbol('unknown'), 'x')).to.eql(ansi.bgRedBright('x'));
+    expect(colorize(NUMBER, 10)).toEqual(ansi.blue(10));
+    expect(colorize(Symbol('unknown'), 'x')).toEqual(ansi.bgRedBright('x'));
 
-    expect(colorize(COMMENT, 'x', true)).to.eql(ansi.dim.gray('x'));
+    expect(colorize(COMMENT, 'x', true)).toEqual(ansi.dim.gray('x'));
   });
 
-  it('colorize(...) handles remaining grouped operator tokens', () => {
+  test('colorize(...) handles remaining grouped operator tokens', () => {
     [
       PIPE, SOME, EVERY, OR, NOT, LESS, LESS_EQ, GREATER, GREATER_EQ, EXACT_EQ, NOT_EQ, EQUAL, LIKE,
       RANGE, BLOCK, COMMA, BEGIN, DONE, CLOSE, OPEN, DOT, EOL,
@@ -94,7 +94,7 @@ describe('Util', () => {
     });
   });
 
-  it('summary(...) returns formatted debug and parser-fallback text', () => {
+  test('summary(...) returns formatted debug and parser-fallback text', () => {
     const err = new Error('Boom');
 
     err.stack = 'Boom';
@@ -103,8 +103,8 @@ describe('Util', () => {
 
     const ok = summary(err, '1+2');
 
-    expect(ok).to.contains('Boom');
-    expect(ok).to.contains('|');
+    expect(ok).toContain('Boom');
+    expect(ok).toContain('|');
 
     const originalGetAST = Parser.getAST;
 
@@ -115,13 +115,13 @@ describe('Util', () => {
 
       const failed = summary(err, 'x+y');
 
-      expect(failed).to.contains('x+y');
+      expect(failed).toContain('x+y');
     } finally {
       Parser.getAST = originalGetAST;
     }
   });
 
-  it('inspect(...) prints tree-like lines for pivot/depth combinations', async () => {
+  test('inspect(...) prints tree-like lines for pivot/depth combinations', async () => {
     const output = await captureStdout(() => {
       inspect([
         ['Eval', 1, [1]],
@@ -131,13 +131,13 @@ describe('Util', () => {
       ]);
     });
 
-    expect(output).to.contains('├──');
-    expect(output).to.contains('├─');
-    expect(output).to.contains('└─');
-    expect(output).to.contains('│');
+    expect(output).toContain('├──');
+    expect(output).toContain('├─');
+    expect(output).toContain('└─');
+    expect(output).toContain('│');
   });
 
-  it('format(...) uses inline flag to control parser mode', async () => {
+  test('format(...) uses inline flag to control parser mode', async () => {
     const originalGetAST = Parser.getAST;
     const args = [];
 
@@ -150,27 +150,27 @@ describe('Util', () => {
       await captureStdout(() => format('1+2', false, true));
       await captureStdout(() => format('1+2', true, false));
 
-      expect(args[0][1]).to.eql('inline');
-      expect(args[1][1]).to.eql('raw');
+      expect(args[0][1], 'inline');
+      expect(args[1][1], 'raw');
     } finally {
       Parser.getAST = originalGetAST;
     }
   });
 
-  it('main(...) evaluates code and prints result', async () => {
+  test('main(...) evaluates code and prints result', async () => {
     const output = await captureStdout(() => main('1+2'));
 
-    expect(output).to.contains('3');
+    expect(output).toContain('3');
   });
 
-  it('main(...) applies prelude and supports info mode for short callstacks', async () => {
+  test('main(...) applies prelude and supports info mode for short callstacks', async () => {
     const output = await captureStdout(() => main('1+1', false, null, true, false, () => '2+2'));
 
-    expect(output).to.contains('step');
-    expect(output).to.contains('4');
+    expect(output).toContain('step');
+    expect(output).toContain('4');
   });
 
-  it('main(...) uses truncated inspect path for long callstacks in raw mode', async () => {
+  test('main(...) uses truncated inspect path for long callstacks in raw mode', async () => {
     execute.failure = null;
     execute.info = {
       calls: Array.from({ length: 100 }).map(() => ['Eval', 1, [1]]),
@@ -178,12 +178,12 @@ describe('Util', () => {
 
     const output = await captureStdout(() => main('1+2', true, null, true));
 
-    expect(output).to.contains('100 steps');
+    expect(output).toContain('100 steps');
   });
 
-  it('main(...) prints summary on execution failures', async () => {
+  test('main(...) prints summary on execution failures', async () => {
     const output = await captureStdout(() => main('x'));
 
-    expect(output).to.contains('Undeclared local `x`');
+    expect(output).toContain('Undeclared local `x`');
   });
 });
