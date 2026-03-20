@@ -279,10 +279,18 @@ export default class Scanner {
       case '.':
         if (this.isMatch('.')) {
           this.addToken(RANGE);
-        } else if (this.peek() === '\n' || this.isDone()) {
-          this.addToken(EOL);
         } else {
-          this.addToken(DOT);
+          let next = this.peek();
+          if (next === ' ' || next === '\t' || next === '\r') {
+            let i = 0;
+            while (this.peekToken(i) === ' ' || this.peekToken(i) === '\t' || this.peekToken(i) === '\r') i++;
+            next = this.peekToken(i);
+          }
+          if (next === '\n' || this.isDone() || next === '' || typeof next === 'undefined') {
+            this.addToken(EOL);
+          } else {
+            this.addToken(DOT);
+          }
         }
         break;
 

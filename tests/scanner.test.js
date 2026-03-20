@@ -118,7 +118,7 @@ describe('Scanner', () => {
     ]);
   });
 
-  test.skip('treats trailing-space statement dots as EOL for unit literals', () => {
+  test('treats trailing-space statement dots as EOL for unit literals', () => {
     const tokens = getTokens('2cm. ', true);
     const eolTokens = tokens.filter(token => token.type === EOL);
     expect(eolTokens).toHaveLength(1);
