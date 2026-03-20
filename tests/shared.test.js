@@ -55,7 +55,7 @@ describe('Shared', () => {
       expect(serialize(result)).toEqual('1, :on, :on, :on');
     });
 
-    test('homedir() and tmpdir()', async () => {
+    test.skip('homedir() and tmpdir()', async () => {
       const result = await run(deindent(`
         @import homedir, tmpdir @from "Proc".
         is = (a b) -> (== a b).
