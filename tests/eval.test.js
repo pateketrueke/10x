@@ -1191,7 +1191,7 @@ describe('Eval', () => {
         Expr.value(10946),
       ]);
 
-      if (process.env.CI) expect((Date.now() - start2) / 1000).to.be.below(0.01);
+      if (process.env.CI) expect((Date.now() - start2) / 1000).toBeLessThan(0.01);
     });
 
     test('should allow to implement Y-combinator', async () => {

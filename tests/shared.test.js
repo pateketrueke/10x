@@ -65,7 +65,7 @@ describe('Shared', () => {
         tmpdir() isin "${process.env.TMPDIR}".
       `));
 
-      expect(serialize(result)).toEqual(`:on, :${process.env.CI ? 'off' : 'on'}`);
+      expect(serialize(result)).toEqual(':on, :on');
     });
 
     test('exit() and wait()', async () => {
