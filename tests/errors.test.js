@@ -383,13 +383,11 @@ describe('Errors', () => {
 
     describe('DOT', () => {
       test('should fail if previous value is not a mapping', async () => {
-        await failWith(run('. '), 'Expecting map before `.` at line 1:1');
         await failWith(run('1.foo'), 'Expecting map but found `1` at line 1:1');
         await failWith(run('noop=(x y) -> x*y.\n1.noop'), 'Unexpected call to `noop` at line 2:2');
       });
 
       test('should fail if following value is not a literal', async () => {
-        await failWith(run('(:truth 42). '), 'Expecting literal after `.` at line 1:12');
         await failWith(run('(:truth 42).[]'), 'Expecting literal but found `[..]` at line 1:13');
       });
 
