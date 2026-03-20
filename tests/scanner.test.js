@@ -122,7 +122,7 @@ describe('Scanner', () => {
     const tokens = getTokens('2cm. ', true);
     const eolTokens = tokens.filter(token => token.type === EOL);
     expect(eolTokens).toHaveLength(1);
-    expect(eolTokens[0].value, '.');
+    expect(eolTokens[0].value).toEqual('.');
   });
 
   describe('Markdown', () => {

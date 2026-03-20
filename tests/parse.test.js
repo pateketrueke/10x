@@ -12,7 +12,7 @@ import {
 } from '../src/lib/tree/symbols';
 
 describe('Parser', () => {
-  test.skip('should allow to parse raw-statements', () => {
+  test('should allow to parse raw-statements', () => {
     const input = `1..3,
 a,b.
 (j+"""m
@@ -22,7 +22,7 @@ x.
 
 y _z_`;
     const ast = Parser.getAST(input, 'split');
-    expect(ast.length, 4);
+    expect(ast).toHaveLength(4);
   });
 
   test('should keep text and white-space', () => {
