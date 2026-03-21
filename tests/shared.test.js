@@ -8,6 +8,7 @@ import { stdout, stderr } from 'stdout-stderr';
 import td from 'testdouble';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 
 import Env from '../src/lib/tree/env';
 
@@ -55,14 +56,14 @@ describe('Shared', () => {
       expect(serialize(result)).toEqual('1, :on, :on, :on');
     });
 
-    test.skip('homedir() and tmpdir()', async () => {
+    test('homedir() and tmpdir()', async () => {
       const result = await run(deindent(`
         @import homedir, tmpdir @from "Proc".
         is = (a b) -> (== a b).
         isin = (a b) -> (~ b a).
 
-        homedir() is "${process.env.HOME}".
-        tmpdir() isin "${process.env.TMPDIR}".
+        homedir() is "${os.homedir()}".
+        tmpdir() isin "${os.tmpdir()}".
       `));
 
       expect(serialize(result)).toEqual(':on, :on');
