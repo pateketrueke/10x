@@ -911,3 +911,107 @@ export function serialize(token, shorten, colorize = (_, x) => (typeof x === 'un
     ? `${colorize(OPEN)}${block.join(separator)}${colorize(CLOSE)}`
     : block.join(separator);
 }
+
+export function SYMBOL_NAME(sym) {
+  if (!sym || typeof sym !== 'symbol') return '';
+  return sym.toString().match(/Symbol\((.+)\)/)?.[1] ?? '';
+}
+
+function unitKindFromToken(token) {
+  const kind = token?.value?.value?.kind ?? token?.value?.kind;
+  if (typeof kind === 'string' && kind.trim()) return kind.trim();
+
+  const asText = String(token?.value?.toString?.() ?? '');
+  const match = asText.match(/[A-Za-z]{1,10}$/);
+  return match?.[0] || '';
+}
+
+export function inferTokenType(token) {
+  if (!token) return 'unknown';
+
+  if (token.isCallable || token.isFunction) return 'fn';
+  if (token.isTag) return 'tag';
+  if (token.isObject) {
+    const shape = token.valueOf ? token.valueOf() : token.value;
+    if (shape && typeof shape === 'object' && shape.__tag && shape.value) return 'result';
+    return 'record';
+  }
+  if (token.isRange) return Array.isArray(token.value) ? 'list' : 'range';
+  if (token.isNumber) {
+    const unitKind = unitKindFromToken(token);
+    if (unitKind) return `unit<${unitKind}>`;
+    return 'number';
+  }
+  if (token.isString) return 'string';
+  if (token.isSymbol) return 'symbol';
+
+  const symbol = SYMBOL_NAME(token.type);
+  return symbol ? symbol.toLowerCase() : 'unknown';
+}
+
+export function inferRuntimeType(value) {
+  if (value === null) return 'nil';
+  if (value === undefined) return 'unknown';
+
+  if (typeof value === 'number') return 'number';
+  if (typeof value === 'string') return 'string';
+  if (typeof value === 'boolean') return 'boolean';
+  if (typeof value === 'function') return 'fn';
+
+  if (Array.isArray(value)) {
+    if (!value.length) return 'list<unknown>';
+    if (value.length === 1) return inferRuntimeType(value[0]);
+
+    const sample = value.find(Boolean);
+    const inner = sample ? inferRuntimeType(sample) : 'unknown';
+    return `list<${inner}>`;
+  }
+
+  if (value && typeof value === 'object' && typeof value.type === 'symbol') {
+    return inferTokenType(value);
+  }
+
+  if (value && typeof value === 'object') {
+    if (value.__tag && value.value) return 'result';
+    return 'record';
+  }
+
+  return 'unknown';
+}
+
+export function canonicalTypeName(typeName) {
+  const text = String(typeName || '').trim().toLowerCase();
+  if (!text) return '';
+  if (text === 'num' || text === 'number') return 'number';
+  if (text === 'str' || text === 'string') return 'string';
+  if (text === 'bool' || text === 'boolean') return 'boolean';
+  if (text.startsWith('unit<') && text.endsWith('>')) return 'number';
+  if (text === 'list' || text.startsWith('list<')) return 'list';
+  return text;
+}
+
+export function prettyTypeName(typeName) {
+  const canon = canonicalTypeName(typeName);
+  if (canon === 'number') return 'num';
+  if (canon === 'string') return 'str';
+  if (canon === 'boolean') return 'bool';
+  if (canon === 'list') return 'list';
+  return String(typeName || '').trim() || 'unknown';
+}
+
+export function matchesType(value, typeStr, env) {
+  const declared = canonicalTypeName(typeStr);
+  if (!declared || declared === 'any' || declared === 'unknown') return true;
+
+  if (env && typeof env.getAnnotation === 'function') {
+    const name = value?.name ?? '';
+    if (name) {
+      const ann = env.getAnnotation(name);
+      if (ann) return canonicalTypeName(String(ann)) === declared;
+    }
+  }
+
+  const actual = canonicalTypeName(inferRuntimeType(value));
+  if (!actual || actual === 'unknown') return true;
+  return actual === declared;
+}

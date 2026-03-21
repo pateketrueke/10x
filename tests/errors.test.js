@@ -398,5 +398,18 @@ describe('Errors', () => {
         await failWith(run('(:t 42, :k -1).x'), 'Missing property `x` in (:t :k) at line 1:16');
       });
     });
+
+    describe('Type Annotations', () => {
+      test('should fail if argument type does not match annotation', async () => {
+        await failWith(
+          run('add :: num, num -> num.\nadd = a -> b -> a + b.\nadd("hello", 2).'),
+          'expected num, got string (arg 1)'
+        );
+        await failWith(
+          run('add :: num, num -> num.\nadd = a -> b -> a + b.\nadd(1, "hello").'),
+          'expected num, got string (arg 2)'
+        );
+      });
+    });
   });
 });

@@ -19,7 +19,45 @@ import {
   argv, only, raise, check, assert, hasDiff, hasIn, serialize,
   isInvokable, isComment, isObject, isLiteral, isScalar, isResult, isString, isNumber, isSymbol, isLogic, isData, isUnit,
   isMixed, isPlain, isRange, isSlice, isArray, isSome, isEvery, isBlock, isComma, isPipe, isMath, isNot, isMod, isEnd, isDot, isEOL, isOR,
+  matchesType, inferRuntimeType, canonicalTypeName,
 } from '../helpers';
+
+function parseAnnotation(annStr) {
+  if (!annStr || typeof annStr !== 'string') return null;
+  const trimmed = annStr.trim();
+  if (!trimmed) return null;
+
+  const arrowIndex = trimmed.indexOf('->');
+  if (arrowIndex === -1) {
+    return { params: trimmed.split(',').map(s => s.trim()).filter(Boolean) };
+  }
+
+  const paramsStr = trimmed.slice(0, arrowIndex).trim();
+  const returnsStr = trimmed.slice(arrowIndex + 2).trim();
+  return {
+    params: paramsStr ? paramsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
+    returns: returnsStr || null,
+  };
+}
+
+function wrapWithTypeCheck(fn, annotation, bindingName, env) {
+  const params = annotation.params ?? [];
+  if (!params.length) return fn;
+
+  return async function typechecked(...args) {
+    for (let i = 0; i < params.length; i++) {
+      const expected = canonicalTypeName(params[i]);
+      const actual = args[i];
+      if (!matchesType(actual, expected, env)) {
+        const got = inferRuntimeType(actual);
+        throw new TypeError(
+          `\`${bindingName}\`: expected ${params[i]}, got ${got} (arg ${i + 1})`
+        );
+      }
+    }
+    return fn(...args);
+  };
+}
 
 const LAZY_DESCRIPTORS = new Set(['Loop', 'Set']);
 const OPS_MUL_DIV = new Set([MUL, DIV]);
@@ -949,7 +987,29 @@ export default class Eval {
           Env.merge(fixedArgs, target.args, clean, ctx);
         }
 
-        const result = await Eval.do(target.body, ctx, `:${prev.getName() || ''}`, true, this.ctx.tokenInfo);
+        // type-check arguments if annotation exists
+        const fnName = prev.getName();
+        if (fnName) {
+          const ann = this.env.getAnnotation(fnName);
+          if (ann && typeof ann === 'string') {
+            const annotation = parseAnnotation(ann);
+            if (annotation?.params?.length) {
+              for (let i = 0; i < annotation.params.length && i < fixedArgs.length; i++) {
+                const expected = annotation.params[i];
+                const actual = fixedArgs[i];
+                if (!matchesType(actual, expected, this.env)) {
+                  const got = inferRuntimeType(actual);
+                  raise(
+                    `\`${fnName}\`: expected ${expected}, got ${got} (arg ${i + 1})`,
+                    this.ctx.tokenInfo
+                  );
+                }
+              }
+            }
+          }
+        }
+
+        const result = await Eval.do(target.body, ctx, `:${fnName || ''}`, true, this.ctx.tokenInfo);
 
         if (key) {
           if (this.descriptor !== 'Eval') {
