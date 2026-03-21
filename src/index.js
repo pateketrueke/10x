@@ -128,6 +128,79 @@ function lintAnnotationSource(source) {
   return warnings;
 }
 
+function lintMarkdown(source) {
+  const warnings = [];
+  const lines = source.split('\n');
+  let inFence = false;
+  let fenceOpenLine = -1;
+  let fenceChar = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!inFence && /^(`{3,}|"{3,})/.test(trimmed)) {
+      inFence = true;
+      fenceChar = trimmed[0];
+      fenceOpenLine = i;
+      if (!/^(`{3,}|"{3,})\w/.test(trimmed)) {
+        warnings.push({ line: i, code: 'missing-lang-tag', message: 'Code block missing language tag — evaluator will skip it' });
+      }
+      continue;
+    }
+    if (inFence && trimmed.startsWith(fenceChar.repeat(3))) {
+      inFence = false;
+      fenceOpenLine = -1;
+      continue;
+    }
+    if (inFence) continue;
+
+    if (/^---+$/.test(trimmed)) {
+      warnings.push({ line: i, code: 'thematic-break', message: '`---` evaluates as subtraction in 10x — use `***` instead' });
+    }
+
+    if (i === 0 && trimmed === '---') {
+      warnings.push({ line: i, code: 'frontmatter', message: 'Frontmatter `---` block is not supported — evaluates as subtraction' });
+    }
+
+    if (/^#{1,6}\s.+\.$/.test(trimmed) || /^[-*+]\s.+\.$/.test(trimmed)) {
+      warnings.push({ line: i, code: 'trailing-dot', message: 'Trailing `.` on heading/list item may conflict with EOL token' });
+    }
+  }
+
+  if (inFence) {
+    warnings.push({ line: fenceOpenLine, code: 'unclosed-fence', message: 'Unclosed code fence' });
+  }
+
+  return warnings;
+}
+
+function fixMarkdown(source) {
+  const lines = source.split('\n');
+  let inFence = false;
+
+  return lines.map((line, i) => {
+    const trimmed = line.trim();
+
+    if (!inFence && /^(`{3,}|"{3,})/.test(trimmed)) {
+      inFence = true;
+      if (!/^(`{3,}|"{3,})\w/.test(trimmed)) {
+        return line.replace(/^(`{3,}|"{3,})/, '$110x');
+      }
+    }
+    if (inFence && /^(`{3,}|"{3,})$/.test(trimmed)) { inFence = false; }
+    if (inFence) return line;
+
+    if (/^---+$/.test(trimmed)) return line.replace(/^-+/, '***');
+
+    if (/^#{1,6}\s.+\.$/.test(trimmed) || /^[-*+]\s.+\.$/.test(trimmed)) {
+      return line.replace(/\.$/, '');
+    }
+
+    return line;
+  }).join('\n');
+}
+
 function inferBindingRuntimeType(token) {
   if (!token) return 'unknown';
   if (token.isCallable || token.isFunction) return 'fn';
@@ -415,29 +488,33 @@ async function cli() {
           console.error(`${file}:${w.line + 1}:1: warning: ${w.message}`);
         });
 
+        const mdWarnings = lintMarkdown(src);
+        mdWarnings.forEach(w => {
+          console.error(`${file}:${w.line + 1}:1: warning: ${w.message}`);
+        });
+
         let checkWarnings = [];
         let fixedOutput = null;
 
+        if (runFix) {
+          fixedOutput = fixMarkdown(src);
+        }
+
         if (runCheck || runFix) {
           try {
-            const checked = await runTypeChecksForFile(src);
+            const checked = await runTypeChecksForFile(fixedOutput || src);
             checkWarnings = checked.warnings;
             checkWarnings.forEach(w => {
               const level = w.hint ? 'hint' : 'warning';
               console.error(`${file}:${w.line + 1}:1: ${level}: ${w.message}`);
             });
 
-            if (runFix) {
-              fixedOutput = applyMissingAnnotations(src, checked.inferredByName, checked.annotations, checked.bindings);
-              if (fixedOutput !== src) {
-                if (dryRun) {
-                  console.log(`${file}: fix available (dry-run)`);
-                } else {
-                  fs.writeFileSync(filePath, fixedOutput, 'utf8');
-                  console.log(`${file}: fixed`);
-                }
+            if (runFix && fixedOutput !== src) {
+              if (dryRun) {
+                console.log(`${file}: fix available (dry-run)`);
               } else {
-                console.log(`${file}: no changes`);
+                fs.writeFileSync(filePath, fixedOutput, 'utf8');
+                console.log(`${file}: fixed`);
               }
             }
           } catch (e) {
@@ -453,7 +530,7 @@ async function cli() {
           console.log(`${file}: ok`);
         }
 
-        if (lintWarnings.some(w => !w.hint) || checkWarnings.some(w => !w.hint)) {
+        if (lintWarnings.some(w => !w.hint) || mdWarnings.length || checkWarnings.some(w => !w.hint)) {
           hasError = true;
         }
       } catch (e) {
