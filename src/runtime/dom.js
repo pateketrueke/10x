@@ -137,8 +137,8 @@ export function render(selectorOrElement, view) {
     prev = next;
   };
 
-  return effect(() => {
-    const next = view.render();
+  return effect(async () => {
+    const next = await view.render();
     if (typeof next === 'string') {
       target.innerHTML = next;
       prev = null;
@@ -148,13 +148,13 @@ export function render(selectorOrElement, view) {
       root = target.firstChild;
       prev = next;
     } else {
-      Promise.resolve()
-        .then(() => patch(root, prev, next))
-        .then(node => {
-          root = node || root || target.firstChild;
-          prev = next;
-        })
-        .catch(() => remount(next));
+      try {
+        const node = await Promise.resolve().then(() => patch(root, prev, next));
+        root = node || root || target.firstChild;
+        prev = next;
+      } catch (_) {
+        remount(next);
+      }
     }
   });
 }
@@ -213,8 +213,8 @@ export function renderShadow(host, view, moduleUrl) {
     prev = next;
   };
 
-  return effect(() => {
-    const next = view.render();
+  return effect(async () => {
+    const next = await view.render();
     if (typeof next === 'string') {
       outlet.innerHTML = next;
       prev = null;
@@ -224,13 +224,13 @@ export function renderShadow(host, view, moduleUrl) {
       root = outlet.firstChild;
       prev = next;
     } else {
-      Promise.resolve()
-        .then(() => patch(root, prev, next))
-        .then(node => {
-          root = node || root || outlet.firstChild;
-          prev = next;
-        })
-        .catch(() => remount(next));
+      try {
+        const node = await Promise.resolve().then(() => patch(root, prev, next));
+        root = node || root || outlet.firstChild;
+        prev = next;
+      } catch (_) {
+        remount(next);
+      }
     }
   });
 }

@@ -230,8 +230,7 @@ export function extractInlineExpressions(source, statementId = '') {
 export const EDITOR_BOOTSTRAP = `
 @import to @from "Unit".
 @from "Prelude" @import (map, filter, take, drop, head, tail, size, keys, vals, pairs, rev, list, push, show).
-@import Runtime @from "./dist/runtime.js".
-@import render, renderShadow, h, style, on @from "Runtime".
+@import signal, read, html, render, renderShadow, h, style, on @from "Runtime".
 `;
 
 export async function bootstrapEnv(env, executeFn) {
@@ -239,17 +238,11 @@ export async function bootstrapEnv(env, executeFn) {
   env.__xEditorBootstrapDone = true;
 
   console.log('[editor] bootstrapping env...');
-  try {
-    const result = await executeFn(EDITOR_BOOTSTRAP, env);
-    console.log('[editor] bootstrap done', result);
-    
-    // Check if Runtime.render is available
-    if (env.get('render')) {
-      console.log('[editor] render available');
-    } else {
-      console.log('[editor] render NOT available');
-    }
-  } catch (err) {
-    console.error('[editor] bootstrap error:', err);
+  const result = await executeFn(EDITOR_BOOTSTRAP, env);
+  if (executeFn.failure) {
+    console.error('[editor] bootstrap error:', executeFn.failure);
+    return;
   }
+  console.log('[editor] bootstrap done', result);
+  console.log('[editor] render available:', env.has('render', true));
 }

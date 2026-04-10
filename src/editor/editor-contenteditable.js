@@ -17,6 +17,7 @@ import { Parser, Env, execute, applyAdapter, HEADING, BLOCKQUOTE, UL_ITEM, OL_IT
 import { createBrowserAdapter } from '../adapters/browser/index.js';
 import {
   SYMBOL_NAME,
+  inferRuntimeType,
   formatRuntimeValue,
   formatRuntimeError,
   normalizeUnitLiterals,
@@ -1568,6 +1569,12 @@ class XEditor extends HTMLElement {
       return;
     }
 
+    const needsMainThreadRuntime = activeStatements.some(({ source }) => {
+      const text = String(source || '');
+      return /\b(render|renderShadow|on|style)\s*\(/.test(text)
+        || /@(?:render|on|style)\b/.test(text);
+    });
+
     const statementIds = new Set(activeStatements.map(statement => statement.statementId));
     Array.from(this._resultsById.keys()).forEach(id => {
       if (!statementIds.has(id)) this._resultsById.delete(id);
@@ -1580,7 +1587,7 @@ class XEditor extends HTMLElement {
     this._pendingResultIds = new Set();
     this._injectResults();
 
-    if (this._worker) {
+    if (this._worker && !needsMainThreadRuntime) {
       // Abort previous long-running evaluation (e.g. fib(99)) so new input is responsive.
       if (this._evalRequestId > this._appliedEvalRequestId) {
         this._restartWorker();

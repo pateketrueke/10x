@@ -1385,14 +1385,19 @@ export default class Eval {
 
   static wrap(self) {
     return async (fn, args, label) => {
-      if (fn.length > args.length) {
+      const safeArgs = Array.isArray(args) ? args : [];
+      const fnArgs = (typeof fn?.getArgs === 'function' && Array.isArray(fn.getArgs()))
+        ? fn.getArgs()
+        : [];
+
+      if (typeof fn.length === 'number' && fn.length > safeArgs.length) {
         raise(`Missing arguments to call \`${fn.getName()}\``, self.ctx.tokenInfo);
       }
 
       try {
         const scope = new Env(self.env);
 
-        Env.merge(args, fn.getArgs(), false, scope);
+        Env.merge(safeArgs, fnArgs, false, scope);
 
         const [value] = await Eval.do(fn.getBody(), scope, label, false, self.ctx.tokenInfo);
 
@@ -1555,6 +1560,45 @@ export default class Eval {
   static async map(token, descriptor, environment, parentTokenInfo, state) {
     const { value } = token;
     const subTree = [];
+    const convert = state && typeof state.convert === 'function' ? state.convert : null;
+
+    const isDirectiveStmt = stmt => !!(stmt && typeof stmt.getBody === 'function');
+
+    const normalizeDirectiveArgs = (stmt) => {
+      if (!isDirectiveStmt(stmt)) return [];
+      const body = stmt.getBody();
+      const flat = body.length === 1
+        && body[0]
+        && body[0].type === BLOCK
+        && body[0].hasBody
+        ? body[0].getBody()
+        : body;
+      return flat.filter(part => part && part.type !== COMMA);
+    };
+
+    const toPlain = valueToken => Expr.plain(valueToken, convert, '<Directive>');
+
+    const resolveRuntimeFn = (name) => {
+      if (!environment.has(name, true)) {
+        raise(`Undeclared local \`${name}\``, parentTokenInfo);
+      }
+
+      const entry = environment.get(name);
+      const [head] = (entry && entry.body) || [];
+      const fn = head ? toPlain(head) : null;
+
+      if (typeof fn !== 'function') {
+        raise(`\`${name}\` is not callable`, parentTokenInfo);
+      }
+
+      return fn;
+    };
+
+    const isSignalValue = candidate => (
+      candidate
+      && typeof candidate.get === 'function'
+      && typeof candidate.set === 'function'
+    );
 
     let isDone;
 
@@ -1687,6 +1731,124 @@ export default class Eval {
 
     if (value.err instanceof Expr.ErrStatement) {
       subTree.push(await Eval.buildResultToken('err', value.err.getBody(), environment, parentTokenInfo));
+      isDone = true;
+    }
+
+    if (isDirectiveStmt(value.signal)) {
+      if (token.__signalCached) {
+        subTree.push(token.__signalCached);
+        isDone = true;
+      }
+
+      if (isDone) {
+        // no-op
+      } else {
+      const signal = resolveRuntimeFn('signal');
+      const args = normalizeDirectiveArgs(value.signal);
+      const runtimeArgs = [];
+
+      for (let i = 0; i < args.length; i++) {
+        const evaluated = await Eval.do([args[i]], environment, 'Expr', true, parentTokenInfo);
+        if (!evaluated.length) continue;
+        runtimeArgs.push(toPlain(evaluated.length === 1 ? evaluated[0] : evaluated));
+      }
+
+      token.__signalCached = Expr.value(signal(...runtimeArgs), parentTokenInfo);
+      subTree.push(token.__signalCached);
+      isDone = true;
+      }
+    }
+
+    if (isDirectiveStmt(value.render)) {
+      const renderArgs = normalizeDirectiveArgs(value.render);
+      const selectorTokens = renderArgs.length
+        ? await Eval.do(renderArgs, environment, 'Expr', true, parentTokenInfo)
+        : [];
+      const selector = selectorTokens.length
+        ? toPlain(selectorTokens.length === 1 ? selectorTokens[0] : selectorTokens)
+        : undefined;
+
+      if (isDirectiveStmt(value.html)) {
+        const html = resolveRuntimeFn('html');
+        const render = resolveRuntimeFn('render');
+        const htmlBody = normalizeDirectiveArgs(value.html);
+
+        const view = html(async () => {
+          const scope = new Env(environment);
+
+          const localNames = Object.keys(environment.locals || {});
+          for (let i = 0; i < localNames.length; i++) {
+            const name = localNames[i];
+            const local = environment.locals[name];
+            const [head] = (local && local.body) || [];
+            if (!(head && head.isObject && head.value && head.value.signal)) continue;
+            const signalEntry = environment.get(name);
+            const resolvedBody = signalEntry && signalEntry.body ? signalEntry.body : [];
+            if (!resolvedBody.length) continue;
+            const resolved = await Eval.do(resolvedBody, environment, 'Lit', false, parentTokenInfo);
+            if (!resolved || !resolved.length) continue;
+            const plain = toPlain(resolved.length === 1 ? resolved[0] : resolved);
+            if (!isSignalValue(plain)) continue;
+            scope.def(name, Expr.value(plain.get(), parentTokenInfo));
+          }
+
+          const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
+          if (!rendered.length) return '';
+          return toPlain(rendered.length === 1 ? rendered[0] : rendered);
+        });
+
+        render(selector, view);
+      }
+
+      isDone = true;
+    }
+
+    if (isDirectiveStmt(value.on)) {
+      const on = resolveRuntimeFn('on');
+      const args = normalizeDirectiveArgs(value.on);
+      if (args.length < 3) {
+        raise('`@on` expects event, selector and handler', parentTokenInfo);
+      }
+
+      const [eventToken, selectorToken, handlerToken] = args;
+      const [eventValue] = await Eval.do([eventToken], environment, 'Expr', true, parentTokenInfo);
+      const [selectorValue] = await Eval.do([selectorToken], environment, 'Expr', true, parentTokenInfo);
+      const eventName = toPlain(eventValue);
+      const selector = toPlain(selectorValue);
+
+      let handler;
+
+      if (handlerToken && handlerToken.isCallable && handlerToken.hasBody && handlerToken.getName) {
+        const targetName = handlerToken.getName();
+        if (environment.has(targetName, true)) {
+          const targetEntry = environment.get(targetName);
+          const resolvedTarget = targetEntry && targetEntry.body
+            ? await Eval.do(targetEntry.body, environment, 'Lit', false, parentTokenInfo)
+            : [];
+          const target = resolvedTarget.length
+            ? toPlain(resolvedTarget.length === 1 ? resolvedTarget[0] : resolvedTarget)
+            : null;
+
+          if (isSignalValue(target)) {
+            handler = async () => {
+              const scope = new Env(environment);
+              scope.def(targetName, Expr.value(target.get(), parentTokenInfo));
+              const nextTokens = await Eval.do(handlerToken.getBody(), scope, 'On', true, parentTokenInfo);
+              if (!nextTokens.length) return;
+              const nextValue = toPlain(nextTokens.length === 1 ? nextTokens[0] : nextTokens);
+              target.set(nextValue);
+            };
+          }
+        }
+      }
+
+      if (!handler) {
+        const [resolvedHandlerToken] = await Eval.do([handlerToken], environment, 'Expr', true, parentTokenInfo);
+        const resolvedHandler = resolvedHandlerToken ? toPlain(resolvedHandlerToken) : null;
+        handler = typeof resolvedHandler === 'function' ? resolvedHandler : () => {};
+      }
+
+      on(eventName, selector, handler);
       isDone = true;
     }
 

@@ -1,3 +1,5 @@
+import * as Runtime from '../../runtime/index.js';
+
 export function createBrowserAdapter() {
   const safeUnits = [];
 
@@ -19,6 +21,7 @@ export function createBrowserAdapter() {
       };
 
       Env.shared = Env.shared || {};
+      Env.shared.Runtime = Runtime;
     },
   };
 }

@@ -65,11 +65,22 @@ export function read(value) {
 export function effect(fn) {
   const run = () => {
     currentEffect = run;
+    let result;
     try {
-      fn();
-    } finally {
+      result = fn();
+    } catch (error) {
       currentEffect = null;
+      throw error;
     }
+
+    if (result && typeof result.then === 'function') {
+      return result.finally(() => {
+        if (currentEffect === run) currentEffect = null;
+      });
+    }
+
+    currentEffect = null;
+    return result;
   };
 
   run();
