@@ -13,11 +13,9 @@
  *   el.addEventListener('change', e => e.detail.results)
  *   el.addEventListener('error',  e => e.detail.error)
  */
-import { Parser, Env, execute, applyAdapter } from '../main.js';
+import { Parser, Env, execute, applyAdapter, HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM } from '../main.js';
 import { createBrowserAdapter } from '../adapters/browser/index.js';
 import {
-  SYMBOL_NAME,
-  inferRuntimeType,
   formatRuntimeValue,
   formatRuntimeError,
   normalizeUnitLiterals,
@@ -740,6 +738,17 @@ function buildStatementAnchors(source) {
     }
     const counts = new Map();
 
+    const proseTypes = new Set([HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM]);
+
+    function isProseOnlyChunk(chunk) {
+      if (!chunk?.body?.length) return false;
+      return chunk.body.every(tok => {
+        if (!tok) return false;
+        const typeName = SYMBOL_NAME(tok.type);
+        return proseTypes.has(tok.type) || typeName === 'TEXT';
+      });
+    }
+
     for (const chunk of chunks) {
       if (!chunk.body.length) continue;
 
@@ -776,6 +785,7 @@ function buildStatementAnchors(source) {
         firstLine,
         startOffset: lineStarts[firstLine] ?? 0,
         source: statementSource,
+        isProseOnly: isProseOnlyChunk(chunk),
       });
     }
   } catch (_) {
@@ -1488,6 +1498,8 @@ class XEditor extends HTMLElement {
   }
 
   _restartWorker() {
+    this._pendingResultIds = new Set(Array.from(this._resultsById.keys()));
+    this._injectResults();
     if (this._worker) {
       this._worker.terminate();
       this._worker = null;
@@ -1567,6 +1579,12 @@ class XEditor extends HTMLElement {
         if (!statement?.source?.trim()) continue;
         this._pendingResultIds.add(statement.statementId);
         this._injectResults();
+
+        if (statement.isProseOnly) {
+          this._pendingResultIds.delete(statement.statementId);
+          continue;
+        }
+
         try {
           const statementSource = normalizeUnitLiterals(statement.source);
           const unitDisplay = unitLiteralDisplay(statementSource);

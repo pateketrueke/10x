@@ -8,6 +8,7 @@ import { execute, evaluate } from './lib/index.js';
 import Env from './lib/tree/env';
 import Expr from './lib/tree/expr';
 import Parser from './lib/tree/parser';
+import * as Symbols from './lib/tree/symbols.js';
 import { applyAdapter as applyRuntimeAdapter, createEnv as createRuntimeEnv } from './adapters/index.js';
 
 export { execute, evaluate };
@@ -16,6 +17,7 @@ export { compile, compileBundle } from './compiler/index.js';
 export * as Runtime from './runtime/index.js';
 
 export { Env, Expr, Parser };
+export * from './lib/tree/symbols.js';
 
 export { main, format } from './util';
 
