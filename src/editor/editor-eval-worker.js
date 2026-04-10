@@ -52,7 +52,9 @@ self.addEventListener('message', async ({ data }) => {
       try {
         const statementSource = normalizeUnitLiterals(statement.source);
         const unitDisplay = unitLiteralDisplay(statementSource);
+        console.log('[worker] executing:', statementSource.substring(0, 50));
         const result = await execute(statementSource, env);
+        console.log('[worker] result:', JSON.stringify(result).substring(0, 200));
         if (isFunctionDefinitionSource(statementSource)) {
           partial.statementResult = {
             statementId: statement.statementId,

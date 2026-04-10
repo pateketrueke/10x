@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <base href="/10x/" />
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>10x DevTools Playground</title>
@@ -11,8 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script type="module">
-    const candidates = ['./dist/editor.js','../dist/editor.js','/dist/editor.js','/10x/dist/editor.js'];
-    for (const c of candidates) { try { await import(c); break; } catch {} }
+    import './dist/editor.js';
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -38,10 +36,12 @@
       display: grid;
       grid-template-columns: 1fr 380px;
       height: 100vh;
+      overflow: hidden;
     }
     .editor-pane {
       display: flex;
       flex-direction: column;
+      overflow: hidden;
       border-right: 1px solid rgba(255,255,255,0.08);
     }
     .pane-header {
@@ -77,6 +77,8 @@
     #ed-devtools {
       flex: 1;
       display: block;
+      min-height: 0;
+      overflow: auto;
     }
     .devtools-pane {
       display: flex;
@@ -103,17 +105,36 @@
         <span class="pane-title">playground.md</span>
         <span class="pane-badge">LIVE</span>
       </div>
-      <x-editor id="ed-devtools" style="display:block;height:100%;"></x-editor>
+      <x-editor id="ed-devtools" style="display:block;height:100%;" value="# Counter
+
+count = @signal 0.
+
+@render &quot;#render-container&quot; @shadow @html
+  &lt;style&gt;button { padding: 0.5rem 1rem; margin: 0.25rem; }&lt;/style&gt;
+  &lt;div&gt;
+    &lt;h1&gt;Count: {count}&lt;/h1&gt;
+    &lt;button id=&quot;dec&quot;&gt;-&lt;/button&gt;
+    &lt;button id=&quot;inc&quot;&gt;+&lt;/button&gt;
+  &lt;/div&gt;
+.
+
+@on :click &quot;#dec&quot; count = count - 1.
+@on :click &quot;#inc&quot; count = count + 1.
+"></x-editor>
     </div>
     <div class="devtools-pane">
       <div class="pane-header">
         <span class="pane-title">Signals</span>
       </div>
       <div id="devtools-container"></div>
+      <div class="pane-header" style="margin-top:auto;border-top:1px solid rgba(255,255,255,0.06)">
+        <span class="pane-title">Output</span>
+      </div>
+      <div id="render-container" style="flex:1;overflow:auto;padding:0.5rem"></div>
     </div>
   </div>
   <script type="module">
-    import { devtools } from './dist/runtime-core.js';
+    import { devtools } from './dist/runtime.js';
     devtools({ docked: true, container: document.getElementById('devtools-container') });
   </script>
 </body>

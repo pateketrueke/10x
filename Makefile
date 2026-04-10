@@ -43,7 +43,7 @@ dev: src deps
 	@bun test --watch
 
 demo: build
-	@bun x serve . --listen 3131
+	@bun x serve public --listen 3131
 
 deps: package*.json
 	@(((ls node_modules | grep .) > /dev/null 2>&1) || bun install) || true

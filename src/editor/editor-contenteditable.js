@@ -16,6 +16,7 @@
 import { Parser, Env, execute, applyAdapter, HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM } from '../main.js';
 import { createBrowserAdapter } from '../adapters/browser/index.js';
 import {
+  SYMBOL_NAME,
   formatRuntimeValue,
   formatRuntimeError,
   normalizeUnitLiterals,
@@ -725,10 +726,23 @@ function buildInlineAnchors(anchors) {
 }
 
 function buildStatementAnchors(source) {
+  console.log('[buildAnchors] source length:', source.length);
   const anchors = [];
 
   try {
     const chunks = Parser.getAST(source, 'split');
+    const chunkInfo = chunks.map((c, i) => {
+      const first = c.body?.[0];
+      const last = c.body?.[c.body.length - 1];
+      const types = c.body?.map(t => String(t?.type).replace('Symbol(', '').replace(')', '')) || [];
+      return {
+        idx: i,
+        bodyLen: c.body?.length || 0,
+        types: types.slice(0, 5),
+        lines: c.lines,
+      };
+    });
+    console.log('[buildAnchors] chunks:', JSON.stringify(chunkInfo));
     const sourceLines = source.split('\n');
     const lineStarts = [];
     let offset = 0;
@@ -750,7 +764,8 @@ function buildStatementAnchors(source) {
     }
 
     for (const chunk of chunks) {
-      if (!chunk.body.length) continue;
+      console.log('[buildAnchors] processing chunk:', chunk.lines);
+      if (!chunk.body.length) { console.log('[buildAnchors] skip empty body'); continue; }
 
       let line = Array.isArray(chunk.lines) && chunk.lines.length
         ? chunk.lines[chunk.lines.length - 1]
@@ -759,25 +774,34 @@ function buildStatementAnchors(source) {
         ? chunk.lines[0]
         : line;
       let statementSource = sourceLines.slice(firstLine, line + 1).join('\n');
+      console.log('[buildAnchors] initial source:', statementSource.substring(0, 50));
 
       // Parser split can under-report multiline markup/string statement bounds.
       // If we don't see a terminating dot yet, extend until next EOL-looking line.
       if (!/\.\s*$/.test(statementSource.trimEnd())) {
+        console.log('[buildAnchors] no dot, extending...');
         let end = line;
         while (end + 1 < sourceLines.length) {
           end += 1;
           statementSource += `\n${sourceLines[end]}`;
+          console.log('[buildAnchors] extended to:', sourceLines[end].substring(0, 30));
           if (/\.\s*$/.test(sourceLines[end])) {
             line = end;
+            console.log('[buildAnchors] found dot at line', line);
             break;
           }
         }
       }
-      if (!statementSource.trim()) continue;
+      console.log('[buildAnchors] final source:', statementSource.substring(0, 50));
+      console.log('[buildAnchors] trimmed:', statementSource.trim());
+      if (!statementSource.trim()) { console.log('[buildAnchors] skip empty trimmed'); continue; }
 
+      console.log('[buildAnchors] normalizing:', statementSource.substring(0, 30));
       const normalized = normalizeStatement(statementSource);
+      console.log('[buildAnchors] normalized:', normalized);
       const nth = (counts.get(normalized) || 0) + 1;
       counts.set(normalized, nth);
+      console.log('[buildAnchors] creating anchor with id:', `${hashString(normalized)}-${nth}`);
 
       anchors.push({
         id: `${hashString(normalized)}-${nth}`,
@@ -787,8 +811,10 @@ function buildStatementAnchors(source) {
         source: statementSource,
         isProseOnly: isProseOnlyChunk(chunk),
       });
+      console.log('[buildAnchors] anchor pushed, total anchors:', anchors.length);
     }
-  } catch (_) {
+  } catch (err) {
+    console.error('[buildAnchors] error:', err);
     // Keep current anchors empty on parse failure.
   }
 
@@ -1046,6 +1072,7 @@ class XEditor extends HTMLElement {
   // Suppress onInput feedback loops while we rebuild DOM.
 
   connectedCallback() {
+    console.log('[editor] connectedCallback');
     this._shadow = this.attachShadow({ mode: 'open' });
     this._tooltipTimer = null;
     this._tooltipTarget = null;
@@ -1100,6 +1127,7 @@ class XEditor extends HTMLElement {
     this._loadReplHistory();
 
     const initial = this.textContent || this.getAttribute('value') || '';
+    console.log('[editor] initial value:', initial.substring(0, 100));
     if (initial) {
       this._applySource(initial);
       this._scheduleEval();
@@ -1166,6 +1194,7 @@ class XEditor extends HTMLElement {
     this._editable.innerHTML = '';
     this._editable.appendChild(renderTokens(source));
     this._anchors = buildStatementAnchors(source);
+    console.log('[editor] anchors:', this._anchors.map(a => ({ id: a.id, prose: a.isProseOnly, src: a.source.substring(0, 40) })));
     this._inlineAnchors = buildInlineAnchors(this._anchors);
     this._bindInlineAnchorNodes();
     this._injectResults();
@@ -1526,7 +1555,9 @@ class XEditor extends HTMLElement {
     const statements = this._anchors.map(anchor => ({
       statementId: anchor.id,
       source: anchor.source,
+      isProseOnly: anchor.isProseOnly,
     }));
+    console.log('[editor] statements:', statements.map(s => ({ id: s.statementId, prose: s.isProseOnly, src: s.source.substring(0, 40) })));
 
     const activeStatements = statements.filter(statement => !this._killedStatementIds.has(statement.statementId));
 
@@ -1588,7 +1619,9 @@ class XEditor extends HTMLElement {
         try {
           const statementSource = normalizeUnitLiterals(statement.source);
           const unitDisplay = unitLiteralDisplay(statementSource);
+          console.log('[editor] executing:', statementSource.substring(0, 80));
           const result = await execute(statementSource, env);
+          console.log('[editor] result:', typeof result, result);
           this._resultsById.delete(statement.statementId);
           Array.from(this._inlineResultsById.keys()).forEach(inlineId => {
             if (inlineId.startsWith(`${statement.statementId}:`)) {
@@ -2039,5 +2072,6 @@ class XEditor extends HTMLElement {
 }
 
 customElements.define('x-editor', XEditor);
+console.log('[editor] defined x-editor');
 
 export default XEditor;
