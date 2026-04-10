@@ -24,8 +24,8 @@ describe('Compiler', () => {
   test('should compile render/html directives to Runtime calls', () => {
     const output = compile('@render "#app" @html <h1>{count}</h1>.');
 
-    expect(output).toInclude('import * as Runtime from "./runtime";');
-    expect(output).toInclude('Runtime.render("#app", Runtime.html(() => Runtime.h("h1", null, Runtime.read(count))));');
+    expect(output).toInclude('import * as $ from "./runtime";');
+    expect(output).toInclude('$.render("#app", $.html(() => $.h("h1", null, $.read(count))));');
   });
 
   test('should compile signal assignment and on-handler updates', () => {
@@ -34,8 +34,8 @@ describe('Compiler', () => {
       '@on :click, "#btn", count = count + 1.',
     ].join('\n'));
 
-    expect(output).toInclude('const count = Runtime.signal(0, "count");');
-    expect(output).toInclude('Runtime.on("click", "#btn", () => { count.set(Runtime.read(count) + 1); });');
+    expect(output).toInclude('export const count = $.signal(0, "count");');
+    expect(output).toInclude('$.on("click", "#btn", () => { count.set($.read(count) + 1); });');
   });
 
   test('should compile shadow components to setup(host)', () => {
@@ -47,11 +47,11 @@ describe('Compiler', () => {
     ].join('\n'));
 
     expect(output).toInclude('export function setup(host) {');
-    expect(output).toInclude('Runtime.signal(Runtime.prop(host, "start", 0), "count")');
-    expect(output).toInclude('Runtime.renderShadow(host,');
-    expect(output).toInclude('Runtime.on("click", "#inc",');
+    expect(output).toInclude('$.signal($.prop(host, "start", 0), "count")');
+    expect(output).toInclude('$.renderShadow(host,');
+    expect(output).toInclude('$.on("click", "#inc",');
     expect(output).toInclude(', host.shadowRoot)');
-    expect(output).toInclude('Runtime.prop(host, "start", 0)');
+    expect(output).toInclude('$.prop(host, "start", 0)');
     expect(output).toInclude('}');
   });
 
@@ -70,7 +70,7 @@ describe('Compiler', () => {
 
   test('should pass import.meta.url to renderShadow when HMR is enabled', () => {
     const output = compile('@render @shadow @html <h1>x</h1>.', { hmr: true });
-    expect(output).toInclude('Runtime.renderShadow(host, Runtime.html(() => Runtime.h("h1", null, "x")), import.meta.url);');
+    expect(output).toInclude('$.renderShadow(host, $.html(() => $.h("h1", null, "x")), import.meta.url);');
   });
 
   test('should allow overriding runtime import path', () => {
@@ -78,7 +78,7 @@ describe('Compiler', () => {
       runtimePath: '/vendor/10x-runtime.mjs',
     });
 
-    expect(output).toInclude('import * as Runtime from "/vendor/10x-runtime.mjs";');
+    expect(output).toInclude('import * as $ from "/vendor/10x-runtime.mjs";');
   });
 
   test('should emit prose lines as comments above compiled statements', () => {
@@ -90,10 +90,10 @@ describe('Compiler', () => {
       '@on :click, "#inc", count = count + 1.',
     ].join('\n'));
 
-    expect(output).toInclude('// Counter setup');
-    expect(output).toInclude('const count = Runtime.signal(0, "count");');
-    expect(output).toInclude('// increment handler');
-    expect(output).toInclude('Runtime.on("click", "#inc", () => { count.set(Runtime.read(count) + 1); });');
+    expect(output).toInclude('// # Counter setup');
+    expect(output).toInclude('export const count = $.signal(0, "count");');
+    expect(output).toInclude('// > increment handler');
+    expect(output).toInclude('$.on("click", "#inc", () => { count.set($.read(count) + 1); });');
   });
 
   test('should compile @on directives without comma separators', () => {
@@ -102,7 +102,7 @@ describe('Compiler', () => {
       '@on :click "#inc" count = count + 1.',
     ].join('\n'));
 
-    expect(output).toInclude('Runtime.on("click", "#inc", () => { count.set(Runtime.read(count) + 1); });');
+    expect(output).toInclude('$.on("click", "#inc", () => { count.set($.read(count) + 1); });');
   });
 
   test('should compile non-DOM modules with runtime core import', () => {
@@ -113,7 +113,7 @@ describe('Compiler', () => {
     ].join('\n'));
 
     expect(output).toInclude('import { head, tail } from "./prelude";');
-    expect(output).toInclude('import * as Runtime from "./runtime";');
+    expect(output).toInclude('import * as $ from "./runtime";');
     expect(output).toInclude('export const pick = (list) => (head(tail(list)));');
   });
 
@@ -209,7 +209,7 @@ describe('Compiler', () => {
       },
     });
 
-    const runtimeImports = output.match(/import \* as Runtime from "\.\/runtime";/g) || [];
+    const runtimeImports = output.match(/import \* as \$ from "\.\/runtime";/g) || [];
     expect(runtimeImports).toHaveLength(1);
     expect(output).toInclude('// Module: /app/helper.md');
     expect(output).toInclude('// Module: /app/main.md');
@@ -236,13 +236,13 @@ describe('Compiler', () => {
 
   test('should compile @style directives for global and shadow contexts', () => {
     const globalOut = compile('@style "body { color: red; }".');
-    expect(globalOut).toInclude('Runtime.style("body { color: red; }");');
+    expect(globalOut).toInclude('$.style("body { color: red; }");');
 
     const shadowOut = compile([
       '@render @shadow @html <div class="box">hello</div>.',
       '@style "div { color: red; }".',
     ].join('\n'));
-    expect(shadowOut).toInclude('Runtime.style(host, "div { color: red; }");');
+    expect(shadowOut).toInclude('$.style(host, "div { color: red; }");');
   });
 
   test('should inject atomic css rules from class attributes', () => {
@@ -250,13 +250,13 @@ describe('Compiler', () => {
       '@render "#app" @html <div class="flex items-center gap-4 p-2 text-blue-500">x</div>.',
     ].join('\n'));
 
-    expect(output).toInclude('Runtime.style(');
+    expect(output).toInclude('$.style(');
     expect(output).toInclude('.flex{display:flex}');
     expect(output).toInclude('.items-center{align-items:center}');
     expect(output).toInclude('.gap-4{gap:16px}');
     expect(output).toInclude('.p-2{padding:8px}');
     expect(output).toInclude('.text-blue-500{color:#3b82f6}');
-    expect(output.indexOf('Runtime.style(')).toBeLessThan(output.indexOf('Runtime.render('));
+    expect(output.indexOf('$.style(')).toBeLessThan(output.indexOf('$.render('));
   });
 
   test('should allow disabling atomic css injection', () => {
@@ -279,7 +279,7 @@ describe('Compiler', () => {
     expect(output).toInclude('"d:show": visible');
     expect(output).toInclude('"d:model": inputValue');
     expect(output).toInclude('"ref": refObj');
-    expect(output).toInclude('"value": Runtime.read(inputValue)');
+    expect(output).toInclude('"value": $.read(inputValue)');
   });
 
   test('should compile @computed and html fragments', () => {
@@ -289,8 +289,8 @@ describe('Compiler', () => {
       '@render "#app" @html [<h1>{count}</h1>, <p>{double}</p>].',
     ].join('\n'));
 
-    expect(output).toInclude('const double = Runtime.computed(() => (Runtime.read(count) * 2));');
-    expect(output).toInclude('Runtime.html(() => [Runtime.h("h1"');
-    expect(output).toInclude('Runtime.h("p"');
+    expect(output).toInclude('const double = $.computed(() => ($.read(count) * 2));');
+    expect(output).toInclude('$.html(() => [$.h("h1"');
+    expect(output).toInclude('$.h("p"');
   });
 });
