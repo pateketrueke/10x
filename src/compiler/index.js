@@ -41,14 +41,24 @@ function splitStatements(tokens) {
   return out;
 }
 
-function stripMarkdownPrefix(line) {
-  return line
-    .replace(/^#{1,6}\s+/, '')
-    .replace(/^>\s+/, '')
-    .replace(/^[-*+]\s+/, '')
-    .replace(/^\d+\.\s+/, '')
-    .replace(/^```+.*$/, '')
-    .trim();
+function preserveMarkdownLine(line) {
+  return String(line || '').replace(/\s+$/, '');
+}
+
+function normalizeProseBlock(lines) {
+  const out = [];
+
+  lines.forEach(line => {
+    const isEmpty = !line.trim().length;
+    const prev = out[out.length - 1];
+    const prevIsEmpty = typeof prev === 'string' && !prev.trim().length;
+    if (isEmpty && (!out.length || prevIsEmpty)) return;
+    out.push(line);
+  });
+
+  while (out.length && !out[0].trim().length) out.shift();
+  while (out.length && !out[out.length - 1].trim().length) out.pop();
+  return out;
 }
 
 function textTokenToSource(token) {
@@ -75,43 +85,52 @@ function normalizeDirectiveArgs(body) {
 }
 
 function collectProseComments(source, statementCount) {
+  const sourceLines = String(source || '').split('\n');
   const raw = Parser.getAST(source, null);
   const commentsByStatement = Array.from({ length: statementCount }, () => []);
 
-  let pending = [];
-  let statementIndex = 0;
-  let inStatement = false;
+  const ranges = [];
+  let currentStart = null;
+  let currentEnd = null;
 
   raw.forEach(token => {
     if (token.type === EOF) return;
 
     if (token.type === EOL) {
-      if (inStatement) {
-        statementIndex++;
-        inStatement = false;
+      if (currentStart !== null) {
+        const line = Number.isFinite(token.line) ? token.line : currentEnd;
+        ranges.push({ start: currentStart, end: line });
+        currentStart = null;
+        currentEnd = null;
       }
       return;
     }
 
-    if (token.type === TEXT && !inStatement) {
-      textTokenToSource(token)
-        .split('\n')
-        .map(stripMarkdownPrefix)
-        .map(line => line.trim())
-        .filter(Boolean)
-        .forEach(line => pending.push(line));
+    if (token.type === TEXT || token.type === COMMENT || token.type === COMMENT_MULTI) return;
+
+    const line = Number.isFinite(token.line) ? token.line : null;
+    if (line === null) return;
+
+    if (currentStart === null) {
+      currentStart = line;
+      currentEnd = line;
       return;
     }
 
-    if (token.type === COMMENT || token.type === COMMENT_MULTI) return;
+    currentEnd = Math.max(currentEnd, line);
+  });
 
-    if (!inStatement) {
-      if (pending.length && statementIndex < commentsByStatement.length) {
-        commentsByStatement[statementIndex].push(...pending);
-      }
-      pending = [];
-      inStatement = true;
-    }
+  if (currentStart !== null) {
+    ranges.push({ start: currentStart, end: currentEnd });
+  }
+
+  let cursor = 0;
+  ranges.slice(0, statementCount).forEach((range, index) => {
+    const prose = sourceLines
+      .slice(cursor, range.start)
+      .map(preserveMarkdownLine);
+    commentsByStatement[index] = normalizeProseBlock(prose);
+    cursor = range.end + 1;
   });
 
   return commentsByStatement;
@@ -348,7 +367,20 @@ function quote(value) {
   return JSON.stringify(String(value));
 }
 
-function compileTag(node) {
+function indentMultiline(value, indent) {
+  return String(value)
+    .split('\n')
+    .map(line => `${indent}${line}`)
+    .join('\n');
+}
+
+function formatFirstInline(value, indent) {
+  const lines = String(value).split('\n');
+  if (lines.length === 1) return lines[0];
+  return `${lines[0]}\n${lines.slice(1).map(line => `${indent}${line}`).join('\n')}`;
+}
+
+function compileTag(node, depth = 0) {
   const attrEntries = Object.entries(node.attrs || {});
   const attrsStr = attrEntries.length === 0
     ? 'null'
@@ -358,19 +390,29 @@ function compileTag(node) {
           const passSignal = /^(d:|s:|class:|style:)/.test(k) || k === 'ref';
           return passSignal
             ? `${JSON.stringify(k)}: ${v.expr.trim()}`
-            : `${JSON.stringify(k)}: Runtime.read(${v.expr.trim()})`;
+            : `${JSON.stringify(k)}: $.read(${v.expr.trim()})`;
         }
         return `${JSON.stringify(k)}: ${JSON.stringify(String(v))}`;
       }).join(', ') + ' }';
 
   const childrenParts = (node.children || []).map(child => {
     if (typeof child === 'string') return JSON.stringify(child);
-    if (child && typeof child.expr === 'string') return `Runtime.read(${child.expr.trim()})`;
-    return compileTag(child);
+    if (child && typeof child.expr === 'string') return `$.read(${child.expr.trim()})`;
+    return compileTag(child, depth + 1);
   });
 
-  const childrenStr = childrenParts.join(', ');
-  return `Runtime.h(${JSON.stringify(node.name)}, ${attrsStr}${childrenStr ? ', ' + childrenStr : ''})`;
+  if (!childrenParts.length) {
+    return `$.h(${JSON.stringify(node.name)}, ${attrsStr})`;
+  }
+
+  const indent = '  '.repeat(depth);
+  const childIndent = '  '.repeat(depth + 1);
+  const [firstRawChild, ...restRawChildren] = childrenParts;
+  const firstChild = formatFirstInline(firstRawChild, childIndent);
+  const restChildren = restRawChildren.map(part => indentMultiline(part, childIndent));
+  const rest = restChildren.length ? `,\n${restChildren.join(',\n')}` : '';
+
+  return `$.h(${JSON.stringify(node.name)}, ${attrsStr}, ${firstChild}${rest})`;
 }
 
 function compileArgs(args, ctx) {
@@ -524,7 +566,7 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
     if (typeof token.value === 'string') {
       if (token.value === '|') return '||';
       if (token.value === '?') return '?';
-      if (ctx.signalVars.has(token.value)) return `Runtime.read(${token.value})`;
+      if (ctx.signalVars.has(token.value)) return `$.read(${token.value})`;
       return token.value;
     }
     if (token.value && typeof token.value === 'object') {
@@ -678,7 +720,7 @@ function compileHandler(token, ctx) {
 }
 
 function compileSignalDirective(body, ctx) {
-  return `Runtime.signal(${compileExpression(body, ctx)})`;
+  return `$.signal(${compileExpression(body, ctx)})`;
 }
 
 function compileIfDirective(value, ctx) {
@@ -832,19 +874,19 @@ function compileHtmlDirective(body, ctx) {
     const items = template.value
       .filter(token => token && token.type !== COMMA)
       .map(token => compileToken(token, ctx));
-    return `Runtime.html(() => [${items.join(', ')}])`;
+    return `$.html(() => [${items.join(', ')}])`;
   }
-  return `Runtime.html(() => ${compileToken(template, ctx)})`;
+  return `$.html(() => ${compileToken(template, ctx)})`;
 }
 
 function compileComputedDirective(body, ctx) {
-  return `Runtime.computed(() => ${compileExpression(body, ctx)})`;
+  return `$.computed(() => ${compileExpression(body, ctx)})`;
 }
 
 function compileStyleDirective(body, ctx) {
   const [arg] = body;
   const hostArg = ctx.shadow ? 'host, ' : '';
-  return `Runtime.style(${hostArg}${compileToken(arg, ctx)})`;
+  return `$.style(${hostArg}${compileToken(arg, ctx)})`;
 }
 
 function compileHmrFooter() {
@@ -878,10 +920,10 @@ function compileRenderDirective(body, value, ctx) {
   const htmlExpr = value.html instanceof Object ? compileHtmlDirective(value.html.getBody(), ctx) : 'undefined';
   if (value.shadow) {
     const hmrUrlArg = ctx.hmr ? ', import.meta.url' : '';
-    return `Runtime.renderShadow(host, ${htmlExpr}${hmrUrlArg})`;
+    return `$.renderShadow(host, ${htmlExpr}${hmrUrlArg})`;
   }
   const selector = body.length ? compileExpression(body, ctx) : 'undefined';
-  return `Runtime.render(${selector}, ${htmlExpr})`;
+  return `$.render(${selector}, ${htmlExpr})`;
 }
 
 function compileOnDirective(body, ctx) {
@@ -890,7 +932,7 @@ function compileOnDirective(body, ctx) {
   const selector = compileToken(selectorToken, ctx);
   const handler = compileHandler(handlerToken, ctx);
   const rootArg = ctx.shadow ? ', host.shadowRoot' : '';
-  return `Runtime.on(${eventName}, ${selector}, ${handler}${rootArg})`;
+  return `$.on(${eventName}, ${selector}, ${handler}${rootArg})`;
 }
 
 function compileOnPropDirective(onBody, propBody, ctx) {
@@ -913,7 +955,7 @@ function compileOnPropDirective(onBody, propBody, ctx) {
   const propName = compileToken(propArgs[0], ctx);
   const fallback = compileToken(propArgs[1], ctx);
   const rootArg = ctx.shadow ? ', host.shadowRoot' : '';
-  return `Runtime.on(${eventName}, ${selector}, () => { ${signalName}.set(Runtime.prop(host, ${propName}, ${fallback})); }${rootArg})`;
+  return `$.on(${eventName}, ${selector}, () => { ${signalName}.set($.prop(host, ${propName}, ${fallback})); }${rootArg})`;
 }
 
 function compileDirectiveObject(token, ctx) {
@@ -1030,15 +1072,15 @@ function compileDefinition(token, asStatement = false, ctx = { signalVars: new S
       const propArgs = head.value.prop.getBody()[0].getBody();
       const propName = compileToken(propArgs[0], ctx);
       const fallback = compileToken(propArgs[1], ctx);
-      const out = `${declConst} ${name} = Runtime.signal(Runtime.prop(host, ${propName}, ${fallback}), ${JSON.stringify(name)})`;
+      const out = `${declConst} ${name} = $.signal($.prop(host, ${propName}, ${fallback}), ${JSON.stringify(name)})`;
       return asStatement ? `${out};` : out;
     }
-    const out = `${declConst} ${name} = Runtime.signal(${compileExpression(head.value.signal.getBody(), ctx)}, ${JSON.stringify(name)})`;
+    const out = `${declConst} ${name} = $.signal(${compileExpression(head.value.signal.getBody(), ctx)}, ${JSON.stringify(name)})`;
     return asStatement ? `${out};` : out;
   }
 
   if (head.isObject && head.value && head.value.computed) {
-    const out = `${declConst} ${name} = Runtime.computed(() => ${compileExpression(head.value.computed.getBody(), ctx)})`;
+    const out = `${declConst} ${name} = $.computed(() => ${compileExpression(head.value.computed.getBody(), ctx)})`;
     return asStatement ? `${out};` : out;
   }
 
@@ -1239,10 +1281,10 @@ export function compile(source, options = {}) {
   const atomicCss = options.atomicCss === false ? '' : generateAtomicCss(collectAtomicClasses(statements));
   if (atomicCss) {
     const hostArg = hasShadow ? 'host, ' : '';
-    lines.unshift(`Runtime.style(${hostArg}${JSON.stringify(atomicCss)});`);
+    lines.unshift(`$.style(${hostArg}${JSON.stringify(atomicCss)});`);
   }
 
-  const requiresRuntime = lines.some(line => line.includes('Runtime.'));
+  const requiresRuntime = lines.some(line => line.includes('$.'));
   const usesRange = lines.some(line => line.includes('range('));
   const output = [];
 
@@ -1259,7 +1301,7 @@ export function compile(source, options = {}) {
     });
     if (requiresRuntime) {
       const importPath = needsDom ? runtimePath : getCoreRuntimePath(runtimePath);
-      output.push(`import * as Runtime from ${JSON.stringify(importPath)};`);
+      output.push(`import * as $ from ${JSON.stringify(importPath)};`);
     }
   }
 

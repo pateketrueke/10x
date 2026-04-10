@@ -9,12 +9,7 @@
   :alias (:h :help),
 ).
 
-usageInfo = "
-  Usage info:
-
-  -h, --help  Display this info
-      --ask   Prompts user for input
-".
+usageInfo = "\nUsage info:\n\n-h, --help  Display this info\n    --ask   Prompts user for input\n".
 
 messageOutput =
   :help => usageInfo | :ask => (
