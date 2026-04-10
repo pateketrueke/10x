@@ -1,6 +1,15 @@
 const SIGNAL = Symbol('10x.signal');
 
 let currentEffect = null;
+let devtoolsActive = false;
+
+export function setDevtoolsActive(active) {
+  devtoolsActive = active;
+}
+
+export function isDevtoolsActive() {
+  return devtoolsActive;
+}
 const globalRegistry = (() => {
   if (!globalThis.__10x_signals) {
     globalThis.__10x_signals = new Map();
@@ -12,6 +21,8 @@ export function signal(initialValue, name) {
   const state = {
     [SIGNAL]: true,
     _value: initialValue,
+    _history: [],
+    _moduleUrl: undefined,
     subs: new Set(),
     get value() {
       return this.get();
@@ -24,7 +35,12 @@ export function signal(initialValue, name) {
       return this._value;
     },
     set(nextValue) {
+      const prev = this._value;
       this._value = nextValue;
+      if (devtoolsActive && this._history) {
+        this._history.push({ value: nextValue, prev, ts: Date.now() });
+        if (this._history.length > 20) this._history.shift();
+      }
       this.subs.forEach(fn => fn());
       return this._value;
     },

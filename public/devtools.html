@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="/10x/" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10x DevTools Playground</title>
+  <meta name="description" content="Debug and inspect 10x signals in real-time">
+  <link rel="icon" href="./favicon.ico" sizes="any" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script type="module">
+    const candidates = ['./dist/editor.js','../dist/editor.js','/dist/editor.js','/10x/dist/editor.js'];
+    for (const c of candidates) { try { await import(c); break; } catch {} }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg: #090c12;
+      --bg-alt: #0d1119;
+      --ink: #e2e8f0;
+      --muted: #64748b;
+      --accent: #2dd4bf;
+      --accent2: #818cf8;
+      --mono: "IBM Plex Mono", monospace;
+      --sans: "Space Grotesk", sans-serif;
+    }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background: var(--bg);
+      height: 100vh;
+      overflow: hidden;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      height: 100vh;
+    }
+    .editor-pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    .pane-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.025);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .pane-title {
+      font: 600 .82rem var(--mono);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .tbar-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .tbar-dot.r { background: #ff5f57; }
+    .tbar-dot.y { background: #ffbd2e; }
+    .tbar-dot.g { background: #28c840; }
+    .pane-badge {
+      margin-left: auto;
+      font: 600 .67rem var(--mono);
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: rgba(45,212,191,0.1);
+      border: 1px solid rgba(45,212,191,0.25);
+      border-radius: 99px;
+      padding: 0.18rem 0.5rem;
+    }
+    #ed-devtools {
+      flex: 1;
+      display: block;
+    }
+    .devtools-pane {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-alt);
+    }
+    #devtools-container {
+      flex: 1;
+      overflow: hidden;
+    }
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .devtools-pane { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <div class="editor-pane">
+      <div class="pane-header">
+        <span class="tbar-dot r"></span>
+        <span class="tbar-dot y"></span>
+        <span class="tbar-dot g"></span>
+        <span class="pane-title">playground.md</span>
+        <span class="pane-badge">LIVE</span>
+      </div>
+      <x-editor id="ed-devtools" style="display:block;height:100%;"></x-editor>
+    </div>
+    <div class="devtools-pane">
+      <div class="pane-header">
+        <span class="pane-title">Signals</span>
+      </div>
+      <div id="devtools-container"></div>
+    </div>
+  </div>
+  <script type="module">
+    import { devtools } from './dist/runtime-core.js';
+    devtools({ docked: true, container: document.getElementById('devtools-container') });
+  </script>
+</body>
+</html>
