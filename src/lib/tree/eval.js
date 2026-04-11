@@ -713,10 +713,19 @@ export default class Eval {
           }
 
           const parts = await this.evalTagExpr(child.expr);
-          parts.forEach(part => {
-            const fixed = normalizeChild(part);
-            if (fixed !== null && typeof fixed !== 'undefined') children.push(fixed);
-          });
+          if (parts.length === 1) {
+            const fixed = normalizeChild(parts[0]);
+            if (fixed !== null && typeof fixed !== 'undefined') {
+              // Preserve expr key so tagToVdom can inject live signals from signalMap
+              const isTagNode = fixed && typeof fixed === 'object' && typeof fixed.name === 'string';
+              children.push(isTagNode ? fixed : { expr: child.expr, _resolved: fixed });
+            }
+          } else {
+            parts.forEach(part => {
+              const fixed = normalizeChild(part);
+              if (fixed !== null && typeof fixed !== 'undefined') children.push(fixed);
+            });
+          }
           continue;
         }
 

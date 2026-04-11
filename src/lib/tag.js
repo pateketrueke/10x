@@ -270,7 +270,11 @@ export function renderTag(node) {
   const children = (node.children || []).map(child => {
     if (typeof child === 'string') return escapeText(child);
     if (typeof child === 'number' || typeof child === 'boolean') return escapeText(String(child));
-    if (child && typeof child.expr === 'string') return `#{${child.expr}}`;
+    if (child && typeof child.expr === 'string') {
+      return child._resolved !== undefined && child._resolved !== null
+        ? escapeText(String(child._resolved))
+        : `#{${child.expr}}`;
+    }
     return renderTag(child);
   }).join('');
 
