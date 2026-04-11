@@ -38,6 +38,14 @@ function lintMarkdown(source) {
     if (/^#{1,6}\s.+\.$/.test(trimmed) || /^[-*+]\s.+\.$/.test(trimmed)) {
       warnings.push({ line: i, code: 'trailing-dot', message: 'Trailing `.` on heading/list item may conflict with EOL token' });
     }
+
+    if (/^\s*@on\b/.test(trimmed) && /\s@shadow\.\s*$/.test(trimmed)) {
+      warnings.push({
+        line: i,
+        code: 'on-shadow-order',
+        message: 'Prefer canonical order: `@on ... @shadow <handler>.`',
+      });
+    }
   }
 
   if (inFence) {
@@ -67,6 +75,13 @@ function fixMarkdown(source) {
 
     if (/^#{1,6}\s.+\.$/.test(trimmed) || /^[-*+]\s.+\.$/.test(trimmed)) {
       return line.replace(/\.$/, '');
+    }
+
+    if (/^\s*@on\b/.test(trimmed) && /\s@shadow\.\s*$/.test(trimmed)) {
+      const fixed = line.match(/^(\s*@on\s+\S+\s+("[^"]+"|'[^']+'|\S+)\s+)(.+?)\s+@shadow\.\s*$/);
+      if (fixed) {
+        return `${fixed[1]}@shadow ${fixed[3]}.`;
+      }
     }
 
     return line;
@@ -177,6 +192,15 @@ x = 1
 \`\`\``;
       const fixed = fixMarkdown(input);
       expect(fixed).toEqual(input);
+    });
+
+    test('warns and fixes non-canonical @on shadow ordering', () => {
+      const input = '@on :click "#btn" count = count + 1 @shadow.';
+      const warnings = lintMarkdown(input);
+      const fixed = fixMarkdown(input);
+
+      expect(warnings.filter(w => w.code === 'on-shadow-order').length).toEqual(1);
+      expect(fixed).toEqual('@on :click "#btn" @shadow count = count + 1.');
     });
   });
 });

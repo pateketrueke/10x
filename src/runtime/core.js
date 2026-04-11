@@ -31,7 +31,10 @@ export function signal(initialValue, name) {
       this.set(nextValue);
     },
     get() {
-      if (currentEffect) this.subs.add(currentEffect);
+      if (currentEffect) {
+        this.subs.add(currentEffect);
+        if (currentEffect._deps) currentEffect._deps.add(this);
+      }
       return this._value;
     },
     set(nextValue) {
@@ -41,7 +44,7 @@ export function signal(initialValue, name) {
         this._history.push({ value: nextValue, prev, ts: Date.now() });
         if (this._history.length > 20) this._history.shift();
       }
-      this.subs.forEach(fn => fn());
+      Array.from(this.subs).forEach(fn => fn());
       return this._value;
     },
     peek() {
@@ -63,7 +66,17 @@ export function read(value) {
 }
 
 export function effect(fn) {
+  const cleanup = () => {
+    if (!run._deps) return;
+    run._deps.forEach(dep => {
+      if (dep && dep.subs) dep.subs.delete(run);
+    });
+    run._deps.clear();
+  };
+
   const run = () => {
+    if (run._stopped) return undefined;
+    cleanup();
     currentEffect = run;
     let result;
     try {
@@ -81,6 +94,12 @@ export function effect(fn) {
 
     currentEffect = null;
     return result;
+  };
+  run._deps = new Set();
+  run._stopped = false;
+  run.stop = () => {
+    run._stopped = true;
+    cleanup();
   };
 
   run();

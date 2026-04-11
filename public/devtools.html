@@ -109,7 +109,7 @@
 
 count = @signal 0.
 
-@render &quot;#render-container&quot; @html
+@render &quot;#render-container&quot; @shadow @html
   &lt;style&gt;button { padding: 0.5rem 1rem; margin: 0.25rem; }&lt;/style&gt;
   &lt;div&gt;
     &lt;h1&gt;Count: {count}&lt;/h1&gt;
@@ -118,8 +118,8 @@ count = @signal 0.
   &lt;/div&gt;
 .
 
-@on :click &quot;#dec&quot; count = count - 1.
-@on :click &quot;#inc&quot; count = count + 1.
+@on :click &quot;#dec&quot; @shadow count = count - 1.
+@on :click &quot;#inc&quot; @shadow count = count + 1.
 "></x-editor>
     </div>
     <div class="devtools-pane">

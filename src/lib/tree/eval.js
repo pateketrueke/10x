@@ -1605,6 +1605,7 @@ export default class Eval {
       && typeof candidate.get === 'function'
       && typeof candidate.set === 'function'
     );
+    const hasShadow = isDirectiveStmt(value.shadow);
     const htmlTextFromValue = (entry) => {
       if (entry === null || typeof entry === 'undefined') return '';
 
@@ -1622,6 +1623,39 @@ export default class Eval {
       }
 
       return String(entry);
+    };
+    const renderDisposers = environment.__xRenderDisposers instanceof Map
+      ? environment.__xRenderDisposers
+      : (environment.__xRenderDisposers = new Map());
+    const onDisposers = environment.__xOnDisposers instanceof Map
+      ? environment.__xOnDisposers
+      : (environment.__xOnDisposers = new Map());
+    const resolveShadowHost = (candidate) => {
+      let host = candidate;
+
+      if (typeof host === 'string') {
+        if (typeof document === 'undefined' || !document.querySelector) {
+          raise(`Shadow host not found: ${host}`, parentTokenInfo);
+        }
+        host = document.querySelector(host);
+      }
+
+      if (!host) {
+        host = environment.__xLastShadowHost || null;
+      }
+
+      if (!host || typeof host !== 'object') {
+        raise('Shadow host not found', parentTokenInfo);
+      }
+
+      if (!host.shadowRoot) {
+        if (typeof host.attachShadow !== 'function') {
+          raise('Shadow host does not support attachShadow', parentTokenInfo);
+        }
+        host.attachShadow({ mode: 'open' });
+      }
+
+      return host;
     };
 
     let isDone;
@@ -1791,11 +1825,26 @@ export default class Eval {
       const selector = selectorTokens.length
         ? toPlain(selectorTokens.length === 1 ? selectorTokens[0] : selectorTokens)
         : undefined;
+      const shadowArgs = hasShadow ? normalizeDirectiveArgs(value.shadow) : [];
+      let shadowSelector;
+      if (shadowArgs.length) {
+        const shadowTokens = await Eval.do(shadowArgs, environment, 'Expr', true, parentTokenInfo);
+        if (shadowTokens.length) {
+          shadowSelector = toPlain(shadowTokens.length === 1 ? shadowTokens[0] : shadowTokens);
+        }
+      }
 
       if (isDirectiveStmt(value.html)) {
         const html = resolveRuntimeFn('html');
-        const render = resolveRuntimeFn('render');
+        const render = hasShadow ? resolveRuntimeFn('renderShadow') : resolveRuntimeFn('render');
         const htmlBody = normalizeDirectiveArgs(value.html);
+        const renderKey = hasShadow
+          ? `shadow:${typeof shadowSelector !== 'undefined' ? shadowSelector : selector || '__last_shadow__'}`
+          : `dom:${selector || '__default__'}`;
+        const previousRender = renderDisposers.get(renderKey);
+        if (previousRender && typeof previousRender.stop === 'function') {
+          previousRender.stop();
+        }
 
         const view = html(async () => {
           const scope = new Env(environment);
@@ -1821,7 +1870,14 @@ export default class Eval {
           return htmlTextFromValue(rendered.length === 1 ? rendered[0] : rendered);
         });
 
-        render(selector, view);
+        if (hasShadow) {
+          const host = resolveShadowHost(typeof shadowSelector !== 'undefined' ? shadowSelector : selector);
+          environment.__xLastShadowHost = host;
+          if (host.shadowRoot) host.shadowRoot.innerHTML = '';
+          renderDisposers.set(renderKey, render(host, view));
+        } else {
+          renderDisposers.set(renderKey, render(selector, view));
+        }
       }
 
       isDone = true;
@@ -1830,15 +1886,44 @@ export default class Eval {
     if (isDirectiveStmt(value.on)) {
       const on = resolveRuntimeFn('on');
       const args = normalizeDirectiveArgs(value.on);
-      if (args.length < 3) {
+      const shadowParts = hasShadow ? normalizeDirectiveArgs(value.shadow) : [];
+      const unwrapHandlerToken = (candidate) => {
+        if (!candidate) return null;
+        if (candidate.isCallable) return candidate;
+        if (candidate.isBlock && candidate.hasBody) {
+          const body = candidate.getBody();
+          if (body.length === 1 && body[0] && body[0].isCallable) return body[0];
+        }
+        return null;
+      };
+
+      let eventToken = args[0];
+      let selectorToken = args[1];
+      let handlerToken = args[2];
+
+      if (!handlerToken && shadowParts.length) {
+        const maybeHandler = unwrapHandlerToken(shadowParts[0]);
+        if (maybeHandler) {
+          handlerToken = maybeHandler;
+          shadowParts.shift();
+        }
+      }
+
+      if (!eventToken || !selectorToken || !handlerToken) {
         raise('`@on` expects event, selector and handler', parentTokenInfo);
       }
 
-      const [eventToken, selectorToken, handlerToken] = args;
       const [eventValue] = await Eval.do([eventToken], environment, 'Expr', true, parentTokenInfo);
       const [selectorValue] = await Eval.do([selectorToken], environment, 'Expr', true, parentTokenInfo);
       const eventName = toPlain(eventValue);
       const selector = toPlain(selectorValue);
+      let shadowSelector;
+      if (shadowParts.length) {
+        const shadowTokens = await Eval.do(shadowParts, environment, 'Expr', true, parentTokenInfo);
+        if (shadowTokens.length) {
+          shadowSelector = toPlain(shadowTokens.length === 1 ? shadowTokens[0] : shadowTokens);
+        }
+      }
 
       let handler;
 
@@ -1872,7 +1957,16 @@ export default class Eval {
         handler = typeof resolvedHandler === 'function' ? resolvedHandler : () => {};
       }
 
-      on(eventName, selector, handler);
+      const shadowRoot = hasShadow
+        ? resolveShadowHost(typeof shadowSelector !== 'undefined' ? shadowSelector : undefined).shadowRoot
+        : undefined;
+
+      const onKey = `${eventName}::${selector}::${hasShadow
+        ? (typeof shadowSelector !== 'undefined' ? shadowSelector : '__last_shadow__')
+        : 'document'}`;
+      const previousOn = onDisposers.get(onKey);
+      if (typeof previousOn === 'function') previousOn();
+      onDisposers.set(onKey, on(eventName, selector, handler, shadowRoot));
       isDone = true;
     }
 
