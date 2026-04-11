@@ -114,7 +114,7 @@ describe('Eval', () => {
       expect(await run(`
         @import render @from "Prelude".
         x = 2.
-        render(<div n={x}>{x + 1}</div>).
+        render(<div n={x}>#{x + 1}</div>).
       `)).toEqual([Expr.value('<div n="2">3</div>')]);
 
       expect(await run(`
@@ -126,7 +126,7 @@ describe('Eval', () => {
       expect(await run(`
         @import render @from "Prelude".
         view = -> <span>ok</span>.
-        render(<div>{@render view()}</div>).
+        render(<div>#{@render view()}</div>).
       `)).toEqual([Expr.value('<div><span>ok</span></div>')]);
 
       expect(await run(`

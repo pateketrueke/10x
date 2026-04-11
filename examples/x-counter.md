@@ -15,11 +15,11 @@ count = @signal @prop "start" 0.
 ## View
 
 The UI is rendered into `@shadow`, so styles and markup stay scoped.
-Whenever `count` changes, `{count}` updates automatically.
+Whenever `count` changes, `#{count}` updates automatically.
 
 @render @shadow @html
   <div class="counter">
-    <h1>{count}</h1>
+    <h1>#{count}</h1>
     <div class="actions">
       <button id="dec">−</button>
       <button id="inc">+</button>

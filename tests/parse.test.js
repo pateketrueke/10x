@@ -34,21 +34,15 @@ y _z_`;
   });
 
   test('should parse markup tags', () => {
-    expect(Parser.getAST(`
-      <div (title) class="static #{dyn}">
-        Hello #{name}!
-      </div>
-    `)).toEqual([Expr.from(STRING, [
-      Expr.value('<div (title) class="static '),
-      Expr.from(PLUS),
-      Expr.body([Expr.local('dyn')]),
-      Expr.from(PLUS),
-      Expr.value('">\n        Hello '),
-      Expr.from(PLUS),
-      Expr.body([Expr.local('name')]),
-      Expr.from(PLUS),
-      Expr.value('!\n      </div>'),
-    ])]);
+    // #{name} in tag content is interpolated by parseTag (not the scanner)
+    expect(Parser.getAST('<div class="box">Hello #{name}!</div>')).toEqual([
+      Expr.tag({
+        name: 'div',
+        attrs: { class: 'box' },
+        children: ['Hello ', { expr: 'name' }, '!'],
+        selfClosing: false,
+      }),
+    ]);
   });
 
   test('should parse simple markup literal as tag value', () => {
@@ -63,7 +57,8 @@ y _z_`;
   });
 
   test('should parse tag expression attrs and children', () => {
-    expect(Parser.getAST('<div class={kind}>{x+1}</div>')).toEqual([
+    // #{expr} in content = interpolation; {expr} = plain text; attr={expr} unchanged
+    expect(Parser.getAST('<div class={kind}>#{x+1}</div>')).toEqual([
       Expr.tag({
         name: 'div',
         attrs: {
@@ -76,7 +71,7 @@ y _z_`;
   });
 
   test('should parse render directive expressions in tags', () => {
-    expect(Parser.getAST('<div>{@render view()}</div>')).toEqual([
+    expect(Parser.getAST('<div>#{@render view()}</div>')).toEqual([
       Expr.tag({
         name: 'div',
         attrs: {},

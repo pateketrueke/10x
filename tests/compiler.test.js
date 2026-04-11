@@ -22,7 +22,7 @@ describe('Compiler', () => {
   });
 
   test('should compile render/html directives to Runtime calls', () => {
-    const output = compile('@render "#app" @html <h1>{count}</h1>.');
+    const output = compile('@render "#app" @html <h1>#{count}</h1>.');
 
     expect(output).toInclude('import * as $ from "./runtime";');
     expect(output).toInclude('$.render("#app", $.html(() => $.h("h1", null, $.read(count))));');
@@ -41,7 +41,7 @@ describe('Compiler', () => {
   test('should compile shadow components to setup(host)', () => {
     const output = compile([
       'count = @signal @prop "start" 0.',
-      '@render @shadow @html <h1>{count}</h1>.',
+      '@render @shadow @html <h1>#{count}</h1>.',
       '@on :click, "#inc", count = count + 1.',
       '@on :click, "#reset", count = @prop "start" 0.',
     ].join('\n'));
@@ -74,7 +74,7 @@ describe('Compiler', () => {
   });
 
   test('should allow overriding runtime import path', () => {
-    const output = compile('@render "#app" @html <h1>{count}</h1>.', {
+    const output = compile('@render "#app" @html <h1>#{count}</h1>.', {
       runtimePath: '/vendor/10x-runtime.mjs',
     });
 
@@ -286,7 +286,7 @@ describe('Compiler', () => {
     const output = compile([
       'count = @signal 1.',
       'double = @computed count * 2.',
-      '@render "#app" @html [<h1>{count}</h1>, <p>{double}</p>].',
+      '@render "#app" @html [<h1>#{count}</h1>, <p>#{double}</p>].',
     ].join('\n'));
 
     expect(output).toInclude('const double = $.computed(() => ($.read(count) * 2));');

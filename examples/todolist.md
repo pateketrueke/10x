@@ -21,8 +21,8 @@ The template reads `count` and `todos` directly, and the runtime subscribes to b
 @render "#app" @html
   <section class="todo-card">
     <h1>TodoList</h1>
-    <p class="meta">items added: {count}</p>
-    <p class="items">{todos}</p>
+    <p class="meta">items added: #{count}</p>
+    <p class="items">#{todos}</p>
     <div class="actions">
       <button id="add">+ add item</button>
       <button id="clear">clear</button>

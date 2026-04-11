@@ -734,7 +734,7 @@ export default class Scanner {
   }
 
   subString(chunk, isMarkup, tokenInfo) {
-    if (chunk.indexOf('#{') === -1) {
+    if (chunk.indexOf('#{') === -1 || isMarkup) {
       this.addToken(STRING, chunk, tokenInfo);
       return;
     }

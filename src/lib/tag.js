@@ -107,7 +107,12 @@ function parseAttrs(input, state) {
 function parseText(input, state) {
   const start = state.i;
 
-  while (state.i < input.length && input[state.i] !== '<' && input[state.i] !== '{') state.i++;
+  while (state.i < input.length) {
+    const ch = input[state.i];
+    if (ch === '<') break;
+    if (ch === '#' && input[state.i + 1] === '{') break;
+    state.i++;
+  }
   return input.slice(start, state.i);
 }
 
@@ -212,7 +217,8 @@ function parseNode(input, state) {
       continue;
     }
 
-    if (input[state.i] === '{') {
+    if (input[state.i] === '#' && input[state.i + 1] === '{') {
+      state.i++; // skip '#'
       node.children.push(readExpr(input, state));
       continue;
     }
@@ -264,7 +270,7 @@ export function renderTag(node) {
   const children = (node.children || []).map(child => {
     if (typeof child === 'string') return escapeText(child);
     if (typeof child === 'number' || typeof child === 'boolean') return escapeText(String(child));
-    if (child && typeof child.expr === 'string') return '';
+    if (child && typeof child.expr === 'string') return `#{${child.expr}}`;
     return renderTag(child);
   }).join('');
 

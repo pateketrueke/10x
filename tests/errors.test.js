@@ -73,13 +73,10 @@ describe('Errors', () => {
       test('should report failures within markup', async () => {
         const env = new Env();
 
-        expect(await run('tag = <div class="#{"static #{bar}"}">x</div>', env)).toEqual([]);
+        expect(await run('tag = <div>#{bar}</div>', env)).toEqual([]);
         expect(await run('tag', env)).toBeUndefined();
 
         expect(run.failure.message).toContain('Undeclared local `bar`');
-        expect(run.failure.line, 0);
-        expect(run.failure.col, 30);
-        expect(run.failure.prevToken).toBeUndefined();
       });
     });
 

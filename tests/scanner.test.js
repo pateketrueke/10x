@@ -95,7 +95,7 @@ describe('Scanner', () => {
 
   test('can scan interpolation', () => {
     expect(getTokens('"foo#{bar/ 2+"BUZZ"}!!"')).toEqual(['foo', '+', '#{', 'bar', '/', ' ', '2', '+', 'BUZZ', '}', '+', '!!']);
-    expect(getTokens('<foo>#{bar}</foo>')).toEqual(['<foo>', '+', '#{', 'bar', '}', '+', '</foo>']);
+    expect(getTokens('<foo>#{bar}</foo>')).toEqual(['<foo>#{bar}</foo>']);
   });
 
   test('can scan comments', () => {

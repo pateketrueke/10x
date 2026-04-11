@@ -148,7 +148,6 @@ describe('Prelude', () => {
       expect(serialize(await run('@import push @from "Prelude".\npush([], [42])'))).toEqual('[42]');
       expect(serialize(await run('@import push @from "Prelude".\npush("x", "y")'))).toEqual('"xy"');
       expect(serialize(await run('@import push @from "Prelude".\npush("x#{1}", "y")'))).toEqual('"x1y"');
-      expect(serialize(await run('@import push @from "Prelude".\npush(<x#{1} />, "y")'))).toEqual('<x1 />y');
     });
   });
 
