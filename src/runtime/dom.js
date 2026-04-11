@@ -1,4 +1,4 @@
-import { h, mount, patch } from 'somedom';
+import { h, mount, patch, isNode } from 'somedom';
 import { effect } from './core.js';
 
 export { h };
@@ -133,7 +133,7 @@ export function render(selectorOrElement, view) {
   const remount = next => {
     target.innerHTML = '';
     mount(target, next);
-    root = target.firstChild;
+    root = isNode(next) ? target.firstChild : null;
     prev = next;
   };
 
@@ -145,16 +145,18 @@ export function render(selectorOrElement, view) {
       root = null;
     } else if (!prev) {
       mount(target, next);
-      root = target.firstChild;
+      root = isNode(next) ? target.firstChild : null;
       prev = next;
-    } else {
+    } else if (root) {
       try {
         const node = await Promise.resolve().then(() => patch(root, prev, next));
-        root = node || root || target.firstChild;
+        root = node || root;
         prev = next;
       } catch (_) {
         remount(next);
       }
+    } else {
+      remount(next);
     }
   });
 }
@@ -209,7 +211,7 @@ export function renderShadow(host, view, moduleUrl) {
   const remount = next => {
     outlet.innerHTML = '';
     mount(outlet, next);
-    root = outlet.firstChild;
+    root = isNode(next) ? outlet.firstChild : null;
     prev = next;
   };
 
@@ -221,16 +223,18 @@ export function renderShadow(host, view, moduleUrl) {
       root = null;
     } else if (!prev) {
       mount(outlet, next);
-      root = outlet.firstChild;
+      root = isNode(next) ? outlet.firstChild : null;
       prev = next;
-    } else {
+    } else if (root) {
       try {
         const node = await Promise.resolve().then(() => patch(root, prev, next));
-        root = node || root || outlet.firstChild;
+        root = node || root;
         prev = next;
       } catch (_) {
         remount(next);
       }
+    } else {
+      remount(next);
     }
   });
 }
