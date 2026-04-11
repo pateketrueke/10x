@@ -85,6 +85,10 @@ export function signal(initialValue, name) {
     peek() {
       return this._value;
     },
+    subscribe(cb) {
+      this.subs.add(cb);
+      return () => this.subs.delete(cb);
+    },
   };
 
   globalRegistry.set(key, state);

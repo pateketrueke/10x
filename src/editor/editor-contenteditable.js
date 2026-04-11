@@ -29,6 +29,7 @@ import {
   catalogSymbolHint,
   isFunctionDefinitionSource,
   extractInlineExpressions,
+  emitEditorRuntimeLog,
   bootstrapEnv,
 } from './editor-runtime-shared.js';
 
@@ -1173,6 +1174,8 @@ class XEditor extends HTMLElement {
     this._inlineResultsById = new Map();
     this._inlineAnchorNodes = new Map();
     this._signalSnapshot = [];
+    this._mainThreadRenderDisposers = new Map();
+    this._mainThreadOnDisposers = new Map();
     this._killedStatementIds = new Set();
     this._rendering = false;
 
@@ -1224,6 +1227,7 @@ class XEditor extends HTMLElement {
       this._worker.terminate();
       this._worker = null;
     }
+    this._clearMainThreadRuntimeEffects();
   }
 
   get value() { return this._extractText(); }
@@ -1547,10 +1551,19 @@ class XEditor extends HTMLElement {
       this._worker = new Worker(workerUrl, { type: 'module' });
       this._worker.addEventListener('message', ({ data }) => {
         const {
-          requestId, statementId, start, completed, statementResult, inlineResults, done, error,
+          requestId, statementId, start, completed, statementResult, inlineResults, done, error, runtimeLog,
         } = data || {};
         if (!requestId || requestId < this._appliedEvalRequestId) return;
         this._appliedEvalRequestId = requestId;
+
+        if (runtimeLog && typeof globalThis.__10x_runtime_log === 'function') {
+          try {
+            globalThis.__10x_runtime_log(runtimeLog);
+          } catch (_) {
+            // no-op
+          }
+          return;
+        }
 
         if (error) {
           this._pendingResultIds = new Set();
@@ -1641,6 +1654,7 @@ class XEditor extends HTMLElement {
     }
 
     if (!text.trim() || !this._anchors.length) {
+      this._clearMainThreadRuntimeEffects();
       this._killedStatementIds = new Set();
       this._pendingResultIds = new Set();
       this._resultsById = new Map();
@@ -1655,7 +1669,7 @@ class XEditor extends HTMLElement {
       source: anchor.source,
       isProseOnly: anchor.isProseOnly,
     }));
-    console.log('[editor] statements:', statements.map(s => ({ id: s.statementId, prose: s.isProseOnly, src: s.source.substring(0, 40) })));
+    emitEditorRuntimeLog('debug', '[editor] statements:', statements.map(s => ({ id: s.statementId, prose: s.isProseOnly, src: s.source.substring(0, 40) })));
 
     const activeStatements = statements.filter(statement => !this._killedStatementIds.has(statement.statementId));
 
@@ -1685,6 +1699,7 @@ class XEditor extends HTMLElement {
     this._injectResults();
 
     if (this._worker && !needsMainThreadRuntime) {
+      this._clearMainThreadRuntimeEffects();
       // Abort previous long-running evaluation (e.g. fib(99)) so new input is responsive.
       if (this._evalRequestId > this._appliedEvalRequestId) {
         this._restartWorker();
@@ -1695,6 +1710,7 @@ class XEditor extends HTMLElement {
         requestId,
         statements: activeStatements,
         skipStatementIds: Array.from(this._killedStatementIds),
+        resetSignals: true,
       });
       return;
     }
@@ -1707,7 +1723,11 @@ class XEditor extends HTMLElement {
 
     this._evaluating = true;
     try {
+      this._clearMainThreadRuntimeEffects();
+      getSignalRegistry().clear();
       const env = new Env();
+      env.__xRenderDisposers = this._mainThreadRenderDisposers;
+      env.__xOnDisposers = this._mainThreadOnDisposers;
       await bootstrapEnv(env, execute);
 
       for (const statement of statements) {
@@ -1723,9 +1743,9 @@ class XEditor extends HTMLElement {
         try {
           const statementSource = normalizeUnitLiterals(statement.source);
           const unitDisplay = unitLiteralDisplay(statementSource);
-          console.log('[editor] executing:', statementSource.substring(0, 80));
+          emitEditorRuntimeLog('info', '[editor] executing:', statementSource.substring(0, 80));
           const result = await execute(statementSource, env);
-          console.log('[editor] result:', typeof result, result);
+          emitEditorRuntimeLog('info', '[editor] result:', typeof result, result);
           this._resultsById.delete(statement.statementId);
           Array.from(this._inlineResultsById.keys()).forEach(inlineId => {
             if (inlineId.startsWith(`${statement.statementId}:`)) {
@@ -1833,6 +1853,30 @@ class XEditor extends HTMLElement {
       this._emitError(e);
     } finally {
       this._evaluating = false;
+    }
+  }
+
+  _clearMainThreadRuntimeEffects() {
+    if (this._mainThreadRenderDisposers instanceof Map) {
+      this._mainThreadRenderDisposers.forEach((dispose) => {
+        if (dispose && typeof dispose.stop === 'function') {
+          dispose.stop();
+          return;
+        }
+        if (typeof dispose === 'function') {
+          dispose();
+        }
+      });
+      this._mainThreadRenderDisposers.clear();
+    }
+
+    if (this._mainThreadOnDisposers instanceof Map) {
+      this._mainThreadOnDisposers.forEach((dispose) => {
+        if (typeof dispose === 'function') {
+          dispose();
+        }
+      });
+      this._mainThreadOnDisposers.clear();
     }
   }
 

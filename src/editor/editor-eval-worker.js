@@ -17,6 +17,18 @@ import {
 
 applyAdapter(createBrowserAdapter());
 
+function postRuntimeLog(requestId, level, ...args) {
+  self.postMessage({
+    requestId,
+    runtimeLog: {
+      source: 'editor-worker',
+      level,
+      args,
+      ts: Date.now(),
+    },
+  });
+}
+
 function toSerializable(value) {
   try {
     return structuredClone(value);
@@ -45,12 +57,18 @@ function buildSignalSnapshot() {
 }
 
 self.addEventListener('message', async ({ data }) => {
-  const { requestId, statements, skipStatementIds } = data || {};
+  const {
+    requestId, statements, skipStatementIds, resetSignals,
+  } = data || {};
   if (!requestId) return;
 
   try {
+    if (resetSignals) {
+      getSignalRegistry().clear();
+    }
+
     if (!Array.isArray(statements) || !statements.length) {
-      self.postMessage({ requestId, done: true });
+      self.postMessage({ requestId, done: true, signalSnapshot: [] });
       return;
     }
 
@@ -80,9 +98,9 @@ self.addEventListener('message', async ({ data }) => {
       try {
         const statementSource = normalizeUnitLiterals(statement.source);
         const unitDisplay = unitLiteralDisplay(statementSource);
-        console.log('[worker] executing:', statementSource.substring(0, 50));
+        postRuntimeLog(requestId, 'info', '[worker] executing:', statementSource.substring(0, 50));
         const result = await execute(statementSource, env);
-        console.log('[worker] result:', JSON.stringify(result).substring(0, 200));
+        postRuntimeLog(requestId, 'info', '[worker] result:', JSON.stringify(result).substring(0, 200));
         if (isFunctionDefinitionSource(statementSource)) {
           partial.statementResult = {
             statementId: statement.statementId,

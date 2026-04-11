@@ -1624,6 +1624,41 @@ export default class Eval {
 
       return String(entry);
     };
+
+    const tagToVdom = (node) => {
+      const attrs = {};
+      for (const [key, val] of Object.entries(node.attrs || {})) {
+        attrs[key] = (val && typeof val.expr === 'string') ? String(val.expr) : val;
+      }
+      const children = (node.children || []).map(child => {
+        if (typeof child === 'string') return child;
+        if (child && typeof child.expr === 'string') return child._signal ?? child._resolved ?? '';
+        if (typeof child === 'object' && typeof child.name === 'string') return tagToVdom(child);
+        return String(child);
+      });
+      return [node.name, attrs, children];
+    };
+
+    const htmlVdomFromValue = (entry) => {
+      if (entry === null || typeof entry === 'undefined') return '';
+
+      if (Array.isArray(entry)) {
+        return entry.map(htmlVdomFromValue);
+      }
+
+      if (entry instanceof Expr) {
+        if (entry.isTag) return tagToVdom(entry.valueOf());
+        return htmlVdomFromValue(Expr.plain(entry, convert, '<HTML>'));
+      }
+
+      if (isSignalValue(entry)) return entry;
+
+      if (typeof entry === 'object' && typeof entry.name === 'string' && Array.isArray(entry.children)) {
+        return tagToVdom(entry);
+      }
+
+      return String(entry);
+    };
     const renderDisposers = environment.__xRenderDisposers instanceof Map
       ? environment.__xRenderDisposers
       : (environment.__xRenderDisposers = new Map());
@@ -1811,6 +1846,14 @@ export default class Eval {
         runtimeArgs.push(toPlain(evaluated.length === 1 ? evaluated[0] : evaluated));
       }
 
+      // Keep named signal identity stable across re-evals, e.g. `count = @signal 0`.
+      const signalName = token && typeof token.getName === 'function'
+        ? token.getName()
+        : null;
+      if (signalName && runtimeArgs.length < 2) {
+        runtimeArgs.push(signalName);
+      }
+
       token.__signalCached = Expr.value(signal(...runtimeArgs), parentTokenInfo);
       subTree.push(token.__signalCached);
       isDone = true;
@@ -1867,7 +1910,7 @@ export default class Eval {
 
           const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
           if (!rendered.length) return '';
-          return htmlTextFromValue(rendered.length === 1 ? rendered[0] : rendered);
+          return htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
         });
 
         if (hasShadow) {

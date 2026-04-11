@@ -89,6 +89,62 @@
       flex: 1;
       overflow: hidden;
     }
+    .tabbar {
+      display: flex;
+      gap: 0.35rem;
+      margin-left: auto;
+    }
+    .tab-btn {
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      font: 600 .68rem var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      color: var(--ink);
+      border-color: rgba(45,212,191,0.45);
+      background: rgba(45,212,191,0.14);
+    }
+    .tab-panels {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .tab-panel {
+      position: absolute;
+      inset: 0;
+      display: none;
+      min-height: 0;
+      overflow: auto;
+      padding: 0.5rem;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+    #log-container {
+      font: 500 .73rem/1.45 var(--mono);
+      color: #d0d7de;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .log-line {
+      padding: 0.2rem 0.15rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .log-line[data-level="error"] { color: #ff9b9b; }
+    .log-line[data-level="warn"] { color: #ffd18a; }
+    .log-line[data-level="info"] { color: #9fd8ff; }
+    .log-line[data-level="debug"] { color: #b8b8ff; }
+    .log-time {
+      color: #7a8492;
+      margin-right: 0.4rem;
+    }
     @media (max-width: 800px) {
       .layout { grid-template-columns: 1fr; }
       .devtools-pane { display: none; }
@@ -129,28 +185,95 @@ count = @signal 0.
       <div id="devtools-container"></div>
       <div class="pane-header" style="margin-top:auto;border-top:1px solid rgba(255,255,255,0.06)">
         <span class="pane-title">Output</span>
+        <div class="tabbar">
+          <button class="tab-btn active" data-tab="output" type="button">Output</button>
+          <button class="tab-btn" data-tab="logs" type="button">Logs</button>
+          <button class="tab-btn" id="clear-logs" type="button" title="Clear logs" aria-label="Clear logs">🗑</button>
+        </div>
       </div>
-      <div id="render-container" style="flex:1;overflow:auto;padding:0.5rem"></div>
+      <div class="tab-panels">
+        <div id="render-container" class="tab-panel active"></div>
+        <div id="log-container" class="tab-panel"></div>
+      </div>
     </div>
   </div>
   <script type="module">
     import { devtools } from './dist/runtime.js';
-    globalThis.__10x_devtools_debug = true;
+    const debug = new URLSearchParams(window.location.search).get('debug');
+    globalThis.__10x_devtools_debug = debug === '1' || debug === 'true';
     devtools({ docked: true, container: document.getElementById('devtools-container') });
     const editor = document.getElementById('ed-devtools');
     let tenxSignalsEvents = 0;
-    console.info('[10x:devtools.html] tenx-signals listener attached', {
-      editorId: editor?.id || null,
-    });
+    if (globalThis.__10x_devtools_debug) {
+      console.info('[10x:devtools.html] tenx-signals listener attached', {
+        editorId: editor?.id || null,
+      });
+    }
     editor.addEventListener('tenx-signals', ({ detail }) => {
       tenxSignalsEvents += 1;
-      console.info('[10x:devtools.html] tenx-signals event', {
-        eventsSeen: tenxSignalsEvents,
-        snapshotCount: Array.isArray(detail) ? detail.length : 0,
-        hasDevtoolsOnSignals: typeof globalThis.__10x_devtools?.onSignals === 'function',
-      });
+      if (globalThis.__10x_devtools_debug) {
+        console.info('[10x:devtools.html] tenx-signals event', {
+          eventsSeen: tenxSignalsEvents,
+          snapshotCount: Array.isArray(detail) ? detail.length : 0,
+          hasDevtoolsOnSignals: typeof globalThis.__10x_devtools?.onSignals === 'function',
+        });
+      }
       globalThis.__10x_devtools?.onSignals?.(detail);
     });
+
+    const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+    const renderPanel = document.getElementById('render-container');
+    const logPanel = document.getElementById('log-container');
+    const clearLogsBtn = document.getElementById('clear-logs');
+    const panels = {
+      output: renderPanel,
+      logs: logPanel,
+    };
+
+    const setTab = (tab) => {
+      tabButtons.forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+      Object.entries(panels).forEach(([name, panel]) => {
+        panel.classList.toggle('active', name === tab);
+      });
+    };
+
+    tabButtons.forEach((btn) => {
+      if (btn.id === 'clear-logs') return;
+      btn.addEventListener('click', () => setTab(btn.dataset.tab));
+    });
+
+    clearLogsBtn?.addEventListener('click', () => {
+      logPanel.innerHTML = '';
+    });
+
+    const MAX_LOG_LINES = 250;
+    const formatLogArg = (value) => {
+      if (typeof value === 'string') return value;
+      try {
+        return JSON.stringify(value);
+      } catch (_) {
+        return String(value);
+      }
+    };
+
+    const appendRuntimeLog = ({ level = 'log', args = [], ts = Date.now(), source = 'runtime' } = {}) => {
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.dataset.level = level;
+      const time = new Date(ts).toLocaleTimeString();
+      line.innerHTML = `<span class="log-time">${time}</span><strong>[${level}]</strong> [${source}] ${args.map(formatLogArg).join(' ')}`;
+      logPanel.appendChild(line);
+      while (logPanel.children.length > MAX_LOG_LINES) {
+        logPanel.removeChild(logPanel.firstChild);
+      }
+      if (logPanel.classList.contains('active')) {
+        logPanel.scrollTop = logPanel.scrollHeight;
+      }
+    };
+
+    globalThis.__10x_runtime_log = appendRuntimeLog;
   </script>
 </body>
 </html>

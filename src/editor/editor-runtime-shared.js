@@ -233,16 +233,31 @@ export const EDITOR_BOOTSTRAP = `
 @import signal, read, html, render, renderShadow, h, style, on @from "Runtime".
 `;
 
+export function emitEditorRuntimeLog(level, ...args) {
+  const sink = globalThis.__10x_runtime_log;
+  if (typeof sink !== 'function') return;
+  try {
+    sink({
+      source: 'editor-main',
+      level,
+      args,
+      ts: Date.now(),
+    });
+  } catch (_) {
+    // no-op
+  }
+}
+
 export async function bootstrapEnv(env, executeFn) {
   if (!env || env.__xEditorBootstrapDone) return;
   env.__xEditorBootstrapDone = true;
 
-  console.log('[editor] bootstrapping env...');
+  emitEditorRuntimeLog('info', '[editor] bootstrapping env...');
   const result = await executeFn(EDITOR_BOOTSTRAP, env);
   if (executeFn.failure) {
-    console.error('[editor] bootstrap error:', executeFn.failure);
+    emitEditorRuntimeLog('error', '[editor] bootstrap error:', executeFn.failure);
     return;
   }
-  console.log('[editor] bootstrap done', result);
-  console.log('[editor] render available:', env.has('render', true));
+  emitEditorRuntimeLog('info', '[editor] bootstrap done', result);
+  emitEditorRuntimeLog('debug', '[editor] render available:', env.has('render', true));
 }

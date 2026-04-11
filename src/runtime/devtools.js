@@ -189,6 +189,8 @@ export function devtools(options = {}) {
   if (typeof document === 'undefined') return null;
 
   const { docked = false, container = null } = options;
+  const dockedPane = docked && container ? container.closest('.devtools-pane') || container : null;
+  const dockedLayout = dockedPane ? dockedPane.closest('.layout') : null;
 
   let panel = document.getElementById('10x-devtools-panel');
   if (panel) return panel;
@@ -211,7 +213,7 @@ export function devtools(options = {}) {
 
   const title = document.createElement('div');
   title.style.cssText = 'font-weight:700;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;';
-  title.innerHTML = `<span>10x DevTools</span><span style="font-weight:400;font-size:10px;color:#888;">Alt+D</span>`;
+  title.innerHTML = `<span>10x DevTools</span><span style="font-weight:400;font-size:10px;color:#888;">Alt+D / Ctrl+Shift+D</span>`;
 
   const hmrStatus = document.createElement('div');
   hmrStatus.id = '10x-hmr-status';
@@ -235,11 +237,18 @@ export function devtools(options = {}) {
   });
 
   function toggle() {
-    if (docked && container) return;
-    if (panel.style.display === 'none') {
-      panel.style.display = '';
+    const target = dockedPane || panel;
+    const hidden = target.style.display === 'none';
+    if (hidden) {
+      target.style.display = '';
+      if (dockedLayout && dockedPane) {
+        dockedLayout.style.gridTemplateColumns = '';
+      }
     } else {
-      panel.style.display = 'none';
+      target.style.display = 'none';
+      if (dockedLayout && dockedPane) {
+        dockedLayout.style.gridTemplateColumns = '1fr';
+      }
     }
   }
 
@@ -275,14 +284,14 @@ export function devtools(options = {}) {
     renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
   };
 
-  if (!docked) {
-    document.addEventListener('keydown', (e) => {
-      if (e.altKey && (e.key === 'd' || e.key === 'D')) {
-        e.preventDefault();
-        toggle();
-      }
-    });
-  }
+  document.addEventListener('keydown', (e) => {
+    const isAltD = e.altKey && (e.key === 'd' || e.key === 'D');
+    const isCtrlShiftD = e.ctrlKey && e.shiftKey && (e.key === 'd' || e.key === 'D');
+    if (isAltD || isCtrlShiftD) {
+      e.preventDefault();
+      toggle();
+    }
+  });
 
   return panel;
 }
