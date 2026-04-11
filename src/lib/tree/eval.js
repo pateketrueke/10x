@@ -1947,6 +1947,12 @@ export default class Eval {
           if (host.shadowRoot) host.shadowRoot.innerHTML = '';
           renderDisposers.set(renderKey, render(host, view));
         } else {
+          if (typeof document !== 'undefined') {
+            const target = typeof selector === 'string'
+              ? document.querySelector(selector)
+              : selector;
+            if (target) target.innerHTML = '';
+          }
           renderDisposers.set(renderKey, render(selector, view));
         }
       }
