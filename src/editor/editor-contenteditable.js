@@ -559,7 +559,7 @@ function appendToken(parent, token) {
   // EOL = dot '.' — render as an explicit anchor node (not a line break).
   if (n === 'EOL') {
     const eol = document.createElement('span');
-    eol.className = 'xt-punct';
+    eol.className = 'xt-punct xt-eol-marker';
     eol.dataset.eol = '';
     if (typeof token.line === 'number') eol.dataset.line = String(token.line);
     eol.textContent = '.';
@@ -755,22 +755,28 @@ function buildStatementAnchors(source) {
 
     const proseTypes = new Set([HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM]);
 
-    function isProseOnlyChunk(chunk) {
+    const isProseOnlyChunk = (chunk) => {
       if (!chunk?.body?.length) return false;
       return chunk.body.every(tok => {
         if (!tok) return false;
         const typeName = SYMBOL_NAME(tok.type);
         return proseTypes.has(tok.type) || typeName === 'TEXT';
       });
-    }
+    };
 
     for (const chunk of chunks) {
       console.log('[buildAnchors] processing chunk:', chunk.lines);
       if (!chunk.body.length) { console.log('[buildAnchors] skip empty body'); continue; }
 
-      let line = Array.isArray(chunk.lines) && chunk.lines.length
-        ? chunk.lines[chunk.lines.length - 1]
-        : 0;
+      // chunk.body[last] is the EOL token (pushed by parser split()); its
+      // tokenInfo.line matches the DOM eol.dataset.line exactly — more
+      // reliable than chunk.lines which can drift on multiline chunks.
+      const eolToken = chunk.body[chunk.body.length - 1];
+      let line = typeof eolToken?.tokenInfo?.line === 'number'
+        ? eolToken.tokenInfo.line
+        : Array.isArray(chunk.lines) && chunk.lines.length
+          ? chunk.lines[chunk.lines.length - 1]
+          : 0;
       const firstLine = Array.isArray(chunk.lines) && chunk.lines.length
         ? chunk.lines[0]
         : line;
@@ -867,6 +873,48 @@ const STYLES = `
   .xt-prose   { color: #c586c0; }
   .xt-punct   { color: #808080; }
   .xt-interp-delim { opacity: 0.55; }
+  .xt-eol-marker {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    border-radius: 3px;
+    border: none;
+    background: none;
+    color: #a7b2bf;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 1px;
+    margin: 0 0.12em 0 0.4em;
+    opacity: 0.85;
+    cursor: default;
+    vertical-align: middle;
+    user-select: none;
+  }
+  .xt-eol-marker[data-eol-has-result] {
+    color: #4ec9b0;
+    opacity: 1;
+  }
+  .xt-eol-marker[data-eol-pending] {
+    color: #cdd7e6;
+  }
+  .xt-eol-marker[data-eol-error] {
+    color: #f48771;
+  }
+  .xt-eol-marker > [data-result] {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    white-space: nowrap;
+    z-index: 25;
+  }
+  .xt-eol-marker:hover > [data-result] {
+    display: inline-flex;
+    animation: eol-expand 0.12s ease-out;
+  }
 
   .xt-heading .xt-bold,
   .xt-heading .xt-italic,
@@ -1286,11 +1334,18 @@ class XEditor extends HTMLElement {
   }
 
   _injectResults() {
-    this._editable.querySelectorAll('[data-result]').forEach(el => el.remove());
     this._editable.querySelectorAll('[data-inline-anchor]').forEach(node => {
       delete node.dataset.inlineHasResult;
       delete node.dataset.inlineError;
       node.dataset.tooltip = 'Interpolation delimiter';
+    });
+    this._editable.querySelectorAll('[data-eol]').forEach(node => {
+      node.querySelector('[data-result]')?.remove();
+      delete node.dataset.eolHasResult;
+      delete node.dataset.eolPending;
+      delete node.dataset.eolError;
+      delete node.dataset.eolStatementId;
+      delete node.dataset.eolCopyValue;
     });
     if (!this._anchors.length && !this._inlineAnchors.length) return;
 
@@ -1317,7 +1372,6 @@ class XEditor extends HTMLElement {
       eolByLine.get(line).push(node);
     });
 
-    const tailByEol = new WeakMap();
     const sortedLines = Array.from(byLine.keys()).sort((a, b) => a - b);
     for (const line of sortedLines) {
       const lineResults = byLine.get(line) || [];
@@ -1325,24 +1379,24 @@ class XEditor extends HTMLElement {
 
       for (let i = 0; i < lineResults.length; i++) {
         const entry = lineResults[i];
+        const eol = eols[Math.min(i, Math.max(0, eols.length - 1))];
+        if (!eol) continue;
+
+        if (entry.pending) eol.dataset.eolPending = '';
+        else if (entry.result?.errorText) eol.dataset.eolError = '';
+
         const widget = this._makeResultWidget({
           result: entry.result,
           pending: entry.pending,
-          fallbackText: entry.fallbackUnitText,
+          fallbackText: entry.fallbackUnitText || '',
           statementId: entry.anchor.id,
           source: entry.anchor.source,
         });
         if (!widget) continue;
 
-        const eol = eols[Math.min(i, Math.max(0, eols.length - 1))];
-        if (eol?.parentNode) {
-          const tail = tailByEol.get(eol) || eol;
-          eol.parentNode.insertBefore(widget, tail.nextSibling);
-          tailByEol.set(eol, widget);
-          continue;
-        }
-
-        this._editable.appendChild(widget);
+        eol.dataset.eolHasResult = '';
+        eol.dataset.eolStatementId = entry.anchor.id;
+        eol.appendChild(widget);
       }
     }
 
