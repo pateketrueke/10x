@@ -5,6 +5,15 @@ import { createBrowserAdapter } from '../src/adapters/browser/index.js';
 applyAdapter(createBrowserAdapter());
 
 describe('Eval Runtime Directives', () => {
+  test('should treat style tag braces as raw text in interpreter mode', async () => {
+    const env = new Env();
+    await run('<style>button { padding: 1rem; margin: 0; }</style>.', env);
+
+    expect(run.failure).toBeFalsy();
+    expect(Array.isArray(run.value)).toBe(true);
+    expect(run.value.length).toBe(1);
+  });
+
   test('should execute @signal/@render/@on directives in interpreter mode', async () => {
     const node = {
       innerHTML: '',

@@ -7,7 +7,7 @@ import Env from './env';
 import Expr from './expr';
 import Parser from './parser';
 import Range from '../range';
-import { composeTag } from '../tag';
+import { composeTag, renderTag } from '../tag';
 
 import {
   EOL, COMMA, MINUS, PLUS, MUL, DIV, MOD, BLOCK, RANGE, LITERAL, NUMBER, STRING, SYMBOL,
@@ -706,6 +706,12 @@ export default class Eval {
         }
 
         if (child && typeof child.expr === 'string') {
+          const rawTextContainer = /^(style|script)$/i.test(String(node.name || ''));
+          if (rawTextContainer) {
+            children.push(`{${child.expr}}`);
+            continue;
+          }
+
           const parts = await this.evalTagExpr(child.expr);
           parts.forEach(part => {
             const fixed = normalizeChild(part);
@@ -1599,6 +1605,24 @@ export default class Eval {
       && typeof candidate.get === 'function'
       && typeof candidate.set === 'function'
     );
+    const htmlTextFromValue = (entry) => {
+      if (entry === null || typeof entry === 'undefined') return '';
+
+      if (Array.isArray(entry)) {
+        return entry.map(htmlTextFromValue).join('');
+      }
+
+      if (entry instanceof Expr) {
+        if (entry.isTag) return renderTag(entry.valueOf());
+        return htmlTextFromValue(Expr.plain(entry, convert, '<HTML>'));
+      }
+
+      if (typeof entry === 'object' && typeof entry.name === 'string' && Array.isArray(entry.children)) {
+        return renderTag(entry);
+      }
+
+      return String(entry);
+    };
 
     let isDone;
 
@@ -1794,7 +1818,7 @@ export default class Eval {
 
           const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
           if (!rendered.length) return '';
-          return toPlain(rendered.length === 1 ? rendered[0] : rendered);
+          return htmlTextFromValue(rendered.length === 1 ? rendered[0] : rendered);
         });
 
         render(selector, view);
