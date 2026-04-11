@@ -1,5 +1,6 @@
 import { Env, execute, applyAdapter } from '../main.js';
 import { createBrowserAdapter } from '../adapters/browser/index.js';
+import { getSignalRegistry, read } from '../runtime/core.js';
 import {
   inferRuntimeType,
   formatRuntimeValue,
@@ -15,6 +16,33 @@ import {
 } from './editor-runtime-shared.js';
 
 applyAdapter(createBrowserAdapter());
+
+function toSerializable(value) {
+  try {
+    return structuredClone(value);
+  } catch (_) {
+    return formatRuntimeValue(value, 180);
+  }
+}
+
+function buildSignalSnapshot() {
+  const out = [];
+  for (const [name, signal] of getSignalRegistry().entries()) {
+    const history = Array.isArray(signal?._history) ? signal._history.slice(-20) : [];
+    out.push({
+      id: signal?._devtoolsId || null,
+      name: String(name),
+      moduleUrl: signal?._moduleUrl || 'global',
+      value: toSerializable(read(signal)),
+      subs: signal?.subs ? signal.subs.size : 0,
+      history: history.map(entry => ({
+        ts: entry?.ts || Date.now(),
+        value: toSerializable(entry?.value),
+      })),
+    });
+  }
+  return out;
+}
 
 self.addEventListener('message', async ({ data }) => {
   const { requestId, statements, skipStatementIds } = data || {};
@@ -125,7 +153,8 @@ self.addEventListener('message', async ({ data }) => {
       self.postMessage(partial);
     }
 
-    self.postMessage({ requestId, done: true });
+    const signalSnapshot = buildSignalSnapshot();
+    self.postMessage({ requestId, done: true, signalSnapshot });
   } catch (error) {
     self.postMessage({ requestId, error: String(error?.message || error) });
   }

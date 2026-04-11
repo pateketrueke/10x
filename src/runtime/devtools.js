@@ -23,29 +23,17 @@ function copyToClipboard(text) {
   });
 }
 
-function renderRows(container, registry, collapsedSignals) {
-  const entries = Array.from(registry.entries());
-  const moduleGroups = new Map();
-
-  entries.forEach(([name, signal]) => {
-    const moduleUrl = signal._moduleUrl || 'global';
-    if (!moduleGroups.has(moduleUrl)) {
-      moduleGroups.set(moduleUrl, []);
-    }
-    moduleGroups.get(moduleUrl).push([name, signal]);
-  });
-
+function renderGroupedRows(container, groups, collapsedSignals, rerender) {
   container.innerHTML = '';
 
-  moduleGroups.forEach((signals, moduleUrl) => {
+  groups.forEach((signals, moduleUrl) => {
     const groupHeader = document.createElement('div');
     groupHeader.style.cssText = 'font-weight:600;margin:0.75rem 0 0.25rem;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;';
     groupHeader.textContent = moduleUrl === 'global' ? 'Global' : moduleUrl.split('/').pop() || moduleUrl;
     container.appendChild(groupHeader);
 
-    signals.forEach(([name, signal]) => {
+    signals.forEach(({ name, value, subsCount, history }) => {
       const isCollapsed = collapsedSignals.has(name);
-      const history = signal._history || [];
 
       const row = document.createElement('div');
       row.style.cssText = 'margin-bottom:0.25rem;';
@@ -58,35 +46,35 @@ function renderRows(container, registry, collapsedSignals) {
         } else {
           collapsedSignals.add(name);
         }
-        renderRows(container, registry, collapsedSignals);
+        rerender();
       };
 
       const key = document.createElement('code');
       key.textContent = String(name);
       key.style.color = '#d2a8ff';
 
-      const value = document.createElement('code');
-      formatValue(read(signal), value);
-      value.style.cursor = 'pointer';
-      value.title = 'Click to copy';
-      value.onclick = (e) => {
+      const valueEl = document.createElement('code');
+      formatValue(value, valueEl);
+      valueEl.style.cursor = 'pointer';
+      valueEl.title = 'Click to copy';
+      valueEl.onclick = (e) => {
         e.stopPropagation();
-        copyToClipboard(JSON.stringify(read(signal)));
+        copyToClipboard(JSON.stringify(value));
       };
 
       const subs = document.createElement('code');
-      subs.textContent = `subs:${signal.subs ? signal.subs.size : 0}`;
+      subs.textContent = `subs:${subsCount}`;
       subs.style.color = '#8b949e';
 
       header.appendChild(key);
-      header.appendChild(value);
+      header.appendChild(valueEl);
       header.appendChild(subs);
       row.appendChild(header);
 
       if (!isCollapsed && history.length > 0) {
         const historyDiv = document.createElement('div');
         historyDiv.style.cssText = 'font-size:10px;margin-left:1rem;padding:0.25rem;background:rgba(255,255,255,0.03);border-radius:4px;max-height:120px;overflow:auto;';
-        
+
         const historyHeader = document.createElement('div');
         historyHeader.style.cssText = 'color:#888;margin-bottom:0.25rem;';
         historyHeader.textContent = `History (${history.length})`;
@@ -95,16 +83,16 @@ function renderRows(container, registry, collapsedSignals) {
         [...history].reverse().forEach((h, i) => {
           const entry = document.createElement('div');
           entry.style.cssText = 'display:flex;justify-content:space-between;gap:0.5rem;margin:0.15rem 0;';
-          
+
           const ts = document.createElement('span');
           const date = new Date(h.ts);
           ts.textContent = date.toLocaleTimeString();
           ts.style.color = '#666';
-          
+
           const val = document.createElement('span');
           formatValue(h.value, val);
           val.style.fontWeight = i === 0 ? '600' : '400';
-          
+
           entry.appendChild(ts);
           entry.appendChild(val);
           historyDiv.appendChild(entry);
@@ -118,6 +106,85 @@ function renderRows(container, registry, collapsedSignals) {
   });
 }
 
+function renderRows(container, registry, collapsedSignals) {
+  const entries = Array.from(registry.entries());
+  const moduleGroups = new Map();
+
+  entries.forEach(([name, signal]) => {
+    const moduleUrl = signal._moduleUrl || 'global';
+    if (!moduleGroups.has(moduleUrl)) {
+      moduleGroups.set(moduleUrl, []);
+    }
+    moduleGroups.get(moduleUrl).push({
+      id: signal._devtoolsId || null,
+      name,
+      value: read(signal),
+      subsCount: signal.subs ? signal.subs.size : 0,
+      history: signal._history || [],
+    });
+  });
+
+  renderGroupedRows(container, moduleGroups, collapsedSignals, () => renderRows(container, registry, collapsedSignals));
+}
+
+function renderRowsFromSnapshot(container, snapshot, collapsedSignals) {
+  const moduleGroups = new Map();
+
+  (Array.isArray(snapshot) ? snapshot : []).forEach((entry) => {
+    if (!entry || !entry.name) return;
+    const moduleUrl = entry.moduleUrl || 'global';
+    if (!moduleGroups.has(moduleUrl)) {
+      moduleGroups.set(moduleUrl, []);
+    }
+    moduleGroups.get(moduleUrl).push({
+      id: entry.id || null,
+      name: entry.name,
+      value: entry.value,
+      subsCount: Number.isFinite(entry.subs) ? entry.subs : 0,
+      history: Array.isArray(entry.history) ? entry.history.slice(-MAX_HISTORY) : [],
+    });
+  });
+
+  renderGroupedRows(
+    container,
+    moduleGroups,
+    collapsedSignals,
+    () => renderRowsFromSnapshot(container, snapshot, collapsedSignals),
+  );
+}
+
+function mergeSignalUpdate(snapshot, update) {
+  if (!update || typeof update.name !== 'string') return snapshot;
+  const current = Array.isArray(snapshot) ? snapshot : [];
+  const next = current.map(entry => ({ ...entry }));
+  const index = next.findIndex(entry => (
+    entry
+    && (
+      (update.id != null && entry.id === update.id)
+      || entry.name === update.name
+    )
+  ));
+  const history = Array.isArray(update.history)
+    ? update.history.slice(-MAX_HISTORY)
+    : [{ ts: update.ts || Date.now(), value: update.value }];
+
+  const merged = {
+    id: update.id || null,
+    name: update.name,
+    moduleUrl: update.moduleUrl || 'global',
+    value: update.value,
+    subs: Number.isFinite(update.subs) ? update.subs : 0,
+    history,
+  };
+
+  if (index >= 0) {
+    next[index] = merged;
+  } else {
+    next.push(merged);
+  }
+  return next;
+}
+
 export function devtools(options = {}) {
   if (typeof document === 'undefined') return null;
 
@@ -128,6 +195,7 @@ export function devtools(options = {}) {
 
   const registry = getSignalRegistry();
   const collapsedSignals = new Set();
+  let latestSnapshot = [];
   let hmrMessage = null;
   let hmrTimeout = null;
 
@@ -189,7 +257,22 @@ export function devtools(options = {}) {
   globalThis.__10x_devtools = {
     active: true,
     onHmr: ({ restored = 0, url = '' }) => showHmrMessage(restored, url),
+    onSignals: (snapshot) => {
+      latestSnapshot = Array.isArray(snapshot) ? snapshot : [];
+      if (globalThis.__10x_devtools_debug) {
+        console.debug('[10x:devtools] onSignals snapshot', { count: latestSnapshot.length });
+      }
+      renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
+    },
     toggle,
+  };
+
+  globalThis.__10x_devtools_notify = (update) => {
+    if (globalThis.__10x_devtools_debug) {
+      console.debug('[10x:devtools] notify update', update);
+    }
+    latestSnapshot = mergeSignalUpdate(latestSnapshot, update);
+    renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
   };
 
   if (!docked) {

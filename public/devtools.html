@@ -135,7 +135,22 @@ count = @signal 0.
   </div>
   <script type="module">
     import { devtools } from './dist/runtime.js';
+    globalThis.__10x_devtools_debug = true;
     devtools({ docked: true, container: document.getElementById('devtools-container') });
+    const editor = document.getElementById('ed-devtools');
+    let tenxSignalsEvents = 0;
+    console.info('[10x:devtools.html] tenx-signals listener attached', {
+      editorId: editor?.id || null,
+    });
+    editor.addEventListener('tenx-signals', ({ detail }) => {
+      tenxSignalsEvents += 1;
+      console.info('[10x:devtools.html] tenx-signals event', {
+        eventsSeen: tenxSignalsEvents,
+        snapshotCount: Array.isArray(detail) ? detail.length : 0,
+        hasDevtoolsOnSignals: typeof globalThis.__10x_devtools?.onSignals === 'function',
+      });
+      globalThis.__10x_devtools?.onSignals?.(detail);
+    });
   </script>
 </body>
 </html>

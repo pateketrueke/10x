@@ -15,6 +15,7 @@
  */
 import { Parser, Env, execute, applyAdapter, HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM } from '../main.js';
 import { createBrowserAdapter } from '../adapters/browser/index.js';
+import { getSignalRegistry, read } from '../runtime/core.js';
 import {
   SYMBOL_NAME,
   inferRuntimeType,
@@ -32,6 +33,33 @@ import {
 } from './editor-runtime-shared.js';
 
 applyAdapter(createBrowserAdapter());
+
+function toSerializable(value) {
+  try {
+    return structuredClone(value);
+  } catch (_) {
+    return formatRuntimeValue(value, 180);
+  }
+}
+
+function collectSignalSnapshot() {
+  const snapshot = [];
+  for (const [name, signal] of getSignalRegistry().entries()) {
+    const history = Array.isArray(signal?._history) ? signal._history.slice(-20) : [];
+    snapshot.push({
+      id: signal?._devtoolsId || null,
+      name: String(name),
+      moduleUrl: signal?._moduleUrl || 'global',
+      value: toSerializable(read(signal)),
+      subs: signal?.subs ? signal.subs.size : 0,
+      history: history.map(entry => ({
+        ts: entry?.ts || Date.now(),
+        value: toSerializable(entry?.value),
+      })),
+    });
+  }
+  return snapshot;
+}
 
 // ─── Token → CSS class mapping (mirrors src/util.js colorize) ────────────────
 
@@ -1144,6 +1172,7 @@ class XEditor extends HTMLElement {
     this._inlineAnchors = [];
     this._inlineResultsById = new Map();
     this._inlineAnchorNodes = new Map();
+    this._signalSnapshot = [];
     this._killedStatementIds = new Set();
     this._rendering = false;
 
@@ -1560,6 +1589,20 @@ class XEditor extends HTMLElement {
         this._injectResults();
 
         if (done) {
+          if (Array.isArray(data.signalSnapshot)) {
+            this._signalSnapshot = data.signalSnapshot;
+            if (globalThis.__10x_devtools_debug) {
+              console.debug('[10x:editor] dispatch tenx-signals (worker)', {
+                count: data.signalSnapshot.length,
+              });
+            }
+            this.dispatchEvent(new CustomEvent('tenx-signals', {
+              detail: data.signalSnapshot,
+              bubbles: true,
+              composed: true,
+            }));
+          }
+
           this._pendingResultIds = new Set();
           this._injectResults();
 
@@ -1772,6 +1815,17 @@ class XEditor extends HTMLElement {
           emitted.push(result.resultText);
         }
       });
+      this._signalSnapshot = collectSignalSnapshot();
+      if (globalThis.__10x_devtools_debug) {
+        console.debug('[10x:editor] dispatch tenx-signals (main)', {
+          count: this._signalSnapshot.length,
+        });
+      }
+      this.dispatchEvent(new CustomEvent('tenx-signals', {
+        detail: this._signalSnapshot,
+        bubbles: true,
+        composed: true,
+      }));
       this._emit(emitted);
     } catch (e) {
       this._pendingResultIds = new Set();

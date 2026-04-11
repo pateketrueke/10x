@@ -1,4 +1,5 @@
 const SIGNAL = Symbol('10x.signal');
+const MAX_HISTORY = 20;
 
 let currentEffect = null;
 let devtoolsActive = false;
@@ -17,9 +18,20 @@ const globalRegistry = (() => {
   return globalThis.__10x_signals;
 })();
 
+function nextSignalId() {
+  const current = Number(globalThis.__10x_signal_id_counter || 0) + 1;
+  globalThis.__10x_signal_id_counter = current;
+  return current;
+}
+
 export function signal(initialValue, name) {
+  const key = name || Symbol('signal');
+  const signalName = String(key);
+  const signalId = nextSignalId();
   const state = {
     [SIGNAL]: true,
+    _devtoolsId: signalId,
+    _devtoolsName: signalName,
     _value: initialValue,
     _history: [],
     _moduleUrl: undefined,
@@ -42,7 +54,30 @@ export function signal(initialValue, name) {
       this._value = nextValue;
       if (devtoolsActive && this._history) {
         this._history.push({ value: nextValue, prev, ts: Date.now() });
-        if (this._history.length > 20) this._history.shift();
+        if (this._history.length > MAX_HISTORY) this._history.shift();
+      }
+      const notify = globalThis.__10x_devtools_notify;
+      if (typeof notify === 'function') {
+        try {
+          notify({
+            id: this._devtoolsId,
+            name: this._devtoolsName,
+            moduleUrl: this._moduleUrl || 'global',
+            value: nextValue,
+            subs: this.subs ? this.subs.size : 0,
+            history: Array.isArray(this._history) ? this._history.slice(-MAX_HISTORY) : [],
+            ts: Date.now(),
+          });
+          if (globalThis.__10x_devtools_debug) {
+            console.debug('[10x:core] notified devtools', {
+              id: this._devtoolsId,
+              name: this._devtoolsName,
+              value: nextValue,
+            });
+          }
+        } catch (_) {
+          // no-op; devtools hooks should not interfere with signal updates
+        }
       }
       Array.from(this.subs).forEach(fn => fn());
       return this._value;
@@ -52,7 +87,6 @@ export function signal(initialValue, name) {
     },
   };
 
-  const key = name || Symbol('signal');
   globalRegistry.set(key, state);
   return state;
 }
