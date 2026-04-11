@@ -1625,6 +1625,9 @@ export default class Eval {
       return String(entry);
     };
 
+    // Populated per-render with name → live signal; tagToVdom reads it to inject live signals
+    let signalMap = new Map();
+
     const tagToVdom = (node) => {
       const attrs = {};
       for (const [key, val] of Object.entries(node.attrs || {})) {
@@ -1632,7 +1635,9 @@ export default class Eval {
       }
       const children = (node.children || []).map(child => {
         if (typeof child === 'string') return child;
-        if (child && typeof child.expr === 'string') return child._signal ?? child._resolved ?? '';
+        if (child && typeof child.expr === 'string') {
+          return signalMap.get(child.expr) ?? child._signal ?? child._resolved ?? '';
+        }
         if (typeof child === 'object' && typeof child.name === 'string') return tagToVdom(child);
         return String(child);
       });
@@ -1891,6 +1896,7 @@ export default class Eval {
 
         const view = html(async () => {
           const scope = new Env(environment);
+          signalMap = new Map();
 
           const localNames = Object.keys(environment.locals || {});
           for (let i = 0; i < localNames.length; i++) {
@@ -1905,12 +1911,19 @@ export default class Eval {
             if (!resolved || !resolved.length) continue;
             const plain = toPlain(resolved.length === 1 ? resolved[0] : resolved);
             if (!isSignalValue(plain)) continue;
-            scope.def(name, Expr.value(plain.get(), parentTokenInfo));
+            signalMap.set(name, plain); // live signal for vdom injection
+            scope.def(name, Expr.value(plain.peek(), parentTokenInfo)); // primitive for arithmetic, peek() avoids effect subscription
           }
 
           const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
           if (!rendered.length) return '';
-          return htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+          const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+          // String templates need the effect to re-run on signal change (innerHTML path).
+          // Vdom templates don't — somedom subscribes directly via createSignalTextNode.
+          if (typeof result === 'string' && signalMap.size > 0) {
+            signalMap.forEach(sig => sig.get());
+          }
+          return result;
         });
 
         if (hasShadow) {

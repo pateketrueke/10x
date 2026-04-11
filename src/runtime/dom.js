@@ -1,5 +1,5 @@
 import { h, mount, patch, isNode } from 'somedom';
-import { effect } from './core.js';
+import { effect, untracked } from './core.js';
 
 export { h };
 
@@ -132,7 +132,7 @@ export function render(selectorOrElement, view) {
 
   const remount = next => {
     target.innerHTML = '';
-    mount(target, next);
+    untracked(() => mount(target, next));
     root = isNode(next) ? target.firstChild : null;
     prev = next;
   };
@@ -144,12 +144,12 @@ export function render(selectorOrElement, view) {
       prev = null;
       root = null;
     } else if (!prev) {
-      mount(target, next);
+      untracked(() => mount(target, next));
       root = isNode(next) ? target.firstChild : null;
       prev = next;
     } else if (root) {
       try {
-        const node = await Promise.resolve().then(() => patch(root, prev, next));
+        const node = await Promise.resolve().then(() => untracked(() => patch(root, prev, next)));
         root = node || root;
         prev = next;
       } catch (_) {
@@ -210,7 +210,7 @@ export function renderShadow(host, view, moduleUrl) {
 
   const remount = next => {
     outlet.innerHTML = '';
-    mount(outlet, next);
+    untracked(() => mount(outlet, next));
     root = isNode(next) ? outlet.firstChild : null;
     prev = next;
   };
@@ -222,12 +222,12 @@ export function renderShadow(host, view, moduleUrl) {
       prev = null;
       root = null;
     } else if (!prev) {
-      mount(outlet, next);
+      untracked(() => mount(outlet, next));
       root = isNode(next) ? outlet.firstChild : null;
       prev = next;
     } else if (root) {
       try {
-        const node = await Promise.resolve().then(() => patch(root, prev, next));
+        const node = await Promise.resolve().then(() => untracked(() => patch(root, prev, next)));
         root = node || root;
         prev = next;
       } catch (_) {

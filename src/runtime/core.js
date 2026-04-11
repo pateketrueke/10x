@@ -1,6 +1,24 @@
 const SIGNAL = Symbol('10x.signal');
 const MAX_HISTORY = 20;
 
+// Thin proxy that satisfies both 10x's isSignalValue (get+set) and somedom's
+// isSignal (value+peek) while behaving like a primitive in JS coercions.
+// Used so live signals can be threaded into vdom children without breaking eval.
+export class SignalProxy {
+  constructor(signal) {
+    this._signal = signal;
+  }
+  valueOf() { return this._signal.peek(); }
+  toString() { return String(this._signal.peek()); }
+  // 10x isSignalValue interface
+  get() { return this._signal.peek(); }
+  set(v) { return this._signal.set(v); }
+  // somedom isSignal interface
+  get value() { return this._signal.peek(); }
+  peek() { return this._signal.peek(); }
+  subscribe(cb) { return this._signal.subscribe(cb); }
+}
+
 let currentEffect = null;
 let devtoolsActive = false;
 
