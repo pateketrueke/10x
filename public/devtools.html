@@ -249,37 +249,18 @@ count = @signal 0.
       globalThis.__10x_devtools?.onSignals?.(detail);
     });
 
-    const makeCounterCode = (shadow) => shadow
-      ? `# Counter
-
-count = @signal 0.
-
-@render "#render-container" @shadow @html
-  <style>button { padding: 0.5rem 1rem; margin: 0.25rem; }</style>
-  <div>
-    <h1>Count: #{count}</h1>
-    <button id="dec">-</button>
-    <button id="inc">+</button>
-  </div>
-.
-
-@on :click "#dec" @shadow count = count - 1.
-@on :click "#inc" @shadow count = count + 1.`
-      : `# Counter
-
-count = @signal 0.
-
-@render "#render-container" @html
-  <style>button { padding: 0.5rem 1rem; margin: 0.25rem; }</style>
-  <div>
-    <h1>Count: #{count}</h1>
-    <button id="dec">-</button>
-    <button id="inc">+</button>
-  </div>
-.
-
-@on :click "#dec" count = count - 1.
-@on :click "#inc" count = count + 1.`;
+    // Transform existing editor code by adding/removing @shadow annotations in-place.
+    const setShadowMode = (code, enabled) => {
+      // Normalize: strip @shadow from @render and @on lines
+      let result = code
+        .replace(/(@render\b[^.]*?) @shadow (@html\b)/g, '$1 $2')
+        .replace(/(@on\b\s+:[^\s]+\s+"[^"]*")\s+@shadow\s+/g, '$1 ');
+      if (!enabled) return result;
+      // Add @shadow back
+      return result
+        .replace(/(@render\b[^.]*?) (@html\b)/g, '$1 @shadow $2')
+        .replace(/(@on\b\s+:[^\s]+\s+"[^"]*")\s+/g, '$1 @shadow ');
+    };
 
     const shadowToggle = document.getElementById('shadow-toggle');
     const resetRenderContainer = () => {
@@ -294,7 +275,7 @@ count = @signal 0.
     shadowToggle.addEventListener('change', () => {
       // Replace the container so any attached shadow root is destroyed
       resetRenderContainer();
-      editor.value = makeCounterCode(shadowToggle.checked);
+      editor.value = setShadowMode(editor.value, shadowToggle.checked);
     });
 
     const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
