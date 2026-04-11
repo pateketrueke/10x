@@ -145,6 +145,30 @@
       color: #7a8492;
       margin-right: 0.4rem;
     }
+    .shadow-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-left: 0.75rem;
+      cursor: pointer;
+      font: 600 .68rem var(--mono);
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      user-select: none;
+    }
+    .shadow-toggle input { display: none; }
+    .shadow-toggle span {
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04);
+      border-radius: 999px;
+      padding: 0.18rem 0.5rem;
+      transition: color .15s, border-color .15s, background .15s;
+    }
+    .shadow-toggle input:checked + span {
+      color: var(--accent2);
+      border-color: rgba(129,140,248,0.45);
+      background: rgba(129,140,248,0.14);
+    }
     @media (max-width: 800px) {
       .layout { grid-template-columns: 1fr; }
       .devtools-pane { display: none; }
@@ -185,6 +209,10 @@ count = @signal 0.
       <div id="devtools-container"></div>
       <div class="pane-header" style="margin-top:auto;border-top:1px solid rgba(255,255,255,0.06)">
         <span class="pane-title">Output</span>
+        <label class="shadow-toggle" title="Toggle shadow DOM mode">
+          <input type="checkbox" id="shadow-toggle" autocomplete="off">
+          <span>@shadow</span>
+        </label>
         <div class="tabbar">
           <button class="tab-btn active" data-tab="output" type="button">Output</button>
           <button class="tab-btn" data-tab="logs" type="button">Logs</button>
@@ -219,6 +247,43 @@ count = @signal 0.
         });
       }
       globalThis.__10x_devtools?.onSignals?.(detail);
+    });
+
+    const makeCounterCode = (shadow) => shadow
+      ? `# Counter
+
+count = @signal 0.
+
+@render "#render-container" @shadow @html
+  <style>button { padding: 0.5rem 1rem; margin: 0.25rem; }</style>
+  <div>
+    <h1>Count: #{count}</h1>
+    <button id="dec">-</button>
+    <button id="inc">+</button>
+  </div>
+.
+
+@on :click "#dec" @shadow count = count - 1.
+@on :click "#inc" @shadow count = count + 1.`
+      : `# Counter
+
+count = @signal 0.
+
+@render "#render-container" @html
+  <style>button { padding: 0.5rem 1rem; margin: 0.25rem; }</style>
+  <div>
+    <h1>Count: #{count}</h1>
+    <button id="dec">-</button>
+    <button id="inc">+</button>
+  </div>
+.
+
+@on :click "#dec" count = count - 1.
+@on :click "#inc" count = count + 1.`;
+
+    const shadowToggle = document.getElementById('shadow-toggle');
+    shadowToggle.addEventListener('change', () => {
+      editor.value = makeCounterCode(shadowToggle.checked);
     });
 
     const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
