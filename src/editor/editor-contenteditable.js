@@ -934,7 +934,7 @@ const STYLES = `
   .xt-eol-marker > [data-result] {
     display: none;
     position: absolute;
-    top: 0;
+    top: 3px;
     left: 0;
     margin: 0;
     white-space: nowrap;

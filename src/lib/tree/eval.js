@@ -1895,12 +1895,18 @@ export default class Eval {
         const html = resolveRuntimeFn('html');
         const render = hasShadow ? resolveRuntimeFn('renderShadow') : resolveRuntimeFn('render');
         const htmlBody = normalizeDirectiveArgs(value.html);
-        const renderKey = hasShadow
-          ? `shadow:${typeof shadowSelector !== 'undefined' ? shadowSelector : selector || '__last_shadow__'}`
-          : `dom:${selector || '__default__'}`;
-        const previousRender = renderDisposers.get(renderKey);
-        if (previousRender && typeof previousRender.stop === 'function') {
-          previousRender.stop();
+        // Key on selector only so switching between @render and @render @shadow
+        // on the same target properly stops the previous render regardless of mode.
+        const renderKey = selector != null ? String(selector)
+          : (hasShadow
+            ? (typeof shadowSelector !== 'undefined' ? String(shadowSelector) : '__last_shadow__')
+            : '__default__');
+        // Stop any previous render on this target (shadow or non-shadow).
+        for (const [key, prev] of renderDisposers) {
+          if (key === renderKey || key === `shadow:${renderKey}` || key === `dom:${renderKey}`) {
+            if (typeof prev.stop === 'function') prev.stop();
+            renderDisposers.delete(key);
+          }
         }
 
         const view = html(async () => {

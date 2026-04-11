@@ -282,7 +282,18 @@ count = @signal 0.
 @on :click "#inc" count = count + 1.`;
 
     const shadowToggle = document.getElementById('shadow-toggle');
+    const resetRenderContainer = () => {
+      const old = document.getElementById('render-container');
+      const fresh = document.createElement('div');
+      fresh.id = 'render-container';
+      fresh.className = old.className;
+      old.replaceWith(fresh);
+      panels.output = fresh;
+    };
+
     shadowToggle.addEventListener('change', () => {
+      // Replace the container so any attached shadow root is destroyed
+      resetRenderContainer();
       editor.value = makeCounterCode(shadowToggle.checked);
     });
 
