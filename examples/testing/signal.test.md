@@ -1,7 +1,15 @@
 import { signal } from "10x/core"
 
-@test "signal starts with initial value" => @signal(5).peek() == 5.
-@test "signal can be updated" => @signal(0).set(10).peek() == 10.
+@test "signal starts with initial value" =>
+  count = @signal 5,
+  @expect count.peek() == 5.
+
+@test "signal can be updated" =>
+  count = @signal 0,
+  count.set(10),
+  @expect count.peek() == 10.
+
 @test "signal can be incremented" =>
-  count = @signal 1.
-  @expect count.peek() == 1.
+  count = @signal 1,
+  count.set(count.peek() + 1),
+  @expect count.peek() == 2.

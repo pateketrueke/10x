@@ -985,15 +985,57 @@ function compileTestDirective(body, value, ctx) {
     compiled.unshift(`const ${varName} = $.signal(${signalExpr});`);
   }
   
-  if (testBody.length && !compiled.length) {
-    for (const token of testBody) {
+  const statements = [];
+  let current = [];
+  for (const token of testBody) {
+    if (token.type === COMMA) {
+      if (current.length) statements.push(current);
+      current = [];
+    } else {
+      current.push(token);
+    }
+  }
+  if (current.length) statements.push(current);
+  
+  for (const stmtTokens of statements) {
+    if (stmtTokens.length === 1) {
+      const token = stmtTokens[0];
+      
       if (token && token.value && token.value.name) {
         const name = token.value.name;
-        compiled.push(`const ${name} = undefined;`);
+        const tokenBody = token.getBody ? token.getBody() : [];
+        
+        if (tokenBody && tokenBody.length === 1 && tokenBody[0] && tokenBody[0].isObject && tokenBody[0].value && tokenBody[0].value.signal) {
+          const signalBody = tokenBody[0].value.signal.getBody();
+          const signalExpr = compileExpression(signalBody, localCtx);
+          compiled.push(`const ${name} = $.signal(${signalExpr});`);
+        } else if (tokenBody && tokenBody.length === 1 && tokenBody[0] && tokenBody[0].isObject && tokenBody[0].value && tokenBody[0].value.expect) {
+          const expectBody = tokenBody[0].value.expect.getBody();
+          compiled.push(compileExpectDirective(expectBody, localCtx));
+        } else if (tokenBody && tokenBody.length) {
+          const expr = compileExpression(tokenBody, localCtx);
+          compiled.push(`${expr};`);
+        } else {
+          compiled.push(`const ${name} = undefined;`);
+        }
       } else if (token && token.isObject && token.value) {
-        const out = compileDirectiveObject(token, localCtx);
-        if (out) compiled.push(out);
+        if (token.value.expect) {
+          compiled.push(compileExpectDirective(token.value.expect.getBody(), localCtx));
+        } else if (token.value.signal) {
+          const signalBody = token.value.signal.getBody();
+          const signalExpr = compileExpression(signalBody, localCtx);
+          compiled.push(`$.signal(${signalExpr});`);
+        } else {
+          const out = compileDirectiveObject(token, localCtx);
+          if (out) compiled.push(out);
+        }
+      } else {
+        const expr = compileToken(token, localCtx);
+        compiled.push(`${expr};`);
       }
+    } else if (stmtTokens.length > 1) {
+      const expr = compileExpression(stmtTokens, localCtx);
+      compiled.push(`${expr};`);
     }
   }
   
