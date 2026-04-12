@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10x Counter - Shadow Mode</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0b1020;
+      color: #e7eeff;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #app {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { mount, renderShadow, signal, on } from '../../dist/runtime.js';
+    import { Counter } from './counter.md';
+
+    // Shadow DOM mode
+    const app = document.getElementById('app');
+    
+    // Create shadow hosts
+    const hostA = document.createElement('div');
+    const hostB = document.createElement('div');
+    app.appendChild(hostA);
+    app.appendChild(hostB);
+    
+    // Mount counters in shadow DOM
+    Counter({ label: 'Shadow A', start: 0 }, hostA);
+    Counter({ label: 'Shadow B', start: 10 }, hostB);
+  </script>
+</body>
+</html>

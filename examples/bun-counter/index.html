@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10x Counter - Bun Integration</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0b1020;
+      color: #e7eeff;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #app {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { mount, html, render, signal, on } from '../../dist/runtime.js';
+    import { Counter } from './counter.md';
+
+    // Light DOM mode
+    const app = document.getElementById('app');
+    
+    // Mount two counter instances
+    const counterA = Counter({ label: 'Counter A', start: 0 });
+    const counterB = Counter({ label: 'Counter B', start: 10 });
+    
+    app.appendChild(counterA);
+    app.appendChild(counterB);
+  </script>
+</body>
+</html>

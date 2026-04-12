@@ -1,0 +1,12 @@
+{
+  "name": "bun-10x",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "peerDependencies": {
+    "bun": ">=1.0.0"
+  }
+}
