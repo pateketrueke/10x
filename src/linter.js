@@ -61,6 +61,16 @@ function collectIdentifiers(token, ids = new Set()) {
   return ids;
 }
 
+function countStatements(tokens) {
+  if (!Array.isArray(tokens)) return 0;
+  let count = 0;
+  for (const t of tokens) {
+    if (!t || typeof t !== 'object') continue;
+    count++;
+  }
+  return count;
+}
+
 export function lintCode(source, ast) {
   const warnings = [];
   const tokens = ast || Parser.getAST(source, 'parse');
@@ -154,6 +164,21 @@ export function lintCode(source, ast) {
         code: 'signal-without-binding',
         message: '`@signal` without a binding name — assign it: `name = @signal <value>`',
       });
+    }
+
+    // block-fn-complexity: => bodies with too many statements
+    if (token.isCallable && token.hasBody && token.value && token.value.type === 'block') {
+      const body = token.getBody();
+      const stmtCount = countStatements(body);
+      if (stmtCount > 5) {
+        warnings.push({
+          line: tokenLine(token),
+          col: tokenCol(token),
+          code: 'block-fn-complexity',
+          severity: 'hint',
+          message: `Block function has ${stmtCount} statements — consider extracting helper functions`,
+        });
+      }
     }
   });
 
