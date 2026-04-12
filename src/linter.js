@@ -71,6 +71,88 @@ function countStatements(tokens) {
   return count;
 }
 
+function countSignalReadsInHtml(token, counts = new Map()) {
+  if (!token || typeof token !== 'object') return counts;
+  
+  // Collect identifiers from interpolation in @html bodies
+  if (token.isObject && token.value && token.value.html) {
+    const htmlBody = token.value.html.getBody();
+    if (Array.isArray(htmlBody)) {
+      for (const t of htmlBody) {
+        collectSignalReads(t, counts);
+      }
+    }
+  }
+  
+  // Walk children
+  if (token.isCallable && token.hasBody) {
+    for (const t of token.getBody()) {
+      countSignalReadsInHtml(t, counts);
+    }
+  }
+  if (token.isObject && token.value) {
+    for (const val of Object.values(token.value)) {
+      if (val && typeof val.getBody === 'function') {
+        countSignalReadsInHtml(val, counts);
+      }
+    }
+  }
+  if (token.isTag && token.value && token.value.children) {
+    for (const child of token.value.children) {
+      countSignalReadsInHtml(child, counts);
+    }
+  }
+  
+  return counts;
+}
+
+function collectSignalReads(token, counts) {
+  if (!token || typeof token !== 'object') return;
+  
+  // Symbol reference
+  if (token.isSymbol && typeof token.value === 'string') {
+    counts.set(token.value, (counts.get(token.value) || 0) + 1);
+  }
+  
+  // Interpolation #{...}
+  if (token.isInterpolation && token.hasBody) {
+    for (const t of token.getBody()) {
+      collectSignalReads(t, counts);
+    }
+  }
+  
+  // Tag with children
+  if (token.isTag && token.value) {
+    if (token.value.attrs) {
+      for (const v of Object.values(token.value.attrs)) {
+        if (v && typeof v.expr === 'string') {
+          const matches = v.expr.match(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\b/g) || [];
+          matches.forEach(m => counts.set(m, (counts.get(m) || 0) + 1));
+        }
+      }
+    }
+    if (token.value.children) {
+      for (const child of token.value.children) {
+        collectSignalReads(child, counts);
+      }
+    }
+  }
+  
+  // Walk nested
+  if (token.isCallable && token.hasBody) {
+    for (const t of token.getBody()) {
+      collectSignalReads(t, counts);
+    }
+  }
+  if (token.isObject && token.value) {
+    for (const val of Object.values(token.value)) {
+      if (val && typeof val.getBody === 'function') {
+        collectSignalReads(val, counts);
+      }
+    }
+  }
+}
+
 export function lintCode(source, ast) {
   const warnings = [];
   const tokens = ast || Parser.getAST(source, 'parse');
@@ -214,6 +296,25 @@ export function lintCode(source, ast) {
           severity: 'hint',
           message: `Block function has ${stmtCount} statements — consider extracting helper functions`,
         });
+      }
+    }
+  });
+
+  // repeated-signal-read: same signal read multiple times in @html
+  walk(tokens, token => {
+    if (token.isObject && token.value && token.value.html) {
+      const counts = new Map();
+      countSignalReadsInHtml(token, counts);
+      for (const [name, count] of counts) {
+        if (count > 1 && signalVars.has(name)) {
+          warnings.push({
+            line: tokenLine(token),
+            col: tokenCol(token),
+            code: 'repeated-signal-read',
+            severity: 'hint',
+            message: `Signal "${name}" is read ${count} times in @html — consider extracting to @computed`,
+          });
+        }
       }
     }
   });
