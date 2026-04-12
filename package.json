@@ -8,6 +8,9 @@
   "bin": {
     "10x": "bin/cli"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "exports": {
     ".": {
       "import": "./dist/main.js",
@@ -37,6 +40,15 @@
     },
     "./editor": {
       "import": "./dist/editor.js"
+    },
+    "./core": {
+      "import": "./packages/core/dist/index.js"
+    },
+    "./client": {
+      "import": "./packages/client/dist/index.js"
+    },
+    "./testing": {
+      "import": "./packages/testing/dist/index.js"
     }
   },
   "scripts": {
@@ -91,7 +103,7 @@
     "prompt-sync-history": "^1.0.1",
     "prompts": "^2.3.1",
     "somedom": "^0.9.4",
-    "testdouble": "^3.13.1",
+    "testdouble": "^3.20.2",
     "timekeeper": "^2.2.0",
     "wargs": "^0.9.0"
   }

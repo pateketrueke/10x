@@ -1,0 +1,24 @@
+{
+  "name": "10x/testing",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "10x/core": "workspace:*",
+    "somedom": "^0.9.4",
+    "testdouble": "^3.20.2"
+  },
+  "peerDependencies": {
+    "bun": ">=1.0.0"
+  },
+  "scripts": {
+    "build": "bun build src/index.js --outfile=dist/index.js --format=esm --external=bun:test"
+  }
+}

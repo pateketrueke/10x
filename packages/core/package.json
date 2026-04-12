@@ -1,0 +1,17 @@
+{
+  "name": "10x/core",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {},
+  "scripts": {
+    "build": "bun build src/index.js --outfile=dist/index.js --format=esm"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "10x/client",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "10x/core": "workspace:*",
+    "somedom": "^0.9.4"
+  },
+  "scripts": {
+    "build": "bun build src/index.js --outfile=dist/index.js --format=esm"
+  }
+}
