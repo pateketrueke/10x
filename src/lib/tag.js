@@ -57,7 +57,9 @@ function readUnquoted(input, state) {
   const start = state.i;
 
   while (state.i < input.length && !/[\s/>]/.test(input[state.i])) state.i++;
-  return input.slice(start, state.i);
+  const raw = input.slice(start, state.i);
+  if (raw !== '' && !isNaN(raw) && !isNaN(parseFloat(raw))) return Number(raw);
+  return raw;
 }
 
 function parseAttrs(input, state) {

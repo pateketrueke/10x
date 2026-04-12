@@ -1911,8 +1911,19 @@ export default class Eval {
     }
 
     if (isDirectiveStmt(value.signal)) {
-      if (token.__signalCached) {
-        subTree.push(token.__signalCached);
+      // Cache signals per owner-environment (not per token) so each component instance
+      // gets its own independent signal. Keying by token gives a stable unique ID.
+      //
+      // `environment` here is `this.env` from the Eval instance. When Eval.do is
+      // called with noInheritance=false (which all signal-body lookups do), a fresh
+      // `new Env(outerEnv)` is created, so environment.parent IS the persistent
+      // outer env (component scope or root env). We cache on that parent so the
+      // signal survives across multiple Eval.do calls into the same outer scope.
+      const _ownerEnv = environment.parent || environment;
+      if (!_ownerEnv.__signalCache) _ownerEnv.__signalCache = new Map();
+      const _cached = _ownerEnv.__signalCache.get(token);
+      if (_cached) {
+        subTree.push(_cached);
         isDone = true;
       }
 
@@ -1941,8 +1952,9 @@ export default class Eval {
         runtimeArgs.push(signalName);
       }
 
-      token.__signalCached = Expr.value(signal(...runtimeArgs), parentTokenInfo);
-      subTree.push(token.__signalCached);
+      const _signalToken = Expr.value(signal(...runtimeArgs), parentTokenInfo);
+      _ownerEnv.__signalCache.set(token, _signalToken);
+      subTree.push(_signalToken);
       isDone = true;
       }
     }
