@@ -11,22 +11,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script type="module">
     import './dist/editor.js';
-    const buildTime = document.getElementById('build-time');
-    if (buildTime && window.__10x_BUILD_TS) {
-      const formatRelative = (iso) => {
-        const diff = Date.now() - new Date(iso).getTime();
-        const secs = Math.floor(diff / 1000);
-        const mins = Math.floor(secs / 60);
-        const hrs = Math.floor(mins / 60);
-        const days = Math.floor(hrs / 24);
-        if (days > 0) return new Date(iso).toLocaleDateString();
-        if (hrs > 0) return `${hrs}h ago`;
-        if (mins > 0) return `${mins}m ago`;
-        return `${secs}s ago`;
-      };
-      buildTime.textContent = `build: ${formatRelative(window.__10x_BUILD_TS)}`;
-      buildTime.title = `Built at ${new Date(window.__10x_BUILD_TS).toLocaleString()}`;
-    }
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -200,7 +184,6 @@
         <span class="tbar-dot g"></span>
         <span class="pane-title">playground.md</span>
         <span class="pane-badge">LIVE</span>
-        <span id="build-time" style="margin-left:0.5rem;font:400 .65rem var(--mono);color:var(--muted);"></span>
       </div>
       <x-editor id="ed-devtools" style="display:block;height:100%;" value="# Isolated Counters
 
