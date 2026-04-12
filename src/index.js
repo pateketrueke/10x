@@ -482,6 +482,64 @@ function resolveWithAliases(specifier, importerPath, aliasEntries) {
 async function cli() {
   await runtimeReady;
 
+  const testFilePattern = /\.(test|spec|feature|steps)\.md$/;
+  const isTestFile = (p) => testFilePattern.test(p);
+
+  if (argv._.length && isTestFile(argv._[0])) {
+    const file = argv._[0];
+    
+    if (file.endsWith('.steps.md')) {
+      const base = file.replace('.steps.md', '');
+      const featureFile = `${base}.feature.md`;
+      
+      if (fs.existsSync(featureFile)) {
+        console.log(`\n  Running ${featureFile}...\n`);
+        const { execSync } = await import('child_process');
+        execSync(`bun test ${featureFile}`, { stdio: 'inherit' });
+      } else {
+        console.log(`\n  Step file detected. Run with a feature file:`);
+        console.log(`    10x ${featureFile}\n`);
+      }
+      process.exit(0);
+    }
+    
+    if (file.endsWith('.test.md') || file.endsWith('.spec.md')) {
+      const outFile = file.replace(/\.md$/, '.js');
+      const compiled = compile(fs.readFileSync(file, 'utf8'), { 
+        module: true,
+        runtimePath: '10x/runtime',
+      });
+      fs.writeFileSync(outFile, compiled, 'utf8');
+      
+      console.log(`\n  Running unit tests: ${file}\n`);
+      const { execSync } = await import('child_process');
+      try {
+        execSync(`bun test ${outFile}`, { stdio: 'inherit' });
+      } finally {
+        fs.unlinkSync(outFile);
+      }
+      process.exit(0);
+    }
+    
+    if (file.endsWith('.feature.md')) {
+      const outFile = file.replace(/\.md$/, '.js');
+      const source = fs.readFileSync(file, 'utf8');
+      const { parseGherkin, compileFeature } = await import('./compiler/gherkin.js');
+      const feature = parseGherkin(source);
+      const compiled = compileFeature(feature, feature.steps, feature.component);
+      fs.writeFileSync(outFile, compiled, 'utf8');
+      
+      console.log(`\n  Running BDD tests: ${file}\n`);
+      const { execSync } = await import('child_process');
+      try {
+        execSync(`bun test ${outFile}`, { stdio: 'inherit' });
+      } finally {
+        fs.unlinkSync(outFile);
+      }
+      process.exit(0);
+    }
+  }
+
   if (argv.flags.lint || argv.flags.check || argv.flags.fix) {
     const files = argv._;
     let hasError = false;
