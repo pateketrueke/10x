@@ -11,6 +11,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script type="module">
     import './dist/editor.js';
+    const buildTime = document.getElementById('build-time');
+    if (buildTime) {
+      const now = new Date();
+      buildTime.textContent = `build: ${now.toLocaleTimeString()}`;
+    }
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -184,6 +189,7 @@
         <span class="tbar-dot g"></span>
         <span class="pane-title">playground.md</span>
         <span class="pane-badge">LIVE</span>
+        <span id="build-time" style="margin-left:0.5rem;font:400 .65rem var(--mono);color:var(--muted);"></span>
       </div>
       <x-editor id="ed-devtools" style="display:block;height:100%;" value="# Isolated Counters
 
