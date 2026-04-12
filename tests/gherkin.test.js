@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'bun:test';
-import { parseGherkin, compileFeature } from '../src/compiler/gherkin';
+import { parseGherkin, compileFeature, parseStepDefinitions, stepPatternToKey, compileStepDefinitions } from '../src/compiler/gherkin';
 
 describe('Gherkin Parser', () => {
   test('should parse feature name', () => {
@@ -110,5 +110,60 @@ Scenario: Increment
     expect(output).toContain('import Counter from "./counter.md"');
     expect(output).toContain('import * as steps from "./counter.steps.md"');
     expect(output).toContain('test("Increment"');
+  });
+});
+
+describe('Step Definition Parser', () => {
+  test('should parse @before_all hook', () => {
+    const steps = parseStepDefinitions('@before_all @mount "#app".');
+    expect(steps.before_all).toBeDefined();
+    expect(steps.before_all.type).toBe('hook');
+  });
+
+  test('should parse Given step', () => {
+    const steps = parseStepDefinitions('Given "a counter starting at {num}" (n) => Counter({ start: n }).');
+    expect(steps.definitions.length).toBe(1);
+    expect(steps.definitions[0].type).toBe('given');
+    expect(steps.definitions[0].pattern).toBe('a counter starting at {num}');
+    expect(steps.definitions[0].params).toEqual(['n']);
+  });
+
+  test('should parse When step', () => {
+    const steps = parseStepDefinitions('When "I click the button" => @click "#btn".');
+    expect(steps.definitions.length).toBe(1);
+    expect(steps.definitions[0].type).toBe('when');
+  });
+
+  test('should parse Then step', () => {
+    const steps = parseStepDefinitions('Then "the count should be {num}" (expected) => @expect count == expected.');
+    expect(steps.definitions.length).toBe(1);
+    expect(steps.definitions[0].type).toBe('then');
+    expect(steps.definitions[0].params).toEqual(['expected']);
+  });
+
+  test('should convert pattern to key', () => {
+    expect(stepPatternToKey('given', 'a counter starting at {num}')).toBe('given_a_counter_starting_at');
+    expect(stepPatternToKey('when', 'I click the button')).toBe('when_I_click_the_button');
+  });
+
+  test('should compile step definitions', () => {
+    const steps = parseStepDefinitions(`
+@before_all @mount "#app".
+
+Given "a counter starting at {num}" (n) =>
+  Counter({ start: n }).
+
+When "I click increment" =>
+  @click "#inc".
+
+Then "count is {num}" (expected) =>
+  @expect count == expected.
+    `);
+    
+    const output = compileStepDefinitions(steps);
+    expect(output).toContain('export const before_all');
+    expect(output).toContain('export const given_a_counter_starting_at');
+    expect(output).toContain('export const when_I_click_increment');
+    expect(output).toContain('export const then_count_is');
   });
 });
