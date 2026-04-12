@@ -701,9 +701,9 @@
 <span class="xt-literal">double</span> <span class="xt-op">=</span> n <span class="xt-op">-&gt;</span> n <span class="xt-op">*</span> <span class="xt-number">2</span>.
 <span class="xt-literal">square</span> <span class="xt-op">=</span> n <span class="xt-op">-&gt;</span> n <span class="xt-op">*</span> n.
 
-[<span class="xt-number">1</span>..<span class="xt-number">5</span>] <span class="xt-op">|&gt;</span> map(double).
-[<span class="xt-number">1</span>..<span class="xt-number">5</span>] <span class="xt-op">|&gt;</span> map(square).
 add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
+double(<span class="xt-number">7</span>).
+square(<span class="xt-number">7</span>).
 
 <span class="xt-literal">fib</span> <span class="xt-op">=</span> n <span class="xt-op">-&gt;</span>
   <span class="xt-op">@if</span> (<span class="xt-op">&lt;</span> n <span class="xt-number">2</span>) <span class="xt-number">1</span>, (<span class="xt-op">&lt;</span> n <span class="xt-number">1</span>) <span class="xt-number">0</span>
@@ -749,7 +749,7 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
               <div class="lit-code">count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-op">@prop</span> <span class="xt-string">"start"</span> <span class="xt-number">0</span>.</div>
               <div class="lit-h2">## View</div>
               <div class="lit-prose">Renders into shadow DOM. Template subscribes to <code style="font-family:var(--mono);font-size:.9em">count</code> automatically.</div>
-              <div class="lit-code"><span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span><br>&nbsp;&nbsp;<span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span><span class="xt-tag">=</span><span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>{count}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.</div>
+              <div class="lit-code"><span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span><br>&nbsp;&nbsp;<span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span><span class="xt-tag">=</span><span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>#{count}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.</div>
               <div class="lit-h2">## Behavior</div>
               <div class="lit-prose">Buttons map directly to state transitions.</div>
               <div class="lit-code"><span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</div>
@@ -783,17 +783,17 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
               <span class="live-name">signals.md</span>
               <span class="badge-shadow">@shadow</span>
             </div>
-<pre>count = @signal 0.
+<pre><span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.
 
-@render "#app" @shadow @html
-  &lt;div class="sig-root"&gt;
-    &lt;div class="sig-value"&gt;#{count}&lt;/div&gt;
-    &lt;button id="inc"&gt;increment&lt;/button&gt;
-    &lt;button id="reset"&gt;reset&lt;/button&gt;
-  &lt;/div&gt;.
+<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span>
+  &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"sig-root"</span>&gt;
+    &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"sig-value"</span>&gt;#{<span class="xt-literal">count</span>}&lt;/<span class="xt-tag-name">div</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"inc"</span>&gt;increment&lt;/<span class="xt-tag-name">button</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"reset"</span>&gt;reset&lt;/<span class="xt-tag-name">button</span>&gt;
+  &lt;/<span class="xt-tag-name">div</span>&gt;.
 
-@on :click "#inc" @shadow count = count + 1.
-@on :click "#reset" @shadow count = 0.</pre>
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-literal">count</span> <span class="xt-op">+</span> <span class="xt-number">1</span>.
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#reset"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-number">0</span>.</pre>
           </div>
         </div>
       </div>
@@ -824,19 +824,19 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
               <span class="live-name">x-counter.md</span>
               <span class="badge-shadow">@shadow</span>
             </div>
-<pre>count = @signal @prop "start" 0.
+<pre><span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-op">@prop</span> <span class="xt-string">"start"</span> <span class="xt-number">0</span>.
 
-@render @shadow @html
-  &lt;div class="ctr-root"&gt;
-    &lt;div class="ctr-value"&gt;#{count}&lt;/div&gt;
-    &lt;button id="dec"&gt;−&lt;/button&gt;
-    &lt;button id="inc"&gt;+&lt;/button&gt;
-    &lt;button id="reset"&gt;reset&lt;/button&gt;
-  &lt;/div&gt;.
+<span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span>
+  &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"ctr-root"</span>&gt;
+    &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"ctr-value"</span>&gt;#{<span class="xt-literal">count</span>}&lt;/<span class="xt-tag-name">div</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"dec"</span>&gt;−&lt;/<span class="xt-tag-name">button</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"inc"</span>&gt;+&lt;/<span class="xt-tag-name">button</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"reset"</span>&gt;reset&lt;/<span class="xt-tag-name">button</span>&gt;
+  &lt;/<span class="xt-tag-name">div</span>&gt;.
 
-@on :click "#inc" @shadow count = count + 1.
-@on :click "#dec" @shadow count = count - 1.
-@on :click "#reset" @shadow count = @prop "start" 0.</pre>
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-literal">count</span> <span class="xt-op">+</span> <span class="xt-number">1</span>.
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#dec"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-literal">count</span> <span class="xt-op">-</span> <span class="xt-number">1</span>.
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#reset"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-op">@prop</span> <span class="xt-string">"start"</span> <span class="xt-number">0</span>.</pre>
           </div>
         </div>
       </div>
@@ -865,20 +865,22 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
             <div>
               <div class="side-label">source</div>
 <pre><span class="xt-comment"># signals.md</span>
-count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.
-double <span class="xt-op">=</span> <span class="xt-op">@computed</span> count <span class="xt-op">*</span> <span class="xt-number">2</span>.
-<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span> <span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span><span class="xt-tag">=</span><span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>{count}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.
+<span class="xt-literal">count</span>  <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.
+<span class="xt-literal">double</span> <span class="xt-op">=</span> <span class="xt-op">@computed</span> count <span class="xt-op">*</span> <span class="xt-number">2</span>.
+<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span>
+  <span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>#{<span class="xt-literal">count</span>}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.
 <span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</pre>
             </div>
             <div>
               <div class="side-label">compiled</div>
 <pre><span class="xt-comment">// signals.md → ESM</span>
-export const count <span class="xt-op">=</span> Runtime.signal(<span class="xt-number">0</span>).
-export const double <span class="xt-op">=</span> Runtime.computed(() <span class="xt-op">=&gt;</span> count() <span class="xt-op">*</span> <span class="xt-number">2</span>).
-Runtime.render(<span class="xt-string">"#app"</span>, Runtime.html(() <span class="xt-op">=&gt;</span> ...)).
-Runtime.on(<span class="xt-string">"click"</span>, <span class="xt-string">"#inc"</span>, () <span class="xt-op">=&gt;</span> {
-  count(count() <span class="xt-op">+</span> <span class="xt-number">1</span>);
-}).</pre>
+export const count = $.signal(<span class="xt-number">0</span>, <span class="xt-string">"count"</span>);
+const double = $.computed(() <span class="xt-op">=&gt;</span> $.read(count) <span class="xt-op">*</span> <span class="xt-number">2</span>);
+$.render(<span class="xt-string">"#app"</span>, $.html(() <span class="xt-op">=&gt;</span>
+  $.h(<span class="xt-string">"h1"</span>, { class: <span class="xt-string">"count"</span> }, $.read(count))));
+$.on(<span class="xt-string">"click"</span>, <span class="xt-string">"#inc"</span>, () <span class="xt-op">=&gt;</span> {
+  count.set($.read(count) <span class="xt-op">+</span> <span class="xt-number">1</span>);
+});</pre>
             </div>
           </div>
         </div>
@@ -974,11 +976,11 @@ Runtime.on(<span class="xt-string">"click"</span>, <span class="xt-string">"#inc
           <h3>CSS &amp; Styles</h3>
           <p>Raw CSS strings, object styles, and auto-generated atomic utilities.</p>
 <pre><span class="xt-op">@style</span> <span class="xt-string">"body { margin: 0; }"</span>.
-<span class="xt-op">@style</span> (<span class="xt-symbol">:host</span> {
-  backgroundColor: <span class="xt-string">"#0f1217"</span>
-}).
+<span class="xt-op">@style</span> <span class="xt-string">"h1 { color: #2dd4bf; }"</span>.
 <span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span>
-  &lt;div class=<span class="xt-string">"flex p-4 gap-2"</span>&gt;.</pre>
+  &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"flex p-4 gap-2"</span>&gt;
+    &lt;<span class="xt-tag-name">h1</span>&gt;Hello!&lt;/<span class="xt-tag-name">h1</span>&gt;
+  &lt;/<span class="xt-tag-name">div</span>&gt;.</pre>
         </div>
 
         <div class="misc-card">
@@ -1083,28 +1085,14 @@ double(5).
 fib = n ->
   @if (< n 2) 1, (< n 1) 0
   @else fib(n - 1) + fib(n - 2).
-fib!(10).
+fib!(10).`,
 
-2cm to :in.`,
+      lang: `@import to, inches @from "Unit".
 
-      lang: `1/2.
-5 cm to :in.
+1/2.
+2 cm to inches.
 [1..5].
-"hello " + "world".
 :ok.`,
-
-      fns: `add    = (a b) -> a + b.
-double = n -> n * 2.
-square = n -> n * n.
-
-double(5).
-square(5).
-add(3, 4).
-
-fib = n ->
-  @if (< n 2) 1, (< n 1) 0
-  @else fib(n - 1) + fib(n - 2).
-fib!(12).`,
     };
 
     /* ── editor init ─────────────────────────────────────────────── */

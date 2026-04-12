@@ -100,7 +100,7 @@ self.addEventListener('message', async ({ data }) => {
         const unitDisplay = unitLiteralDisplay(statementSource);
         postRuntimeLog(requestId, 'info', '[worker] executing:', statementSource.substring(0, 50));
         const result = await execute(statementSource, env);
-        postRuntimeLog(requestId, 'info', '[worker] result:', JSON.stringify(result).substring(0, 200));
+        postRuntimeLog(requestId, 'info', '[worker] result:', (JSON.stringify(result) ?? String(result)).substring(0, 200));
         if (isFunctionDefinitionSource(statementSource)) {
           partial.statementResult = {
             statementId: statement.statementId,
