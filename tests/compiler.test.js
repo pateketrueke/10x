@@ -293,4 +293,13 @@ describe('Compiler', () => {
     expect(output).toInclude('$.html(() => [$.h("h1"');
     expect(output).toInclude('$.h("p"');
   });
+
+  test('should compile #{@if} in tag children as $.computed', () => {
+    const output = compile([
+      'show = @signal true.',
+      '@render "#app" @html <div>#{@if (show) "yes" @else "no"}</div>.',
+    ].join('\n'));
+
+    expect(output).toInclude('$.computed(() => ((($.read(show))) ? ("yes") : ("no")))');
+  });
 });

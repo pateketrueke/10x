@@ -380,7 +380,7 @@ function formatFirstInline(value, indent) {
   return `${lines[0]}\n${lines.slice(1).map(line => `${indent}${line}`).join('\n')}`;
 }
 
-function compileTag(node, depth = 0) {
+function compileTag(node, depth = 0, ctx = {}) {
   const attrEntries = Object.entries(node.attrs || {});
   const attrsStr = attrEntries.length === 0
     ? 'null'
@@ -397,10 +397,19 @@ function compileTag(node, depth = 0) {
 
   const childrenParts = (node.children || []).map(child => {
     if (typeof child === 'string') return JSON.stringify(child);
-    // Pass the signal/value directly so somedom can create a surgical text-node
-    // subscription (via its isSignal check) rather than subscribing the outer effect.
-    if (child && typeof child.expr === 'string') return child.expr.trim();
-    return compileTag(child, depth + 1);
+    if (child && typeof child.expr === 'string') {
+      const expr = child.expr.trim();
+      // #{@if cond then @else else} → $.computed(() => cond ? then : else)
+      // so somedom handles it as a reactive signal child with surgical updates.
+      if (expr.startsWith('@if ') || expr === '@if') {
+        const tokens = Parser.sub(expr);
+        if (tokens.length) return `$.computed(() => ${compileToken(tokens[0], ctx)})`;
+      }
+      // Pass the signal/value directly so somedom can create a surgical text-node
+      // subscription (via its isSignal check) rather than subscribing the outer effect.
+      return expr;
+    }
+    return compileTag(child, depth + 1, ctx);
   });
 
   // Component dispatch: uppercase tag names call the function directly.
@@ -495,7 +504,7 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
   }
 
   if (token.isTag) {
-    return compileTag(token.value);
+    return compileTag(token.value, 0, ctx);
   }
 
   if (token.isCallable && !token.getName()) {
