@@ -1867,18 +1867,10 @@ export default class Eval {
         runtimeArgs.push(toPlain(evaluated.length === 1 ? evaluated[0] : evaluated));
       }
 
-      // Optional :name via trailing symbol key: `count = @signal 0 :counter` → "counter"
-      // The parser stores it as an extra key in value with an empty body.
-      const knownDirectives = new Set(['signal', 'prop', 'computed', 'render', 'html', 'on',
-        'shadow', 'if', 'else', 'do', 'let', 'loop', 'while', 'match', 'try', 'rescue',
-        'export', 'import', 'from', 'style', 'ok', 'err']);
-      const explicitName = Object.keys(value)
-        .find(k => !knownDirectives.has(k) && isDirectiveStmt(value[k]) && !value[k].getBody().length)
-        ?? null;
-
-      // Name priority: explicit :name > assignment target (`count = @signal 0`)
-      const signalName = explicitName
-        || token._assignName
+      // Auto-name from assignment variable: `count = @signal 0` → name "count"
+      // _assignName is set at definition time in evalBlocks when name && body.
+      // The explicit 2nd arg `@signal 0, "name"` takes priority (runtimeArgs.length === 2).
+      const signalName = token._assignName
         || (token && typeof token.getName === 'function' ? token.getName() : null);
       if (signalName && runtimeArgs.length < 2) {
         runtimeArgs.push(signalName);
