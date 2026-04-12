@@ -13,8 +13,17 @@
     import './dist/editor.js';
     const buildTime = document.getElementById('build-time');
     if (buildTime && window.__10x_BUILD_TS) {
-      const ts = new Date(window.__10x_BUILD_TS);
-      buildTime.textContent = `build: ${ts.toLocaleTimeString()}`;
+      const formatRelative = (iso) => {
+        const diff = Date.now() - new Date(iso).getTime();
+        const secs = Math.floor(diff / 1000);
+        const mins = Math.floor(secs / 60);
+        const hrs = Math.floor(mins / 60);
+        if (hrs > 0) return `${hrs}h ago`;
+        if (mins > 0) return `${mins}m ago`;
+        return `${secs}s ago`;
+      };
+      buildTime.textContent = `build: ${formatRelative(window.__10x_BUILD_TS)}`;
+      buildTime.title = `Built at ${new Date(window.__10x_BUILD_TS).toLocaleString()}`;
     }
   </script>
   <style>
