@@ -3,7 +3,7 @@ src := build
 target := gh-pages
 message := Release: $(shell date)
 
-.PHONY: pages deploy
+.PHONY: pages deploy build demo dist dev
 
 dist:
 	@bun run build
