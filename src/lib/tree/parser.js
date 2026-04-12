@@ -18,6 +18,8 @@ export default class Parser {
     this.templates = (ctx && ctx.templates) || {};
     this.template = null;
     this.partial = [];
+    this.blockBodyDepth = 0;
+    this.inBlockBody = false;
     this.raw = plain;
 
     this.tokens = tokens;
@@ -142,6 +144,11 @@ export default class Parser {
           continue;
         }
 
+        if (isDirective(cur) && this.blockBodyDepth > 0) {
+          body.push(Expr.from(cur));
+          continue;
+        }
+
         this.appendTo(stack, key, map, token, optional);
         optional = false;
         key = cur.value;
@@ -165,7 +172,18 @@ export default class Parser {
       }
 
       if (!isText(cur)) {
-        body.push(Expr.from(cur));
+        if (cur.type === FAT_ARROW) {
+          this.blockBodyDepth++;
+          this.inBlockBody = true;
+        }
+        if (isDirective(cur) && this.blockBodyDepth > 0) {
+          const savedInBlockBody = this.inBlockBody;
+          this.inBlockBody = false;
+          body.push(Expr.from(cur));
+          this.inBlockBody = savedInBlockBody;
+        } else {
+          body.push(Expr.from(cur));
+        }
       }
     }
 
@@ -362,13 +380,11 @@ export default class Parser {
   isEnd(endToken, raw) {
     const token = this.peek();
 
-    // break on call-expressions
     if (isOpen(token) || isBegin(token)) this.depth++;
     if (isClose(token) || isDone(token)) this.depth--;
 
     if (this.depth > 0) return false;
 
-    // reset on negative offsets ;-)
     if (this.depth < 0) {
       this.depth = 0;
       return true;

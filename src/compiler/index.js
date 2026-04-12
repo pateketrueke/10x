@@ -964,79 +964,51 @@ function compileStyleDirective(body, ctx) {
 
 function compileTestDirective(body, value, ctx) {
   const [stmt] = body;
-  const innerBody = stmt && stmt.hasBody ? stmt.getBody() : body;
-  const testName = innerBody[0] && innerBody[0].isString ? innerBody[0].value : 'test';
-  const arrowIdx = innerBody.findIndex(t => t.type === FAT_ARROW);
-  const testBody = arrowIdx >= 0 ? innerBody.slice(arrowIdx + 1) : innerBody.slice(1);
+  const testBody = stmt && stmt.hasBody ? stmt.getBody() : body;
+  const firstBlock = testBody[0] && testBody[0].hasBody ? testBody[0].getBody() : testBody;
+  const testName = firstBlock[0] && firstBlock[0].isString ? firstBlock[0].value : 'test';
   
   const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false };
   
   const compiled = [];
   
-  if (value && value.expect) {
-    compiled.push(compileExpectDirective(value.expect.getBody(), localCtx));
-  }
-  
-  if (value && value.signal) {
-    const signalBody = value.signal.getBody();
-    const signalExpr = compileExpression(signalBody, localCtx);
-    const defToken = testBody.find(t => t && t.value && t.value.name);
-    const varName = defToken && defToken.value.name ? defToken.value.name : 'value';
-    compiled.unshift(`const ${varName} = $.signal(${signalExpr});`);
-  }
-  
-  const statements = [];
-  let current = [];
-  for (const token of testBody) {
-    if (token.type === COMMA) {
-      if (current.length) statements.push(current);
-      current = [];
-    } else {
-      current.push(token);
-    }
-  }
-  if (current.length) statements.push(current);
-  
-  for (const stmtTokens of statements) {
-    if (stmtTokens.length === 1) {
-      const token = stmtTokens[0];
+  for (const token of firstBlock) {
+    if (token.type === FAT_ARROW) continue;
+    if (token.isString) continue;
+    
+    if (token && token.value && token.value.name) {
+      const name = token.value.name;
+      const tokenBody = token.getBody ? token.getBody() : [];
       
-      if (token && token.value && token.value.name) {
-        const name = token.value.name;
-        const tokenBody = token.getBody ? token.getBody() : [];
-        
-        if (tokenBody && tokenBody.length === 1 && tokenBody[0] && tokenBody[0].isObject && tokenBody[0].value && tokenBody[0].value.signal) {
-          const signalBody = tokenBody[0].value.signal.getBody();
-          const signalExpr = compileExpression(signalBody, localCtx);
-          compiled.push(`const ${name} = $.signal(${signalExpr});`);
-        } else if (tokenBody && tokenBody.length === 1 && tokenBody[0] && tokenBody[0].isObject && tokenBody[0].value && tokenBody[0].value.expect) {
-          const expectBody = tokenBody[0].value.expect.getBody();
-          compiled.push(compileExpectDirective(expectBody, localCtx));
-        } else if (tokenBody && tokenBody.length) {
-          const expr = compileExpression(tokenBody, localCtx);
-          compiled.push(`${expr};`);
-        } else {
-          compiled.push(`const ${name} = undefined;`);
-        }
-      } else if (token && token.isObject && token.value) {
-        if (token.value.expect) {
-          compiled.push(compileExpectDirective(token.value.expect.getBody(), localCtx));
-        } else if (token.value.signal) {
-          const signalBody = token.value.signal.getBody();
-          const signalExpr = compileExpression(signalBody, localCtx);
-          compiled.push(`$.signal(${signalExpr});`);
-        } else {
-          const out = compileDirectiveObject(token, localCtx);
-          if (out) compiled.push(out);
-        }
-      } else {
-        const expr = compileToken(token, localCtx);
+      if (tokenBody && tokenBody.length === 1 && tokenBody[0] && tokenBody[0].value && tokenBody[0].value.signal) {
+        const signalBody = tokenBody[0].value.signal.getBody();
+        const signalExpr = compileExpression(signalBody, localCtx);
+        compiled.push(`const ${name} = $.signal(${signalExpr});`);
+      } else if (tokenBody && tokenBody.length) {
+        const expr = compileExpression(tokenBody, localCtx);
         compiled.push(`${expr};`);
       }
-    } else if (stmtTokens.length > 1) {
-      const expr = compileExpression(stmtTokens, localCtx);
-      compiled.push(`${expr};`);
     }
+  }
+  
+  for (let i = 1; i < testBody.length; i++) {
+    const token = testBody[i];
+    
+    if (token && token.hasBody) {
+      const tokenBody = token.getBody();
+      if (tokenBody && tokenBody.length) {
+        const expr = compileExpression(tokenBody, localCtx);
+        compiled.push(`${expr};`);
+      }
+    } else if (token && token.isObject && token.value) {
+      if (token.value.expect) {
+        compiled.push(compileExpectDirective(token.value.expect.getBody(), localCtx));
+      }
+    }
+  }
+  
+  if (value && value.expect) {
+    compiled.push(compileExpectDirective(value.expect.getBody(), localCtx));
   }
   
   if (!compiled.length) {
