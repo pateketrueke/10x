@@ -1962,8 +1962,7 @@ export default class Eval {
       const signalName = token._assignName
         || (token && typeof token.getName === 'function' ? token.getName() : null);
       
-      // Namespace signal name with component instance
-      // Walk up the env chain to find component info
+      // Walk up the env chain to find component info for grouping
       let componentName = environment.__componentName;
       let componentInstanceId = environment.__componentInstanceId;
       let envPtr = environment.parent;
@@ -1973,17 +1972,14 @@ export default class Eval {
         envPtr = envPtr.parent;
       }
       
-      const namespacedName = (componentName && componentInstanceId)
-        ? `${componentName}$${componentInstanceId}.${signalName}`
-        : signalName;
-      
-      // Set moduleUrl for devtools grouping
+      // Set moduleUrl for devtools grouping (signals grouped by component instance)
       const moduleUrl = (componentName && componentInstanceId)
         ? `${componentName}$${componentInstanceId}`
         : undefined;
       
-      if (namespacedName && runtimeArgs.length < 2) {
-        runtimeArgs.push(namespacedName);
+      // Signal name stays as-is (e.g., "count"), grouping is via moduleUrl
+      if (signalName && runtimeArgs.length < 2) {
+        runtimeArgs.push(signalName);
       }
       if (moduleUrl && runtimeArgs.length < 3) {
         runtimeArgs.push(moduleUrl);
