@@ -185,23 +185,23 @@
         <span class="pane-title">playground.md</span>
         <span class="pane-badge">LIVE</span>
       </div>
-      <x-editor id="ed-devtools" style="display:block;height:100%;" value="# Signal Counter
+      <x-editor id="ed-devtools" style="display:block;height:100%;" value="# Isolated Counters
 
-Btn = props -&gt; @html
-  &lt;button onclick={props.onclick} style=&quot;padding:0.5rem 1.25rem;font-size:1.25rem;margin:0.25rem;cursor:pointer&quot;&gt;
-    #{props.label}
-  &lt;/button&gt;.
-
-count = @signal 0.
-inc = @on count = count + 1.
-dec = @on count = count - 1.
+Counter props =&gt; @html
+  count = @signal (props.start or 0).
+  inc = @on count = count + 1.
+  dec = @on count = count - 1.
+  &lt;div style=&quot;text-align:center;border:1px solid #333;border-radius:8px;padding:1.5rem;margin:0.5rem&quot;&gt;
+    &lt;h2 style=&quot;margin:0 0 0.5rem&quot;&gt;#{props.label}&lt;/h2&gt;
+    &lt;h1 style=&quot;font-size:3rem;margin:0.25rem 0&quot;&gt;#{count}&lt;/h1&gt;
+    &lt;button onclick={dec} style=&quot;padding:0.5rem 1rem;font-size:1.25rem;margin:0.25rem;cursor:pointer&quot;&gt;-&lt;/button&gt;
+    &lt;button onclick={inc} style=&quot;padding:0.5rem 1rem;font-size:1.25rem;margin:0.25rem;cursor:pointer&quot;&gt;+&lt;/button&gt;
+  &lt;/div&gt;.
 
 @render &quot;#render-container&quot; @html
-  &lt;style&gt;h1 { font-size: 3rem; margin: 0.5rem 0; }&lt;/style&gt;
-  &lt;div style=&quot;text-align:center;padding:2rem&quot;&gt;
-    &lt;h1&gt;#{@if (= count 0) &quot;zero&quot; @else count}&lt;/h1&gt;
-    &lt;Btn label=&quot;-&quot; onclick={dec} /&gt;
-    &lt;Btn label=&quot;+&quot; onclick={inc} /&gt;
+  &lt;div style=&quot;display:flex;gap:1rem;padding:1rem;flex-wrap:wrap&quot;&gt;
+    &lt;Counter label=&quot;A&quot; start=0 /&gt;
+    &lt;Counter label=&quot;B&quot; start=10 /&gt;
   &lt;/div&gt;
 .
 "></x-editor>
