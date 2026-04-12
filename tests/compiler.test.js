@@ -366,4 +366,38 @@ describe('Compiler', () => {
     expect(output).toInclude('const inc = () => { n.set(((n) => (n + 1))(n.peek())); };');
     expect(output).toInclude('return $.html(');
   });
+
+  describe('HMR Footer', () => {
+    test('should not include HMR footer by default', () => {
+      const output = compile('count = @signal 0.');
+      expect(output).not.toInclude('import.meta.hot');
+    });
+
+    test('should include HMR footer when hmr: true', () => {
+      const output = compile('count = @signal 0.', { hmr: true });
+      expect(output).toInclude('import.meta.hot');
+      expect(output).toInclude('import.meta.hot.dispose');
+      expect(output).toInclude('import.meta.hot.accept');
+    });
+
+    test('HMR footer should snapshot signals on dispose', () => {
+      const output = compile('count = @signal 0.', { hmr: true });
+      expect(output).toInclude('data.__signals = {}');
+      expect(output).toInclude('globalThis.__10x_signals');
+      expect(output).toInclude('.peek()');
+    });
+
+    test('HMR footer should restore signals on accept', () => {
+      const output = compile('count = @signal 0.', { hmr: true });
+      expect(output).toInclude('import.meta.hot.data.__signals');
+      expect(output).toInclude('.set(');
+      expect(output).toInclude('_restoredCount');
+    });
+
+    test('HMR footer should notify devtools', () => {
+      const output = compile('count = @signal 0.', { hmr: true });
+      expect(output).toInclude('__10x_devtools');
+      expect(output).toInclude('onHmr');
+    });
+  });
 });
