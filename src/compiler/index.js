@@ -397,9 +397,21 @@ function compileTag(node, depth = 0) {
 
   const childrenParts = (node.children || []).map(child => {
     if (typeof child === 'string') return JSON.stringify(child);
-    if (child && typeof child.expr === 'string') return `$.read(${child.expr.trim()})`;
+    // Pass the signal/value directly so somedom can create a surgical text-node
+    // subscription (via its isSignal check) rather than subscribing the outer effect.
+    if (child && typeof child.expr === 'string') return child.expr.trim();
     return compileTag(child, depth + 1);
   });
+
+  // Component dispatch: uppercase tag names call the function directly.
+  if (/^[A-Z]/.test(node.name)) {
+    const propsBase = attrsStr === 'null' ? '' : attrsStr.slice(2, -2); // strip '{ ' / ' }'
+    const childrenEntry = childrenParts.length
+      ? `"children": [${childrenParts.join(', ')}]`
+      : '';
+    const entries = [propsBase, childrenEntry].filter(Boolean).join(', ');
+    return `${node.name}({ ${entries} })`;
+  }
 
   if (!childrenParts.length) {
     return `$.h(${JSON.stringify(node.name)}, ${attrsStr})`;
@@ -875,6 +887,14 @@ function compileHtmlDirective(body, ctx) {
       .filter(token => token && token.type !== COMMA)
       .map(token => compileToken(token, ctx));
     return `$.html(() => [${items.join(', ')}])`;
+  }
+  // Multi-root: a BLOCK wrapping multiple sibling nodes → emit as array fragment
+  if (template && template.type === BLOCK && template.hasBody) {
+    const inner = template.getBody();
+    if (inner.length > 1) {
+      const items = inner.map(t => compileToken(t, ctx));
+      return `$.html(() => [${items.join(', ')}])`;
+    }
   }
   return `$.html(() => ${compileToken(template, ctx)})`;
 }

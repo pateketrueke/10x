@@ -25,7 +25,7 @@ describe('Compiler', () => {
     const output = compile('@render "#app" @html <h1>#{count}</h1>.');
 
     expect(output).toInclude('import * as $ from "./runtime";');
-    expect(output).toInclude('$.render("#app", $.html(() => $.h("h1", null, $.read(count))));');
+    expect(output).toInclude('$.render("#app", $.html(() => $.h("h1", null, count)));');
   });
 
   test('should compile signal assignment and on-handler updates', () => {

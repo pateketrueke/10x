@@ -1933,11 +1933,10 @@ export default class Eval {
           const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
           if (!rendered.length) return '';
           const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
-          // Subscribe the effect to every signal so it re-runs on any signal change.
-          // Needed for both: string templates (innerHTML) and component prop updates (vdom).
-          // For #{signal} text nodes somedom also subscribes directly (surgical update) —
-          // the vdom diff on effect re-run is a no-op for those, so there's no conflict.
-          if (signalMap.size > 0) {
+          // For string output, subscribe the effect to signals so it re-runs on change.
+          // For vdom output, #{signal} children carry the raw SignalProxy into somedom,
+          // which creates surgical text-node subscriptions — no effect re-run needed.
+          if (typeof result === 'string' && signalMap.size > 0) {
             signalMap.forEach(sig => sig.get());
           }
           return result;
