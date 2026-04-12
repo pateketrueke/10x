@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10x DevTools Playground</title>
+  <meta name="description" content="Debug and inspect 10x signals in real-time">
+  <link rel="icon" href="./favicon.ico" sizes="any" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script type="module">
+    import './dist/editor.js';
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg: #090c12;
+      --bg-alt: #0d1119;
+      --ink: #e2e8f0;
+      --muted: #64748b;
+      --accent: #2dd4bf;
+      --accent2: #818cf8;
+      --mono: "IBM Plex Mono", monospace;
+      --sans: "Space Grotesk", sans-serif;
+    }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background: var(--bg);
+      height: 100vh;
+      overflow: hidden;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .editor-pane {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    .pane-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.025);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .pane-title {
+      font: 600 .82rem var(--mono);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .tbar-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .tbar-dot.r { background: #ff5f57; }
+    .tbar-dot.y { background: #ffbd2e; }
+    .tbar-dot.g { background: #28c840; }
+    .pane-badge {
+      margin-left: auto;
+      font: 600 .67rem var(--mono);
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: rgba(45,212,191,0.1);
+      border: 1px solid rgba(45,212,191,0.25);
+      border-radius: 99px;
+      padding: 0.18rem 0.5rem;
+    }
+    #ed-devtools {
+      flex: 1;
+      display: block;
+      min-height: 0;
+      overflow: auto;
+    }
+    .devtools-pane {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-alt);
+    }
+    #devtools-container {
+      flex: 1;
+      overflow: hidden;
+    }
+    .tabbar {
+      display: flex;
+      gap: 0.35rem;
+      margin-left: auto;
+    }
+    .tab-btn {
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      font: 600 .68rem var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      color: var(--ink);
+      border-color: rgba(45,212,191,0.45);
+      background: rgba(45,212,191,0.14);
+    }
+    .tab-panels {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .tab-panel {
+      position: absolute;
+      inset: 0;
+      display: none;
+      min-height: 0;
+      overflow: auto;
+      padding: 0.5rem;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+    #log-container {
+      font: 500 .73rem/1.45 var(--mono);
+      color: #d0d7de;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .log-line {
+      padding: 0.2rem 0.15rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .log-line[data-level="error"] { color: #ff9b9b; }
+    .log-line[data-level="warn"] { color: #ffd18a; }
+    .log-line[data-level="info"] { color: #9fd8ff; }
+    .log-line[data-level="debug"] { color: #b8b8ff; }
+    .log-time {
+      color: #7a8492;
+      margin-right: 0.4rem;
+    }
+    .shadow-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-left: 0.75rem;
+      cursor: pointer;
+      font: 600 .68rem var(--mono);
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      user-select: none;
+    }
+    .shadow-toggle input { display: none; }
+    .shadow-toggle span {
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04);
+      border-radius: 999px;
+      padding: 0.18rem 0.5rem;
+      transition: color .15s, border-color .15s, background .15s;
+    }
+    .shadow-toggle input:checked + span {
+      color: var(--accent2);
+      border-color: rgba(129,140,248,0.45);
+      background: rgba(129,140,248,0.14);
+    }
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .devtools-pane { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <div class="editor-pane">
+      <div class="pane-header">
+        <span class="tbar-dot r"></span>
+        <span class="tbar-dot y"></span>
+        <span class="tbar-dot g"></span>
+        <span class="pane-title">playground.md</span>
+        <span class="pane-badge">LIVE</span>
+      </div>
+      <x-editor id="ed-devtools" style="display:block;height:100%;" value="# Counter with Components
+
+Btn = props ->
+  &lt;button id={props.id}&gt;#{props.label}&lt;/button&gt;.
+
+count = @signal 0.
+
+@render &quot;#render-container&quot; @html
+  &lt;style&gt;button { padding: 0.5rem 1rem; margin: 0.25rem; }&lt;/style&gt;
+  &lt;div&gt;
+    &lt;h1&gt;Count: #{count}&lt;/h1&gt;
+    &lt;Btn id=&quot;dec&quot; label=&quot;-&quot; /&gt;
+    &lt;Btn id=&quot;inc&quot; label=&quot;+&quot; /&gt;
+  &lt;/div&gt;
+.
+
+@on :click &quot;#dec&quot; count = count - 1.
+@on :click &quot;#inc&quot; count = count + 1.
+"></x-editor>
+    </div>
+    <div class="devtools-pane">
+      <div class="pane-header">
+        <span class="pane-title">Signals</span>
+      </div>
+      <div id="devtools-container"></div>
+      <div class="pane-header" style="margin-top:auto;border-top:1px solid rgba(255,255,255,0.06)">
+        <span class="pane-title">Output</span>
+        <label class="shadow-toggle" title="Toggle shadow DOM mode">
+          <input type="checkbox" id="shadow-toggle" autocomplete="off">
+          <span>@shadow</span>
+        </label>
+        <div class="tabbar">
+          <button class="tab-btn active" data-tab="output" type="button">Output</button>
+          <button class="tab-btn" data-tab="logs" type="button">Logs</button>
+          <button class="tab-btn" id="clear-logs" type="button" title="Clear logs" aria-label="Clear logs">🗑</button>
+        </div>
+      </div>
+      <div class="tab-panels">
+        <div id="render-container" class="tab-panel active"></div>
+        <div id="log-container" class="tab-panel"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module">
+    import { devtools } from './dist/runtime.js';
+    const debug = new URLSearchParams(window.location.search).get('debug');
+    globalThis.__10x_devtools_debug = debug === '1' || debug === 'true';
+    devtools({ docked: true, container: document.getElementById('devtools-container') });
+    const editor = document.getElementById('ed-devtools');
+    let tenxSignalsEvents = 0;
+    if (globalThis.__10x_devtools_debug) {
+      console.info('[10x:devtools.html] tenx-signals listener attached', {
+        editorId: editor?.id || null,
+      });
+    }
+    editor.addEventListener('tenx-signals', ({ detail }) => {
+      tenxSignalsEvents += 1;
+      if (globalThis.__10x_devtools_debug) {
+        console.info('[10x:devtools.html] tenx-signals event', {
+          eventsSeen: tenxSignalsEvents,
+          snapshotCount: Array.isArray(detail) ? detail.length : 0,
+          hasDevtoolsOnSignals: typeof globalThis.__10x_devtools?.onSignals === 'function',
+        });
+      }
+      globalThis.__10x_devtools?.onSignals?.(detail);
+    });
+
+    // Transform existing editor code by adding/removing @shadow annotations in-place.
+    const setShadowMode = (code, enabled) => {
+      // Normalize: strip @shadow from @render and @on lines
+      let result = code
+        .replace(/(@render\b[^.]*?) @shadow (@html\b)/g, '$1 $2')
+        .replace(/(@on\b\s+:[^\s]+\s+"[^"]*")\s+@shadow\s+/g, '$1 ');
+      if (!enabled) return result;
+      // Add @shadow back
+      return result
+        .replace(/(@render\b[^.]*?) (@html\b)/g, '$1 @shadow $2')
+        .replace(/(@on\b\s+:[^\s]+\s+"[^"]*")\s+/g, '$1 @shadow ');
+    };
+
+    const shadowToggle = document.getElementById('shadow-toggle');
+    const resetRenderContainer = () => {
+      const old = document.getElementById('render-container');
+      const fresh = document.createElement('div');
+      fresh.id = 'render-container';
+      fresh.className = old.className;
+      old.replaceWith(fresh);
+      panels.output = fresh;
+    };
+
+    shadowToggle.addEventListener('change', () => {
+      // Replace the container so any attached shadow root is destroyed
+      resetRenderContainer();
+      editor.value = setShadowMode(editor.value, shadowToggle.checked);
+    });
+
+    const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+    const renderPanel = document.getElementById('render-container');
+    const logPanel = document.getElementById('log-container');
+    const clearLogsBtn = document.getElementById('clear-logs');
+    const panels = {
+      output: renderPanel,
+      logs: logPanel,
+    };
+
+    const setTab = (tab) => {
+      tabButtons.forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+      Object.entries(panels).forEach(([name, panel]) => {
+        panel.classList.toggle('active', name === tab);
+      });
+    };
+
+    tabButtons.forEach((btn) => {
+      if (btn.id === 'clear-logs') return;
+      btn.addEventListener('click', () => setTab(btn.dataset.tab));
+    });
+
+    clearLogsBtn?.addEventListener('click', () => {
+      logPanel.innerHTML = '';
+    });
+
+    const MAX_LOG_LINES = 250;
+    const formatLogArg = (value) => {
+      if (typeof value === 'string') return value;
+      try {
+        return JSON.stringify(value);
+      } catch (_) {
+        return String(value);
+      }
+    };
+
+    const appendRuntimeLog = ({ level = 'log', args = [], ts = Date.now(), source = 'runtime' } = {}) => {
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.dataset.level = level;
+      const time = new Date(ts).toLocaleTimeString();
+      line.innerHTML = `<span class="log-time">${time}</span><strong>[${level}]</strong> [${source}] ${args.map(formatLogArg).join(' ')}`;
+      logPanel.appendChild(line);
+      while (logPanel.children.length > MAX_LOG_LINES) {
+        logPanel.removeChild(logPanel.firstChild);
+      }
+      if (logPanel.classList.contains('active')) {
+        logPanel.scrollTop = logPanel.scrollHeight;
+      }
+    };
+
+    globalThis.__10x_runtime_log = appendRuntimeLog;
+  </script>
+</body>
+</html>

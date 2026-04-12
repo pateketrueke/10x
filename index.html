@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <base href="/10x/" />
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>10x Language</title>
@@ -332,6 +331,10 @@
     .xt-string { color: #ce9178; }
     .xt-symbol { color: #dcdcaa; }
     .xt-op     { color: #c586c0; }
+    .xt-tag    { color: #4fc1ff; }
+    .xt-tag-name { color: #4fc1ff; }
+    .xt-attr   { color: #9cdcfe; }
+    .xt-attr-value { color: #ce9178; }
     .xt-comment{ color: #6a9955; }
     .xt-literal{ color: #9cdcfe; }
     .xt-sh-cmd { color: #9cdcfe; }
@@ -377,6 +380,10 @@
     .lit-code .xt-op { color: #c586c0; }
     .lit-code .xt-string { color: #ce9178; }
     .lit-code .xt-number { color: #b5cea8; }
+    .lit-code .xt-tag,
+    .lit-code .xt-tag-name { color: #4fc1ff; }
+    .lit-code .xt-attr { color: #9cdcfe; }
+    .lit-code .xt-attr-value { color: #ce9178; }
 
     /* ── compiler split ─────────────────────────────────────────── */
     .compiler-split {
@@ -488,15 +495,6 @@
       overflow: hidden;
       box-shadow: 0 20px 60px rgba(0,0,0,.4), 0 0 0 1px rgba(45,212,191,.06);
     }
-    .demo-editor-bar {
-      display: flex; align-items: center; gap: .5rem;
-      padding: .6rem .9rem;
-      background: rgba(255,255,255,.025);
-      border-bottom: 1px solid rgba(255,255,255,.06);
-    }
-    .demo-editor-bar .tbar-dot { width: 9px; height: 9px; }
-    .demo-file { font: .74rem var(--mono); color: var(--muted); margin-left: .4rem; flex: 1; }
-    #ed-demo { display: block; height: 360px; }
 
     /* ── quick start ────────────────────────────────────────────── */
     .quickstart { padding: 5rem 0; border-top: 1px solid rgba(255,255,255,.05); }
@@ -564,6 +562,7 @@
         <li><a href="#demo">Demo</a></li>
       </ul>
       <div class="nav-cta">
+        <a class="btn-sm ghost" href="./devtools.html" target="_blank">DevTools</a>
         <a class="btn-sm ghost" href="https://github.com/pateketrueke/10x#readme" target="_blank" rel="noopener">GitHub</a>
         <a class="btn-sm solid" href="#demo">Try it live</a>
       </div>
@@ -702,9 +701,9 @@
 <span class="xt-literal">double</span> <span class="xt-op">=</span> n <span class="xt-op">-&gt;</span> n <span class="xt-op">*</span> <span class="xt-number">2</span>.
 <span class="xt-literal">square</span> <span class="xt-op">=</span> n <span class="xt-op">-&gt;</span> n <span class="xt-op">*</span> n.
 
-[<span class="xt-number">1</span>..<span class="xt-number">5</span>] <span class="xt-op">|&gt;</span> map(double).
-[<span class="xt-number">1</span>..<span class="xt-number">5</span>] <span class="xt-op">|&gt;</span> map(square).
 add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
+double(<span class="xt-number">7</span>).
+square(<span class="xt-number">7</span>).
 
 <span class="xt-literal">fib</span> <span class="xt-op">=</span> n <span class="xt-op">-&gt;</span>
   <span class="xt-op">@if</span> (<span class="xt-op">&lt;</span> n <span class="xt-number">2</span>) <span class="xt-number">1</span>, (<span class="xt-op">&lt;</span> n <span class="xt-number">1</span>) <span class="xt-number">0</span>
@@ -750,10 +749,10 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
               <div class="lit-code">count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-op">@prop</span> <span class="xt-string">"start"</span> <span class="xt-number">0</span>.</div>
               <div class="lit-h2">## View</div>
               <div class="lit-prose">Renders into shadow DOM. Template subscribes to <code style="font-family:var(--mono);font-size:.9em">count</code> automatically.</div>
-              <div class="lit-code"><span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span><br>&nbsp;&nbsp;&lt;h1&gt;{count}&lt;/h1&gt;.</div>
+              <div class="lit-code"><span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span><br>&nbsp;&nbsp;<span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span><span class="xt-tag">=</span><span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>#{count}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.</div>
               <div class="lit-h2">## Behavior</div>
               <div class="lit-prose">Buttons map directly to state transitions.</div>
-              <div class="lit-code"><span class="xt-op">@on</span> <span class="xt-string">"click"</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</div>
+              <div class="lit-code"><span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</div>
             </div>
           </div>
         </div>
@@ -783,9 +782,18 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
             <div class="live-bar">
               <span class="live-name">signals.md</span>
               <span class="badge-shadow">@shadow</span>
-              <span class="badge-live">LIVE</span>
             </div>
-            <x-editor id="ed-sig" style="display:block;min-height:240px;"></x-editor>
+<pre><span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.
+
+<span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span>
+  &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"sig-root"</span>&gt;
+    &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"sig-value"</span>&gt;#{<span class="xt-literal">count</span>}&lt;/<span class="xt-tag-name">div</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"inc"</span>&gt;increment&lt;/<span class="xt-tag-name">button</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"reset"</span>&gt;reset&lt;/<span class="xt-tag-name">button</span>&gt;
+  &lt;/<span class="xt-tag-name">div</span>&gt;.
+
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-literal">count</span> <span class="xt-op">+</span> <span class="xt-number">1</span>.
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#reset"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-number">0</span>.</pre>
           </div>
         </div>
       </div>
@@ -815,9 +823,20 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
             <div class="live-bar">
               <span class="live-name">x-counter.md</span>
               <span class="badge-shadow">@shadow</span>
-              <span class="badge-live">LIVE</span>
             </div>
-            <x-editor id="ed-xctr" style="display:block;min-height:260px;"></x-editor>
+<pre><span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-op">@prop</span> <span class="xt-string">"start"</span> <span class="xt-number">0</span>.
+
+<span class="xt-op">@render</span> <span class="xt-op">@shadow</span> <span class="xt-op">@html</span>
+  &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"ctr-root"</span>&gt;
+    &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"ctr-value"</span>&gt;#{<span class="xt-literal">count</span>}&lt;/<span class="xt-tag-name">div</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"dec"</span>&gt;−&lt;/<span class="xt-tag-name">button</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"inc"</span>&gt;+&lt;/<span class="xt-tag-name">button</span>&gt;
+    &lt;<span class="xt-tag-name">button</span> <span class="xt-attr">id</span>=<span class="xt-attr-value">"reset"</span>&gt;reset&lt;/<span class="xt-tag-name">button</span>&gt;
+  &lt;/<span class="xt-tag-name">div</span>&gt;.
+
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-literal">count</span> <span class="xt-op">+</span> <span class="xt-number">1</span>.
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#dec"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-literal">count</span> <span class="xt-op">-</span> <span class="xt-number">1</span>.
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#reset"</span> <span class="xt-op">@shadow</span> <span class="xt-literal">count</span> <span class="xt-op">=</span> <span class="xt-op">@prop</span> <span class="xt-string">"start"</span> <span class="xt-number">0</span>.</pre>
           </div>
         </div>
       </div>
@@ -846,29 +865,22 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
             <div>
               <div class="side-label">source</div>
 <pre><span class="xt-comment"># signals.md</span>
-count <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.
-double <span class="xt-op">=</span> <span class="xt-op">@computed</span>
-  count <span class="xt-op">*</span> <span class="xt-number">2</span>.
+<span class="xt-literal">count</span>  <span class="xt-op">=</span> <span class="xt-op">@signal</span> <span class="xt-number">0</span>.
+<span class="xt-literal">double</span> <span class="xt-op">=</span> <span class="xt-op">@computed</span> count <span class="xt-op">*</span> <span class="xt-number">2</span>.
 <span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span>
-  &lt;h1&gt;{count}&lt;/h1&gt;.
-<span class="xt-op">@on</span> <span class="xt-string">"click"</span> <span class="xt-string">"#inc"</span>
-  count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</pre>
+  <span class="xt-tag">&lt;</span><span class="xt-tag-name">h1</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"count"</span><span class="xt-tag">&gt;</span>#{<span class="xt-literal">count</span>}<span class="xt-tag">&lt;/</span><span class="xt-tag-name">h1</span><span class="xt-tag">&gt;</span>.
+<span class="xt-op">@on</span> <span class="xt-symbol">:click</span> <span class="xt-string">"#inc"</span> count <span class="xt-op">=</span> count <span class="xt-op">+</span> <span class="xt-number">1</span>.</pre>
             </div>
             <div>
               <div class="side-label">compiled</div>
 <pre><span class="xt-comment">// signals.md → ESM</span>
-export const count <span class="xt-op">=</span>
-  Runtime.signal(<span class="xt-number">0</span>).
-export const double <span class="xt-op">=</span>
-  Runtime.computed(()
-    <span class="xt-op">=&gt;</span> count() <span class="xt-op">*</span> <span class="xt-number">2</span>).
-Runtime.render(<span class="xt-string">"#app"</span>,
-  Runtime.html(()
-    <span class="xt-op">=&gt;</span> ...)).
-Runtime.on(<span class="xt-string">"click"</span>,
-  <span class="xt-string">"#inc"</span>, () <span class="xt-op">=&gt;</span> {
-  count(count() <span class="xt-op">+</span> <span class="xt-number">1</span>);
-}).</pre>
+export const count = $.signal(<span class="xt-number">0</span>, <span class="xt-string">"count"</span>);
+const double = $.computed(() <span class="xt-op">=&gt;</span> $.read(count) <span class="xt-op">*</span> <span class="xt-number">2</span>);
+$.render(<span class="xt-string">"#app"</span>, $.html(() <span class="xt-op">=&gt;</span>
+  $.h(<span class="xt-string">"h1"</span>, { class: <span class="xt-string">"count"</span> }, $.read(count))));
+$.on(<span class="xt-string">"click"</span>, <span class="xt-string">"#inc"</span>, () <span class="xt-op">=&gt;</span> {
+  count.set($.read(count) <span class="xt-op">+</span> <span class="xt-number">1</span>);
+});</pre>
             </div>
           </div>
         </div>
@@ -964,11 +976,11 @@ Runtime.on(<span class="xt-string">"click"</span>,
           <h3>CSS &amp; Styles</h3>
           <p>Raw CSS strings, object styles, and auto-generated atomic utilities.</p>
 <pre><span class="xt-op">@style</span> <span class="xt-string">"body { margin: 0; }"</span>.
-<span class="xt-op">@style</span> (<span class="xt-symbol">:host</span> {
-  backgroundColor: <span class="xt-string">"#0f1217"</span>
-}).
+<span class="xt-op">@style</span> <span class="xt-string">"h1 { color: #2dd4bf; }"</span>.
 <span class="xt-op">@render</span> <span class="xt-string">"#app"</span> <span class="xt-op">@html</span>
-  &lt;div class=<span class="xt-string">"flex p-4 gap-2"</span>&gt;.</pre>
+  &lt;<span class="xt-tag-name">div</span> <span class="xt-attr">class</span>=<span class="xt-attr-value">"flex p-4 gap-2"</span>&gt;
+    &lt;<span class="xt-tag-name">h1</span>&gt;Hello!&lt;/<span class="xt-tag-name">h1</span>&gt;
+  &lt;/<span class="xt-tag-name">div</span>&gt;.</pre>
         </div>
 
         <div class="misc-card">
@@ -996,32 +1008,18 @@ Runtime.on(<span class="xt-string">"click"</span>,
       </div>
     </section>
 
-    <!-- ── tabbed live demo ──────────────────────────────────────── -->
+    <!-- ── live playground ──────────────────────────────────────── -->
     <section class="demo-section reveal" id="demo">
       <div class="shell">
         <div class="demo-header">
-          <div class="sect-label" style="text-align:center;margin-bottom:.55rem">Live Demo</div>
+          <div class="sect-label" style="text-align:center;margin-bottom:.55rem">Playground</div>
           <h2 class="sect-h2" style="text-align:center;margin:0 0 .5rem">See it run.</h2>
           <p style="text-align:center;color:var(--muted);font-size:.95rem;margin:0">
-            Edit any snippet — results appear instantly.
+            Edit any snippet — results and signals update instantly.
           </p>
         </div>
-        <div class="demo-tabs" id="demo-tabs">
-          <button class="demo-tab active" data-tab="lang">Language</button>
-          <button class="demo-tab" data-tab="fns">Functions</button>
-          <button class="demo-tab" data-tab="sig">Signals</button>
-          <button class="demo-tab" data-tab="xctr">x-counter</button>
-          <button class="demo-tab" data-tab="todo">TodoList</button>
-        </div>
         <div class="demo-editor-wrap">
-          <div class="demo-editor-bar">
-            <span class="tbar-dot r"></span>
-            <span class="tbar-dot y"></span>
-            <span class="tbar-dot g"></span>
-            <span class="demo-file" id="demo-filename">primitives.md</span>
-            <span class="tbar-live">LIVE</span>
-          </div>
-          <x-editor id="ed-demo"></x-editor>
+          <iframe src="./devtools.html" style="width:100%;height:560px;border:0;display:block;" loading="lazy" title="10x Playground"></iframe>
         </div>
       </div>
     </section>
@@ -1087,96 +1085,14 @@ double(5).
 fib = n ->
   @if (< n 2) 1, (< n 1) 0
   @else fib(n - 1) + fib(n - 2).
-fib!(10).
+fib!(10).`,
 
-2cm to :in.`,
+      lang: `@import to, inches @from "Unit".
 
-      lang: `1/2.
-5 cm to :in.
+1/2.
+2 cm to inches.
 [1..5].
-"hello " + "world".
 :ok.`,
-
-      sig: `count = @signal 0.
-@style "
-  .sig-root { padding: 1.5rem; font-family: system-ui, sans-serif; }
-  .sig-value { font-size: 3rem; font-weight: 700; color: #2dd4bf; line-height: 1; margin-bottom: .6rem; }
-  .sig-actions { display: flex; gap: .5rem; }
-  .sig-inc { padding: .5rem 1.1rem; background: #2dd4bf; border: 0; border-radius: 8px; cursor: pointer; font-size: .9rem; color: #090c12; font-weight: 600; }
-  .sig-reset { padding: .5rem 1rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; cursor: pointer; font-size: .9rem; color: #94a3b8; }
-".
-@render @shadow @html
-  <div class="sig-root">
-    <div class="sig-value">{count}</div>
-    <div class="sig-actions">
-      <button id="inc" class="sig-inc">increment</button>
-      <button id="reset" class="sig-reset">reset</button>
-    </div>
-  </div>.
-@on click "#inc" count = count + 1.
-@on click "#reset" count = 0.`,
-
-      xctr: `count = @signal @prop "start" 0.
-@style "
-  .ctr-root { padding: 1.5rem; font-family: system-ui, sans-serif; }
-  .ctr-value { font-size: 3.5rem; font-weight: 700; color: #818cf8; line-height: 1; margin-bottom: .75rem; }
-  .ctr-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
-  .ctr-dec { padding: .5rem 1rem; background: rgba(129,140,248,.12); border: 1px solid rgba(129,140,248,.3); border-radius: 8px; cursor: pointer; color: #818cf8; font-size: 1.1rem; font-weight: 700; }
-  .ctr-inc { padding: .5rem 1rem; background: #818cf8; border: 0; border-radius: 8px; cursor: pointer; color: #090c12; font-size: 1.1rem; font-weight: 700; }
-  .ctr-reset { padding: .5rem 1rem; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; cursor: pointer; color: #475569; font-size: .85rem; }
-".
-@render @shadow @html
-  <div class="ctr-root">
-    <div class="ctr-value">{count}</div>
-    <div class="ctr-actions">
-      <button id="dec" class="ctr-dec">−</button>
-      <button id="inc" class="ctr-inc">+</button>
-      <button id="reset" class="ctr-reset">reset</button>
-    </div>
-  </div>.
-@on click "#inc" count = count + 1.
-@on click "#dec" count = count - 1.
-@on click "#reset" count = @prop "start" 0.`,
-
-      todo: `todos = @signal "Write parser regression tests".
-count = @signal 1.
-@style "
-  .todo-wrap { padding: 1.5rem; font-family: system-ui, sans-serif; }
-  .todo-title { margin: 0 0 .25rem; color: #e2e8f0; font-size: 1.05rem; font-weight: 700; }
-  .todo-meta { opacity: .45; font-size: .8rem; margin-bottom: .5rem; font-family: monospace; }
-  .todo-items { color: #94a3b8; font-size: .9rem; line-height: 1.6; margin-bottom: .75rem; }
-  .todo-add { padding: .4rem .85rem; background: #2dd4bf; border: 0; border-radius: 6px; cursor: pointer; font-size: .85rem; color: #090c12; font-weight: 600; }
-".
-@render @shadow @html
-  <section class="todo-wrap">
-    <h2 class="todo-title">TodoList</h2>
-    <div class="todo-meta">{count} items</div>
-    <div class="todo-items">{todos}</div>
-    <button id="add" class="todo-add">+ add item</button>
-  </section>.
-@on click "#add" todos = todos + ", task " + count.
-@on click "#add" count = count + 1.`,
-
-      fns: `add    = (a b) -> a + b.
-double = n -> n * 2.
-square = n -> n * n.
-
-double(5).
-square(5).
-add(3, 4).
-
-fib = n ->
-  @if (< n 2) 1, (< n 1) 0
-  @else fib(n - 1) + fib(n - 2).
-fib!(12).`,
-    };
-
-    const TAB_FILES = {
-      lang: 'primitives.md',
-      fns:  'functions.md',
-      sig:  'signals.md',
-      xctr: 'x-counter.md',
-      todo: 'todolist.md',
     };
 
     /* ── editor init ─────────────────────────────────────────────── */
@@ -1198,31 +1114,6 @@ fib!(12).`,
       };
       set('ed-hero', 'hero');
       set('ed-lang', 'lang');
-      set('ed-sig',  'sig');
-      set('ed-xctr', 'xctr');
-      set('ed-demo', 'lang');
-    });
-
-    /* ── demo tabs ────────────────────────────────────────────────── */
-    let currentTab = 'lang';
-    const filenameEl = document.getElementById('demo-filename');
-
-    document.getElementById('demo-tabs').addEventListener('click', e => {
-      const btn = e.target.closest('[data-tab]');
-      if (!btn) return;
-      const tab = btn.dataset.tab;
-      if (tab === currentTab) return;
-      currentTab = tab;
-
-      document.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-      if (filenameEl) filenameEl.textContent = TAB_FILES[tab] || tab + '.md';
-
-      ensureEditorReady().then(ready => {
-        if (!ready) return;
-        const ed = document.getElementById('ed-demo');
-        if (ed && SNIPPETS[tab]) ed.value = SNIPPETS[tab];
-      });
     });
 
     /* ── nav scroll effect ────────────────────────────────────────── */
