@@ -1972,14 +1972,18 @@ export default class Eval {
         envPtr = envPtr.parent;
       }
       
-      // Set moduleUrl for devtools grouping (signals grouped by component instance)
+      // Namespace signal name for unique identification
+      const namespacedName = (componentName && componentInstanceId)
+        ? `${componentName}$${componentInstanceId}.${signalName}`
+        : signalName;
+      
+      // Set moduleUrl for devtools grouping
       const moduleUrl = (componentName && componentInstanceId)
         ? `${componentName}$${componentInstanceId}`
         : undefined;
       
-      // Signal name stays as-is (e.g., "count"), grouping is via moduleUrl
-      if (signalName && runtimeArgs.length < 2) {
-        runtimeArgs.push(signalName);
+      if (namespacedName && runtimeArgs.length < 2) {
+        runtimeArgs.push(namespacedName);
       }
       if (moduleUrl && runtimeArgs.length < 3) {
         runtimeArgs.push(moduleUrl);

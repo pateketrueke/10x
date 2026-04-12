@@ -34,6 +34,9 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
 
     signals.forEach(({ name, value, subsCount, history }) => {
       const isCollapsed = collapsedSignals.has(name);
+      
+      // Strip prefix from display name (e.g., "Counter$1.count" -> "count")
+      const displayName = name.includes('.') ? name.split('.').pop() : name;
 
       const row = document.createElement('div');
       row.style.cssText = 'margin-bottom:0.25rem;';
@@ -50,7 +53,7 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
       };
 
       const key = document.createElement('code');
-      key.textContent = String(name);
+      key.textContent = displayName;
       key.style.color = '#d2a8ff';
 
       const valueEl = document.createElement('code');
