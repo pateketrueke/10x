@@ -28,14 +28,13 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
 
   groups.forEach((signals, moduleUrl) => {
     const groupHeader = document.createElement('div');
-    groupHeader.style.cssText = 'font-weight:600;margin:0.75rem 0 0.25rem;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;';
+    groupHeader.style.cssText = 'font-weight:600;margin:0.75rem 0 0.25rem;font-size:11px;color:#888;letter-spacing:0.5px;';
     groupHeader.textContent = moduleUrl === 'global' ? 'Global' : moduleUrl.split('/').pop() || moduleUrl;
     container.appendChild(groupHeader);
 
-    signals.forEach(({ name, value, subsCount, history }) => {
+    signals.forEach(({ name, value, subsCount, history, lazy }) => {
       const isCollapsed = collapsedSignals.has(name);
-      
-      // Strip prefix from display name (e.g., "Counter$1.count" -> "count")
+
       const displayName = name.includes('.') ? name.split('.').pop() : name;
 
       const row = document.createElement('div');
@@ -57,13 +56,19 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
       key.style.color = '#d2a8ff';
 
       const valueEl = document.createElement('code');
-      formatValue(value, valueEl);
-      valueEl.style.cursor = 'pointer';
-      valueEl.title = 'Click to copy';
-      valueEl.onclick = (e) => {
-        e.stopPropagation();
-        copyToClipboard(JSON.stringify(value));
-      };
+      if (lazy && value === undefined) {
+        valueEl.textContent = '…';
+        valueEl.style.color = '#555';
+        valueEl.style.fontStyle = 'italic';
+      } else {
+        formatValue(value, valueEl);
+        valueEl.style.cursor = 'pointer';
+        valueEl.title = 'Click to copy';
+        valueEl.onclick = (e) => {
+          e.stopPropagation();
+          copyToClipboard(JSON.stringify(value));
+        };
+      }
 
       const subs = document.createElement('code');
       subs.textContent = `subs:${subsCount}`;
@@ -109,25 +114,17 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
   });
 }
 
-function renderRows(container, registry, collapsedSignals) {
+function buildLazySnapshot(registry) {
   const entries = Array.from(registry.entries());
-  const moduleGroups = new Map();
-
-  entries.forEach(([name, signal]) => {
-    const moduleUrl = signal._moduleUrl || 'global';
-    if (!moduleGroups.has(moduleUrl)) {
-      moduleGroups.set(moduleUrl, []);
-    }
-    moduleGroups.get(moduleUrl).push({
-      id: signal._devtoolsId || null,
-      name,
-      value: read(signal),
-      subsCount: signal.subs ? signal.subs.size : 0,
-      history: signal._history || [],
-    });
-  });
-
-  renderGroupedRows(container, moduleGroups, collapsedSignals, () => renderRows(container, registry, collapsedSignals));
+  return entries.map(([key, signal]) => ({
+    id: signal._devtoolsId || null,
+    name: signal._devtoolsName || `signal_${signal._devtoolsId}`,
+    moduleUrl: signal._moduleUrl || 'global',
+    value: undefined,
+    subs: signal.subs ? signal.subs.size : 0,
+    history: [],
+    lazy: true,
+  }));
 }
 
 function renderRowsFromSnapshot(container, snapshot, collapsedSignals) {
@@ -145,6 +142,7 @@ function renderRowsFromSnapshot(container, snapshot, collapsedSignals) {
       value: entry.value,
       subsCount: Number.isFinite(entry.subs) ? entry.subs : 0,
       history: Array.isArray(entry.history) ? entry.history.slice(-MAX_HISTORY) : [],
+      lazy: !!entry.lazy,
     });
   });
 
@@ -178,6 +176,7 @@ function mergeSignalUpdate(snapshot, update) {
     value: update.value,
     subs: Number.isFinite(update.subs) ? update.subs : 0,
     history,
+    lazy: false,
   };
 
   if (index >= 0) {
@@ -218,12 +217,35 @@ export function devtools(options = {}) {
   title.style.cssText = 'font-weight:700;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;';
   title.innerHTML = `<span>10x DevTools</span><span style="font-weight:400;font-size:10px;color:#888;">Alt+D / Ctrl+Shift+D</span>`;
 
+  const buildStatus = document.createElement('div');
+  buildStatus.style.cssText = 'font-size:10px;color:#666;margin-bottom:0.5rem;';
+
+  function formatAgo(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    if (h > 0) return `${h}h ago`;
+    if (m > 0) return `${m}m ago`;
+    return 'just now';
+  }
+
+  function updateBuildStatus() {
+    const ts = globalThis.__10x_BUILD_TS;
+    if (!ts) { buildStatus.textContent = ''; return; }
+    const diff = Date.now() - new Date(ts).getTime();
+    buildStatus.textContent = `build: ${formatAgo(diff)}`;
+  }
+
+  updateBuildStatus();
+  setInterval(updateBuildStatus, 60000);
+
   const hmrStatus = document.createElement('div');
   hmrStatus.id = '10x-hmr-status';
   hmrStatus.style.cssText = 'font-size:11px;margin-bottom:0.5rem;padding:0.25rem 0.5rem;background:#238636;border-radius:4px;color:#fff;display:none;';
 
   const body = document.createElement('div');
   panel.appendChild(title);
+  panel.appendChild(buildStatus);
   panel.appendChild(hmrStatus);
   panel.appendChild(body);
 
@@ -235,9 +257,8 @@ export function devtools(options = {}) {
 
   setDevtoolsActive(true);
 
-  effect(() => {
-    renderRows(body, registry, collapsedSignals);
-  });
+  latestSnapshot = buildLazySnapshot(registry);
+  renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
 
   function toggle() {
     const target = dockedPane || panel;
@@ -284,6 +305,24 @@ export function devtools(options = {}) {
       console.debug('[10x:devtools] notify update', update);
     }
     latestSnapshot = mergeSignalUpdate(latestSnapshot, update);
+    renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
+  };
+
+  globalThis.__10x_devtools_signal_created = (info) => {
+    if (globalThis.__10x_devtools_debug) {
+      console.debug('[10x:devtools] signal created', info);
+    }
+    const existing = latestSnapshot.find(e => e && (e.id === info.id || e.name === info.name));
+    if (existing) return;
+    latestSnapshot.push({
+      id: info.id || null,
+      name: info.name,
+      moduleUrl: info.moduleUrl || 'global',
+      value: undefined,
+      subs: 0,
+      history: [],
+      lazy: true,
+    });
     renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
   };
 

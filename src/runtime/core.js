@@ -113,6 +113,19 @@ export function signal(initialValue, name, moduleUrl) {
   };
 
   globalRegistry.set(key, state);
+
+  const onCreated = globalThis.__10x_devtools_signal_created;
+  if (typeof onCreated === 'function') {
+    try {
+      onCreated({
+        id: signalId,
+        name: signalName,
+        moduleUrl: moduleUrl || 'global',
+        lazy: true,
+      });
+    } catch (_) {}
+  }
+
   return state;
 }
 
