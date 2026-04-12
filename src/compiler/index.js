@@ -264,49 +264,49 @@ function collectImportSpecs(statements, runtimePath) {
   const seenGlobal = new Set();
 
   statements.forEach(tokens => {
-    if (tokens.length !== 1) return;
-    const [token] = tokens;
-    if (!token.isObject || !token.value || !token.value.import) return;
+    if (tokens.length === 1) {
+      const [token] = tokens;
+      if (!token.isObject || !token.value || !token.value.import) return;
 
-    const fromBody = token.value.from && token.value.from.getBody ? token.value.from.getBody() : [];
-    const source = fromBody[0] && typeof fromBody[0].value === 'string' ? fromBody[0].value : null;
-    const importToken = token.value.import;
-    const importBodyRaw = importToken && importToken.getBody ? importToken.getBody() : [];
-    const importBody = importBodyRaw.length === 1
-      && importBodyRaw[0]
-      && importBodyRaw[0].type === BLOCK
-      && importBodyRaw[0].hasBody
-      ? importBodyRaw[0].getBody()
-      : importBodyRaw;
-    const specifiers = (importBody.length
-      ? importBody.filter(x => x && x.type !== COMMA).map(x => x.value)
-      : [importToken && importToken.value]
-    ).filter(Boolean);
+      const fromBody = token.value.from && token.value.from.getBody ? token.value.from.getBody() : [];
+      const source = fromBody[0] && typeof fromBody[0].value === 'string' ? fromBody[0].value : null;
+      const importToken = token.value.import;
+      const importBodyRaw = importToken && importToken.getBody ? importToken.getBody() : [];
+      const importBody = importBodyRaw.length === 1
+        && importBodyRaw[0]
+        && importBodyRaw[0].type === BLOCK
+        && importBodyRaw[0].hasBody
+        ? importBodyRaw[0].getBody()
+        : importBodyRaw;
+      const specifiers = (importBody.length
+        ? importBody.filter(x => x && x.type !== COMMA).map(x => x.value)
+        : [importToken && importToken.value]
+      ).filter(Boolean);
 
-    if (!specifiers.length) return;
+      if (!specifiers.length) return;
 
-    if (source === 'Prelude' || source === 'IO' || source === 'Proc' || (source === 'Array' && specifiers.includes('concat'))) {
-      const modulePath = source === 'Prelude'
-        ? getPreludePath(runtimePath)
-        : source === 'IO'
-          ? getRuntimeSiblingPath(runtimePath, 'io')
-          : source === 'Proc'
-            ? getRuntimeSiblingPath(runtimePath, 'proc')
-            : getPreludePath(runtimePath);
-      const preludeSpecifiers = source === 'Prelude'
-        ? specifiers
-        : source === 'IO' || source === 'Proc'
+      if (source === 'Prelude' || source === 'IO' || source === 'Proc' || (source === 'Array' && specifiers.includes('concat'))) {
+        const modulePath = source === 'Prelude'
+          ? getPreludePath(runtimePath)
+          : source === 'IO'
+            ? getRuntimeSiblingPath(runtimePath, 'io')
+            : source === 'Proc'
+              ? getRuntimeSiblingPath(runtimePath, 'proc')
+              : getPreludePath(runtimePath);
+        const preludeSpecifiers = source === 'Prelude'
           ? specifiers
-        : specifiers.filter(x => x === 'concat');
-      const key = `${modulePath}::${specifiers.join(',')}`;
-      if (!seenImport.has(key)) {
-        imports.push({ source: modulePath, specifiers: preludeSpecifiers });
-        seenImport.add(key);
-      }
-      if (source === 'Array') {
-        const remaining = specifiers.filter(x => x !== 'concat');
-        if (!remaining.length) return;
-        const gKey = `${source}::${remaining.join(',')}`;
+          : source === 'IO' || source === 'Proc'
+            ? specifiers
+          : specifiers.filter(x => x === 'concat');
+        const key = `${modulePath}::${specifiers.join(',')}`;
+        if (!seenImport.has(key)) {
+          imports.push({ source: modulePath, specifiers: preludeSpecifiers });
+          seenImport.add(key);
+        }
+        if (source === 'Array') {
+          const remaining = specifiers.filter(x => x !== 'concat');
+          if (!remaining.length) return;
+          const gKey = `${source}::${remaining.join(',')}`;
         if (!seenGlobal.has(gKey)) {
           globals.push({ source, specifiers: remaining });
           seenGlobal.add(gKey);
@@ -321,6 +321,28 @@ function collectImportSpecs(statements, runtimePath) {
       if (!seenGlobal.has(key)) {
         globals.push({ source, specifiers });
         seenGlobal.add(key);
+      }
+    }
+    }
+    
+    if (tokens.length >= 4 && tokens[0].value === 'import' && tokens[2].value === 'from') {
+      const importBlock = tokens[1];
+      const sourceToken = tokens[3];
+      
+      if (importBlock && importBlock.hasArgs && sourceToken && sourceToken.isString) {
+        const source = sourceToken.value;
+        const specifiers = importBlock.getArgs()
+          .filter(t => t.type !== COMMA)
+          .map(t => t.value)
+          .filter(Boolean);
+        
+        if (specifiers.length && source) {
+          const key = `${source}::${specifiers.join(',')}`;
+          if (!seenImport.has(key)) {
+            imports.push({ source, specifiers });
+            seenImport.add(key);
+          }
+        }
       }
     }
   });
@@ -949,16 +971,37 @@ function compileTestDirective(body, value, ctx) {
   
   const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false };
   
-  let compiled;
+  const compiled = [];
+  
   if (value && value.expect) {
-    compiled = compileExpectDirective(value.expect.getBody(), localCtx);
-  } else if (testBody.length) {
-    compiled = compileExpression(testBody, localCtx);
-  } else {
-    compiled = 'undefined';
+    compiled.push(compileExpectDirective(value.expect.getBody(), localCtx));
   }
   
-  return `test(${JSON.stringify(testName)}, async () => { ${compiled}; })`;
+  if (value && value.signal) {
+    const signalBody = value.signal.getBody();
+    const signalExpr = compileExpression(signalBody, localCtx);
+    const defToken = testBody.find(t => t && t.value && t.value.name);
+    const varName = defToken && defToken.value.name ? defToken.value.name : 'value';
+    compiled.unshift(`const ${varName} = $.signal(${signalExpr});`);
+  }
+  
+  if (testBody.length && !compiled.length) {
+    for (const token of testBody) {
+      if (token && token.value && token.value.name) {
+        const name = token.value.name;
+        compiled.push(`const ${name} = undefined;`);
+      } else if (token && token.isObject && token.value) {
+        const out = compileDirectiveObject(token, localCtx);
+        if (out) compiled.push(out);
+      }
+    }
+  }
+  
+  if (!compiled.length) {
+    compiled.push('undefined');
+  }
+  
+  return `test(${JSON.stringify(testName)}, async () => { ${compiled.join(' ')}; })`;
 }
 
 function compileExpectDirective(body, ctx) {
@@ -1227,6 +1270,10 @@ function compileDirectiveObject(token, ctx) {
     return compileHtmlDirective(value.html.getBody(), ctx);
   }
 
+  if (value.test) {
+    return compileTestDirective(value.test.getBody(), value, ctx);
+  }
+
   if (value.signal) {
     return compileSignalDirective(value.signal.getBody(), ctx);
   }
@@ -1237,10 +1284,6 @@ function compileDirectiveObject(token, ctx) {
 
   if (value.style) {
     return compileStyleDirective(value.style.getBody(), ctx);
-  }
-
-  if (value.test) {
-    return compileTestDirective(value.test.getBody(), value, ctx);
   }
 
   if (value.expect) {
@@ -1362,11 +1405,19 @@ function compileDefinition(token, asStatement = false, ctx = { signalVars: new S
 function compileStatement(tokens, ctx, statementIndex) {
   if (!tokens.length) return '';
 
+  if (tokens.length >= 4 && tokens[0].value === 'import' && tokens[2].value === 'from') {
+    return '';
+  }
+
   const shouldPrint = ctx.printStatements && ctx.printStatements.has(statementIndex);
   const autoPrint = !!ctx.autoPrintExpressions;
 
   if (tokens.length === 1) {
     const [token] = tokens;
+
+    if (token.isObject && token.value && token.value.import) {
+      return '';
+    }
 
     if (token.isCallable && token.getName()) {
       return `${compileDefinition(token, false, ctx)};`;
