@@ -743,8 +743,24 @@ export default class Eval {
           // Component returned a view object (standalone @html) — inline-render it
           if (fixed && typeof fixed === 'object' && !Array.isArray(fixed)
               && typeof fixed.render === 'function' && typeof fixed.name === 'undefined') {
-            const vdom = await fixed.render();
-            if (vdom !== null && typeof vdom !== 'undefined') children.push(vdom);
+            // Walk env chain to find the parent render's viewCache
+            let _e = this.env;
+            while (_e && !_e.__viewCache) _e = _e.parent;
+            if (_e && _e.__viewCache && _e.__domRender && typeof document !== 'undefined') {
+              const idx = _e.__viewCacheIndex.value++;
+              let entry = _e.__viewCache.get(idx);
+              if (!entry) {
+                const placeholder = document.createElement('x-slot');
+                const dispose = _e.__domRender(placeholder, fixed);
+                entry = { placeholder, dispose };
+                _e.__viewCache.set(idx, entry);
+              }
+              children.push(entry.placeholder);
+            } else {
+              // Fallback: inline render (test env, no document, or no parent viewCache)
+              const vdom = await fixed.render();
+              if (vdom !== null && typeof vdom !== 'undefined') children.push(vdom);
+            }
           } else if (fixed !== null && typeof fixed !== 'undefined') {
             children.push(fixed);
           }
@@ -1905,10 +1921,17 @@ export default class Eval {
     // Used inside component bodies: `@html <div>...</div>` → returns { render: fn }
     if (!isDirectiveStmt(value.render) && isDirectiveStmt(value.html)) {
       const html = resolveRuntimeFn('html');
+      let domRender = null;
+      try { domRender = resolveRuntimeFn('render'); } catch (_) {}
       const htmlBody = normalizeDirectiveArgs(value.html);
       const signalMap = new Map();
+      const viewCache = new Map();
       const view = html(async () => {
+        const _viewIndex = { value: 0 };
         const scope = new Env(environment);
+        scope.__viewCache = viewCache;
+        scope.__viewCacheIndex = _viewIndex;
+        scope.__domRender = domRender;
         const localNames = Object.keys(environment.locals || {});
         for (let i = 0; i < localNames.length; i++) {
           const name = localNames[i];
@@ -1930,6 +1953,12 @@ export default class Eval {
         const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
         if (typeof result === 'string' && signalMap.size > 0) {
           signalMap.forEach(sig => sig.get());
+        }
+        for (const [idx, entry] of viewCache) {
+          if (idx >= _viewIndex.value) {
+            if (typeof entry.dispose === 'function') entry.dispose();
+            viewCache.delete(idx);
+          }
         }
         return result;
       });
@@ -1957,7 +1986,10 @@ export default class Eval {
       if (isDirectiveStmt(value.html)) {
         const html = resolveRuntimeFn('html');
         const render = hasShadow ? resolveRuntimeFn('renderShadow') : resolveRuntimeFn('render');
+        let domRender = null;
+        try { domRender = resolveRuntimeFn('render'); } catch (_) {}
         const htmlBody = normalizeDirectiveArgs(value.html);
+        const viewCache = new Map();
         // Key on selector only so switching between @render and @render @shadow
         // on the same target properly stops the previous render regardless of mode.
         const renderKey = selector != null ? String(selector)
@@ -1973,7 +2005,11 @@ export default class Eval {
         }
 
         const view = html(async () => {
+          const _viewIndex = { value: 0 };
           const scope = new Env(environment);
+          scope.__viewCache = viewCache;
+          scope.__viewCacheIndex = _viewIndex;
+          scope.__domRender = domRender;
           signalMap = new Map();
 
           const localNames = Object.keys(environment.locals || {});
@@ -2001,6 +2037,12 @@ export default class Eval {
           // complex expressions that can't subscribe surgically through somedom alone).
           if (signalMap.size > 0) {
             signalMap.forEach(sig => sig.get());
+          }
+          for (const [idx, entry] of viewCache) {
+            if (idx >= _viewIndex.value) {
+              if (typeof entry.dispose === 'function') entry.dispose();
+              viewCache.delete(idx);
+            }
           }
           return result;
         });
