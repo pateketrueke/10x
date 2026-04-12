@@ -333,7 +333,16 @@ function collectNeedsDom(statements) {
     if (tokens.length !== 1) return false;
     const [token] = tokens;
     if (!token.isObject || !token.value) return false;
-    return !!(token.value.render || token.value.on || token.value.shadow || token.value.style);
+    return !!(token.value.render || token.value.on || token.value.shadow || token.value.style || token.value.mount || token.value.click);
+  });
+}
+
+function collectNeedsTest(statements) {
+  return statements.some(tokens => {
+    if (tokens.length !== 1) return false;
+    const [token] = tokens;
+    if (!token.isObject || !token.value) return false;
+    return !!(token.value.test || token.value.expect || token.value.before_all || token.value.before_each || token.value.after_all || token.value.after_each);
   });
 }
 
@@ -502,6 +511,7 @@ function compileToken(token, ctx = { signalVars: new Set() }) {
     const directiveKeys = [
       'render', 'on', 'html', 'signal', 'computed', 'prop', 'if', 'else', 'do', 'let',
       'match', 'while', 'loop', 'try', 'rescue', 'export', 'import', 'from', 'style',
+      'test', 'expect', 'before_all', 'before_each', 'after_all', 'after_each', 'mount', 'click',
     ];
     const isDirective = keys.some(k => directiveKeys.includes(k));
 
@@ -930,6 +940,110 @@ function compileStyleDirective(body, ctx) {
   return `$.style(${hostArg}${compileToken(arg, ctx)})`;
 }
 
+function compileTestDirective(body, value, ctx) {
+  const [stmt] = body;
+  const innerBody = stmt && stmt.hasBody ? stmt.getBody() : body;
+  const testName = innerBody[0] && innerBody[0].isString ? innerBody[0].value : 'test';
+  const arrowIdx = innerBody.findIndex(t => t.type === FAT_ARROW);
+  const testBody = arrowIdx >= 0 ? innerBody.slice(arrowIdx + 1) : innerBody.slice(1);
+  
+  const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false };
+  
+  let compiled;
+  if (value && value.expect) {
+    compiled = compileExpectDirective(value.expect.getBody(), localCtx);
+  } else if (testBody.length) {
+    compiled = compileExpression(testBody, localCtx);
+  } else {
+    compiled = 'undefined';
+  }
+  
+  return `test(${JSON.stringify(testName)}, async () => { ${compiled}; })`;
+}
+
+function compileExpectDirective(body, ctx) {
+  const expr = compileExpression(body, ctx);
+  return `expect(${expr}).toBe(true)`;
+}
+
+function compileBeforeAllDirective(body, ctx) {
+  const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false };
+  const compiled = [];
+  
+  if (ctx.currentValue && ctx.currentValue.mount) {
+    compiled.push(compileMountDirective(ctx.currentValue.mount.getBody(), localCtx));
+  }
+  
+  if (body.length) {
+    const block = body.find(t => t && t.hasBody);
+    const statements = block ? splitByEol(block.getBody()) : body;
+    statements.forEach(stmt => {
+      const result = compileStatement(stmt, localCtx, -1);
+      if (result) compiled.push(result);
+    });
+  }
+  
+  return `beforeAll(async () => { ${compiled.join(' ')} })`;
+}
+
+function compileBeforeEachDirective(body, ctx) {
+  const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false };
+  const compiled = [];
+  
+  if (body.length) {
+    const block = body.find(t => t && t.hasBody);
+    const statements = block ? splitByEol(block.getBody()) : body;
+    statements.forEach(stmt => {
+      const result = compileStatement(stmt, localCtx, -1);
+      if (result) compiled.push(result);
+    });
+  }
+  
+  return `beforeEach(async () => { ${compiled.join(' ')} })`;
+}
+
+function compileAfterAllDirective(body, ctx) {
+  const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false };
+  const compiled = [];
+  
+  if (body.length) {
+    const block = body.find(t => t && t.hasBody);
+    const statements = block ? splitByEol(block.getBody()) : body;
+    statements.forEach(stmt => {
+      const result = compileStatement(stmt, localCtx, -1);
+      if (result) compiled.push(result);
+    });
+  }
+  
+  return `afterAll(async () => { ${compiled.join(' ')} })`;
+}
+
+function compileAfterEachDirective(body, ctx) {
+  const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false };
+  const compiled = [];
+  
+  if (body.length) {
+    const block = body.find(t => t && t.hasBody);
+    const statements = block ? splitByEol(block.getBody()) : body;
+    statements.forEach(stmt => {
+      const result = compileStatement(stmt, localCtx, -1);
+      if (result) compiled.push(result);
+    });
+  }
+  
+  return `afterEach(async () => { ${compiled.join(' ')} })`;
+}
+
+function compileMountDirective(body, ctx) {
+  const [selector] = body;
+  return `mount(${compileToken(selector, ctx)})`;
+}
+
+function compileClickDirective(body, ctx) {
+  const [selector] = body;
+  return `await click(${compileToken(selector, ctx)})`;
+}
+
 function compileHmrFooter() {
   return [
     'if (import.meta.hot) {',
@@ -1123,6 +1237,38 @@ function compileDirectiveObject(token, ctx) {
 
   if (value.style) {
     return compileStyleDirective(value.style.getBody(), ctx);
+  }
+
+  if (value.test) {
+    return compileTestDirective(value.test.getBody(), value, ctx);
+  }
+
+  if (value.expect) {
+    return compileExpectDirective(value.expect.getBody(), ctx);
+  }
+
+  if (value.before_all) {
+    return compileBeforeAllDirective(value.before_all.getBody(), { ...ctx, currentValue: value });
+  }
+
+  if (value.before_each) {
+    return compileBeforeEachDirective(value.before_each.getBody(), { ...ctx, currentValue: value });
+  }
+
+  if (value.after_all) {
+    return compileAfterAllDirective(value.after_all.getBody(), { ...ctx, currentValue: value });
+  }
+
+  if (value.after_each) {
+    return compileAfterEachDirective(value.after_each.getBody(), { ...ctx, currentValue: value });
+  }
+
+  if (value.mount) {
+    return compileMountDirective(value.mount.getBody(), ctx);
+  }
+
+  if (value.click) {
+    return compileClickDirective(value.click.getBody(), ctx);
   }
 
   throw new Error(`Unsupported directive object: ${Object.keys(value).join(', ')}`);
@@ -1382,8 +1528,10 @@ export function compile(source, options = {}) {
   const statements = splitStatements(ast);
   const hasShadow = collectShadowFlag(statements);
   const needsDom = collectNeedsDom(statements);
+  const needsTest = collectNeedsTest(statements);
   const hmrEnabled = options.hmr === true && options.module !== false;
   const runtimePath = options.runtimePath || './runtime';
+  const testPath = options.testPath || '10x/testing';
   const { imports, globals } = collectImportSpecs(statements, runtimePath);
   const ctx = {
     signalVars: collectSignalBindings(statements),
@@ -1411,6 +1559,7 @@ export function compile(source, options = {}) {
 
   const requiresRuntime = lines.some(line => line.includes('$.'));
   const usesRange = lines.some(line => line.includes('range('));
+  const usesTest = lines.some(line => /^(test|beforeAll|beforeEach|afterAll|afterEach|expect|mount|click)\(/.test(line));
   const output = [];
 
   if (options.module !== false) {
@@ -1427,6 +1576,10 @@ export function compile(source, options = {}) {
     if (requiresRuntime) {
       const importPath = needsDom ? runtimePath : getCoreRuntimePath(runtimePath);
       output.push(`import * as $ from ${JSON.stringify(importPath)};`);
+    }
+    if (usesTest) {
+      output.push(`import { test, describe, beforeAll, beforeEach, afterAll, afterEach, expect } from 'bun:test';`);
+      output.push(`import { mount, click } from ${JSON.stringify(testPath)};`);
     }
   }
 
