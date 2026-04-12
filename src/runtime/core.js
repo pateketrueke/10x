@@ -45,9 +45,9 @@ function nextSignalId() {
 }
 
 export function signal(initialValue, name) {
-  const key = name || Symbol('signal');
-  const signalName = String(key);
   const signalId = nextSignalId();
+  const key = Symbol(`signal_${signalId}`);
+  const signalName = name || `signal_${signalId}`;
   const state = {
     [SIGNAL]: true,
     _devtoolsId: signalId,
