@@ -1491,6 +1491,13 @@ export default class Eval {
       try {
         const scope = new Env(self.env);
         const scopeId = scope.__envId || (scope.__envId = Math.random().toString(36).slice(2));
+        
+        // Add component instance info for signal namespacing
+        const fnName = fn.getName();
+        if (fnName && fnName[0] === fnName[0].toUpperCase()) {
+          scope.__componentName = fnName;
+          scope.__componentInstanceId = ++componentInstanceId;
+        }
 
         Env.merge(safeArgs, fnArgs, false, scope);
 
@@ -1956,8 +1963,16 @@ export default class Eval {
         || (token && typeof token.getName === 'function' ? token.getName() : null);
       
       // Namespace signal name with component instance
-      const componentName = environment.__componentName;
-      const componentInstanceId = environment.__componentInstanceId;
+      // Walk up the env chain to find component info
+      let componentName = environment.__componentName;
+      let componentInstanceId = environment.__componentInstanceId;
+      let envPtr = environment.parent;
+      while (envPtr && (!componentName || !componentInstanceId)) {
+        if (envPtr.__componentName) componentName = envPtr.__componentName;
+        if (envPtr.__componentInstanceId) componentInstanceId = envPtr.__componentInstanceId;
+        envPtr = envPtr.parent;
+      }
+      
       const namespacedName = (componentName && componentInstanceId)
         ? `${componentName}$${componentInstanceId}.${signalName}`
         : signalName;
