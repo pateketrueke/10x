@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'bun:test';
-import { parseGherkin, compileFeature, parseStepDefinitions, stepPatternToKey, compileStepDefinitions } from '../src/compiler/gherkin';
+import { parseGherkin, compileFeature, parseStepDefinitions, stepPatternToKey, compileStepDefinitions, patternToRegex, matchStep } from '../src/compiler/gherkin';
 
 describe('Gherkin Parser', () => {
   test('should parse feature name', () => {
@@ -165,5 +165,58 @@ Then "count is {num}" (expected) =>
     expect(output).toContain('export const given_a_counter_starting_at');
     expect(output).toContain('export const when_I_click_increment');
     expect(output).toContain('export const then_count_is');
+  });
+});
+
+describe('Pattern Matching', () => {
+  test('should convert {num} to regex', () => {
+    const regex = patternToRegex('a counter starting at {num}');
+    expect(regex.test('a counter starting at 0')).toBe(true);
+    expect(regex.test('a counter starting at 42')).toBe(true);
+    expect(regex.test('a counter starting at abc')).toBe(false);
+  });
+
+  test('should convert {str} to regex', () => {
+    const regex = patternToRegex('user {str} logged in');
+    expect(regex.test('user "alice" logged in')).toBe(true);
+    expect(regex.test('user "bob" logged in')).toBe(true);
+  });
+
+  test('should convert {bool} to regex', () => {
+    const regex = patternToRegex('feature is {bool}');
+    expect(regex.test('feature is true')).toBe(true);
+    expect(regex.test('feature is false')).toBe(true);
+    expect(regex.test('feature is maybe')).toBe(false);
+  });
+
+  test('should match step text against definitions', () => {
+    const definitions = [
+      { type: 'given', pattern: 'a counter starting at {num}', params: ['n'] },
+      { type: 'when', pattern: 'I click the button', params: [] },
+    ];
+    
+    const match = matchStep('a counter starting at 0', definitions);
+    expect(match).toBeDefined();
+    expect(match.key).toBe('given_a_counter_starting_at');
+    expect(match.params).toEqual([0]);
+  });
+
+  test('should extract multiple parameters', () => {
+    const definitions = [
+      { type: 'given', pattern: 'counter {str} with value {num}', params: ['name', 'value'] },
+    ];
+    
+    const match = matchStep('counter "test" with value 42', definitions);
+    expect(match).toBeDefined();
+    expect(match.params).toEqual(['test', 42]);
+  });
+
+  test('should return null for no match', () => {
+    const definitions = [
+      { type: 'given', pattern: 'a counter starting at {num}', params: ['n'] },
+    ];
+    
+    const match = matchStep('something completely different', definitions);
+    expect(match).toBeNull();
   });
 });

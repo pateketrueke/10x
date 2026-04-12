@@ -204,6 +204,110 @@ export function stepPatternToKey(type, pattern) {
   return `${type}_${key}`;
 }
 
+export function patternToRegex(pattern) {
+  const parts = [];
+  let i = 0;
+  let literal = '';
+  
+  while (i < pattern.length) {
+    if (pattern[i] === '{') {
+      if (literal) {
+        parts.push(literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        literal = '';
+      }
+      const end = pattern.indexOf('}', i);
+      if (end === -1) break;
+      const placeholder = pattern.slice(i + 1, end);
+      if (placeholder === 'num') {
+        parts.push('(\\d+)');
+      } else if (placeholder === 'str') {
+        parts.push('"([^"]*)"');
+      } else if (placeholder === 'bool') {
+        parts.push('(true|false)');
+      } else {
+        parts.push('(.+?)');
+      }
+      i = end + 1;
+    } else {
+      literal += pattern[i];
+      i++;
+    }
+  }
+  
+  if (literal) {
+    parts.push(literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  }
+  
+  return new RegExp(`^${parts.join('')}$`);
+}
+
+export function matchStep(stepText, definitions) {
+  for (const def of definitions) {
+    const regex = patternToRegex(def.pattern);
+    const match = stepText.match(regex);
+    if (match) {
+      const values = match.slice(1).map((v, i) => {
+        const param = def.params[i];
+        if (param && v && !isNaN(v)) {
+          return Number(v);
+        }
+        if (v === 'true') return true;
+        if (v === 'false') return false;
+        if (v && v.startsWith('"') && v.endsWith('"')) {
+          return v.slice(1, -1);
+        }
+        return v;
+      });
+      return {
+        key: stepPatternToKey(def.type, def.pattern),
+        params: values,
+      };
+    }
+  }
+  return null;
+}
+
+export function compileFeature(feature, stepsModule, componentModule) {
+  const lines = [];
+  
+  lines.push(`import { test, describe, beforeAll, beforeEach } from 'bun:test';`);
+  lines.push(`import { mount, click, expect } from '10x/testing';`);
+  
+  if (componentModule) {
+    const componentName = componentModule.replace(/\.md$/, '').split('/').pop();
+    const capitalizedName = componentName.charAt(0).toUpperCase() + componentName.slice(1);
+    lines.push(`import ${capitalizedName} from ${JSON.stringify(componentModule)};`);
+  }
+  
+  if (stepsModule) {
+    lines.push(`import * as steps from ${JSON.stringify(stepsModule)};`);
+  }
+  
+  lines.push('');
+  lines.push(`describe(${JSON.stringify(feature.name)}, () => {`);
+  
+  if (stepsModule) {
+    lines.push(`  if (steps.before_all) beforeAll(steps.before_all);`);
+    lines.push(`  if (steps.before_each) beforeEach(steps.before_each);`);
+  }
+  
+  for (const scenario of feature.scenarios) {
+    lines.push('');
+    lines.push(`  test(${JSON.stringify(scenario.name)}, async () => {`);
+    
+    for (const step of scenario.steps) {
+      const stepKey = `${step.type}_${step.text.replace(/\{[^}]+\}/g, '_').replace(/[^a-zA-Z0-9_]/g, '_')}`;
+      lines.push(`    await steps[${JSON.stringify(stepKey)}]?.();`);
+    }
+    
+    lines.push(`  });`);
+  }
+  
+  lines.push('});');
+  
+  return lines.join('\n');
+}
+
 export function compileStepDefinitions(steps) {
   const lines = [];
   
