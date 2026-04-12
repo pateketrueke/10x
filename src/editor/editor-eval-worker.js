@@ -1,4 +1,4 @@
-import { Env, execute, applyAdapter } from '../main.js';
+import { Env, execute, applyAdapter, resetComponentInstanceId } from '../main.js';
 import { createBrowserAdapter } from '../adapters/browser/index.js';
 import { getSignalRegistry, read } from '../runtime/core.js';
 import {
@@ -63,7 +63,11 @@ self.addEventListener('message', async ({ data }) => {
   if (!requestId) return;
 
   try {
+    let preRemountSnapshot = null;
     if (resetSignals) {
+      preRemountSnapshot = buildSignalSnapshot();
+      self.postMessage({ requestId, preRemountSnapshot });
+      resetComponentInstanceId(0);
       getSignalRegistry().clear();
     }
 

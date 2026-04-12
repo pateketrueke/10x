@@ -13,7 +13,7 @@
  *   el.addEventListener('change', e => e.detail.results)
  *   el.addEventListener('error',  e => e.detail.error)
  */
-import { Parser, Env, execute, applyAdapter, HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM } from '../main.js';
+import { Parser, Env, execute, applyAdapter, HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM, getComponentInstanceId, resetComponentInstanceId } from '../main.js';
 import { createBrowserAdapter } from '../adapters/browser/index.js';
 import { getSignalRegistry, read } from '../runtime/core.js';
 import {
@@ -1552,9 +1552,14 @@ class XEditor extends HTMLElement {
       this._worker.addEventListener('message', ({ data }) => {
         const {
           requestId, statementId, start, completed, statementResult, inlineResults, done, error, runtimeLog,
+          preRemountSnapshot,
         } = data || {};
         if (!requestId || requestId < this._appliedEvalRequestId) return;
         this._appliedEvalRequestId = requestId;
+
+        if (preRemountSnapshot && typeof globalThis.__10x_devtools_before_remount === 'function') {
+          globalThis.__10x_devtools_before_remount('worker', preRemountSnapshot);
+        }
 
         if (runtimeLog && typeof globalThis.__10x_runtime_log === 'function') {
           try {
@@ -1724,6 +1729,10 @@ class XEditor extends HTMLElement {
     this._evaluating = true;
     try {
       this._clearMainThreadRuntimeEffects();
+      if (typeof globalThis.__10x_devtools_before_remount === 'function') {
+        globalThis.__10x_devtools_before_remount('main-thread');
+      }
+      resetComponentInstanceId(0);
       getSignalRegistry().clear();
       const env = new Env();
       env.__xRenderDisposers = this._mainThreadRenderDisposers;

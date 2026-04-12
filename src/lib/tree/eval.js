@@ -12,6 +12,16 @@ import { composeTag, renderTag } from '../tag';
 
 let componentInstanceId = 0;
 
+export function getComponentInstanceId() {
+  return componentInstanceId;
+}
+
+export function resetComponentInstanceId(value) {
+  if (typeof value === 'number' && value >= 0) {
+    componentInstanceId = value;
+  }
+}
+
 import {
   EOL, COMMA, MINUS, PLUS, MUL, DIV, MOD, BLOCK, RANGE, LITERAL, NUMBER, STRING, SYMBOL,
   EQUAL, LESS_EQ, LESS, GREATER_EQ, GREATER, NOT, LIKE, NOT_EQ, EXACT_EQ, FFI,

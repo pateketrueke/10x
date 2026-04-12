@@ -43,3 +43,5 @@ export {
   Token, debug, serialize, compact, deindent, hasDiff,
   copy, repr, raise, assert, check, argv, only,
 } from './lib/helpers';
+
+export { getComponentInstanceId, resetComponentInstanceId } from './lib/tree/eval.js';

@@ -121,7 +121,7 @@ export function signal(initialValue, name, moduleUrl) {
         id: signalId,
         name: signalName,
         moduleUrl: moduleUrl || 'global',
-        lazy: true,
+        signal: state,
       });
     } catch (_) {}
   }

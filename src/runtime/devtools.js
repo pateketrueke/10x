@@ -32,7 +32,7 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
     groupHeader.textContent = moduleUrl === 'global' ? 'Global' : moduleUrl.split('/').pop() || moduleUrl;
     container.appendChild(groupHeader);
 
-    signals.forEach(({ name, value, subsCount, history, lazy }) => {
+    signals.forEach(({ name, value, subsCount, history, lazy, restored }) => {
       const isCollapsed = collapsedSignals.has(name);
 
       const displayName = name.includes('.') ? name.split('.').pop() : name;
@@ -56,7 +56,19 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
       key.style.color = '#d2a8ff';
 
       const valueEl = document.createElement('code');
-      if (lazy && value === undefined) {
+      if (restored) {
+        const indicator = document.createElement('span');
+        indicator.textContent = '↻ ';
+        indicator.style.color = '#238636';
+        indicator.title = 'Restored from previous mount';
+        valueEl.appendChild(indicator);
+        formatValue(value, valueEl);
+        valueEl.style.cursor = 'pointer';
+        valueEl.onclick = (e) => {
+          e.stopPropagation();
+          copyToClipboard(JSON.stringify(value));
+        };
+      } else if (lazy && value === undefined) {
         valueEl.textContent = '…';
         valueEl.style.color = '#555';
         valueEl.style.fontStyle = 'italic';
@@ -143,6 +155,7 @@ function renderRowsFromSnapshot(container, snapshot, collapsedSignals) {
       subsCount: Number.isFinite(entry.subs) ? entry.subs : 0,
       history: Array.isArray(entry.history) ? entry.history.slice(-MAX_HISTORY) : [],
       lazy: !!entry.lazy,
+      restored: !!entry.restored,
     });
   });
 
@@ -177,6 +190,7 @@ function mergeSignalUpdate(snapshot, update) {
     subs: Number.isFinite(update.subs) ? update.subs : 0,
     history,
     lazy: false,
+    restored: false,
   };
 
   if (index >= 0) {
@@ -200,6 +214,7 @@ export function devtools(options = {}) {
   const registry = getSignalRegistry();
   const collapsedSignals = new Set();
   let latestSnapshot = [];
+  let remountSnapshot = {};
   let hmrMessage = null;
   let hmrTimeout = null;
 
@@ -257,7 +272,7 @@ export function devtools(options = {}) {
 
   setDevtoolsActive(true);
 
-  latestSnapshot = buildLazySnapshot(registry);
+  latestSnapshot = [];
   renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
 
   function toggle() {
@@ -309,20 +324,46 @@ export function devtools(options = {}) {
   };
 
   globalThis.__10x_devtools_signal_created = (info) => {
-    if (globalThis.__10x_devtools_debug) {
-      console.debug('[10x:devtools] signal created', info);
-    }
     const existing = latestSnapshot.find(e => e && (e.id === info.id || e.name === info.name));
     if (existing) return;
+
+    const restored = remountSnapshot[info.name];
+    const isRestored = restored !== undefined;
+
     latestSnapshot.push({
       id: info.id || null,
       name: info.name,
       moduleUrl: info.moduleUrl || 'global',
-      value: undefined,
+      value: isRestored ? restored.value : undefined,
       subs: 0,
-      history: [],
-      lazy: true,
+      history: isRestored ? restored.history : [],
+      lazy: !isRestored,
+      restored: isRestored,
     });
+
+    if (isRestored) {
+      delete remountSnapshot[info.name];
+    }
+
+    if (isRestored && info.signal && typeof info.signal.set === 'function') {
+      info.signal.set(restored.value);
+    }
+
+    renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
+  };
+
+  globalThis.__10x_devtools_before_remount = (moduleUrl, externalSnapshot) => {
+    remountSnapshot = {};
+    const source = Array.isArray(externalSnapshot) ? externalSnapshot : latestSnapshot;
+    source.forEach((entry) => {
+      if (entry && entry.name && entry.value !== undefined) {
+        remountSnapshot[entry.name] = {
+          value: entry.value,
+          history: entry.history || [],
+        };
+      }
+    });
+    latestSnapshot = [];
     renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
   };
 
