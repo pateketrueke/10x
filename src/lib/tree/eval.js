@@ -1959,7 +1959,7 @@ export default class Eval {
       const componentName = environment.__componentName;
       const componentInstanceId = environment.__componentInstanceId;
       const namespacedName = (componentName && componentInstanceId)
-        ? `${componentName}@${componentInstanceId}.${signalName}`
+        ? `${componentName}$${componentInstanceId}.${signalName}`
         : signalName;
       
       if (namespacedName && runtimeArgs.length < 2) {
