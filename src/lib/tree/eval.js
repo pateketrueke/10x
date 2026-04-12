@@ -2019,7 +2019,7 @@ export default class Eval {
           if (isSignalValue(target)) {
             handler = async () => {
               const scope = new Env(environment);
-              scope.def(targetName, Expr.value(target.get(), parentTokenInfo));
+              scope.def(targetName, Expr.value(target.peek(), parentTokenInfo));
               const nextTokens = await Eval.do(handlerToken.getBody(), scope, 'On', true, parentTokenInfo);
               if (!nextTokens.length) return;
               const nextValue = toPlain(nextTokens.length === 1 ? nextTokens[0] : nextTokens);

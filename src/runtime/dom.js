@@ -130,10 +130,15 @@ export function render(selectorOrElement, view) {
   let prev = null;
   let root = null;
 
+  // For a single-root vdom, root = the mounted DOM node (patch replaces in-place).
+  // For multi-root vdom (array of siblings), root = the container element so that
+  // somedom can diff its children against the new array without a full remount.
+  const rootFor = (next) => isNode(next) ? target.firstChild : target;
+
   const remount = next => {
     target.innerHTML = '';
     untracked(() => mount(target, next));
-    root = isNode(next) ? target.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
 
@@ -145,7 +150,7 @@ export function render(selectorOrElement, view) {
       root = null;
     } else if (!prev) {
       untracked(() => mount(target, next));
-      root = isNode(next) ? target.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
@@ -208,10 +213,12 @@ export function renderShadow(host, view, moduleUrl) {
   let prev = null;
   let root = null;
 
+  const rootFor = (next) => isNode(next) ? outlet.firstChild : outlet;
+
   const remount = next => {
     outlet.innerHTML = '';
     untracked(() => mount(outlet, next));
-    root = isNode(next) ? outlet.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
 
@@ -223,7 +230,7 @@ export function renderShadow(host, view, moduleUrl) {
       root = null;
     } else if (!prev) {
       untracked(() => mount(outlet, next));
-      root = isNode(next) ? outlet.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
