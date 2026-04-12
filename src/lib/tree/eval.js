@@ -785,9 +785,34 @@ export default class Eval {
         children: resolvedNode.children,
       };
 
+      const propsArg = Expr.value(props, this.ctx.tokenInfo);
+      const compEntry = this.env.get(resolvedNode.name);
+
+      // Determine the actual callable to invoke:
+      // - FAT_ARROW style (`Counter props => body`): compEntry.args is an array,
+      //   so wrap compEntry back into an Expr.callable.
+      // - Lambda container (`Box = props -> body`): compEntry.args is undefined,
+      //   compEntry.body[0] is the Expr.callable — use it directly.
+      // For lambda-style, the original evalLiterals path works fine (returns the
+      // lambda unevaluated, then evalBlocks picks it up). We only need to bypass
+      // evalLiterals for FAT_ARROW-style, where evalLiterals pre-evaluates the
+      // component body in the wrong scope (before props is bound).
+      const isFatArrow = Array.isArray(compEntry.args);
+      if (isFatArrow) {
+        const compFn = Expr.callable(
+          { type: BLOCK, value: { ...compEntry, name: resolvedNode.name } },
+          this.ctx.tokenInfo
+        );
+        const compResult = await this.convert(compFn, [propsArg], 'TagComp');
+        if (compResult !== undefined) return [Expr.value(compResult, this.ctx.tokenInfo)];
+        return [];
+      }
+
+      // Lambda-style: use original dispatch (evalLiterals returns lambda unevaluated,
+      // then evalBlocks binds props and invokes it).
       return Eval.do([
         Expr.local(resolvedNode.name, this.ctx.tokenInfo),
-        Expr.block({ args: [Expr.value(props, this.ctx.tokenInfo)] }, this.ctx.tokenInfo),
+        Expr.block({ args: [propsArg] }, this.ctx.tokenInfo),
       ], this.env, 'TagComp', false, this.ctx.tokenInfo);
     };
 
@@ -1690,6 +1715,8 @@ export default class Eval {
         if (typeof child === 'object' && typeof child.name === 'string') return tagToVdom(child);
         // Raw vdom array from an inline-rendered component — pass through directly
         if (Array.isArray(child) && child.length === 3 && typeof child[0] === 'string') return child;
+        // Real DOM node from an isolated component slot — pass through directly
+        if (child && typeof child === 'object' && typeof child.nodeType === 'number') return child;
         return String(child);
       });
       return [node.name, attrs, children];
@@ -1896,10 +1923,13 @@ export default class Eval {
       const args = normalizeDirectiveArgs(value.signal);
       const runtimeArgs = [];
 
-      for (let i = 0; i < args.length; i++) {
-        const evaluated = await Eval.do([args[i]], environment, 'Expr', true, parentTokenInfo);
-        if (!evaluated.length) continue;
-        runtimeArgs.push(toPlain(evaluated.length === 1 ? evaluated[0] : evaluated));
+      // Evaluate all signal args together so multi-token expressions like
+      // `props.start` (LITERAL + DOT + LITERAL) are handled correctly.
+      // Comma separators were already stripped by normalizeDirectiveArgs, so
+      // each evaluated token in the result corresponds to one argument.
+      const evaluated = await Eval.do(args, environment, 'Expr', true, parentTokenInfo);
+      for (const tok of evaluated) {
+        runtimeArgs.push(toPlain(tok));
       }
 
       // Auto-name from assignment variable: `count = @signal 0` → name "count"
