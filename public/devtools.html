@@ -187,19 +187,21 @@
       </div>
       <x-editor id="ed-devtools" style="display:block;height:100%;" value="# Signal Counter
 
+Btn = props -&gt; @html
+  &lt;button onclick={props.onclick} style=&quot;padding:0.5rem 1.25rem;font-size:1.25rem;margin:0.25rem;cursor:pointer&quot;&gt;
+    #{props.label}
+  &lt;/button&gt;.
+
 count = @signal 0.
 inc = @on count = count + 1.
 dec = @on count = count - 1.
 
 @render &quot;#render-container&quot; @html
-  &lt;style&gt;
-    h1 { font-size: 3rem; margin: 0.5rem 0; }
-    button { padding: 0.5rem 1.25rem; font-size: 1.25rem; margin: 0.25rem; cursor: pointer; }
-  &lt;/style&gt;
+  &lt;style&gt;h1 { font-size: 3rem; margin: 0.5rem 0; }&lt;/style&gt;
   &lt;div style=&quot;text-align:center;padding:2rem&quot;&gt;
     &lt;h1&gt;#{@if (= count 0) &quot;zero&quot; @else count}&lt;/h1&gt;
-    &lt;button onclick={dec}&gt;-&lt;/button&gt;
-    &lt;button onclick={inc}&gt;+&lt;/button&gt;
+    &lt;Btn label=&quot;-&quot; onclick={dec} /&gt;
+    &lt;Btn label=&quot;+&quot; onclick={inc} /&gt;
   &lt;/div&gt;
 .
 "></x-editor>

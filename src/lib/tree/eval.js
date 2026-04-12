@@ -737,9 +737,18 @@ export default class Eval {
           continue;
         }
 
-        const [resolved] = await Eval.do([Expr.tag(child, this.ctx.tokenInfo)], this.env, 'TagNode', false, this.ctx.tokenInfo);
-        const fixed = normalizeChild(resolved);
-        if (fixed !== null && typeof fixed !== 'undefined') children.push(fixed);
+        const childResults = await Eval.do([Expr.tag(child, this.ctx.tokenInfo)], this.env, 'TagNode', false, this.ctx.tokenInfo);
+        for (const result of childResults) {
+          let fixed = normalizeChild(result);
+          // Component returned a view object (standalone @html) — inline-render it
+          if (fixed && typeof fixed === 'object' && !Array.isArray(fixed)
+              && typeof fixed.render === 'function' && typeof fixed.name === 'undefined') {
+            const vdom = await fixed.render();
+            if (vdom !== null && typeof vdom !== 'undefined') children.push(vdom);
+          } else if (fixed !== null && typeof fixed !== 'undefined') {
+            children.push(fixed);
+          }
+        }
       }
 
       const resolvedNode = {
@@ -1663,6 +1672,8 @@ export default class Eval {
           return signalMap.get(child.expr) ?? child._signal ?? child._resolved ?? '';
         }
         if (typeof child === 'object' && typeof child.name === 'string') return tagToVdom(child);
+        // Raw vdom array from an inline-rendered component — pass through directly
+        if (Array.isArray(child) && child.length === 3 && typeof child[0] === 'string') return child;
         return String(child);
       });
       return [node.name, attrs, children];
