@@ -1102,7 +1102,14 @@ function compileDefinition(token, asStatement = false, ctx = { signalVars: new S
       const out = `${declConst} ${name} = $.signal($.prop(host, ${propName}, ${fallback}), ${JSON.stringify(name)})`;
       return asStatement ? `${out};` : out;
     }
-    const out = `${declConst} ${name} = $.signal(${compileExpression(head.value.signal.getBody(), ctx)}, ${JSON.stringify(name)})`;
+    // Optional :name key: `count = @signal 0 :counter` → $.signal(0, "counter")
+    const knownDirectiveKeys = new Set(['signal', 'prop', 'computed', 'render', 'html', 'on',
+      'shadow', 'if', 'else', 'do', 'let', 'loop', 'while', 'match', 'try', 'rescue',
+      'export', 'import', 'from', 'style', 'ok', 'err']);
+    const explicitNameKey = Object.keys(head.value)
+      .find(k => !knownDirectiveKeys.has(k) && head.value[k] && head.value[k].getBody?.()?.length === 0);
+    const signalName = explicitNameKey || name;
+    const out = `${declConst} ${name} = $.signal(${compileExpression(head.value.signal.getBody(), ctx)}, ${JSON.stringify(signalName)})`;
     return asStatement ? `${out};` : out;
   }
 

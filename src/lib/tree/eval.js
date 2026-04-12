@@ -1054,6 +1054,13 @@ export default class Eval {
           call[0].source = name;
         }
 
+        // Annotate signal/computed object tokens with the assignment name for devtools
+        if (call[0] && call[0].isObject && call[0].value) {
+          if (call[0].value.signal || call[0].value.computed) {
+            call[0]._assignName = name;
+          }
+        }
+
         this.env.defn(name, { args, body: call }, this.ctx.tokenInfo);
         this.registerNamespaceExport(name);
       } else {
@@ -1860,10 +1867,19 @@ export default class Eval {
         runtimeArgs.push(toPlain(evaluated.length === 1 ? evaluated[0] : evaluated));
       }
 
-      // Keep named signal identity stable across re-evals, e.g. `count = @signal 0`.
-      const signalName = token && typeof token.getName === 'function'
-        ? token.getName()
-        : null;
+      // Optional :name via trailing symbol key: `count = @signal 0 :counter` → "counter"
+      // The parser stores it as an extra key in value with an empty body.
+      const knownDirectives = new Set(['signal', 'prop', 'computed', 'render', 'html', 'on',
+        'shadow', 'if', 'else', 'do', 'let', 'loop', 'while', 'match', 'try', 'rescue',
+        'export', 'import', 'from', 'style', 'ok', 'err']);
+      const explicitName = Object.keys(value)
+        .find(k => !knownDirectives.has(k) && isDirectiveStmt(value[k]) && !value[k].getBody().length)
+        ?? null;
+
+      // Name priority: explicit :name > assignment target (`count = @signal 0`)
+      const signalName = explicitName
+        || token._assignName
+        || (token && typeof token.getName === 'function' ? token.getName() : null);
       if (signalName && runtimeArgs.length < 2) {
         runtimeArgs.push(signalName);
       }
