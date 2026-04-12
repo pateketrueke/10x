@@ -31,6 +31,36 @@ function tokenCol(token) {
   return info ? (info.col ?? 0) : 0;
 }
 
+function collectIdentifiers(token, ids = new Set()) {
+  if (!token || typeof token !== 'object') return ids;
+  if (token.isSymbol && typeof token.value === 'string') {
+    ids.add(token.value);
+  }
+  if (token.isCallable && token.hasBody) {
+    const args = token.value && Array.isArray(token.value.args) ? token.value.args : [];
+    const argNames = new Set(args.map(a => a && typeof a.value === 'string' ? a.value : null).filter(Boolean));
+    for (const t of token.getBody()) {
+      if (t && typeof t.value === 'string' && !argNames.has(t.value)) {
+        collectIdentifiers(t, ids);
+      }
+    }
+  }
+  if (token.isObject && token.value) {
+    for (const val of Object.values(token.value)) {
+      if (val && typeof val.getBody === 'function') collectIdentifiers(val, ids);
+    }
+  }
+  if (token.isTag && token.value && token.value.attrs) {
+    for (const v of Object.values(token.value.attrs)) {
+      if (v && typeof v.expr === 'string') {
+        const matches = v.expr.match(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\b/g) || [];
+        matches.forEach(m => ids.add(m));
+      }
+    }
+  }
+  return ids;
+}
+
 export function lintCode(source, ast) {
   const warnings = [];
   const tokens = ast || Parser.getAST(source, 'parse');
@@ -66,6 +96,19 @@ export function lintCode(source, ast) {
             code: 'on-arrow-updater',
             message: '`@on signal -> expr` is deprecated — use `@on signal = expr`',
           });
+        }
+        // on-handler-target: handler must reference its signal
+        if (name && signalVars.has(name)) {
+          const ids = collectIdentifiers(callable);
+          if (!ids.has(name)) {
+            warnings.push({
+              line: tokenLine(token),
+              col: tokenCol(token),
+              code: 'on-handler-target',
+              severity: 'error',
+              message: `\`@on ${name} -> ...\` handler does not reference signal "${name}"`,
+            });
+          }
         }
       }
     }
