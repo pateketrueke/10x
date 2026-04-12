@@ -44,7 +44,7 @@ function nextSignalId() {
   return current;
 }
 
-export function signal(initialValue, name) {
+export function signal(initialValue, name, moduleUrl) {
   const signalId = nextSignalId();
   const key = Symbol(`signal_${signalId}`);
   const signalName = name || `signal_${signalId}`;
@@ -54,7 +54,7 @@ export function signal(initialValue, name) {
     _devtoolsName: signalName,
     _value: initialValue,
     _history: [],
-    _moduleUrl: undefined,
+    _moduleUrl: moduleUrl,
     subs: new Set(),
     get value() {
       return this.get();

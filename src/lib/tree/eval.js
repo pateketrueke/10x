@@ -1962,8 +1962,16 @@ export default class Eval {
         ? `${componentName}$${componentInstanceId}.${signalName}`
         : signalName;
       
+      // Set moduleUrl for devtools grouping
+      const moduleUrl = (componentName && componentInstanceId)
+        ? `${componentName}$${componentInstanceId}`
+        : undefined;
+      
       if (namespacedName && runtimeArgs.length < 2) {
         runtimeArgs.push(namespacedName);
+      }
+      if (moduleUrl && runtimeArgs.length < 3) {
+        runtimeArgs.push(moduleUrl);
       }
 
       const _signalToken = Expr.value(signalFn(...runtimeArgs), parentTokenInfo);
