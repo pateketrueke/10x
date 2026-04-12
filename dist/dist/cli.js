@@ -15449,6 +15449,11 @@ class Eval {
           call2[0].length = Expr.arity(call2[0]);
           call2[0].source = name;
         }
+        if (call2[0] && call2[0].isObject && call2[0].value) {
+          if (call2[0].value.signal || call2[0].value.computed) {
+            call2[0]._assignName = name;
+          }
+        }
         this.env.defn(name, { args, body: call2 }, this.ctx.tokenInfo);
         this.registerNamespaceExport(name);
       } else {
@@ -16079,7 +16084,7 @@ class Eval {
             continue;
           runtimeArgs.push(toPlain(evaluated.length === 1 ? evaluated[0] : evaluated));
         }
-        const signalName = token && typeof token.getName === "function" ? token.getName() : null;
+        const signalName = token._assignName || (token && typeof token.getName === "function" ? token.getName() : null);
         if (signalName && runtimeArgs.length < 2) {
           runtimeArgs.push(signalName);
         }
@@ -16139,7 +16144,7 @@ class Eval {
           if (!rendered.length)
             return "";
           const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
-          if (signalMap.size > 0) {
+          if (typeof result === "string" && signalMap.size > 0) {
             signalMap.forEach((sig) => sig.get());
           }
           return result;
@@ -16211,7 +16216,7 @@ class Eval {
           if (isSignalValue(target)) {
             handler = async () => {
               const scope = new Env(environment);
-              scope.def(targetName, Expr.value(target.get(), parentTokenInfo));
+              scope.def(targetName, Expr.value(target.peek(), parentTokenInfo));
               const nextTokens = await Eval.do(handlerToken.getBody(), scope, "On", true, parentTokenInfo);
               if (!nextTokens.length)
                 return;
@@ -17081,9 +17086,15 @@ function compileTag(node, depth = 0) {
     if (typeof child === "string")
       return JSON.stringify(child);
     if (child && typeof child.expr === "string")
-      return `$.read(${child.expr.trim()})`;
+      return child.expr.trim();
     return compileTag(child, depth + 1);
   });
+  if (/^[A-Z]/.test(node.name)) {
+    const propsBase = attrsStr === "null" ? "" : attrsStr.slice(2, -2);
+    const childrenEntry = childrenParts.length ? `"children": [${childrenParts.join(", ")}]` : "";
+    const entries = [propsBase, childrenEntry].filter(Boolean).join(", ");
+    return `${node.name}({ ${entries} })`;
+  }
   if (!childrenParts.length) {
     return `$.h(${JSON.stringify(node.name)}, ${attrsStr})`;
   }
@@ -17502,6 +17513,13 @@ function compileHtmlDirective(body, ctx) {
   if (template && template.type === RANGE && Array.isArray(template.value)) {
     const items2 = template.value.filter((token) => token && token.type !== COMMA).map((token) => compileToken(token, ctx));
     return `$.html(() => [${items2.join(", ")}])`;
+  }
+  if (template && template.type === BLOCK && template.hasBody) {
+    const inner = template.getBody();
+    if (inner.length > 1) {
+      const items2 = inner.map((t) => compileToken(t, ctx));
+      return `$.html(() => [${items2.join(", ")}])`;
+    }
   }
   return `$.html(() => ${compileToken(template, ctx)})`;
 }
@@ -18295,10 +18313,11 @@ function render2(selectorOrElement, view) {
     throw new Error(`Render target not found: ${selectorOrElement}`);
   let prev = null;
   let root = null;
+  const rootFor = (next) => y(next) ? target.firstChild : target;
   const remount = (next) => {
     target.innerHTML = "";
     untracked(() => he(target, next));
-    root = y(next) ? target.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
   return effect(async () => {
@@ -18309,7 +18328,7 @@ function render2(selectorOrElement, view) {
       root = null;
     } else if (!prev) {
       untracked(() => he(target, next));
-      root = y(next) ? target.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
@@ -18360,10 +18379,11 @@ function renderShadow(host, view, moduleUrl) {
   shadow.appendChild(outlet);
   let prev = null;
   let root = null;
+  const rootFor = (next) => y(next) ? outlet.firstChild : outlet;
   const remount = (next) => {
     outlet.innerHTML = "";
     untracked(() => he(outlet, next));
-    root = y(next) ? outlet.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
   return effect(async () => {
@@ -18374,7 +18394,7 @@ function renderShadow(host, view, moduleUrl) {
       root = null;
     } else if (!prev) {
       untracked(() => he(outlet, next));
-      root = y(next) ? outlet.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
@@ -24813,6 +24833,11 @@ class Eval2 {
           call2[0].length = Expr2.arity(call2[0]);
           call2[0].source = name;
         }
+        if (call2[0] && call2[0].isObject && call2[0].value) {
+          if (call2[0].value.signal || call2[0].value.computed) {
+            call2[0]._assignName = name;
+          }
+        }
         this.env.defn(name, { args, body: call2 }, this.ctx.tokenInfo);
         this.registerNamespaceExport(name);
       } else {
@@ -25443,7 +25468,7 @@ class Eval2 {
             continue;
           runtimeArgs.push(toPlain(evaluated.length === 1 ? evaluated[0] : evaluated));
         }
-        const signalName = token && typeof token.getName === "function" ? token.getName() : null;
+        const signalName = token._assignName || (token && typeof token.getName === "function" ? token.getName() : null);
         if (signalName && runtimeArgs.length < 2) {
           runtimeArgs.push(signalName);
         }
@@ -25503,7 +25528,7 @@ class Eval2 {
           if (!rendered.length)
             return "";
           const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
-          if (signalMap.size > 0) {
+          if (typeof result === "string" && signalMap.size > 0) {
             signalMap.forEach((sig) => sig.get());
           }
           return result;
@@ -25575,7 +25600,7 @@ class Eval2 {
           if (isSignalValue(target)) {
             handler = async () => {
               const scope = new Env2(environment);
-              scope.def(targetName, Expr2.value(target.get(), parentTokenInfo));
+              scope.def(targetName, Expr2.value(target.peek(), parentTokenInfo));
               const nextTokens = await Eval2.do(handlerToken.getBody(), scope, "On", true, parentTokenInfo);
               if (!nextTokens.length)
                 return;
@@ -26288,9 +26313,15 @@ function compileTag2(node, depth = 0) {
     if (typeof child === "string")
       return JSON.stringify(child);
     if (child && typeof child.expr === "string")
-      return `$.read(${child.expr.trim()})`;
+      return child.expr.trim();
     return compileTag2(child, depth + 1);
   });
+  if (/^[A-Z]/.test(node.name)) {
+    const propsBase = attrsStr === "null" ? "" : attrsStr.slice(2, -2);
+    const childrenEntry = childrenParts.length ? `"children": [${childrenParts.join(", ")}]` : "";
+    const entries = [propsBase, childrenEntry].filter(Boolean).join(", ");
+    return `${node.name}({ ${entries} })`;
+  }
   if (!childrenParts.length) {
     return `$.h(${JSON.stringify(node.name)}, ${attrsStr})`;
   }
@@ -26709,6 +26740,13 @@ function compileHtmlDirective2(body, ctx) {
   if (template && template.type === RANGE2 && Array.isArray(template.value)) {
     const items22 = template.value.filter((token) => token && token.type !== COMMA2).map((token) => compileToken2(token, ctx));
     return `$.html(() => [${items22.join(", ")}])`;
+  }
+  if (template && template.type === BLOCK2 && template.hasBody) {
+    const inner = template.getBody();
+    if (inner.length > 1) {
+      const items22 = inner.map((t) => compileToken2(t, ctx));
+      return `$.html(() => [${items22.join(", ")}])`;
+    }
   }
   return `$.html(() => ${compileToken2(template, ctx)})`;
 }
@@ -27466,10 +27504,11 @@ function render22(selectorOrElement, view) {
     throw new Error(`Render target not found: ${selectorOrElement}`);
   let prev = null;
   let root = null;
+  const rootFor = (next) => y2(next) ? target.firstChild : target;
   const remount = (next) => {
     target.innerHTML = "";
     untracked2(() => he2(target, next));
-    root = y2(next) ? target.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
   return effect2(async () => {
@@ -27480,7 +27519,7 @@ function render22(selectorOrElement, view) {
       root = null;
     } else if (!prev) {
       untracked2(() => he2(target, next));
-      root = y2(next) ? target.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
@@ -27531,10 +27570,11 @@ function renderShadow2(host, view, moduleUrl) {
   shadow.appendChild(outlet);
   let prev = null;
   let root = null;
+  const rootFor = (next) => y2(next) ? outlet.firstChild : outlet;
   const remount = (next) => {
     outlet.innerHTML = "";
     untracked2(() => he2(outlet, next));
-    root = y2(next) ? outlet.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
   return effect2(async () => {
@@ -27545,7 +27585,7 @@ function renderShadow2(host, view, moduleUrl) {
       root = null;
     } else if (!prev) {
       untracked2(() => he2(outlet, next));
-      root = y2(next) ? outlet.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {

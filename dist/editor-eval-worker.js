@@ -8032,6 +8032,11 @@ class Eval {
           call[0].length = Expr.arity(call[0]);
           call[0].source = name;
         }
+        if (call[0] && call[0].isObject && call[0].value) {
+          if (call[0].value.signal || call[0].value.computed) {
+            call[0]._assignName = name;
+          }
+        }
         this.env.defn(name, { args, body: call }, this.ctx.tokenInfo);
         this.registerNamespaceExport(name);
       } else {
@@ -8662,7 +8667,7 @@ class Eval {
             continue;
           runtimeArgs.push(toPlain(evaluated.length === 1 ? evaluated[0] : evaluated));
         }
-        const signalName = token && typeof token.getName === "function" ? token.getName() : null;
+        const signalName = token._assignName || (token && typeof token.getName === "function" ? token.getName() : null);
         if (signalName && runtimeArgs.length < 2) {
           runtimeArgs.push(signalName);
         }
@@ -8722,7 +8727,7 @@ class Eval {
           if (!rendered.length)
             return "";
           const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
-          if (signalMap.size > 0) {
+          if (typeof result === "string" && signalMap.size > 0) {
             signalMap.forEach((sig) => sig.get());
           }
           return result;
@@ -8794,7 +8799,7 @@ class Eval {
           if (isSignalValue(target)) {
             handler = async () => {
               const scope = new Env(environment);
-              scope.def(targetName, Expr.value(target.get(), parentTokenInfo));
+              scope.def(targetName, Expr.value(target.peek(), parentTokenInfo));
               const nextTokens = await Eval.do(handlerToken.getBody(), scope, "On", true, parentTokenInfo);
               if (!nextTokens.length)
                 return;
@@ -9474,10 +9479,11 @@ function render2(selectorOrElement, view) {
     throw new Error(`Render target not found: ${selectorOrElement}`);
   let prev = null;
   let root = null;
+  const rootFor = (next) => y(next) ? target.firstChild : target;
   const remount = (next) => {
     target.innerHTML = "";
     untracked(() => he(target, next));
-    root = y(next) ? target.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
   return effect(async () => {
@@ -9488,7 +9494,7 @@ function render2(selectorOrElement, view) {
       root = null;
     } else if (!prev) {
       untracked(() => he(target, next));
-      root = y(next) ? target.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
@@ -9539,10 +9545,11 @@ function renderShadow(host, view, moduleUrl) {
   shadow.appendChild(outlet);
   let prev = null;
   let root = null;
+  const rootFor = (next) => y(next) ? outlet.firstChild : outlet;
   const remount = (next) => {
     outlet.innerHTML = "";
     untracked(() => he(outlet, next));
-    root = y(next) ? outlet.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
   return effect(async () => {
@@ -9553,7 +9560,7 @@ function renderShadow(host, view, moduleUrl) {
       root = null;
     } else if (!prev) {
       untracked(() => he(outlet, next));
-      root = y(next) ? outlet.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {

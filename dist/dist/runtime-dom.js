@@ -642,10 +642,11 @@ function render(selectorOrElement, view) {
     throw new Error(`Render target not found: ${selectorOrElement}`);
   let prev = null;
   let root = null;
+  const rootFor = (next) => y(next) ? target.firstChild : target;
   const remount = (next) => {
     target.innerHTML = "";
     untracked(() => he(target, next));
-    root = y(next) ? target.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
   return effect(async () => {
@@ -656,7 +657,7 @@ function render(selectorOrElement, view) {
       root = null;
     } else if (!prev) {
       untracked(() => he(target, next));
-      root = y(next) ? target.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
@@ -707,10 +708,11 @@ function renderShadow(host, view, moduleUrl) {
   shadow.appendChild(outlet);
   let prev = null;
   let root = null;
+  const rootFor = (next) => y(next) ? outlet.firstChild : outlet;
   const remount = (next) => {
     outlet.innerHTML = "";
     untracked(() => he(outlet, next));
-    root = y(next) ? outlet.firstChild : null;
+    root = rootFor(next);
     prev = next;
   };
   return effect(async () => {
@@ -721,7 +723,7 @@ function renderShadow(host, view, moduleUrl) {
       root = null;
     } else if (!prev) {
       untracked(() => he(outlet, next));
-      root = y(next) ? outlet.firstChild : null;
+      root = rootFor(next);
       prev = next;
     } else if (root) {
       try {

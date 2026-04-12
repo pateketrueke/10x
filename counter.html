@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10x Counter — compiled</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
+      background: #090c12;
+      color: #e2e8f0;
+    }
+    #app {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    // Compiled output of:
+    //
+    // Btn = props -> <button id={props.id}>#{props.label}</button>.
+    // count = @signal 0.
+    // @render "#app" @html
+    //   <style>button { padding: 0.5rem 1rem; margin: 0.25rem; font-size: 1.5rem; }</style>
+    //   <div>
+    //     <h1>Count: #{count}</h1>
+    //     <Btn id="dec" label="-" />
+    //     <Btn id="inc" label="+" />
+    //   </div>.
+    // @on :click "#dec" count = count - 1.
+    // @on :click "#inc" count = count + 1.
+
+    import * as $ from './dist/runtime.js';
+
+    const Btn = (props) => ($.h("button", { "id": $.read(props.id) }, props.label));
+    const count = $.signal(0, "count");
+    $.render("#app", $.html(() => [
+      $.h("style", null, "button { padding: 0.5rem 1rem; margin: 0.25rem; font-size: 1.5rem; }"),
+      $.h("div", null,
+        $.h("h1", null, "Count: ", count),
+        Btn({ "id": "dec", "label": "-" }),
+        Btn({ "id": "inc", "label": "+" }),
+      ),
+    ]));
+    $.on("click", "#dec", () => { count.set($.read(count) - 1); });
+    $.on("click", "#inc", () => { count.set($.read(count) + 1); });
+  </script>
+</body>
+</html>
