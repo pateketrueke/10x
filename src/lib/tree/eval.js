@@ -1933,9 +1933,11 @@ export default class Eval {
           const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
           if (!rendered.length) return '';
           const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
-          // String templates need the effect to re-run on signal change (innerHTML path).
-          // Vdom templates don't — somedom subscribes directly via createSignalTextNode.
-          if (typeof result === 'string' && signalMap.size > 0) {
+          // Subscribe the effect to every signal so it re-runs on any signal change.
+          // Needed for both: string templates (innerHTML) and component prop updates (vdom).
+          // For #{signal} text nodes somedom also subscribes directly (surgical update) —
+          // the vdom diff on effect re-run is a no-op for those, so there's no conflict.
+          if (signalMap.size > 0) {
             signalMap.forEach(sig => sig.get());
           }
           return result;
