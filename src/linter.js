@@ -153,6 +153,78 @@ function collectSignalReads(token, counts) {
   }
 }
 
+function checkIfComplexity(token, depth = 0) {
+  if (!token || typeof token !== 'object') return { depth: 0, hasInterpolation: false, hasNestedIf: false };
+  
+  let maxDepth = depth;
+  let hasInterpolation = false;
+  let hasNestedIf = false;
+  
+  // Check for nested @if
+  if (token.isObject && token.value && token.value.if) {
+    hasNestedIf = true;
+    const ifBody = token.value.if.getBody();
+    if (Array.isArray(ifBody)) {
+      for (const branch of ifBody) {
+        if (branch && typeof branch.getBody === 'function') {
+          const result = checkIfComplexity(branch, depth + 1);
+          maxDepth = Math.max(maxDepth, result.depth);
+          hasInterpolation = hasInterpolation || result.hasInterpolation;
+          hasNestedIf = hasNestedIf || result.hasNestedIf;
+        }
+      }
+    }
+  }
+  
+  // Check for interpolation
+  if (token.isInterpolation) {
+    hasInterpolation = true;
+  }
+  
+  // Check tag children for interpolation
+  if (token.isTag && token.value) {
+    if (token.value.attrs) {
+      for (const v of Object.values(token.value.attrs)) {
+        if (v && typeof v.expr === 'string' && v.expr.includes('#{')) {
+          hasInterpolation = true;
+        }
+      }
+    }
+    if (token.value.children) {
+      for (const child of token.value.children) {
+        if (child && typeof child === 'object') {
+          const result = checkIfComplexity(child, depth);
+          maxDepth = Math.max(maxDepth, result.depth);
+          hasInterpolation = hasInterpolation || result.hasInterpolation;
+          hasNestedIf = hasNestedIf || result.hasNestedIf;
+        }
+      }
+    }
+  }
+  
+  // Walk nested structures
+  if (token.isCallable && token.hasBody) {
+    for (const t of token.getBody()) {
+      const result = checkIfComplexity(t, depth);
+      maxDepth = Math.max(maxDepth, result.depth);
+      hasInterpolation = hasInterpolation || result.hasInterpolation;
+      hasNestedIf = hasNestedIf || result.hasNestedIf;
+    }
+  }
+  if (token.isObject && token.value) {
+    for (const val of Object.values(token.value)) {
+      if (val && typeof val.getBody === 'function') {
+        const result = checkIfComplexity(val, depth);
+        maxDepth = Math.max(maxDepth, result.depth);
+        hasInterpolation = hasInterpolation || result.hasInterpolation;
+        hasNestedIf = hasNestedIf || result.hasNestedIf;
+      }
+    }
+  }
+  
+  return { depth: maxDepth, hasInterpolation, hasNestedIf };
+}
+
 export function lintCode(source, ast) {
   const warnings = [];
   const tokens = ast || Parser.getAST(source, 'parse');
@@ -296,6 +368,25 @@ export function lintCode(source, ast) {
           severity: 'hint',
           message: `Block function has ${stmtCount} statements — consider extracting helper functions`,
         });
+      }
+    }
+
+    // extract-complex-if: nested @if or interpolation inside @if
+    if (token.isInterpolation && token.hasBody) {
+      for (const t of token.getBody()) {
+        if (t && t.isObject && t.value && t.value.if) {
+          const result = checkIfComplexity(t);
+          if (result.hasNestedIf || result.hasInterpolation) {
+            warnings.push({
+              line: tokenLine(token),
+              col: tokenCol(token),
+              code: 'extract-complex-if',
+              severity: 'warning',
+              message: 'Complex @if inside #{...} — extract to @computed for readability',
+            });
+            break;
+          }
+        }
       }
     }
   });
