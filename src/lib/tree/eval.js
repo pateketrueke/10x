@@ -10,6 +10,8 @@ import { getCurrentEffect } from '../../runtime/core.js';
 import Range from '../range';
 import { composeTag, renderTag } from '../tag';
 
+let componentInstanceId = 0;
+
 import {
   EOL, COMMA, MINUS, PLUS, MUL, DIV, MOD, BLOCK, RANGE, LITERAL, NUMBER, STRING, SYMBOL,
   EQUAL, LESS_EQ, LESS, GREATER_EQ, GREATER, NOT, LIKE, NOT_EQ, EXACT_EQ, FFI,
@@ -1063,6 +1065,13 @@ export default class Eval {
 
         // type-check arguments if annotation exists
         const fnName = prev.getName();
+        
+        // Add component instance info for signal namespacing
+        if (fnName && fnName[0] === fnName[0].toUpperCase()) {
+          ctx.__componentName = fnName;
+          ctx.__componentInstanceId = ++componentInstanceId;
+        }
+        
         if (fnName) {
           const ann = this.env.getAnnotation(fnName);
           if (ann && typeof ann === 'string') {
@@ -1945,8 +1954,16 @@ export default class Eval {
 
       const signalName = token._assignName
         || (token && typeof token.getName === 'function' ? token.getName() : null);
-      if (signalName && runtimeArgs.length < 2) {
-        runtimeArgs.push(signalName);
+      
+      // Namespace signal name with component instance
+      const componentName = environment.__componentName;
+      const componentInstanceId = environment.__componentInstanceId;
+      const namespacedName = (componentName && componentInstanceId)
+        ? `${componentName}@${componentInstanceId}.${signalName}`
+        : signalName;
+      
+      if (namespacedName && runtimeArgs.length < 2) {
+        runtimeArgs.push(namespacedName);
       }
 
       const _signalToken = Expr.value(signalFn(...runtimeArgs), parentTokenInfo);
