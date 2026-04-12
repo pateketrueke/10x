@@ -1954,6 +1954,7 @@ var OR = Symbol("OR");
 var DOT = Symbol("DOT");
 var PIPE = Symbol("PIPE");
 var BLOCK = Symbol("BLOCK");
+var FAT_ARROW = Symbol("FAT_ARROW");
 var RANGE = Symbol("RANGE");
 var SPREAD = Symbol("SPREAD");
 var SOME = Symbol("SOME");
@@ -2266,6 +2267,7 @@ function ensureDefaultMappings() {
 var e = /^[0-9A-Za-z-]+$/;
 var r = /^xlink:?/;
 var i = "http://www.w3.org/1999/xlink";
+var o = ["oncreate", "onupdate", "onreplace", "ondestroy"];
 var c = ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"];
 var a = (e2) => Array.isArray(e2);
 var l = (e2) => typeof e2 == "string";
@@ -2281,11 +2283,11 @@ function g(t) {
 function y(e2) {
   return !(!a(e2) || !u(e2[0])) || !!(e2 && a(e2) && g(e2[0])) && !!(f(e2[1]) && e2.length >= 2);
 }
-function v(e2) {
+function m(e2) {
   return e2 === null || !u(e2) && (a(e2) ? e2.length === 0 : f(e2) ? Object.keys(e2).length === 0 : d(e2) || e2 === false);
 }
-var m = (e2) => a(e2) && !y(e2);
-function _(e2) {
+var v = (e2) => a(e2) && !y(e2);
+function w(e2) {
   if (y(e2) && f(e2[1]))
     return e2[1].key;
 }
@@ -2293,61 +2295,61 @@ function E(e2) {
   if (e2.nodeType === 1)
     return e2.getAttribute("data-key") || undefined;
 }
-function N(e2, t) {
+function D(e2, t) {
   if (typeof e2 != typeof t)
     return true;
   if (a(e2)) {
     if (!a(t) || e2.length !== t.length)
       return true;
     for (let n = 0;n < t.length; n += 1)
-      if (N(e2[n], t[n]))
+      if (D(e2[n], t[n]))
         return true;
   } else {
     if (!f(e2) || !f(t))
       return e2 !== t;
     {
       const n = Object.keys(e2).sort(), s = Object.keys(t).sort();
-      if (N(n, s))
+      if (D(n, s))
         return true;
       for (let r2 = 0;r2 < n.length; r2 += 1)
-        if (N(e2[n[r2]], t[s[r2]]))
+        if (D(e2[n[r2]], t[s[r2]]))
           return true;
     }
   }
 }
-function k(e2) {
+function N(e2) {
   return e2.slice(2);
 }
 function x(e2) {
-  return y(e2) ? e2 : a(e2) ? e2.reduce((e3, t) => e3.concat(y(t) ? [t] : x(t)), []) : v(e2) ? [] : [e2];
+  return y(e2) ? e2 : a(e2) ? e2.reduce((e3, t) => e3.concat(y(t) ? [t] : x(t)), []) : m(e2) ? [] : [e2];
 }
-function D(e2) {
+function k(e2) {
   return e2.attributes && !e2.getAttributeNames ? e2.attributes : e2.getAttributeNames().reduce((t, n) => (t[n.replace("data-", "@")] = e2[n] || e2.getAttribute(n), t), {});
 }
-function S(e2, t) {
+function T(e2, t) {
   if (!d(e2)) {
     if (a(e2))
-      return e2.map((e3) => S(e3, t));
+      return e2.map((e3) => T(e3, t));
     if (typeof NodeList != "undefined" && e2 instanceof NodeList)
-      return S(e2.values(), t);
+      return T(e2.values(), t);
     if (e2.nodeType === 3)
       return e2.nodeValue;
     if (e2.nodeType === 1) {
       const n = [];
       return t && e2.childNodes.forEach((e3) => {
-        n.push(S(e3, t));
-      }), [e2.tagName.toLowerCase(), D(e2), n];
+        n.push(T(e3, t));
+      }), [e2.tagName.toLowerCase(), k(e2), n];
     }
-    return e2.childNodes ? e2.childNodes.map((e3) => S(e3, t)) : S([...e2], t);
+    return e2.childNodes ? e2.childNodes.map((e3) => T(e3, t)) : T([...e2], t);
   }
 }
 
-class L {
+class S {
   constructor() {
     this.childNodes = [], this.nodeType = 11;
   }
   appendChild(e2) {
-    L.valid(e2) ? e2.childNodes.forEach((e3) => {
+    S.valid(e2) ? e2.childNodes.forEach((e3) => {
       this.appendChild(e3);
     }) : this.childNodes.push(e2);
   }
@@ -2358,19 +2360,20 @@ class L {
     }
   }
   static valid(e2) {
-    return e2 instanceof L;
+    return e2 instanceof S;
   }
   static from(e2, t) {
-    const n = new L;
+    const n = new S;
     return t = t.filter((e3) => e3 !== null), n.vnode = t, t.forEach((t2) => {
       n.appendChild(e2(t2));
     }), n;
   }
 }
-var T = (e2) => e2.replace(/-([a-z])/g, (e3, t) => t.toUpperCase());
-var U = (e2, t) => e2 && e2.removeChild(t);
-var q = (e2, t) => {
-  t && (L.valid(t) ? t.mount(e2.parentNode, e2) : e2.parentNode.insertBefore(t, e2)), U(e2.parentNode, e2);
+var L = (e2) => e2.replace(/-([a-z])/g, (e3, t) => t.toUpperCase());
+var M = (e2, t, n = {}) => (...s) => t === s.length && e2(...s, n);
+var W = (e2, t) => e2 && e2.removeChild(t);
+var V = (e2, t) => {
+  t && (S.valid(t) ? t.mount(e2.parentNode, e2) : e2.parentNode.insertBefore(t, e2)), W(e2.parentNode, e2);
 };
 var G = null;
 var Q = new Set;
@@ -2411,9 +2414,9 @@ function oe(e2, t, n) {
     const i2 = n.subscribe(() => {
       const t2 = n.peek();
       s === "textContent" ? e2.textContent = t2 == null ? "" : String(t2) : s === "innerHTML" ? e2.innerHTML = t2 == null ? "" : String(t2) : s.startsWith("style.") ? e2.style[s.slice(6)] = t2 : e2[s] = t2;
-    }), o = r2;
+    }), o2 = r2;
     return void e2._signalDisposers.set(t, () => {
-      o(), i2();
+      o2(), i2();
     });
   }
   e2._signalDisposers.set(t, r2);
@@ -2422,24 +2425,24 @@ function ce(e2) {
   e2._signalDisposers && (e2._signalDisposers.forEach((e3) => e3()), e2._signalDisposers.clear());
 }
 function ae(e2, t, n, s) {
-  Object.entries(t).forEach(([t2, o]) => {
+  Object.entries(t).forEach(([t2, o2]) => {
     if (t2 !== "key" && t2 !== "open")
       if (t2 === "ref")
         e2.oncreate = (e3) => {
-          o.current = e3;
+          o2.current = e3;
         };
       else if (t2 === "@html")
-        e2.innerHTML = o;
+        e2.innerHTML = o2;
       else if (re(t2)) {
-        if (o && typeof o == "object" && "value" in o) {
-          oe(e2, t2, o);
+        if (o2 && typeof o2 == "object" && "value" in o2) {
+          oe(e2, t2, o2);
           const n2 = e2.teardown;
           e2.teardown = () => {
             ce(e2), n2 && n2();
           };
         }
       } else if (ie(t2)) {
-        if (o && typeof o == "object" && "value" in o) {
+        if (o2 && typeof o2 == "object" && "value" in o2) {
           (function(e3, t3, n3) {
             const s2 = t3.slice(2);
             let r2;
@@ -2530,7 +2533,7 @@ function ae(e2, t, n, s) {
                 return;
             }
             e3._directiveDisposers.set(t3, r2);
-          })(e2, t2, o);
+          })(e2, t2, o2);
           const n2 = e2.teardown;
           e2.teardown = () => {
             (function(e3) {
@@ -2541,21 +2544,21 @@ function ae(e2, t, n, s) {
           };
         }
       } else if (t2.indexOf("class:") === 0)
-        o ? e2.classList.add(t2.substr(6)) : e2.classList.remove(t2.substr(6));
+        o2 ? e2.classList.add(t2.substr(6)) : e2.classList.remove(t2.substr(6));
       else if (t2.indexOf("style:") === 0)
-        e2.style[T(t2.substr(6))] = o;
+        e2.style[L(t2.substr(6))] = o2;
       else {
         const c2 = t2.replace("@", "data-").replace(r, "");
-        if (b(o)) {
-          oe(e2, `${se}${c2}`, o);
+        if (b(o2)) {
+          oe(e2, `${se}${c2}`, o2);
           const t3 = e2.teardown;
           return void (e2.teardown = () => {
             ce(e2), t3 && t3();
           });
         }
-        let l2 = o !== true ? o : !!c2.includes("-") || c2;
+        let l2 = o2 !== true ? o2 : !!c2.includes("-") || c2;
         p(l2) && (l2 = u(s) && s(e2, c2, l2) || l2, l2 = l2 !== e2 ? l2 : null, l2 = a(l2) ? l2.join("") : l2);
-        const d2 = v(l2);
+        const d2 = m(l2);
         if (n && t2 !== c2)
           return void (d2 ? e2.removeAttributeNS(i, c2) : e2.setAttributeNS(i, c2, l2));
         d2 ? e2.removeAttribute(c2) : h(l2) && e2.setAttribute(c2, l2);
@@ -2590,51 +2593,84 @@ class le {
     }), s;
   }
 }
-var ue = () => typeof Element != "undefined" && ("moveBefore" in Element.prototype);
-function de(e2, t = (e3) => e3()) {
+function ue(e2, t, n) {
+  return function(e3, t2, n2) {
+    let s = document.createTextNode(""), r2 = null;
+    const i2 = async () => {
+      const i3 = e3.peek(), o3 = s._signalDispose;
+      if (d(i3) || i3 === false) {
+        if (s.nodeType === 3)
+          s.nodeValue = "";
+        else {
+          const e4 = document.createTextNode("");
+          e4._signalDispose = o3, s.replaceWith(e4), s = e4;
+        }
+        r2 = null;
+      } else if (h(i3)) {
+        if (s.nodeType === 3)
+          s.nodeValue = String(i3);
+        else {
+          const e4 = document.createTextNode(String(i3));
+          e4._signalDispose = o3, s.replaceWith(e4), s = e4;
+        }
+        r2 = null;
+      } else if (s.nodeType === 3) {
+        const e4 = he(i3, t2, n2);
+        e4._signalDispose = o3, s.replaceWith(e4), s = e4, r2 = i3;
+      } else
+        s = await ge(s, r2, i3, t2, n2), s._signalDispose = o3, r2 = i3;
+    };
+    Promise.resolve().then(i2);
+    const o2 = ee(() => {
+      e3.value;
+    });
+    if (o2._deps?.size || typeof e3.subscribe != "function") {
+      let t3 = false;
+      const n3 = ee(() => {
+        e3.value, t3 && i2(), t3 = true;
+      });
+      s._signalDispose = n3;
+    } else {
+      const t3 = e3.subscribe(() => i2());
+      s._signalDispose = () => {
+        o2(), t3();
+      };
+    }
+    return s;
+  }(e2, t, n);
+}
+var de = () => typeof Element != "undefined" && ("moveBefore" in Element.prototype);
+function fe(e2, t = (e3) => e3()) {
   const n = () => e2 && e2.remove();
   return t === false ? n() : Promise.resolve().then(() => t(n));
 }
-function fe(e2, t, n, s) {
-  const r2 = pe(t, n, s);
-  return le.valid(r2) ? r2.mount() : L.valid(r2) ? r2.mount(e2) : e2.appendChild(r2), r2;
+function pe(e2, t, n, s) {
+  const r2 = he(t, n, s);
+  return le.valid(r2) ? r2.mount() : S.valid(r2) ? r2.mount(e2) : e2.appendChild(r2), r2;
 }
-function pe(e2, t, n) {
+function he(e2, t, n) {
   if (d(e2))
     throw new Error(`Invalid vnode, given '${e2}'`);
   if (!y(e2))
-    return a(e2) ? L.from((e3) => pe(e3, t, n), e2) : b(e2) ? function(e3) {
-      const t2 = document.createTextNode(String(e3.peek())), n2 = ee(() => {
-        t2.nodeValue = String(e3.value);
-      });
-      if (!n2._deps?.size && typeof e3.subscribe == "function") {
-        const s2 = e3.subscribe(() => {
-          t2.nodeValue = String(e3.peek());
-        }), r3 = n2;
-        return t2._signalDispose = () => {
-          r3(), s2();
-        }, t2;
-      }
-      return t2._signalDispose = n2, t2;
-    }(e2) : h(e2) && document.createTextNode(String(e2)) || e2;
+    return a(e2) ? S.from((e3) => he(e3, t, n), e2) : b(e2) ? ue(e2, t, n) : h(e2) && document.createTextNode(String(e2)) || e2;
   if (!a(e2))
     return e2;
   if (n && n.tags && n.tags[e2[0]])
-    return pe(n.tags[e2[0]](e2[1], k(e2), n), t, n);
+    return he(n.tags[e2[0]](e2[1], N(e2), n), t, n);
   if (!y(e2))
-    return L.from((e3) => pe(e3, t, n), e2);
+    return S.from((e3) => he(e3, t, n), e2);
   if (u(e2[0]))
-    return pe(e2[0](e2[1], e2.slice(2)), t, n);
+    return he(e2[0](e2[1], e2.slice(2)), t, n);
   if (e2[0] === "portal") {
     const [, s2, ...r3] = e2;
-    return le.from((e3) => pe(e3, t, n), r3, s2.target);
+    return le.from((e3) => he(e3, t, n), r3, s2.target);
   }
-  const s = t || e2[0].indexOf("svg") === 0, [r2, i2, ...o] = e2;
+  const s = t || e2[0].indexOf("svg") === 0, [r2, i2, ...o2] = e2;
   let c2 = s ? document.createElementNS("http://www.w3.org/2000/svg", r2) : document.createElement(r2);
-  if (i2 && i2.key && c2.setAttribute("data-key", i2.key), u(n) && (c2 = n(c2, r2, i2, o) || c2), u(c2))
-    return pe(c2(), s, n);
-  v(i2) || ae(c2, i2, s, n), u(c2.oncreate) && c2.oncreate(c2), u(c2.enter) && c2.enter(), c2.remove = () => Promise.resolve().then(() => u(c2.ondestroy) && c2.ondestroy(c2)).then(() => u(c2.teardown) && c2.teardown()).then(() => u(c2.exit) && c2.exit()).then(() => q(c2)), o.forEach((e3) => {
-    he(c2, e3, s, n);
+  if (i2 && i2.key && c2.setAttribute("data-key", i2.key), u(n) && (c2 = n(c2, r2, i2, o2) || c2), u(c2))
+    return he(c2(), s, n);
+  m(i2) || ae(c2, i2, s, n), u(c2.oncreate) && c2.oncreate(c2), u(c2.enter) && c2.enter(), c2.remove = () => Promise.resolve().then(() => u(c2.ondestroy) && c2.ondestroy(c2)).then(() => u(c2.teardown) && c2.teardown()).then(() => u(c2.exit) && c2.exit()).then(() => V(c2)), o2.forEach((e3) => {
+    be(c2, e3, s, n);
   });
   const l2 = c2.childNodes;
   if (l2.length > 0) {
@@ -2649,52 +2685,52 @@ function pe(e2, t, n) {
   }
   return c2;
 }
-function he(e2, t, n, s) {
-  return u(t) && (s = t, t = e2, e2 = undefined), u(n) && (s = n, n = null), d(t) && (t = e2, e2 = undefined), e2 || (e2 = document.body), typeof e2 == "string" && (e2 = document.querySelector(e2)), m(t) ? t.forEach((t2) => {
-    he(e2, t2, n, s);
-  }) : d(t) || (e2 = fe(e2, t, n, s)), e2;
+function be(e2, t, n, s) {
+  return u(t) && (s = t, t = e2, e2 = undefined), u(n) && (s = n, n = null), d(t) && (t = e2, e2 = undefined), e2 || (e2 = document.body), typeof e2 == "string" && (e2 = document.querySelector(e2)), v(t) ? t.forEach((t2) => {
+    be(e2, t2, n, s);
+  }) : d(t) || (e2 = pe(e2, t, n, s)), e2;
 }
-async function be(e2, t, n, s, r2) {
+async function ge(e2, t, n, s, r2) {
   return h(n) || !y(t) || t[0] !== n[0] || e2.nodeType !== 1 ? function(e3, t2, n2, s2) {
     if (u(e3.onreplace))
       return e3.onreplace(t2, n2, s2);
-    const r3 = pe(t2, n2, s2);
-    return le.valid(r3) ? (r3.mount(), e3.remove()) : L.valid(r3) ? q(e3, r3) : e3.replaceWith(r3), r3;
+    const r3 = he(t2, n2, s2);
+    return le.valid(r3) ? (r3.mount(), e3.remove()) : S.valid(r3) ? V(e3, r3) : e3.replaceWith(r3), r3;
   }(e2, n, s, r2) : (function(e3, t2, n2, s2, r3) {
     let i2;
-    const o = Object.keys(t2).concat(Object.keys(n2)).reduce((e4, s3) => ((s3 in t2) && !(s3 in n2) ? (e4[s3] = null, i2 = true) : N(t2[s3], n2[s3]) && (e4[s3] = n2[s3], i2 = true), e4), {});
+    const o2 = Object.keys(t2).concat(Object.keys(n2)).reduce((e4, s3) => ((s3 in t2) && !(s3 in n2) ? (e4[s3] = null, i2 = true) : D(t2[s3], n2[s3]) && (e4[s3] = n2[s3], i2 = true), e4), {});
     return i2 && (Object.keys(t2).forEach((t3) => {
       if (re(t3) && !(t3 in n2) && e3._signalDisposers && e3._signalDisposers.has(t3) && (e3._signalDisposers.get(t3)(), e3._signalDisposers.delete(t3)), ie(t3) && !(t3 in n2) && e3._directiveDisposers && e3._directiveDisposers.has(t3)) {
         const n3 = e3._directiveDisposers.get(t3);
         n3._cleanup && n3._cleanup(), n3(), e3._directiveDisposers.delete(t3);
       }
-    }), ae(e3, o, s2, r3)), i2;
-  }(e2, t[1] || [], n[1] || [], s, r2) && (u(e2.onupdate) && await e2.onupdate(e2), u(e2.update) && await e2.update()), n[1] && n[1]["@html"] ? e2 : ge(e2, k(t), k(n), s, r2));
+    }), ae(e3, o2, s2, r3)), i2;
+  }(e2, t[1] || [], n[1] || [], s, r2) && (u(e2.onupdate) && await e2.onupdate(e2), u(e2.update) && await e2.update()), n[1] && n[1]["@html"] ? e2 : ye(e2, N(t), N(n), s, r2));
 }
-async function ge(e2, t, n, s, r2) {
+async function ye(e2, t, n, s, r2) {
   if (!t || y(t) && y(n))
-    return be(e2, t, n, s, r2);
+    return ge(e2, t, n, s, r2);
   if (y(t)) {
     for (;a(n) && n.length === 1; )
       n = n[0];
-    return ge(e2, [t], n, s, r2);
+    return ye(e2, [t], n, s, r2);
   }
-  return y(n) ? be(e2, t, n, s, r2) : (await async function(e3, t2, n2, s2) {
-    const r3 = [], i2 = x(t2), o = Math.max(e3.childNodes.length, i2.length), c2 = Array.from(e3.childNodes), a2 = new Map, l2 = new Set;
+  return y(n) ? ge(e2, t, n, s, r2) : (await async function(e3, t2, n2, s2) {
+    const r3 = [], i2 = x(t2), o2 = Math.max(e3.childNodes.length, i2.length), c2 = Array.from(e3.childNodes), a2 = new Map, l2 = new Set;
     for (let e4 = 0;e4 < c2.length; e4++) {
       const t3 = E(c2[e4]);
       t3 && a2.set(t3, { el: c2[e4], index: e4 });
     }
     let u2, f2, p2, h2 = 0;
-    for (let t3 = 0;t3 < o; t3 += 1) {
-      u2 !== h2 && (f2 = e3.childNodes[h2], p2 = S(f2), u2 = h2);
-      const t4 = i2.shift(), n3 = _(t4);
+    for (let t3 = 0;t3 < o2; t3 += 1) {
+      u2 !== h2 && (f2 = e3.childNodes[h2], p2 = T(f2), u2 = h2);
+      const t4 = i2.shift(), n3 = w(t4);
       if (d(t4))
         r3.push({ rm: f2 }), u2 = null;
       else if (d(p2))
         if (n3 && a2.has(n3) && !l2.has(n3)) {
           const e4 = a2.get(n3).el, s3 = a2.get(n3).index;
-          l2.add(n3), s3 < h2 ? (r3.push({ move: e4, target: f2 }), h2++) : (r3.push({ patch: S(e4), with: t4, target: e4 }), l2.add(n3));
+          l2.add(n3), s3 < h2 ? (r3.push({ move: e4, target: f2 }), h2++) : (r3.push({ patch: T(e4), with: t4, target: e4 }), l2.add(n3));
         } else
           r3.push({ add: t4 }), h2++;
       else {
@@ -2714,21 +2750,39 @@ async function ge(e2, t, n, s, r2) {
         s3 && l2.has(s3) || r3.push({ rm: n3 });
       }
     for (const t3 of r3)
-      t3.rm && await de(t3.rm), d(t3.add) || fe(e3, t3.add, n2, s2), t3.move && (ue() ? e3.moveBefore(t3.move, t3.target) : e3.insertBefore(t3.move, t3.target)), d(t3.patch) || await ye(t3.target, t3.patch, t3.with, n2, s2);
+      t3.rm && await fe(t3.rm), d(t3.add) || pe(e3, t3.add, n2, s2), t3.move && (de() ? e3.moveBefore(t3.move, t3.target) : e3.insertBefore(t3.move, t3.target)), d(t3.patch) || await me(t3.target, t3.patch, t3.with, n2, s2);
   }(e2, [n], s, r2), e2);
 }
-async function ye(e2, t, n, s, r2) {
-  if (L.valid(n)) {
+async function me(e2, t, n, s, r2) {
+  if (S.valid(n)) {
     let t2 = e2;
     for (;n.childNodes.length > 0; ) {
       const s2 = n.childNodes.pop();
       e2.parentNode.insertBefore(s2, t2), t2 = s2;
     }
-    return q(e2), t2;
+    return V(e2), t2;
   }
-  return e2.nodeType === 3 && h(n) ? N(t, n) && (e2.nodeValue = String(n)) : e2 = await be(e2, t, n, s, r2), e2;
+  return e2.nodeType === 3 && h(n) ? D(t, n) && (e2.nodeValue = String(n)) : e2 = await ge(e2, t, n, s, r2), e2;
 }
-var me = (e2 = "div", t = null, ...n) => h(t) ? [e2, {}, [t].concat(n).filter((e3) => !d(e3))] : a(t) && !n.length ? [e2, {}, t] : [e2, t || {}, n];
+function ve(e2, t, n, s) {
+  if (u(n))
+    if (e2.listeners = e2.listeners || {}, e2.events = e2.events || {}, e2.teardown || (e2.teardown = () => {
+      Object.keys(e2.events).forEach((t2) => {
+        e2.removeEventListener(t2, e2.listeners[t2]), e2.events[t2] = [];
+      });
+    }), t.substr(0, 2) === "on" && o.indexOf(t) === -1) {
+      const r2 = t.substr(2);
+      e2.events[r2] || (e2.listeners[r2] = function(e3) {
+        return (t2) => t2.currentTarget.events[e3](t2);
+      }(r2), e2.addEventListener(r2, e2.listeners[r2], false)), e2.events[r2] = (e3) => function(e4, t2, n2, s2) {
+        let r3;
+        p(s2) && (u(s2) ? r3 = s2(t2, e4) === false : u(s2[t2]) && (r3 = s2[t2](e4) === false)), r3 || n2(e4);
+      }(e3, t, n, s);
+    } else
+      (o.indexOf(t) > -1 ? e2 : e2.events)[t] = n;
+}
+var _e = (e2 = "div", t = null, ...n) => h(t) ? [e2, {}, [t].concat(n).filter((e3) => !d(e3))] : a(t) && !n.length ? [e2, {}, t] : [e2, t || {}, n];
+var Ne = (e2) => M(ve, 3, e2);
 
 // src/lib/void-tags.js
 var VOID_TAGS = new Set((c || []).map((name) => String(name).toLowerCase()));
@@ -2791,7 +2845,10 @@ function readUnquoted(input, state) {
   const start = state.i;
   while (state.i < input.length && !/[\s/>]/.test(input[state.i]))
     state.i++;
-  return input.slice(start, state.i);
+  const raw = input.slice(start, state.i);
+  if (raw !== "" && !isNaN(raw) && !isNaN(parseFloat(raw)))
+    return Number(raw);
+  return raw;
 }
 function parseAttrs(input, state) {
   const attrs = {};
@@ -2802,12 +2859,17 @@ function parseAttrs(input, state) {
       break;
     if (input[state.i] === "{") {
       const spreadExpr = readExpr(input, state);
-      if (!spreadExpr.expr.startsWith("..."))
-        fail("Only spread expressions are allowed in tag attrs");
-      const source = spreadExpr.expr.slice(3).trim();
-      if (!source)
-        fail("Missing source after spread operator in tag attrs");
-      spreads.push({ expr: source });
+      if (spreadExpr.expr.startsWith("...")) {
+        const source = spreadExpr.expr.slice(3).trim();
+        if (!source)
+          fail("Missing source after spread operator in tag attrs");
+        spreads.push({ expr: source });
+      } else if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(spreadExpr.expr.trim())) {
+        const ident = spreadExpr.expr.trim();
+        attrs[ident] = { expr: ident };
+      } else {
+        fail("Only spread expressions or shorthand identifiers are allowed in bare tag attr braces");
+      }
       continue;
     }
     const key = readName(input, state);
@@ -3161,8 +3223,8 @@ function isEnd(t) {
 function isCall(t) {
   return t && (t.type === PIPE || t.type === BLOCK && !t.value.body && t.value.args);
 }
-function isMixed(t, ...o) {
-  return t && t.type === LITERAL && t.value && o.includes(typeof t.value);
+function isMixed(t, ...o2) {
+  return t && t.type === LITERAL && t.value && o2.includes(typeof t.value);
 }
 function isPlain2(t) {
   return t && Object.prototype.toString.call(t) === "[object Object]";
@@ -3198,8 +3260,8 @@ function isUnit(t) {
 function isData(t) {
   return isRange(t) && Array.isArray(t.value) || isLiteral(t) || isResult(t) && !isInvokable(t);
 }
-function hasStatements(o) {
-  return CONTROL_TYPES.some((k2) => o[k2.substr(1)] && o[k2.substr(1)].isStatement);
+function hasStatements(o2) {
+  return CONTROL_TYPES.some((k2) => o2[k2.substr(1)] && o2[k2.substr(1)].isStatement);
 }
 function hasBreaks(token) {
   if (isString(token) && typeof token.value === "string") {
@@ -3551,17 +3613,17 @@ function isReadable(c2, raw) {
 function isAlphaNumeric(c2, raw) {
   return isDigit(c2) || isReadable(c2, raw);
 }
-function getSeparator(_2, o, p2, c2, n, dx) {
+function getSeparator(_, o2, p2, c2, n, dx) {
   if (isComment(p2) && !isText(c2) || isComment(c2) && !isText(p2)) {
     return (isComment(p2) ? p2 : c2).type === COMMENT_MULTI ? " " : `
 `;
   }
-  if (dx === "Stmt" && (!o && isBlock(p2) && !isBlock(c2) || isBlock(p2) && isBlock(c2) && !c2.isStatement && c2.isRaw) || isComma(p2) && !isText(c2) || isOperator(p2) && isBlock(c2) || o && isOperator(p2) && (isData(c2) && !isLiteral(c2)) && !(isEOL(o) || isComma(o) || isText(o)) || isData(p2) && isOperator(c2) && isData(n) || isData(o) && isOperator(p2) && isData(c2) || isData(p2) && !isLiteral(p2) && isOperator(c2) || (isBlock(p2) && isOperator(c2) || isBlock(o) && isOperator(p2)) || isLiteral(_2) && isOperator(o) && isOperator(p2) && !isData(n) || isLiteral(p2) && isOperator(c2) && isOperator(n) && c2.value !== n.value || isOperator(o) && isOperator(p2) && o.value !== p2.value && isLiteral(c2))
+  if (dx === "Stmt" && (!o2 && isBlock(p2) && !isBlock(c2) || isBlock(p2) && isBlock(c2) && !c2.isStatement && c2.isRaw) || isComma(p2) && !isText(c2) || isOperator(p2) && isBlock(c2) || o2 && isOperator(p2) && (isData(c2) && !isLiteral(c2)) && !(isEOL(o2) || isComma(o2) || isText(o2)) || isData(p2) && isOperator(c2) && isData(n) || isData(o2) && isOperator(p2) && isData(c2) || isData(p2) && !isLiteral(p2) && isOperator(c2) || (isBlock(p2) && isOperator(c2) || isBlock(o2) && isOperator(p2)) || isLiteral(_) && isOperator(o2) && isOperator(p2) && !isData(n) || isLiteral(p2) && isOperator(c2) && isOperator(n) && c2.value !== n.value || isOperator(o2) && isOperator(p2) && o2.value !== p2.value && isLiteral(c2))
     return " ";
   if (isBlock(p2) && isBlock(c2) || isBlock(p2) && isData(c2) || isData(p2) && isData(c2) && (!isRange(p2) || !isSymbol(c2)))
     return dx === "Root" || dx !== "Expr" && !isSymbol(p2) ? COMMA : " ";
 }
-function serialize(token, shorten, colorize = (_2, x2) => typeof x2 === "undefined" ? literal({ type: _2 }) : x2, descriptor = "Root") {
+function serialize(token, shorten, colorize = (_, x2) => typeof x2 === "undefined" ? literal({ type: _ }) : x2, descriptor = "Root") {
   if (typeof token === "undefined")
     return;
   if (token === null)
@@ -5247,9 +5309,9 @@ function format2(str, ...args) {
     return p2;
   }, []);
   let offset = 0;
-  return str.value.replace(RE_PLACEHOLDER, (_2, key) => {
+  return str.value.replace(RE_PLACEHOLDER, (_, key) => {
     if (!RE_FORMATTING.test(key))
-      raise(`Invalid format \`${_2}\``);
+      raise(`Invalid format \`${_}\``);
     const [
       idx,
       fill,
@@ -5260,7 +5322,7 @@ function format2(str, ...args) {
     ] = key.match(RE_FORMATTING).slice(1);
     let [value] = get(data, idx || offset++);
     if (typeof value === "undefined")
-      return _2;
+      return _;
     let prefix = "";
     let suffix = "";
     if (type === "?")
@@ -5764,7 +5826,7 @@ class Scanner {
         this.addToken(this.isMatch("=") ? NOT_EQ : NOT);
         break;
       case "=":
-        this.addToken(this.isMatch("=") ? EXACT_EQ : EQUAL);
+        this.addToken(this.isMatch(">") ? FAT_ARROW : this.isMatch("=") ? EXACT_EQ : EQUAL);
         break;
       case "%":
         this.addToken(MOD);
@@ -6102,7 +6164,17 @@ class Scanner {
       return true;
     }
     const looksLikeUnitLiteral = /^\d+[A-Za-z_][A-Za-z0-9_]*$/.test(this.blank);
-    if (isReadable(this.blank) && token === "*" || nextToken === " " && ");:.,".includes(token) && !(token === "." && looksLikeUnitLiteral) || token === " " && (nextToken === "*" || nextToken && isAlphaNumeric(nextToken))) {
+    const hasFatArrowAhead = (from) => {
+      for (let j = from;j < this.chars.length; j++) {
+        if (this.chars[j] === `
+`)
+          return false;
+        if (this.chars[j] === "=" && this.chars[j + 1] === ">")
+          return true;
+      }
+      return false;
+    };
+    if (isReadable(this.blank) && token === "*" || nextToken === " " && ");:.,".includes(token) && !(token === "." && looksLikeUnitLiteral) || token === " " && (nextToken === "*" || nextToken && isAlphaNumeric(nextToken) && !hasFatArrowAhead(i2))) {
       this.pushToken(token, nextToken);
       this.offset = this.start = i2 + 2;
       this.parseLine();
@@ -6265,6 +6337,8 @@ class Scanner {
           close.pop();
         }
       }
+      if (old === ">" && tag === this.getCurrent(tag))
+        close.pop();
       if (offset && cur === "<" && isAlphaNumeric(next)) {
         let nextTag = "";
         let char;
@@ -6278,8 +6352,6 @@ class Scanner {
         this.col -= 2;
         close.push(nextTag);
       }
-      if (old === ">" && tag === this.getCurrent(tag))
-        close.pop();
       if (!close.length)
         break;
       this.nextToken();
@@ -6560,6 +6632,52 @@ class Parser {
     });
     return node;
   }
+  definitionBlock(token) {
+    const args = [];
+    while (this.offset < this.tokens.length) {
+      const cur = this.tokens[this.offset];
+      if (!cur || cur.type === FAT_ARROW)
+        break;
+      if (isText(cur)) {
+        this.offset++;
+        continue;
+      }
+      if (isLiteral(cur)) {
+        args.push(Expr.from(cur));
+        this.offset++;
+        continue;
+      }
+      break;
+    }
+    if (this.tokens[this.offset] && this.tokens[this.offset].type === FAT_ARROW)
+      this.offset++;
+    const body = [];
+    while (this.offset < this.tokens.length) {
+      const cur = this.tokens[this.offset];
+      if (!cur || isEOL(cur) || isEOF(cur))
+        break;
+      if (isText(cur)) {
+        this.offset++;
+        continue;
+      }
+      if (isComma(cur)) {
+        body.push(Expr.from(cur));
+        this.offset++;
+        continue;
+      }
+      const stmt = this.subTree(this.statement([COMMA, EOL]));
+      body.push(...stmt);
+    }
+    return {
+      type: BLOCK,
+      value: {
+        name: token.value,
+        args: args.length ? args : undefined,
+        body,
+        blockBody: true
+      }
+    };
+  }
   destructure(token) {
     const bindings = [{ name: token.value, rest: false }];
     let offset = this.offset;
@@ -6681,6 +6799,22 @@ class Parser {
     while (idx < this.tokens.length && isText(this.tokens[idx]))
       idx++;
     return idx;
+  }
+  peekFatArrow() {
+    for (let i2 = this.offset;i2 < this.tokens.length; i2++) {
+      const t = this.tokens[i2];
+      if (!t)
+        break;
+      if (isText(t))
+        continue;
+      if (t.type === FAT_ARROW)
+        return true;
+      if (isEOL(t) || isEOF(t))
+        return false;
+      if (isEqual(t) || t.type === BLOCK)
+        return false;
+    }
+    return false;
   }
   tokenSourceText(token) {
     if (!token)
@@ -6858,6 +6992,10 @@ class Parser {
           push2(Expr.callable(this.definition(token), tokenInfo));
           continue;
         }
+        if (curToken && (curToken.type === FAT_ARROW || isLiteral(curToken) && this.peekFatArrow())) {
+          push2(Expr.callable(this.definitionBlock(token), tokenInfo));
+          continue;
+        }
         if (isBlock(curToken) && this.has(BLOCK)) {
           const args = Expr.args([Expr.from(token)].concat(this.statement([BLOCK])));
           const body = this.expression();
@@ -7008,7 +7146,7 @@ class Parser {
         if (isString(token) && tokenInfo.kind === "markup" && typeof token.value === "string") {
           try {
             push2(Expr.tag(parseTag(token.value), tokenInfo));
-          } catch (_2) {
+          } catch (_) {
             push2(Expr.from(token));
           }
         } else if (isString(token) && Array.isArray(token.value)) {
@@ -7228,7 +7366,226 @@ ${source}`, "inline", environment).slice(1);
   }
 }
 
+// src/runtime/core.js
+var SIGNAL = Symbol("10x.signal");
+var MAX_HISTORY = 20;
+
+class SignalProxy {
+  constructor(signal) {
+    this._signal = signal;
+  }
+  valueOf() {
+    return this._signal.peek();
+  }
+  toString() {
+    return String(this._signal.peek());
+  }
+  get() {
+    return this._signal.peek();
+  }
+  set(v2) {
+    return this._signal.set(v2);
+  }
+  get value() {
+    return this._signal.peek();
+  }
+  peek() {
+    return this._signal.peek();
+  }
+  subscribe(cb) {
+    return this._signal.subscribe(cb);
+  }
+}
+var currentEffect = null;
+var devtoolsActive = false;
+function getCurrentEffect() {
+  return currentEffect;
+}
+function setDevtoolsActive(active) {
+  devtoolsActive = active;
+}
+function isDevtoolsActive() {
+  return devtoolsActive;
+}
+var globalRegistry = (() => {
+  if (!globalThis.__10x_signals) {
+    globalThis.__10x_signals = new Map;
+  }
+  return globalThis.__10x_signals;
+})();
+function nextSignalId() {
+  const current2 = Number(globalThis.__10x_signal_id_counter || 0) + 1;
+  globalThis.__10x_signal_id_counter = current2;
+  return current2;
+}
+function signal(initialValue, name, moduleUrl) {
+  const signalId = nextSignalId();
+  const key = Symbol(`signal_${signalId}`);
+  const signalName = name || `signal_${signalId}`;
+  const state = {
+    [SIGNAL]: true,
+    _devtoolsId: signalId,
+    _devtoolsName: signalName,
+    _value: initialValue,
+    _history: [],
+    _moduleUrl: moduleUrl,
+    subs: new Set,
+    get value() {
+      return this.get();
+    },
+    set value(nextValue) {
+      this.set(nextValue);
+    },
+    get() {
+      if (currentEffect) {
+        this.subs.add(currentEffect);
+        if (currentEffect._deps)
+          currentEffect._deps.add(this);
+      } else {}
+      return this._value;
+    },
+    set(nextValue) {
+      const prev = this._value;
+      this._value = nextValue;
+      if (devtoolsActive && this._history) {
+        this._history.push({ value: nextValue, prev, ts: Date.now() });
+        if (this._history.length > MAX_HISTORY)
+          this._history.shift();
+      }
+      const notify = globalThis.__10x_devtools_notify;
+      if (typeof notify === "function") {
+        try {
+          notify({
+            id: this._devtoolsId,
+            name: this._devtoolsName,
+            moduleUrl: this._moduleUrl || "global",
+            value: nextValue,
+            subs: this.subs ? this.subs.size : 0,
+            history: Array.isArray(this._history) ? this._history.slice(-MAX_HISTORY) : [],
+            ts: Date.now()
+          });
+          if (globalThis.__10x_devtools_debug) {
+            console.debug("[10x:core] notified devtools", {
+              id: this._devtoolsId,
+              name: this._devtoolsName,
+              value: nextValue
+            });
+          }
+        } catch (_) {}
+      }
+      Array.from(this.subs).forEach((fn) => fn());
+      return this._value;
+    },
+    peek() {
+      return this._value;
+    },
+    subscribe(cb) {
+      this.subs.add(cb);
+      return () => {
+        this.subs.delete(cb);
+      };
+    }
+  };
+  globalRegistry.set(key, state);
+  const onCreated = globalThis.__10x_devtools_signal_created;
+  if (typeof onCreated === "function") {
+    try {
+      onCreated({
+        id: signalId,
+        name: signalName,
+        moduleUrl: moduleUrl || "global",
+        signal: state
+      });
+    } catch (_) {}
+  }
+  return state;
+}
+function isSignal(value) {
+  return !!(value && value[SIGNAL]);
+}
+function read(value) {
+  return isSignal(value) ? value.get() : value;
+}
+function effect(fn) {
+  const cleanup = () => {
+    if (!run._deps)
+      return;
+    run._deps.forEach((dep) => {
+      if (dep && dep.subs)
+        dep.subs.delete(run);
+    });
+    run._deps.clear();
+  };
+  const run = () => {
+    if (run._stopped)
+      return;
+    cleanup();
+    currentEffect = run;
+    let result;
+    try {
+      result = fn();
+    } catch (error) {
+      currentEffect = null;
+      throw error;
+    }
+    if (result && typeof result.then === "function") {
+      return result.finally(() => {
+        if (currentEffect === run)
+          currentEffect = null;
+      });
+    }
+    currentEffect = null;
+    return result;
+  };
+  run._deps = new Set;
+  run._stopped = false;
+  run.stop = () => {
+    run._stopped = true;
+    cleanup();
+  };
+  run();
+  return run;
+}
+function computed(fn) {
+  const out = signal(undefined);
+  effect(() => out.set(fn()));
+  return out;
+}
+function batch(fn) {
+  return fn();
+}
+function untracked(fn) {
+  const prev = currentEffect;
+  currentEffect = null;
+  try {
+    return fn();
+  } finally {
+    currentEffect = prev;
+  }
+}
+function html(renderFn) {
+  if (typeof renderFn !== "function") {
+    throw new Error("html(...) expects a function");
+  }
+  return {
+    render: renderFn
+  };
+}
+function prop(host, name, fallback) {
+  const raw = host.getAttribute(name);
+  return raw !== null ? Number(raw) || raw : fallback;
+}
+function getSignalRegistry() {
+  return globalRegistry;
+}
+
 // src/lib/tree/eval.js
+var componentInstanceId = 0;
+function resetComponentInstanceId(value) {
+  if (typeof value === "number" && value >= 0) {
+    componentInstanceId = value;
+  }
+}
 function parseAnnotation(annStr) {
   if (!annStr || typeof annStr !== "string")
     return null;
@@ -7752,7 +8109,14 @@ class Eval {
       for (const key of Object.keys(node.attrs || {})) {
         const value = node.attrs[key];
         if (value && typeof value === "object" && typeof value.expr === "string") {
-          const [exprValue] = await this.evalTagExpr(value.expr);
+          const expr = value.expr.trim();
+          if (/^@[a-z]/.test(expr)) {
+            raise(`Attribute "${key}" uses an inline directive — declare it before the markup`, this.ctx.tokenInfo);
+          }
+          if (/^[a-zA-Z_$][a-zA-Z0-9_$,\s]*\s*->/.test(expr)) {
+            raise(`Attribute "${key}" uses an inline lambda — declare the handler before the markup`, this.ctx.tokenInfo);
+          }
+          const [exprValue] = await this.evalTagExpr(expr);
           attrs[key] = typeof exprValue === "undefined" ? "" : Expr.plain(exprValue, this.convert, "<TagAttr>");
         } else {
           attrs[key] = value;
@@ -7771,24 +8135,46 @@ class Eval {
           }
           const parts = await this.evalTagExpr(child.expr);
           if (parts.length === 1) {
-            const fixed2 = normalizeChild(parts[0]);
-            if (fixed2 !== null && typeof fixed2 !== "undefined") {
-              const isTagNode = fixed2 && typeof fixed2 === "object" && typeof fixed2.name === "string";
-              children.push(isTagNode ? fixed2 : { expr: child.expr, _resolved: fixed2 });
+            const fixed = normalizeChild(parts[0]);
+            if (fixed !== null && typeof fixed !== "undefined") {
+              const isTagNode = fixed && typeof fixed === "object" && typeof fixed.name === "string";
+              children.push(isTagNode ? fixed : { expr: child.expr, _resolved: fixed });
             }
           } else {
             parts.forEach((part) => {
-              const fixed2 = normalizeChild(part);
-              if (fixed2 !== null && typeof fixed2 !== "undefined")
-                children.push(fixed2);
+              const fixed = normalizeChild(part);
+              if (fixed !== null && typeof fixed !== "undefined")
+                children.push(fixed);
             });
           }
           continue;
         }
-        const [resolved] = await Eval.do([Expr.tag(child, this.ctx.tokenInfo)], this.env, "TagNode", false, this.ctx.tokenInfo);
-        const fixed = normalizeChild(resolved);
-        if (fixed !== null && typeof fixed !== "undefined")
-          children.push(fixed);
+        const childResults = await Eval.do([Expr.tag(child, this.ctx.tokenInfo)], this.env, "TagNode", false, this.ctx.tokenInfo);
+        for (const result of childResults) {
+          let fixed = normalizeChild(result);
+          if (fixed && typeof fixed === "object" && !Array.isArray(fixed) && typeof fixed.render === "function" && typeof fixed.name === "undefined") {
+            let _e2 = this.env;
+            while (_e2 && !_e2.__viewCache)
+              _e2 = _e2.parent;
+            if (_e2 && _e2.__viewCache && _e2.__domRender && typeof document !== "undefined") {
+              const idx = _e2.__viewCacheIndex.value++;
+              let entry = _e2.__viewCache.get(idx);
+              if (!entry) {
+                const placeholder = document.createElement("x-slot");
+                const dispose = _e2.__domRender(placeholder, fixed);
+                entry = { placeholder, dispose };
+                _e2.__viewCache.set(idx, entry);
+              }
+              children.push(entry.placeholder);
+            } else {
+              const vdom = await fixed.render();
+              if (vdom !== null && typeof vdom !== "undefined")
+                children.push(vdom);
+            }
+          } else if (fixed !== null && typeof fixed !== "undefined") {
+            children.push(fixed);
+          }
+        }
       }
       const resolvedNode = {
         name: node.name,
@@ -7804,9 +8190,19 @@ class Eval {
         ...resolvedNode.attrs,
         children: resolvedNode.children
       };
+      const propsArg = Expr.value(props, this.ctx.tokenInfo);
+      const compEntry = this.env.get(resolvedNode.name);
+      const isFatArrow = Array.isArray(compEntry.args);
+      if (isFatArrow) {
+        const compFn = Expr.callable({ type: BLOCK, value: { ...compEntry, name: resolvedNode.name } }, this.ctx.tokenInfo);
+        const compResult = await this.convert(compFn, [propsArg], "TagComp");
+        if (compResult !== undefined)
+          return [Expr.value(compResult, this.ctx.tokenInfo)];
+        return [];
+      }
       return Eval.do([
         Expr.local(resolvedNode.name, this.ctx.tokenInfo),
-        Expr.block({ args: [Expr.value(props, this.ctx.tokenInfo)] }, this.ctx.tokenInfo)
+        Expr.block({ args: [propsArg] }, this.ctx.tokenInfo)
       ], this.env, "TagComp", false, this.ctx.tokenInfo);
     };
     this.append(...await evaluateNode(this.ctx.value));
@@ -7829,7 +8225,7 @@ class Eval {
         try {
           left = await Eval.do(value.slice(0, i2), this.env, "LogicArg", true, this.ctx.tokenInfo);
           right = await Eval.do(value.slice(i2), this.env, "LogicArg", true, this.ctx.tokenInfo);
-        } catch (_2) {
+        } catch (_) {
           continue;
         }
         if (left.length === 1 && right.length === 1) {
@@ -7996,6 +8392,10 @@ class Eval {
           Env.merge(fixedArgs, target.args, clean, ctx);
         }
         const fnName = prev.getName();
+        if (fnName && fnName[0] === fnName[0].toUpperCase()) {
+          ctx.__componentName = fnName;
+          ctx.__componentInstanceId = ++componentInstanceId;
+        }
         if (fnName) {
           const ann = this.env.getAnnotation(fnName);
           if (ann && typeof ann === "string") {
@@ -8048,6 +8448,9 @@ class Eval {
         fixedBody = Eval.normalizeBraceRecordArgs(args);
       }
       const derived = this.derive || fixedBody[0] && fixedBody[0].isObject;
+      for (let i2 = 0;i2 < fixedBody.length; i2++) {
+        const stmt = fixedBody[i2];
+      }
       this.append(...await Eval.do(fixedBody, this.env, derived ? this.descriptor : "...", derived, this.ctx.tokenInfo));
     }
     return true;
@@ -8227,7 +8630,7 @@ class Eval {
         let inc = 0;
         const source = isHead ? subTree[0].getArgs() || subTree[0].valueOf() : subTree;
         const values = await Eval.do(source, this.env, "Str", false, next.tokenInfo);
-        const newValue = prev.value.replace(/{(\d+)?}/g, (_2, idx) => {
+        const newValue = prev.value.replace(/{(\d+)?}/g, (_, idx) => {
           const fixedValue = typeof idx !== "undefined" ? values[idx] : values[inc++];
           if (typeof fixedValue === "undefined") {
             raise(`Missing argument #${idx || inc}`, next.tokenInfo);
@@ -8296,8 +8699,18 @@ class Eval {
       }
       try {
         const scope = new Env(self2.env);
+        const scopeId = scope.__envId || (scope.__envId = Math.random().toString(36).slice(2));
+        const fnName = fn.getName();
+        if (fnName && fnName[0] === fnName[0].toUpperCase()) {
+          scope.__componentName = fnName;
+          scope.__componentInstanceId = ++componentInstanceId;
+        }
         Env.merge(safeArgs, fnArgs, false, scope);
-        const [value] = await Eval.do(fn.getBody(), scope, label, false, self2.ctx.tokenInfo);
+        const body = fn.getBody();
+        for (let i2 = 0;i2 < body.length; i2++) {
+          const stmt = body[i2];
+        }
+        const [value] = await Eval.do(body, scope, label, false, self2.ctx.tokenInfo);
         return value ? Expr.plain(value, self2.convert, `<${fn.name || "Function"}>`) : undefined;
       } catch (e2) {
         raise(e2.message.replace(/\sat line.*$/, ""), self2.ctx.tokenInfo);
@@ -8507,6 +8920,10 @@ class Eval {
         }
         if (typeof child === "object" && typeof child.name === "string")
           return tagToVdom(child);
+        if (Array.isArray(child) && child.length === 3 && typeof child[0] === "string")
+          return child;
+        if (child && typeof child === "object" && typeof child.nodeType === "number")
+          return child;
         return String(child);
       });
       return [node.name, attrs, children];
@@ -8653,28 +9070,102 @@ class Eval {
       isDone2 = true;
     }
     if (isDirectiveStmt(value.signal)) {
-      if (token.__signalCached) {
-        subTree.push(token.__signalCached);
+      const _ownerEnv = environment.parent || environment;
+      if (!_ownerEnv.__signalCache)
+        _ownerEnv.__signalCache = new Map;
+      const _cached = _ownerEnv.__signalCache.get(token);
+      if (_cached) {
+        subTree.push(_cached);
         isDone2 = true;
       }
       if (isDone2) {} else {
-        const signal = resolveRuntimeFn("signal");
-        const args = normalizeDirectiveArgs(value.signal);
+        const signalFn = resolveRuntimeFn("signal");
+        const signalArgs = normalizeDirectiveArgs(value.signal);
         const runtimeArgs = [];
-        for (let i2 = 0;i2 < args.length; i2++) {
-          const evaluated = await Eval.do([args[i2]], environment, "Expr", true, parentTokenInfo);
-          if (!evaluated.length)
-            continue;
-          runtimeArgs.push(toPlain(evaluated.length === 1 ? evaluated[0] : evaluated));
+        const evaluated = await Eval.do(signalArgs, environment, "Expr", true, parentTokenInfo);
+        for (const tok of evaluated) {
+          runtimeArgs.push(toPlain(tok));
         }
         const signalName = token._assignName || (token && typeof token.getName === "function" ? token.getName() : null);
-        if (signalName && runtimeArgs.length < 2) {
-          runtimeArgs.push(signalName);
+        let componentName = environment.__componentName;
+        let componentInstanceId2 = environment.__componentInstanceId;
+        let envPtr = environment.parent;
+        while (envPtr && (!componentName || !componentInstanceId2)) {
+          if (envPtr.__componentName)
+            componentName = envPtr.__componentName;
+          if (envPtr.__componentInstanceId)
+            componentInstanceId2 = envPtr.__componentInstanceId;
+          envPtr = envPtr.parent;
         }
-        token.__signalCached = Expr.value(signal(...runtimeArgs), parentTokenInfo);
-        subTree.push(token.__signalCached);
+        const namespacedName = componentName && componentInstanceId2 ? `${componentName}$${componentInstanceId2}.${signalName}` : signalName;
+        const moduleUrl = componentName && componentInstanceId2 ? `${componentName}$${componentInstanceId2}` : undefined;
+        if (namespacedName && runtimeArgs.length < 2) {
+          runtimeArgs.push(namespacedName);
+        }
+        if (moduleUrl && runtimeArgs.length < 3) {
+          runtimeArgs.push(moduleUrl);
+        }
+        const _signalToken = Expr.value(signalFn(...runtimeArgs), parentTokenInfo);
+        _ownerEnv.__signalCache.set(token, _signalToken);
+        const _sigName = token._assignName;
+        let _defEnv = environment;
+        while (_defEnv) {
+          if (_defEnv.locals && _defEnv.locals[_sigName]) {
+            const entry = _defEnv.locals[_sigName];
+            if (entry && entry.body && entry.body[0] === token) {
+              entry.body = [_signalToken];
+              break;
+            }
+          }
+          _defEnv = _defEnv.parent;
+        }
+        subTree.push(_signalToken);
         isDone2 = true;
       }
+    }
+    if (!isDirectiveStmt(value.render) && isDirectiveStmt(value.html)) {
+      const html2 = resolveRuntimeFn("html");
+      let domRender = null;
+      try {
+        domRender = resolveRuntimeFn("render");
+      } catch (_) {}
+      const htmlBody = normalizeDirectiveArgs(value.html);
+      const signalMap2 = new Map;
+      const viewCache = new Map;
+      const view = html2(async () => {
+        const _viewIndex = { value: 0 };
+        const scope = new Env(environment);
+        scope.__viewCache = viewCache;
+        scope.__viewCacheIndex = _viewIndex;
+        scope.__domRender = domRender;
+        const localNames = Object.keys(environment.locals || {});
+        for (let i2 = 0;i2 < localNames.length; i2++) {
+          const name = localNames[i2];
+          const local = environment.locals[name];
+          const [head2] = local && local.body || [];
+          if (!(head2 && head2.isObject && head2.value && head2.value.signal))
+            continue;
+          const plain = head2.value;
+          if (!isSignalValue(plain))
+            continue;
+          signalMap2.set(name, plain);
+          scope.def(name, Expr.value(plain.get(), parentTokenInfo));
+        }
+        const rendered = await Eval.do(htmlBody, scope, "Render", true, parentTokenInfo);
+        if (!rendered.length)
+          return "";
+        const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+        for (const [idx, entry] of viewCache) {
+          if (idx >= _viewIndex.value) {
+            if (typeof entry.dispose === "function")
+              entry.dispose();
+            viewCache.delete(idx);
+          }
+        }
+        return result;
+      });
+      subTree.push(Expr.value(view, parentTokenInfo));
+      isDone2 = true;
     }
     if (isDirectiveStmt(value.render)) {
       const renderArgs = normalizeDirectiveArgs(value.render);
@@ -8689,9 +9180,14 @@ class Eval {
         }
       }
       if (isDirectiveStmt(value.html)) {
-        const html = resolveRuntimeFn("html");
+        const html2 = resolveRuntimeFn("html");
         const render2 = hasShadow ? resolveRuntimeFn("renderShadow") : resolveRuntimeFn("render");
+        let domRender = null;
+        try {
+          domRender = resolveRuntimeFn("render");
+        } catch (_) {}
         const htmlBody = normalizeDirectiveArgs(value.html);
+        const viewCache = new Map;
         const renderKey = selector != null ? String(selector) : hasShadow ? typeof shadowSelector !== "undefined" ? String(shadowSelector) : "__last_shadow__" : "__default__";
         for (const [key, prev] of renderDisposers) {
           if (key === renderKey || key === `shadow:${renderKey}` || key === `dom:${renderKey}`) {
@@ -8700,8 +9196,12 @@ class Eval {
             renderDisposers.delete(key);
           }
         }
-        const view = html(async () => {
+        const view = html2(async () => {
+          const _viewIndex = { value: 0 };
           const scope = new Env(environment);
+          scope.__viewCache = viewCache;
+          scope.__viewCacheIndex = _viewIndex;
+          scope.__domRender = domRender;
           signalMap = new Map;
           const localNames = Object.keys(environment.locals || {});
           for (let i2 = 0;i2 < localNames.length; i2++) {
@@ -8710,25 +9210,22 @@ class Eval {
             const [head2] = local && local.body || [];
             if (!(head2 && head2.isObject && head2.value && head2.value.signal))
               continue;
-            const signalEntry = environment.get(name);
-            const resolvedBody = signalEntry && signalEntry.body ? signalEntry.body : [];
-            if (!resolvedBody.length)
-              continue;
-            const resolved = await Eval.do(resolvedBody, environment, "Lit", false, parentTokenInfo);
-            if (!resolved || !resolved.length)
-              continue;
-            const plain = toPlain(resolved.length === 1 ? resolved[0] : resolved);
+            const plain = head2.value;
             if (!isSignalValue(plain))
               continue;
             signalMap.set(name, plain);
-            scope.def(name, Expr.value(plain.peek(), parentTokenInfo));
+            scope.def(name, Expr.value(plain.get(), parentTokenInfo));
           }
           const rendered = await Eval.do(htmlBody, scope, "Render", true, parentTokenInfo);
           if (!rendered.length)
             return "";
           const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
-          if (typeof result === "string" && signalMap.size > 0) {
-            signalMap.forEach((sig) => sig.get());
+          for (const [idx, entry] of viewCache) {
+            if (idx >= _viewIndex.value) {
+              if (typeof entry.dispose === "function")
+                entry.dispose();
+              viewCache.delete(idx);
+            }
           }
           return result;
         });
@@ -8750,77 +9247,119 @@ class Eval {
       isDone2 = true;
     }
     if (isDirectiveStmt(value.on)) {
-      const on = resolveRuntimeFn("on");
       const args = normalizeDirectiveArgs(value.on);
-      const shadowParts = hasShadow ? normalizeDirectiveArgs(value.shadow) : [];
-      const unwrapHandlerToken = (candidate) => {
-        if (!candidate)
+      const _rawOnBody = value.on.getBody ? value.on.getBody() : [];
+      const _callable = _rawOnBody.length === 1 && _rawOnBody[0] && _rawOnBody[0].isCallable ? _rawOnBody[0] : args.length === 1 && args[0] && args[0].isCallable ? args[0] : null;
+      let _signalName = _callable ? _callable.getName() : null;
+      let _bodyTokens = _callable ? _callable.getBody() : null;
+      if (!_callable && args.length >= 2 && args[0] && args[0].type === LITERAL && args[1] && args[1].type === EQUAL) {
+        _signalName = typeof args[0].value === "string" ? args[0].value : null;
+        _bodyTokens = args.slice(2);
+      }
+      if (_signalName && _bodyTokens) {
+        const signalName = _signalName;
+        const bodyTokens = _bodyTokens;
+        const handlerFn = async () => {
+          const findSignalEntry = async (name, env) => {
+            let e2 = env;
+            while (e2) {
+              const entry = e2.locals && e2.locals[name];
+              if (entry) {
+                const [head2] = entry.body || [];
+                const v2 = head2 && typeof head2.valueOf === "function" ? head2.valueOf() : null;
+                if (v2 && typeof v2.set === "function" && typeof v2.peek === "function") {
+                  return v2;
+                }
+              }
+              e2 = e2.parent;
+            }
+            return null;
+          };
+          const signalObj = await findSignalEntry(signalName, environment);
+          if (signalObj && typeof signalObj.set === "function" && typeof signalObj.peek === "function") {
+            const current2 = signalObj.peek();
+            const innerEnv = new Env(environment);
+            innerEnv.def(signalName, Expr.value(current2, parentTokenInfo));
+            const [result] = await Eval.do(bodyTokens, innerEnv, "OnBody", true, parentTokenInfo);
+            const next = result ? toPlain(result) : current2;
+            signalObj.set(next);
+          }
+        };
+        subTree.push(Expr.value(handlerFn, parentTokenInfo));
+        isDone2 = true;
+      }
+      if (isDone2) {} else {
+        const on = resolveRuntimeFn("on");
+        const shadowParts = hasShadow ? normalizeDirectiveArgs(value.shadow) : [];
+        const unwrapHandlerToken = (candidate) => {
+          if (!candidate)
+            return null;
+          if (candidate.isCallable)
+            return candidate;
+          if (candidate.isBlock && candidate.hasBody) {
+            const body = candidate.getBody();
+            if (body.length === 1 && body[0] && body[0].isCallable)
+              return body[0];
+          }
           return null;
-        if (candidate.isCallable)
-          return candidate;
-        if (candidate.isBlock && candidate.hasBody) {
-          const body = candidate.getBody();
-          if (body.length === 1 && body[0] && body[0].isCallable)
-            return body[0];
-        }
-        return null;
-      };
-      let eventToken = args[0];
-      let selectorToken = args[1];
-      let handlerToken = args[2];
-      if (!handlerToken && shadowParts.length) {
-        const maybeHandler = unwrapHandlerToken(shadowParts[0]);
-        if (maybeHandler) {
-          handlerToken = maybeHandler;
-          shadowParts.shift();
-        }
-      }
-      if (!eventToken || !selectorToken || !handlerToken) {
-        raise("`@on` expects event, selector and handler", parentTokenInfo);
-      }
-      const [eventValue] = await Eval.do([eventToken], environment, "Expr", true, parentTokenInfo);
-      const [selectorValue] = await Eval.do([selectorToken], environment, "Expr", true, parentTokenInfo);
-      const eventName = toPlain(eventValue);
-      const selector = toPlain(selectorValue);
-      let shadowSelector;
-      if (shadowParts.length) {
-        const shadowTokens = await Eval.do(shadowParts, environment, "Expr", true, parentTokenInfo);
-        if (shadowTokens.length) {
-          shadowSelector = toPlain(shadowTokens.length === 1 ? shadowTokens[0] : shadowTokens);
-        }
-      }
-      let handler;
-      if (handlerToken && handlerToken.isCallable && handlerToken.hasBody && handlerToken.getName) {
-        const targetName = handlerToken.getName();
-        if (environment.has(targetName, true)) {
-          const targetEntry = environment.get(targetName);
-          const resolvedTarget = targetEntry && targetEntry.body ? await Eval.do(targetEntry.body, environment, "Lit", false, parentTokenInfo) : [];
-          const target = resolvedTarget.length ? toPlain(resolvedTarget.length === 1 ? resolvedTarget[0] : resolvedTarget) : null;
-          if (isSignalValue(target)) {
-            handler = async () => {
-              const scope = new Env(environment);
-              scope.def(targetName, Expr.value(target.peek(), parentTokenInfo));
-              const nextTokens = await Eval.do(handlerToken.getBody(), scope, "On", true, parentTokenInfo);
-              if (!nextTokens.length)
-                return;
-              const nextValue = toPlain(nextTokens.length === 1 ? nextTokens[0] : nextTokens);
-              target.set(nextValue);
-            };
+        };
+        let eventToken = args[0];
+        let selectorToken = args[1];
+        let handlerToken = args[2];
+        if (!handlerToken && shadowParts.length) {
+          const maybeHandler = unwrapHandlerToken(shadowParts[0]);
+          if (maybeHandler) {
+            handlerToken = maybeHandler;
+            shadowParts.shift();
           }
         }
+        if (!eventToken || !selectorToken || !handlerToken) {
+          raise("`@on` expects event, selector and handler", parentTokenInfo);
+        }
+        const [eventValue] = await Eval.do([eventToken], environment, "Expr", true, parentTokenInfo);
+        const [selectorValue] = await Eval.do([selectorToken], environment, "Expr", true, parentTokenInfo);
+        const eventName = toPlain(eventValue);
+        const selector = toPlain(selectorValue);
+        let shadowSelector;
+        if (shadowParts.length) {
+          const shadowTokens = await Eval.do(shadowParts, environment, "Expr", true, parentTokenInfo);
+          if (shadowTokens.length) {
+            shadowSelector = toPlain(shadowTokens.length === 1 ? shadowTokens[0] : shadowTokens);
+          }
+        }
+        let handler;
+        if (handlerToken && handlerToken.isCallable && handlerToken.hasBody && handlerToken.getName) {
+          const targetName = handlerToken.getName();
+          if (environment.has(targetName, true)) {
+            const targetEntry = environment.get(targetName);
+            const resolvedTarget = targetEntry && targetEntry.body ? await Eval.do(targetEntry.body, environment, "Lit", false, parentTokenInfo) : [];
+            const target = resolvedTarget.length ? toPlain(resolvedTarget.length === 1 ? resolvedTarget[0] : resolvedTarget) : null;
+            if (isSignalValue(target)) {
+              handler = async () => {
+                const scope = new Env(environment);
+                scope.def(targetName, Expr.value(target.peek(), parentTokenInfo));
+                const nextTokens = await Eval.do(handlerToken.getBody(), scope, "On", true, parentTokenInfo);
+                if (!nextTokens.length)
+                  return;
+                const nextValue = toPlain(nextTokens.length === 1 ? nextTokens[0] : nextTokens);
+                target.set(nextValue);
+              };
+            }
+          }
+        }
+        if (!handler) {
+          const [resolvedHandlerToken] = await Eval.do([handlerToken], environment, "Expr", true, parentTokenInfo);
+          const resolvedHandler = resolvedHandlerToken ? toPlain(resolvedHandlerToken) : null;
+          handler = typeof resolvedHandler === "function" ? resolvedHandler : () => {};
+        }
+        const shadowRoot = hasShadow ? resolveShadowHost(typeof shadowSelector !== "undefined" ? shadowSelector : undefined).shadowRoot : undefined;
+        const onKey = `${eventName}::${selector}::${hasShadow ? typeof shadowSelector !== "undefined" ? shadowSelector : "__last_shadow__" : "document"}`;
+        const previousOn = onDisposers.get(onKey);
+        if (typeof previousOn === "function")
+          previousOn();
+        onDisposers.set(onKey, on(eventName, selector, handler, shadowRoot));
+        isDone2 = true;
       }
-      if (!handler) {
-        const [resolvedHandlerToken] = await Eval.do([handlerToken], environment, "Expr", true, parentTokenInfo);
-        const resolvedHandler = resolvedHandlerToken ? toPlain(resolvedHandlerToken) : null;
-        handler = typeof resolvedHandler === "function" ? resolvedHandler : () => {};
-      }
-      const shadowRoot = hasShadow ? resolveShadowHost(typeof shadowSelector !== "undefined" ? shadowSelector : undefined).shadowRoot : undefined;
-      const onKey = `${eventName}::${selector}::${hasShadow ? typeof shadowSelector !== "undefined" ? shadowSelector : "__last_shadow__" : "document"}`;
-      const previousOn = onDisposers.get(onKey);
-      if (typeof previousOn === "function")
-        previousOn();
-      onDisposers.set(onKey, on(eventName, selector, handler, shadowRoot));
-      isDone2 = true;
     }
     if (value.loop instanceof Expr.LoopStatement) {
       const body = value.loop.getBody();
@@ -9157,8 +9696,9 @@ __export(exports_runtime, {
   isSignal: () => isSignal,
   isDevtoolsActive: () => isDevtoolsActive,
   html: () => html,
-  h: () => me,
+  h: () => _e,
   getSignalRegistry: () => getSignalRegistry,
+  getCurrentEffect: () => getCurrentEffect,
   effect: () => effect,
   devtoolsEnabledByQuery: () => devtoolsEnabledByQuery,
   devtools: () => devtools,
@@ -9167,202 +9707,6 @@ __export(exports_runtime, {
   SignalProxy: () => SignalProxy
 });
 
-// src/runtime/core.js
-var SIGNAL = Symbol("10x.signal");
-var MAX_HISTORY = 20;
-
-class SignalProxy {
-  constructor(signal) {
-    this._signal = signal;
-  }
-  valueOf() {
-    return this._signal.peek();
-  }
-  toString() {
-    return String(this._signal.peek());
-  }
-  get() {
-    return this._signal.peek();
-  }
-  set(v2) {
-    return this._signal.set(v2);
-  }
-  get value() {
-    return this._signal.peek();
-  }
-  peek() {
-    return this._signal.peek();
-  }
-  subscribe(cb) {
-    return this._signal.subscribe(cb);
-  }
-}
-var currentEffect = null;
-var devtoolsActive = false;
-function setDevtoolsActive(active) {
-  devtoolsActive = active;
-}
-function isDevtoolsActive() {
-  return devtoolsActive;
-}
-var globalRegistry = (() => {
-  if (!globalThis.__10x_signals) {
-    globalThis.__10x_signals = new Map;
-  }
-  return globalThis.__10x_signals;
-})();
-function nextSignalId() {
-  const current2 = Number(globalThis.__10x_signal_id_counter || 0) + 1;
-  globalThis.__10x_signal_id_counter = current2;
-  return current2;
-}
-function signal(initialValue, name) {
-  const key = name || Symbol("signal");
-  const signalName = String(key);
-  const signalId = nextSignalId();
-  const state = {
-    [SIGNAL]: true,
-    _devtoolsId: signalId,
-    _devtoolsName: signalName,
-    _value: initialValue,
-    _history: [],
-    _moduleUrl: undefined,
-    subs: new Set,
-    get value() {
-      return this.get();
-    },
-    set value(nextValue) {
-      this.set(nextValue);
-    },
-    get() {
-      if (currentEffect) {
-        this.subs.add(currentEffect);
-        if (currentEffect._deps)
-          currentEffect._deps.add(this);
-      }
-      return this._value;
-    },
-    set(nextValue) {
-      const prev = this._value;
-      this._value = nextValue;
-      if (devtoolsActive && this._history) {
-        this._history.push({ value: nextValue, prev, ts: Date.now() });
-        if (this._history.length > MAX_HISTORY)
-          this._history.shift();
-      }
-      const notify = globalThis.__10x_devtools_notify;
-      if (typeof notify === "function") {
-        try {
-          notify({
-            id: this._devtoolsId,
-            name: this._devtoolsName,
-            moduleUrl: this._moduleUrl || "global",
-            value: nextValue,
-            subs: this.subs ? this.subs.size : 0,
-            history: Array.isArray(this._history) ? this._history.slice(-MAX_HISTORY) : [],
-            ts: Date.now()
-          });
-          if (globalThis.__10x_devtools_debug) {
-            console.debug("[10x:core] notified devtools", {
-              id: this._devtoolsId,
-              name: this._devtoolsName,
-              value: nextValue
-            });
-          }
-        } catch (_2) {}
-      }
-      Array.from(this.subs).forEach((fn) => fn());
-      return this._value;
-    },
-    peek() {
-      return this._value;
-    },
-    subscribe(cb) {
-      this.subs.add(cb);
-      return () => this.subs.delete(cb);
-    }
-  };
-  globalRegistry.set(key, state);
-  return state;
-}
-function isSignal(value) {
-  return !!(value && value[SIGNAL]);
-}
-function read(value) {
-  return isSignal(value) ? value.get() : value;
-}
-function effect(fn) {
-  const cleanup = () => {
-    if (!run._deps)
-      return;
-    run._deps.forEach((dep) => {
-      if (dep && dep.subs)
-        dep.subs.delete(run);
-    });
-    run._deps.clear();
-  };
-  const run = () => {
-    if (run._stopped)
-      return;
-    cleanup();
-    currentEffect = run;
-    let result;
-    try {
-      result = fn();
-    } catch (error) {
-      currentEffect = null;
-      throw error;
-    }
-    if (result && typeof result.then === "function") {
-      return result.finally(() => {
-        if (currentEffect === run)
-          currentEffect = null;
-      });
-    }
-    currentEffect = null;
-    return result;
-  };
-  run._deps = new Set;
-  run._stopped = false;
-  run.stop = () => {
-    run._stopped = true;
-    cleanup();
-  };
-  run();
-  return run;
-}
-function computed(fn) {
-  const out = signal(undefined);
-  effect(() => out.set(fn()));
-  return out;
-}
-function batch(fn) {
-  return fn();
-}
-function untracked(fn) {
-  const prev = currentEffect;
-  currentEffect = null;
-  try {
-    return fn();
-  } finally {
-    currentEffect = prev;
-  }
-}
-function html(renderFn) {
-  if (typeof renderFn !== "function") {
-    throw new Error("html(...) expects a function");
-  }
-  return {
-    render: renderFn
-  };
-}
-function prop(host, name, fallback) {
-  const raw = host.getAttribute(name);
-  return raw !== null ? Number(raw) || raw : fallback;
-}
-function getSignalRegistry() {
-  return globalRegistry;
-}
 // src/runtime/dom.js
 var componentObservers = new WeakMap;
 function registerShadowHost(host, moduleUrl) {
@@ -9477,35 +9821,46 @@ function render2(selectorOrElement, view) {
   const target = typeof selectorOrElement === "string" ? document.querySelector(selectorOrElement) : selectorOrElement;
   if (!target)
     throw new Error(`Render target not found: ${selectorOrElement}`);
+  const cb = Ne();
   let prev = null;
   let root = null;
   const rootFor = (next) => y(next) ? target.firstChild : target;
   const remount = (next) => {
     target.innerHTML = "";
-    untracked(() => he(target, next));
+    untracked(() => be(target, next, false, cb));
     root = rootFor(next);
     prev = next;
   };
   return effect(async () => {
-    const next = await view.render();
-    if (typeof next === "string") {
-      target.innerHTML = next;
-      prev = null;
-      root = null;
-    } else if (!prev) {
-      untracked(() => he(target, next));
-      root = rootFor(next);
-      prev = next;
-    } else if (root) {
-      try {
-        const node = await Promise.resolve().then(() => untracked(() => ge(root, prev, next)));
-        root = node || root;
+    let next;
+    try {
+      next = await view.render();
+    } catch (err) {
+      console.error("[10x:dom] view.render() threw:", err);
+      return;
+    }
+    try {
+      if (typeof next === "string") {
+        target.innerHTML = next;
+        prev = null;
+        root = null;
+      } else if (!prev) {
+        untracked(() => be(target, next, false, cb));
+        root = rootFor(next);
         prev = next;
-      } catch (_2) {
+      } else if (root) {
+        try {
+          const node = await Promise.resolve().then(() => untracked(() => ye(root, prev, next, false, cb)));
+          root = node || root;
+          prev = next;
+        } catch (_) {
+          remount(next);
+        }
+      } else {
         remount(next);
       }
-    } else {
-      remount(next);
+    } catch (err) {
+      console.error("[10x:dom] mount/patch threw:", err);
     }
   });
 }
@@ -9546,9 +9901,10 @@ function renderShadow(host, view, moduleUrl) {
   let prev = null;
   let root = null;
   const rootFor = (next) => y(next) ? outlet.firstChild : outlet;
+  const cb = Ne();
   const remount = (next) => {
     outlet.innerHTML = "";
-    untracked(() => he(outlet, next));
+    untracked(() => be(outlet, next, false, cb));
     root = rootFor(next);
     prev = next;
   };
@@ -9559,15 +9915,15 @@ function renderShadow(host, view, moduleUrl) {
       prev = null;
       root = null;
     } else if (!prev) {
-      untracked(() => he(outlet, next));
+      untracked(() => be(outlet, next, false, cb));
       root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
-        const node = await Promise.resolve().then(() => untracked(() => ge(root, prev, next)));
+        const node = await Promise.resolve().then(() => untracked(() => ye(root, prev, next, false, cb)));
         root = node || root;
         prev = next;
-      } catch (_2) {
+      } catch (_) {
         remount(next);
       }
     } else {
@@ -9602,11 +9958,12 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
   container.innerHTML = "";
   groups.forEach((signals, moduleUrl) => {
     const groupHeader = document.createElement("div");
-    groupHeader.style.cssText = "font-weight:600;margin:0.75rem 0 0.25rem;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;";
+    groupHeader.style.cssText = "font-weight:600;margin:0.75rem 0 0.25rem;font-size:11px;color:#888;letter-spacing:0.5px;";
     groupHeader.textContent = moduleUrl === "global" ? "Global" : moduleUrl.split("/").pop() || moduleUrl;
     container.appendChild(groupHeader);
-    signals.forEach(({ name, value, subsCount, history }) => {
+    signals.forEach(({ name, value, subsCount, history, lazy, restored }) => {
       const isCollapsed = collapsedSignals.has(name);
+      const displayName = name.includes(".") ? name.split(".").pop() : name;
       const row = document.createElement("div");
       row.style.cssText = "margin-bottom:0.25rem;";
       const header = document.createElement("div");
@@ -9620,16 +9977,34 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
         rerender();
       };
       const key = document.createElement("code");
-      key.textContent = String(name);
+      key.textContent = displayName;
       key.style.color = "#d2a8ff";
       const valueEl = document.createElement("code");
-      formatValue(value, valueEl);
-      valueEl.style.cursor = "pointer";
-      valueEl.title = "Click to copy";
-      valueEl.onclick = (e2) => {
-        e2.stopPropagation();
-        copyToClipboard(JSON.stringify(value));
-      };
+      if (restored) {
+        const indicator = document.createElement("span");
+        indicator.textContent = "↻ ";
+        indicator.style.color = "#238636";
+        indicator.title = "Restored from previous mount";
+        valueEl.appendChild(indicator);
+        formatValue(value, valueEl);
+        valueEl.style.cursor = "pointer";
+        valueEl.onclick = (e2) => {
+          e2.stopPropagation();
+          copyToClipboard(JSON.stringify(value));
+        };
+      } else if (lazy && value === undefined) {
+        valueEl.textContent = "…";
+        valueEl.style.color = "#555";
+        valueEl.style.fontStyle = "italic";
+      } else {
+        formatValue(value, valueEl);
+        valueEl.style.cursor = "pointer";
+        valueEl.title = "Click to copy";
+        valueEl.onclick = (e2) => {
+          e2.stopPropagation();
+          copyToClipboard(JSON.stringify(value));
+        };
+      }
       const subs = document.createElement("code");
       subs.textContent = `subs:${subsCount}`;
       subs.style.color = "#8b949e";
@@ -9664,24 +10039,6 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
     });
   });
 }
-function renderRows(container, registry, collapsedSignals) {
-  const entries = Array.from(registry.entries());
-  const moduleGroups = new Map;
-  entries.forEach(([name, signal2]) => {
-    const moduleUrl = signal2._moduleUrl || "global";
-    if (!moduleGroups.has(moduleUrl)) {
-      moduleGroups.set(moduleUrl, []);
-    }
-    moduleGroups.get(moduleUrl).push({
-      id: signal2._devtoolsId || null,
-      name,
-      value: read(signal2),
-      subsCount: signal2.subs ? signal2.subs.size : 0,
-      history: signal2._history || []
-    });
-  });
-  renderGroupedRows(container, moduleGroups, collapsedSignals, () => renderRows(container, registry, collapsedSignals));
-}
 function renderRowsFromSnapshot(container, snapshot, collapsedSignals) {
   const moduleGroups = new Map;
   (Array.isArray(snapshot) ? snapshot : []).forEach((entry) => {
@@ -9696,7 +10053,9 @@ function renderRowsFromSnapshot(container, snapshot, collapsedSignals) {
       name: entry.name,
       value: entry.value,
       subsCount: Number.isFinite(entry.subs) ? entry.subs : 0,
-      history: Array.isArray(entry.history) ? entry.history.slice(-MAX_HISTORY2) : []
+      history: Array.isArray(entry.history) ? entry.history.slice(-MAX_HISTORY2) : [],
+      lazy: !!entry.lazy,
+      restored: !!entry.restored
     });
   });
   renderGroupedRows(container, moduleGroups, collapsedSignals, () => renderRowsFromSnapshot(container, snapshot, collapsedSignals));
@@ -9714,7 +10073,9 @@ function mergeSignalUpdate(snapshot, update) {
     moduleUrl: update.moduleUrl || "global",
     value: update.value,
     subs: Number.isFinite(update.subs) ? update.subs : 0,
-    history
+    history,
+    lazy: false,
+    restored: false
   };
   if (index >= 0) {
     next[index] = merged;
@@ -9735,6 +10096,7 @@ function devtools(options = {}) {
   const registry = getSignalRegistry();
   const collapsedSignals = new Set;
   let latestSnapshot = [];
+  let remountSnapshot = {};
   let hmrMessage = null;
   let hmrTimeout = null;
   panel = document.createElement("aside");
@@ -9746,11 +10108,35 @@ function devtools(options = {}) {
   const title = document.createElement("div");
   title.style.cssText = "font-weight:700;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;";
   title.innerHTML = `<span>10x DevTools</span><span style="font-weight:400;font-size:10px;color:#888;">Alt+D / Ctrl+Shift+D</span>`;
+  const buildStatus = document.createElement("div");
+  buildStatus.style.cssText = "font-size:10px;color:#666;margin-bottom:0.5rem;";
+  function formatAgo(ms) {
+    const s = Math.floor(ms / 1000);
+    const m2 = Math.floor(s / 60);
+    const h2 = Math.floor(m2 / 60);
+    if (h2 > 0)
+      return `${h2}h ago`;
+    if (m2 > 0)
+      return `${m2}m ago`;
+    return "just now";
+  }
+  function updateBuildStatus() {
+    const ts = globalThis.__10x_BUILD_TS;
+    if (!ts) {
+      buildStatus.textContent = "";
+      return;
+    }
+    const diff = Date.now() - new Date(ts).getTime();
+    buildStatus.textContent = `build: ${formatAgo(diff)}`;
+  }
+  updateBuildStatus();
+  setInterval(updateBuildStatus, 60000);
   const hmrStatus = document.createElement("div");
   hmrStatus.id = "10x-hmr-status";
   hmrStatus.style.cssText = "font-size:11px;margin-bottom:0.5rem;padding:0.25rem 0.5rem;background:#238636;border-radius:4px;color:#fff;display:none;";
   const body = document.createElement("div");
   panel.appendChild(title);
+  panel.appendChild(buildStatus);
   panel.appendChild(hmrStatus);
   panel.appendChild(body);
   if (docked && container) {
@@ -9759,9 +10145,8 @@ function devtools(options = {}) {
     document.body.appendChild(panel);
   }
   setDevtoolsActive(true);
-  effect(() => {
-    renderRows(body, registry, collapsedSignals);
-  });
+  latestSnapshot = [];
+  renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
   function toggle() {
     const target = dockedPane || panel;
     const hidden = target.style.display === "none";
@@ -9806,6 +10191,44 @@ function devtools(options = {}) {
     latestSnapshot = mergeSignalUpdate(latestSnapshot, update);
     renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
   };
+  globalThis.__10x_devtools_signal_created = (info) => {
+    const existing = latestSnapshot.find((e2) => e2 && (e2.id === info.id || e2.name === info.name));
+    if (existing)
+      return;
+    const restored = remountSnapshot[info.name];
+    const isRestored = restored !== undefined;
+    latestSnapshot.push({
+      id: info.id || null,
+      name: info.name,
+      moduleUrl: info.moduleUrl || "global",
+      value: isRestored ? restored.value : undefined,
+      subs: 0,
+      history: isRestored ? restored.history : [],
+      lazy: !isRestored,
+      restored: isRestored
+    });
+    if (isRestored) {
+      delete remountSnapshot[info.name];
+    }
+    if (isRestored && info.signal && typeof info.signal.set === "function") {
+      info.signal.set(restored.value);
+    }
+    renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
+  };
+  globalThis.__10x_devtools_before_remount = (moduleUrl, externalSnapshot) => {
+    remountSnapshot = {};
+    const source = Array.isArray(externalSnapshot) ? externalSnapshot : latestSnapshot;
+    source.forEach((entry) => {
+      if (entry && entry.name && entry.value !== undefined) {
+        remountSnapshot[entry.name] = {
+          value: entry.value,
+          history: entry.history || []
+        };
+      }
+    });
+    latestSnapshot = [];
+    renderRowsFromSnapshot(body, latestSnapshot, collapsedSignals);
+  };
   document.addEventListener("keydown", (e2) => {
     const isAltD = e2.altKey && (e2.key === "d" || e2.key === "D");
     const isCtrlShiftD = e2.ctrlKey && e2.shiftKey && (e2.key === "d" || e2.key === "D");
@@ -9834,7 +10257,7 @@ function maybeEnableDevtools(options = {}) {
   const start = () => {
     try {
       devtools(options);
-    } catch (_2) {}
+    } catch (_) {}
   };
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", start, { once: true });
@@ -10114,7 +10537,7 @@ function emitEditorRuntimeLog(level, ...args) {
       args,
       ts: Date.now()
     });
-  } catch (_2) {}
+  } catch (_) {}
 }
 async function bootstrapEnv(env, executeFn) {
   if (!env || env.__xEditorBootstrapDone)
@@ -10146,7 +10569,7 @@ function postRuntimeLog(requestId, level, ...args) {
 function toSerializable(value) {
   try {
     return structuredClone(value);
-  } catch (_2) {
+  } catch (_) {
     return formatRuntimeValue(value, 180);
   }
 }
@@ -10178,7 +10601,11 @@ self.addEventListener("message", async ({ data }) => {
   if (!requestId)
     return;
   try {
+    let preRemountSnapshot = null;
     if (resetSignals) {
+      preRemountSnapshot = buildSignalSnapshot();
+      self.postMessage({ requestId, preRemountSnapshot });
+      resetComponentInstanceId(0);
       getSignalRegistry().clear();
     }
     if (!Array.isArray(statements) || !statements.length) {

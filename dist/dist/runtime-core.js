@@ -32,6 +32,9 @@ class SignalProxy {
 }
 var currentEffect = null;
 var devtoolsActive = false;
+function getCurrentEffect() {
+  return currentEffect;
+}
 function setDevtoolsActive(active) {
   devtoolsActive = active;
 }
@@ -49,17 +52,17 @@ function nextSignalId() {
   globalThis.__10x_signal_id_counter = current;
   return current;
 }
-function signal(initialValue, name) {
-  const key = name || Symbol("signal");
-  const signalName = String(key);
+function signal(initialValue, name, moduleUrl) {
   const signalId = nextSignalId();
+  const key = Symbol(`signal_${signalId}`);
+  const signalName = name || `signal_${signalId}`;
   const state = {
     [SIGNAL]: true,
     _devtoolsId: signalId,
     _devtoolsName: signalName,
     _value: initialValue,
     _history: [],
-    _moduleUrl: undefined,
+    _moduleUrl: moduleUrl,
     subs: new Set,
     get value() {
       return this.get();
@@ -72,7 +75,7 @@ function signal(initialValue, name) {
         this.subs.add(currentEffect);
         if (currentEffect._deps)
           currentEffect._deps.add(this);
-      }
+      } else {}
       return this._value;
     },
     set(nextValue) {
@@ -112,10 +115,23 @@ function signal(initialValue, name) {
     },
     subscribe(cb) {
       this.subs.add(cb);
-      return () => this.subs.delete(cb);
+      return () => {
+        this.subs.delete(cb);
+      };
     }
   };
   globalRegistry.set(key, state);
+  const onCreated = globalThis.__10x_devtools_signal_created;
+  if (typeof onCreated === "function") {
+    try {
+      onCreated({
+        id: signalId,
+        name: signalName,
+        moduleUrl: moduleUrl || "global",
+        signal: state
+      });
+    } catch (_) {}
+  }
   return state;
 }
 function isSignal(value) {
@@ -206,6 +222,7 @@ export {
   isDevtoolsActive,
   html,
   getSignalRegistry,
+  getCurrentEffect,
   effect,
   computed,
   batch,
