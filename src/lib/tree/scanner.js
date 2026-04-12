@@ -8,6 +8,7 @@ import {
   NOT, LIKE, EQUAL, NOT_EQ, EXACT_EQ,
   LESS, LESS_EQ, GREATER, GREATER_EQ,
   COMMENT, COMMENT_MULTI,
+  FAT_ARROW,
 } from './symbols';
 
 import {
@@ -306,7 +307,7 @@ export default class Scanner {
       case '*': this.addToken(MUL); break;
 
       case '!': this.addToken(this.isMatch('=') ? NOT_EQ : NOT); break;
-      case '=': this.addToken(this.isMatch('=') ? EXACT_EQ : EQUAL); break;
+      case '=': this.addToken(this.isMatch('>') ? FAT_ARROW : this.isMatch('=') ? EXACT_EQ : EQUAL); break;
 
 
       case '%': this.addToken(MOD); break;
@@ -707,10 +708,18 @@ export default class Scanner {
 
     // consume words and embedded formatting, e.g. `abc...[:,.] def...` OR `foo*bar*`
     const looksLikeUnitLiteral = /^\d+[A-Za-z_][A-Za-z0-9_]*$/.test(this.blank);
+    // Check if `=>` (fat arrow) appears before a newline — indicates block-body fn, not prose
+    const hasFatArrowAhead = (from) => {
+      for (let j = from; j < this.chars.length; j++) {
+        if (this.chars[j] === '\n') return false;
+        if (this.chars[j] === '=' && this.chars[j + 1] === '>') return true;
+      }
+      return false;
+    };
     if (
       (isReadable(this.blank) && token === '*')
       || (nextToken === ' ' && ');:.,'.includes(token) && !(token === '.' && looksLikeUnitLiteral))
-      || (token === ' ' && (nextToken === '*' || (nextToken && isAlphaNumeric(nextToken))))
+      || (token === ' ' && (nextToken === '*' || (nextToken && isAlphaNumeric(nextToken) && !hasFatArrowAhead(i))))
     ) {
       this.pushToken(token, nextToken);
       this.offset = this.start = i + 2;

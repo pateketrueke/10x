@@ -46,6 +46,7 @@ function lintMarkdown(source) {
         message: 'Prefer canonical order: `@on ... @shadow <handler>.`',
       });
     }
+
   }
 
   if (inFence) {

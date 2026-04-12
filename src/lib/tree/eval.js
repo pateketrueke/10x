@@ -690,7 +690,15 @@ export default class Eval {
         const value = node.attrs[key];
 
         if (value && typeof value === 'object' && typeof value.expr === 'string') {
-          const [exprValue] = await this.evalTagExpr(value.expr);
+          const expr = value.expr.trim();
+          // Track B: reject inline lambdas and directives in attribute values
+          if (/^@[a-z]/.test(expr)) {
+            raise(`Attribute "${key}" uses an inline directive — declare it before the markup`, this.ctx.tokenInfo);
+          }
+          if (/^[a-zA-Z_$][a-zA-Z0-9_$,\s]*\s*->/.test(expr)) {
+            raise(`Attribute "${key}" uses an inline lambda — declare the handler before the markup`, this.ctx.tokenInfo);
+          }
+          const [exprValue] = await this.evalTagExpr(expr);
           attrs[key] = typeof exprValue === 'undefined'
             ? ''
             : Expr.plain(exprValue, this.convert, '<TagAttr>');
@@ -1882,6 +1890,42 @@ export default class Eval {
       }
     }
 
+    // Track C: standalone @html (no @render selector) — return view object as value
+    // Used inside component bodies: `@html <div>...</div>` → returns { render: fn }
+    if (!isDirectiveStmt(value.render) && isDirectiveStmt(value.html)) {
+      const html = resolveRuntimeFn('html');
+      const htmlBody = normalizeDirectiveArgs(value.html);
+      const signalMap = new Map();
+      const view = html(async () => {
+        const scope = new Env(environment);
+        const localNames = Object.keys(environment.locals || {});
+        for (let i = 0; i < localNames.length; i++) {
+          const name = localNames[i];
+          const local = environment.locals[name];
+          const [head] = (local && local.body) || [];
+          if (!(head && head.isObject && head.value && head.value.signal)) continue;
+          const signalEntry = environment.get(name);
+          const resolvedBody = signalEntry && signalEntry.body ? signalEntry.body : [];
+          if (!resolvedBody.length) continue;
+          const resolved = await Eval.do(resolvedBody, environment, 'Lit', false, parentTokenInfo);
+          if (!resolved || !resolved.length) continue;
+          const plain = toPlain(resolved.length === 1 ? resolved[0] : resolved);
+          if (!isSignalValue(plain)) continue;
+          signalMap.set(name, plain);
+          scope.def(name, Expr.value(plain.peek(), parentTokenInfo));
+        }
+        const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
+        if (!rendered.length) return '';
+        const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+        if (typeof result === 'string' && signalMap.size > 0) {
+          signalMap.forEach(sig => sig.get());
+        }
+        return result;
+      });
+      subTree.push(Expr.value(view, parentTokenInfo));
+      isDone = true;
+    }
+
     if (isDirectiveStmt(value.render)) {
       const renderArgs = normalizeDirectiveArgs(value.render);
       const selectorTokens = renderArgs.length
@@ -1970,8 +2014,46 @@ export default class Eval {
     }
 
     if (isDirectiveStmt(value.on)) {
-      const on = resolveRuntimeFn('on');
       const args = normalizeDirectiveArgs(value.on);
+
+      // Signal-updater form: @on signal = expr
+      // Single callable arg whose name is the target signal (parsed as assignment, not arrow).
+      // Returns a handler function: () => { signal.set(expr(signal.peek())) }
+      // Detect: single callable where getName() is a known signal var.
+      const _callable = args.length === 1 && args[0] && args[0].isCallable ? args[0] : null;
+      const _callableArgs = _callable && _callable.value && Array.isArray(_callable.value.args)
+        ? _callable.value.args.filter(a => a && a.type !== COMMA) : [];
+      const _firstArg = _callableArgs[0];
+      const _signalName = _firstArg && _firstArg.type === LITERAL
+        ? (typeof _firstArg.value === 'string' ? _firstArg.value : null)
+        : (_callable ? _callable.getName() : null);
+
+      if (_callable && _signalName) {
+        const signalEntry = environment.has(_signalName, true) ? environment.get(_signalName) : null;
+        const signalResolved = signalEntry && signalEntry.body
+          ? await Eval.do(signalEntry.body, environment, 'Lit', false, parentTokenInfo)
+          : [];
+        const signalObj = signalResolved.length ? toPlain(signalResolved[0]) : null;
+        if (signalObj && typeof signalObj.set === 'function' && typeof signalObj.peek === 'function') {
+          const callable = _callable;
+          const signalName = _signalName;
+          const handlerFn = async () => {
+            const current = signalObj.peek();
+            const innerEnv = new Env(environment);
+            innerEnv.def(signalName, Expr.value(current, parentTokenInfo));
+            const [result] = await Eval.do(callable.getBody(), innerEnv, 'OnBody', true, parentTokenInfo);
+            signalObj.set(result ? toPlain(result) : current);
+          };
+          subTree.push(Expr.value(handlerFn, parentTokenInfo));
+          isDone = true;
+        }
+      }
+
+      if (isDone) {
+        // signal-updater form handled above
+      } else {
+
+      const on = resolveRuntimeFn('on');
       const shadowParts = hasShadow ? normalizeDirectiveArgs(value.shadow) : [];
       const unwrapHandlerToken = (candidate) => {
         if (!candidate) return null;
@@ -2054,6 +2136,7 @@ export default class Eval {
       if (typeof previousOn === 'function') previousOn();
       onDisposers.set(onKey, on(eventName, selector, handler, shadowRoot));
       isDone = true;
+      } // end else (DOM event form)
     }
 
     // iterate lists, arrays, ranges or numeric value, e.g. `@loop (3)` OR `@loop (1..3, 5)` OR `@loop [1, 2]`

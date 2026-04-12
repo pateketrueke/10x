@@ -2,7 +2,7 @@ import Parser from '../lib/tree/parser';
 import { generateAtomicCss } from './atoms.js';
 import {
   BLOCK, COMMA, DIV, DOT, EOL, EQUAL, GREATER, GREATER_EQ, LESS, LESS_EQ, LIKE, MINUS, MOD, MUL, NOT_EQ, EXACT_EQ, OR, PIPE, PLUS,
-  TEXT, COMMENT, COMMENT_MULTI, EOF, RANGE, SOME, EVERY, SYMBOL, NOT,
+  TEXT, COMMENT, COMMENT_MULTI, EOF, RANGE, SOME, EVERY, SYMBOL, NOT, FAT_ARROW, LITERAL,
 } from '../lib/tree/symbols';
 
 const OPERATOR = new Map([
@@ -23,7 +23,7 @@ const OPERATOR = new Map([
   [PIPE, '|>'],
 ]);
 
-function splitStatements(tokens) {
+export function splitStatements(tokens) {
   const out = [];
   let current = [];
 
@@ -71,7 +71,7 @@ function textTokenToSource(token) {
   }, '');
 }
 
-function normalizeDirectiveArgs(body) {
+export function normalizeDirectiveArgs(body) {
   if (!Array.isArray(body)) return [];
 
   const flat = body.length === 1
@@ -387,10 +387,18 @@ function compileTag(node, depth = 0, ctx = {}) {
     : '{ ' + attrEntries.map(([k, v]) => {
         if (v === true) return `${JSON.stringify(k)}: true`;
         if (v && typeof v === 'object' && typeof v.expr === 'string') {
+          const expr = v.expr.trim();
+          // Track B: reject inline lambdas and directives in attribute values
+          if (/^@[a-z]/.test(expr)) {
+            throw new Error(`Attribute "${k}" uses an inline directive — declare it before the markup`);
+          }
+          if (/^[a-zA-Z_$][a-zA-Z0-9_$,\s]*\s*->/.test(expr)) {
+            throw new Error(`Attribute "${k}" uses an inline lambda — declare the handler before the markup`);
+          }
           const passSignal = /^(d:|s:|class:|style:)/.test(k) || k === 'ref';
           return passSignal
-            ? `${JSON.stringify(k)}: ${v.expr.trim()}`
-            : `${JSON.stringify(k)}: $.read(${v.expr.trim()})`;
+            ? `${JSON.stringify(k)}: ${expr}`
+            : `${JSON.stringify(k)}: $.read(${expr})`;
         }
         return `${JSON.stringify(k)}: ${JSON.stringify(String(v))}`;
       }).join(', ') + ' }';
@@ -404,6 +412,10 @@ function compileTag(node, depth = 0, ctx = {}) {
       if (expr.startsWith('@if ') || expr === '@if') {
         const tokens = Parser.sub(expr);
         if (tokens.length) return `$.computed(() => ${compileToken(tokens[0], ctx)})`;
+      }
+      // #{@html expr} → inject trusted vdom/array directly (no escape wrapper)
+      if (expr.startsWith('@html ')) {
+        return expr.slice(6).trim();
       }
       // Pass the signal/value directly so somedom can create a surgical text-node
       // subscription (via its isSignal check) rather than subscribing the outer effect.
@@ -963,7 +975,30 @@ function compileRenderDirective(body, value, ctx) {
 }
 
 function compileOnDirective(body, ctx) {
-  const [eventToken, selectorToken, handlerToken] = normalizeDirectiveArgs(body);
+  const args = normalizeDirectiveArgs(body);
+
+  // Signal-updater form: @on signal = expr
+  // e.g. `inc = @on count = count + 1` → `() => { count.set(((count) => (count + 1))(count.peek())); }`
+  // Detection: single callable whose getName() is a known signal var.
+  if (args.length === 1 && args[0] && args[0].isCallable) {
+    const callable = args[0];
+    const callableArgs = callable.value && Array.isArray(callable.value.args)
+      ? callable.value.args.filter(a => a && a.type !== COMMA)
+      : [];
+    const firstArg = callableArgs[0];
+    const signalName = firstArg && firstArg.type === LITERAL
+      ? (typeof firstArg.value === 'string' ? firstArg.value : null)
+      : callable.getName();
+    if (signalName && ctx.signalVars && ctx.signalVars.has(signalName)) {
+      // Compile body WITHOUT wrapping signalName in $.read() — it's the lambda param, not the signal.
+      const innerCtx = { ...ctx, signalVars: new Set([...(ctx.signalVars || [])].filter(v => v !== signalName)) };
+      const bodyExpr = callable.hasBody ? compileExpression(callable.getBody(), innerCtx) : 'undefined';
+      return `() => { ${signalName}.set(((${signalName}) => (${bodyExpr}))(${signalName}.peek())); }`;
+    }
+  }
+
+  // DOM event form: @on "event" selector handler
+  const [eventToken, selectorToken, handlerToken] = args;
   const eventName = compileToken(eventToken, ctx);
   const selector = compileToken(selectorToken, ctx);
   const handler = compileHandler(handlerToken, ctx);
@@ -1088,6 +1123,44 @@ function compileDirectiveObject(token, ctx) {
   throw new Error(`Unsupported directive object: ${Object.keys(value).join(', ')}`);
 }
 
+function compileBlockBody(token, ctx) {
+  // Compile a `=>` block-body callable: comma-separated stmts, last is return.
+  const name = token.getName();
+  const rawArgs = token.value && token.value.args;
+  const args = rawArgs ? rawArgs.map(a => compileToken(a, ctx)).join(', ') : '';
+  const rawBody = token.value && token.value.body ? token.value.body : [];
+  const declConst = ctx.exportDefinitions ? 'export const' : 'const';
+
+  // Split raw body tokens by COMMA
+  const stmts = [];
+  let cur = [];
+  for (const tok of rawBody) {
+    if (tok && tok.type === COMMA) { if (cur.length) stmts.push(cur); cur = []; }
+    else cur.push(tok);
+  }
+  if (cur.length) stmts.push(cur);
+
+  // Track C: collect signal defs from block body so @on signal-updater detection works inside
+  const localSignalVars = collectSignalBindings(stmts);
+  const mergedSignalVars = new Set([...(ctx.signalVars || []), ...localSignalVars]);
+  const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false, signalVars: mergedSignalVars };
+  const head = stmts.slice(0, -1).map(stmt => {
+    if (stmt.length === 1 && stmt[0].isCallable && stmt[0].getName()) {
+      return `${compileDefinition(stmt[0], true, localCtx)}`;
+    }
+    return `${compileStatement(stmt, localCtx, -1)}`;
+  });
+  const tail = stmts[stmts.length - 1];
+  const ret = tail
+    ? (tail.length === 1 && tail[0].isObject
+      ? `return ${compileToken(tail[0], localCtx)};`
+      : `return ${compileStatement(tail, localCtx, -1).replace(/;\s*$/, '')};`)
+    : 'return undefined;';
+
+  const body = [...head, ret].join('\n  ');
+  return `${declConst} ${name} = (${args}) => {\n  ${body}\n}`;
+}
+
 function compileDefinition(token, asStatement = false, ctx = { signalVars: new Set() }) {
   const name = token.getName();
   const [head] = token.getBody();
@@ -1095,6 +1168,12 @@ function compileDefinition(token, asStatement = false, ctx = { signalVars: new S
   const declLet = ctx.exportDefinitions ? 'export let' : 'let';
 
   if (!head) return asStatement ? `${declConst} ${name} = undefined;` : `${declConst} ${name} = undefined`;
+
+  // Block-body callable: `Name [args] => comma-chain.`
+  if (token.value && token.value.blockBody) {
+    const out = compileBlockBody(token, ctx);
+    return asStatement ? `${out};` : out;
+  }
 
   if (head.isCallable) {
     const args = head.hasArgs ? head.getArgs().map(arg => compileToken(arg, ctx)).join(', ') : '';
@@ -1117,6 +1196,11 @@ function compileDefinition(token, asStatement = false, ctx = { signalVars: new S
 
   if (head.isObject && head.value && head.value.computed) {
     const out = `${declConst} ${name} = $.computed(() => ${compileExpression(head.value.computed.getBody(), ctx)})`;
+    return asStatement ? `${out};` : out;
+  }
+
+  if (head.isObject && head.value && head.value.on && !head.value.prop) {
+    const out = `${declConst} ${name} = ${compileDirectiveObject(head, ctx)}`;
     return asStatement ? `${out};` : out;
   }
 
@@ -1174,7 +1258,7 @@ function collectShadowFlag(statements) {
   });
 }
 
-function collectSignalBindings(statements) {
+export function collectSignalBindings(statements) {
   const signalVars = new Set();
 
   statements.forEach(tokens => {

@@ -4,7 +4,7 @@ import { parseTag } from '../tag';
 
 import {
   CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME, DOT,
-  HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM, TABLE,
+  HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM, TABLE, FAT_ARROW,
 } from './symbols';
 
 import {
@@ -235,6 +235,49 @@ export default class Parser {
     return node;
   }
 
+  // Parse block-body callable: `Name [args...] => comma-chain.`
+  // Args are any LITERAL tokens between the name and `=>`.
+  // Body is comma-separated statements up to EOL; last statement is the return value.
+  definitionBlock(token) {
+    // consume any LITERAL args before `=>`
+    const args = [];
+    while (this.offset < this.tokens.length) {
+      const cur = this.tokens[this.offset];
+      if (!cur || cur.type === FAT_ARROW) break;
+      if (isText(cur)) { this.offset++; continue; }
+      if (isLiteral(cur)) {
+        args.push(Expr.from(cur));
+        this.offset++;
+        continue;
+      }
+      break;
+    }
+    // consume the `=>` token
+    if (this.tokens[this.offset] && this.tokens[this.offset].type === FAT_ARROW) this.offset++;
+
+    // parse comma-chain body: each COMMA-separated segment is a statement
+    const body = [];
+    while (this.offset < this.tokens.length) {
+      const cur = this.tokens[this.offset];
+      if (!cur || isEOL(cur) || isEOF(cur)) break;
+      if (isText(cur)) { this.offset++; continue; }
+      if (isComma(cur)) { body.push(Expr.from(cur)); this.offset++; continue; }
+      // parse one statement up to the next COMMA or EOL
+      const stmt = this.subTree(this.statement([COMMA, EOL]));
+      body.push(...stmt);
+    }
+
+    return {
+      type: BLOCK,
+      value: {
+        name: token.value,
+        args: args.length ? args : undefined,
+        body,
+        blockBody: true,
+      },
+    };
+  }
+
   destructure(token) {
     const bindings = [{ name: token.value, rest: false }];
     let offset = this.offset;
@@ -387,6 +430,21 @@ export default class Parser {
     let idx = offset;
     while (idx < this.tokens.length && isText(this.tokens[idx])) idx++;
     return idx;
+  }
+
+  // Returns true if FAT_ARROW appears before any = or EOL/EOF from current offset.
+  // Used to detect `Name arg1 arg2 => body` forms.
+  peekFatArrow() {
+    for (let i = this.offset; i < this.tokens.length; i++) {
+      const t = this.tokens[i];
+      if (!t) break;
+      if (isText(t)) continue;
+      if (t.type === FAT_ARROW) return true;
+      if (isEOL(t) || isEOF(t)) return false;
+      // stop if we hit = or -> (would be definition or lambda instead)
+      if (isEqual(t) || t.type === BLOCK) return false;
+    }
+    return false;
   }
 
   tokenSourceText(token) {
@@ -624,6 +682,12 @@ export default class Parser {
         // parse local definitions, e.g. `x =`
         if (isEqual(curToken)) {
           push(Expr.callable(this.definition(token), tokenInfo));
+          continue;
+        }
+
+        // parse block-body callables: `Name =>` or `Name arg =>` or `Name arg1 arg2 =>`
+        if (curToken && (curToken.type === FAT_ARROW || (isLiteral(curToken) && this.peekFatArrow()))) {
+          push(Expr.callable(this.definitionBlock(token), tokenInfo));
           continue;
         }
 

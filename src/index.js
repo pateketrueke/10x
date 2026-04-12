@@ -7,6 +7,7 @@ import ansi from './lib/ansi.js';
 import wargs from 'wargs';
 
 import { createNodeAdapter } from './adapters/node/index.js';
+import { lintCode } from './linter.js';
 
 let Env;
 let Expr;
@@ -496,7 +497,7 @@ async function cli() {
       const filePath = file + (!file.includes('.') ? '.md' : '');
       const src = fs.readFileSync(filePath).toString();
       try {
-        Parser.getAST(src, 'parse');
+        const ast = Parser.getAST(src, 'parse');
 
         const lintWarnings = lintAnnotationSource(src);
         lintWarnings.forEach(w => {
@@ -504,9 +505,13 @@ async function cli() {
         });
 
         const mdWarnings = lintMarkdown(src);
-        mdWarnings.forEach(w => {
-          console.error(`${file}:${w.line + 1}:1: warning: ${w.message}`);
-        });
+        const codeWarnings = lintCode(src, ast);
+        [...mdWarnings, ...codeWarnings]
+          .sort((a, b) => a.line - b.line)
+          .forEach(w => {
+            const col = w.col != null ? w.col + 1 : 1;
+            console.error(`${file}:${w.line + 1}:${col}: warning [${w.code}]: ${w.message}`);
+          });
 
         let checkWarnings = [];
         let fixedOutput = null;

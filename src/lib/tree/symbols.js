@@ -29,6 +29,7 @@ export const OR = Symbol('OR');
 export const DOT = Symbol('DOT');
 export const PIPE = Symbol('PIPE');
 export const BLOCK = Symbol('BLOCK');
+export const FAT_ARROW = Symbol('FAT_ARROW');
 export const RANGE = Symbol('RANGE');
 export const SPREAD = Symbol('SPREAD');
 

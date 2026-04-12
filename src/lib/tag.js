@@ -72,12 +72,18 @@ function parseAttrs(input, state) {
     if (input[state.i] === '{') {
       const spreadExpr = readExpr(input, state);
 
-      if (!spreadExpr.expr.startsWith('...')) fail('Only spread expressions are allowed in tag attrs');
-
-      const source = spreadExpr.expr.slice(3).trim();
-      if (!source) fail('Missing source after spread operator in tag attrs');
-
-      spreads.push({ expr: source });
+      if (spreadExpr.expr.startsWith('...')) {
+        // spread: {...obj}
+        const source = spreadExpr.expr.slice(3).trim();
+        if (!source) fail('Missing source after spread operator in tag attrs');
+        spreads.push({ expr: source });
+      } else if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(spreadExpr.expr.trim())) {
+        // shorthand: {bar} → bar={bar}
+        const ident = spreadExpr.expr.trim();
+        attrs[ident] = { expr: ident };
+      } else {
+        fail('Only spread expressions or shorthand identifiers are allowed in bare tag attr braces');
+      }
       continue;
     }
 

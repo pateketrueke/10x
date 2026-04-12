@@ -302,4 +302,68 @@ describe('Compiler', () => {
 
     expect(output).toInclude('$.computed(() => ((($.read(show))) ? ("yes") : ("no")))');
   });
+
+  // Track A: @on as value (named handler)
+  test('should compile @on signal-updater as named handler', () => {
+    const output = compile([
+      'count = @signal 0.',
+      'inc = @on count = count + 1.',
+    ].join('\n'));
+
+    expect(output).toInclude('const inc = () => { count.set(((count) => (count + 1))(count.peek())); };');
+  });
+
+  // Track B: declaration-first attribute enforcement
+  test('should reject inline lambda in attribute value', () => {
+    expect(() => compile([
+      'count = @signal 0.',
+      '@render "#app" @html <button on_click={x -> x + 1}>+</button>.',
+    ].join('\n'))).toThrow('inline lambda');
+  });
+
+  test('should reject inline directive in attribute value', () => {
+    expect(() => compile([
+      'count = @signal 0.',
+      '@render "#app" @html <div class={@signal 0}>x</div>.',
+    ].join('\n'))).toThrow('inline directive');
+  });
+
+  // Track E: {bar} attribute shorthand
+  test('should expand {bar} attribute shorthand', () => {
+    const output = compile([
+      'label = "Click".',
+      '@render "#app" @html <button {label}>+</button>.',
+    ].join('\n'));
+
+    expect(output).toInclude('"label": $.read(label)');
+  });
+
+  // Track F: => block-body syntax
+  test('should compile => block-body function', () => {
+    // Note: standalone line needs prior EOL context for scanner to treat as code, not prose
+    const output = compile([
+      'y = 1.',
+      'double x => x * 2.',
+    ].join('\n'));
+
+    expect(output).toInclude('const double = (x) => {');
+    expect(output).toInclude('return');
+    expect(output).toInclude('x * 2');
+  });
+
+  // Track C: component with owned state (=> + @signal + @on)
+  test('should compile => component with owned signal and handler', () => {
+    const output = compile([
+      'count = @signal 0.',
+      'Counter =>',
+      '  n = @signal 0,',
+      '  inc = @on n = n + 1,',
+      '  @html <button>#{n}</button>.',
+    ].join('\n'));
+
+    expect(output).toInclude('const Counter = () => {');
+    expect(output).toInclude('const n = $.signal(0');
+    expect(output).toInclude('const inc = () => { n.set(((n) => (n + 1))(n.peek())); };');
+    expect(output).toInclude('return $.html(');
+  });
 });
