@@ -1,4 +1,4 @@
-import { h, mount, patch, isNode } from 'somedom';
+import { h, mount, patch, isNode, listeners } from 'somedom';
 import { effect, untracked } from './core.js';
 
 export { h };
@@ -127,6 +127,7 @@ export function render(selectorOrElement, view) {
 
   if (!target) throw new Error(`Render target not found: ${selectorOrElement}`);
 
+  const cb = listeners();
   let prev = null;
   let root = null;
 
@@ -137,7 +138,7 @@ export function render(selectorOrElement, view) {
 
   const remount = next => {
     target.innerHTML = '';
-    untracked(() => mount(target, next));
+    untracked(() => mount(target, next, false, cb));
     root = rootFor(next);
     prev = next;
   };
@@ -149,12 +150,12 @@ export function render(selectorOrElement, view) {
       prev = null;
       root = null;
     } else if (!prev) {
-      untracked(() => mount(target, next));
+      untracked(() => mount(target, next, false, cb));
       root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
-        const node = await Promise.resolve().then(() => untracked(() => patch(root, prev, next)));
+        const node = await Promise.resolve().then(() => untracked(() => patch(root, prev, next, false, cb)));
         root = node || root;
         prev = next;
       } catch (_) {
@@ -215,9 +216,11 @@ export function renderShadow(host, view, moduleUrl) {
 
   const rootFor = (next) => isNode(next) ? outlet.firstChild : outlet;
 
+  const cb = listeners();
+
   const remount = next => {
     outlet.innerHTML = '';
-    untracked(() => mount(outlet, next));
+    untracked(() => mount(outlet, next, false, cb));
     root = rootFor(next);
     prev = next;
   };
@@ -229,12 +232,12 @@ export function renderShadow(host, view, moduleUrl) {
       prev = null;
       root = null;
     } else if (!prev) {
-      untracked(() => mount(outlet, next));
+      untracked(() => mount(outlet, next, false, cb));
       root = rootFor(next);
       prev = next;
     } else if (root) {
       try {
-        const node = await Promise.resolve().then(() => untracked(() => patch(root, prev, next)));
+        const node = await Promise.resolve().then(() => untracked(() => patch(root, prev, next, false, cb)));
         root = node || root;
         prev = next;
       } catch (_) {

@@ -1985,10 +1985,10 @@ export default class Eval {
           const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
           if (!rendered.length) return '';
           const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
-          // For string output, subscribe the effect to signals so it re-runs on change.
-          // For vdom output, #{signal} children carry the raw SignalProxy into somedom,
-          // which creates surgical text-node subscriptions — no effect re-run needed.
-          if (typeof result === 'string' && signalMap.size > 0) {
+          // Subscribe the render effect to all signals so any signal change re-runs the render.
+          // This covers both string output and vdom output (where #{expr} children may embed
+          // complex expressions that can't subscribe surgically through somedom alone).
+          if (signalMap.size > 0) {
             signalMap.forEach(sig => sig.get());
           }
           return result;
@@ -2017,31 +2017,59 @@ export default class Eval {
       const args = normalizeDirectiveArgs(value.on);
 
       // Signal-updater form: @on signal = expr
-      // Single callable arg whose name is the target signal (parsed as assignment, not arrow).
-      // Returns a handler function: () => { signal.set(expr(signal.peek())) }
-      // Detect: single callable where getName() is a known signal var.
-      const _callable = args.length === 1 && args[0] && args[0].isCallable ? args[0] : null;
-      const _callableArgs = _callable && _callable.value && Array.isArray(_callable.value.args)
-        ? _callable.value.args.filter(a => a && a.type !== COMMA) : [];
-      const _firstArg = _callableArgs[0];
-      const _signalName = _firstArg && _firstArg.type === LITERAL
-        ? (typeof _firstArg.value === 'string' ? _firstArg.value : null)
-        : (_callable ? _callable.getName() : null);
+      // normalizeDirectiveArgs unwraps callables (type === BLOCK), so the callable
+      // must be read from the raw body of value.on before normalization.
+      // Form A: raw body has a single callable → name = signal, body = expr tokens
+      // Form B: raw tokens [LITERAL, EQUAL, ...exprTokens] (fallback, unlikely after parser)
+      const _rawOnBody = value.on.getBody ? value.on.getBody() : [];
+      const _callable = _rawOnBody.length === 1 && _rawOnBody[0] && _rawOnBody[0].isCallable
+        ? _rawOnBody[0]
+        : (args.length === 1 && args[0] && args[0].isCallable ? args[0] : null);
 
-      if (_callable && _signalName) {
-        const signalEntry = environment.has(_signalName, true) ? environment.get(_signalName) : null;
-        const signalResolved = signalEntry && signalEntry.body
-          ? await Eval.do(signalEntry.body, environment, 'Lit', false, parentTokenInfo)
-          : [];
-        const signalObj = signalResolved.length ? toPlain(signalResolved[0]) : null;
+      // Form A: single callable token — name = signal, body = expr tokens
+      let _signalName = _callable ? _callable.getName() : null;
+      let _bodyTokens = _callable ? _callable.getBody() : null;
+
+      // Form B: raw [LITERAL, EQUAL, ...rest] — directive body wasn't sub-parsed
+      if (!_callable && args.length >= 2 && args[0] && args[0].type === LITERAL && args[1] && args[1].type === EQUAL) {
+        _signalName = typeof args[0].value === 'string' ? args[0].value : null;
+        _bodyTokens = args.slice(2);
+      }
+
+      if (_signalName && _bodyTokens) {
+        // Walk up the env chain to find the actual signal object token, bypassing
+        // primitive overrides (e.g. the render scope sets count = peek() for arithmetic).
+        const findSignalEntry = (name, env) => {
+          let e = env;
+          while (e) {
+            const entry = e.locals && e.locals[name];
+            if (entry) {
+              const [head] = entry.body || [];
+              if (head && head.isObject && head.value && head.value.signal) return entry;
+            }
+            e = e.parent;
+          }
+          return null;
+        };
+        const signalEntry = findSignalEntry(_signalName, environment);
+        let signalResolved = [];
+        try {
+          signalResolved = signalEntry && signalEntry.body
+            ? await Eval.do(signalEntry.body, environment, 'Lit', false, parentTokenInfo)
+            : [];
+        } catch (_err) {
+          // signal not yet resolvable (e.g. Runtime not loaded in test env) — skip updater path
+        }
+        const _r0 = signalResolved.length ? signalResolved[0] : null;
+        const signalObj = _r0 ? toPlain(_r0) : null;
         if (signalObj && typeof signalObj.set === 'function' && typeof signalObj.peek === 'function') {
-          const callable = _callable;
           const signalName = _signalName;
+          const bodyTokens = _bodyTokens;
           const handlerFn = async () => {
             const current = signalObj.peek();
             const innerEnv = new Env(environment);
             innerEnv.def(signalName, Expr.value(current, parentTokenInfo));
-            const [result] = await Eval.do(callable.getBody(), innerEnv, 'OnBody', true, parentTokenInfo);
+            const [result] = await Eval.do(bodyTokens, innerEnv, 'OnBody', true, parentTokenInfo);
             signalObj.set(result ? toPlain(result) : current);
           };
           subTree.push(Expr.value(handlerFn, parentTokenInfo));

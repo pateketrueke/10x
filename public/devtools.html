@@ -185,24 +185,23 @@
         <span class="pane-title">playground.md</span>
         <span class="pane-badge">LIVE</span>
       </div>
-      <x-editor id="ed-devtools" style="display:block;height:100%;" value="# Counter with Components
-
-Btn = props ->
-  &lt;button id={props.id}&gt;#{props.label}&lt;/button&gt;.
+      <x-editor id="ed-devtools" style="display:block;height:100%;" value="# Signal Counter
 
 count = @signal 0.
+inc = @on count = count + 1.
+dec = @on count = count - 1.
 
 @render &quot;#render-container&quot; @html
-  &lt;style&gt;button { padding: 0.5rem 1rem; margin: 0.25rem; }&lt;/style&gt;
-  &lt;div&gt;
-    &lt;h1&gt;Count: #{count}&lt;/h1&gt;
-    &lt;Btn id=&quot;dec&quot; label=&quot;-&quot; /&gt;
-    &lt;Btn id=&quot;inc&quot; label=&quot;+&quot; /&gt;
+  &lt;style&gt;
+    h1 { font-size: 3rem; margin: 0.5rem 0; }
+    button { padding: 0.5rem 1.25rem; font-size: 1.25rem; margin: 0.25rem; cursor: pointer; }
+  &lt;/style&gt;
+  &lt;div style=&quot;text-align:center;padding:2rem&quot;&gt;
+    &lt;h1&gt;#{@if (= count 0) &quot;zero&quot; @else count}&lt;/h1&gt;
+    &lt;button onclick={dec}&gt;-&lt;/button&gt;
+    &lt;button onclick={inc}&gt;+&lt;/button&gt;
   &lt;/div&gt;
 .
-
-@on :click &quot;#dec&quot; count = count - 1.
-@on :click &quot;#inc&quot; count = count + 1.
 "></x-editor>
     </div>
     <div class="devtools-pane">

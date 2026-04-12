@@ -979,22 +979,27 @@ function compileOnDirective(body, ctx) {
 
   // Signal-updater form: @on signal = expr
   // e.g. `inc = @on count = count + 1` → `() => { count.set(((count) => (count + 1))(count.peek())); }`
-  // Detection: single callable whose getName() is a known signal var.
+  // normalizeDirectiveArgs unwraps the BLOCK wrapper, exposing the callable directly.
+  // Form A: single callable in args → name = signal, body = expr tokens
+  // Form B: raw [LITERAL, EQUAL, ...exprTokens] — fallback
+  let _signalName = null;
+  let _bodyTokens = null;
+
   if (args.length === 1 && args[0] && args[0].isCallable) {
+    // Form A
     const callable = args[0];
-    const callableArgs = callable.value && Array.isArray(callable.value.args)
-      ? callable.value.args.filter(a => a && a.type !== COMMA)
-      : [];
-    const firstArg = callableArgs[0];
-    const signalName = firstArg && firstArg.type === LITERAL
-      ? (typeof firstArg.value === 'string' ? firstArg.value : null)
-      : callable.getName();
-    if (signalName && ctx.signalVars && ctx.signalVars.has(signalName)) {
-      // Compile body WITHOUT wrapping signalName in $.read() — it's the lambda param, not the signal.
-      const innerCtx = { ...ctx, signalVars: new Set([...(ctx.signalVars || [])].filter(v => v !== signalName)) };
-      const bodyExpr = callable.hasBody ? compileExpression(callable.getBody(), innerCtx) : 'undefined';
-      return `() => { ${signalName}.set(((${signalName}) => (${bodyExpr}))(${signalName}.peek())); }`;
-    }
+    _signalName = callable.getName();
+    _bodyTokens = callable.hasBody ? callable.getBody() : null;
+  } else if (args.length >= 2 && args[0] && args[0].type === LITERAL && args[1] && args[1].type === EQUAL) {
+    // Form B: raw tokens from directive body
+    _signalName = typeof args[0].value === 'string' ? args[0].value : null;
+    _bodyTokens = args.slice(2);
+  }
+
+  if (_signalName && _bodyTokens && ctx.signalVars && ctx.signalVars.has(_signalName)) {
+    const innerCtx = { ...ctx, signalVars: new Set([...(ctx.signalVars || [])].filter(v => v !== _signalName)) };
+    const bodyExpr = compileExpression(_bodyTokens, innerCtx);
+    return `() => { ${_signalName}.set(((${_signalName}) => (${bodyExpr}))(${_signalName}.peek())); }`;
   }
 
   // DOM event form: @on "event" selector handler
