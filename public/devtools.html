@@ -18,6 +18,8 @@
         const secs = Math.floor(diff / 1000);
         const mins = Math.floor(secs / 60);
         const hrs = Math.floor(mins / 60);
+        const days = Math.floor(hrs / 24);
+        if (days > 0) return new Date(iso).toLocaleDateString();
         if (hrs > 0) return `${hrs}h ago`;
         if (mins > 0) return `${mins}m ago`;
         return `${secs}s ago`;
