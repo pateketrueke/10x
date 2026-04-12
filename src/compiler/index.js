@@ -963,20 +963,23 @@ function compileStyleDirective(body, ctx) {
 }
 
 function compileTestDirective(body, value, ctx) {
-  const [stmt] = body;
-  const testBody = stmt && stmt.hasBody ? stmt.getBody() : body;
-  const firstBlock = testBody[0] && testBody[0].hasBody ? testBody[0].getBody() : testBody;
-  const testName = firstBlock[0] && firstBlock[0].isString ? firstBlock[0].value : 'test';
+  const [firstStmt, ...restStmts] = body;
+  const firstBody = firstStmt && firstStmt.hasBody ? firstStmt.getBody() : [];
+  const testName = firstBody[0] && firstBody[0].isString ? firstBody[0].value : 'test';
   
   const localCtx = { ...ctx, exportDefinitions: false, autoPrintExpressions: false };
   
   const compiled = [];
   
-  for (const token of firstBlock) {
+  for (const token of firstBody) {
     if (token.type === FAT_ARROW) continue;
     if (token.isString) continue;
     
-    if (token && token.value && token.value.name) {
+    if (token && token.isObject && token.value) {
+      if (token.value.expect) {
+        compiled.push(compileExpectDirective(token.value.expect.getBody(), localCtx));
+      }
+    } else if (token && token.value && token.value.name) {
       const name = token.value.name;
       const tokenBody = token.getBody ? token.getBody() : [];
       
@@ -991,18 +994,16 @@ function compileTestDirective(body, value, ctx) {
     }
   }
   
-  for (let i = 1; i < testBody.length; i++) {
-    const token = testBody[i];
-    
-    if (token && token.hasBody) {
-      const tokenBody = token.getBody();
-      if (tokenBody && tokenBody.length) {
-        const expr = compileExpression(tokenBody, localCtx);
+  for (const stmt of restStmts) {
+    if (stmt && stmt.hasBody) {
+      const stmtBody = stmt.getBody();
+      if (stmtBody && stmtBody.length) {
+        const expr = compileExpression(stmtBody, localCtx);
         compiled.push(`${expr};`);
       }
-    } else if (token && token.isObject && token.value) {
-      if (token.value.expect) {
-        compiled.push(compileExpectDirective(token.value.expect.getBody(), localCtx));
+    } else if (stmt && stmt.isObject && stmt.value) {
+      if (stmt.value.expect) {
+        compiled.push(compileExpectDirective(stmt.value.expect.getBody(), localCtx));
       }
     }
   }
