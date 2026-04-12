@@ -6,6 +6,7 @@
 import Env from './env';
 import Expr from './expr';
 import Parser from './parser';
+import { getCurrentEffect } from '../../runtime/core.js';
 import Range from '../range';
 import { composeTag, renderTag } from '../tag';
 
@@ -1134,6 +1135,10 @@ export default class Eval {
 
       const derived = this.derive || (fixedBody[0] && fixedBody[0].isObject);
 
+      for (let i = 0; i < fixedBody.length; i++) {
+        const stmt = fixedBody[i];
+      }
+
       this.append(...await Eval.do(fixedBody, this.env, derived ? this.descriptor : '...', derived, this.ctx.tokenInfo));
     }
     return true;
@@ -1476,10 +1481,16 @@ export default class Eval {
 
       try {
         const scope = new Env(self.env);
+        const scopeId = scope.__envId || (scope.__envId = Math.random().toString(36).slice(2));
 
         Env.merge(safeArgs, fnArgs, false, scope);
 
-        const [value] = await Eval.do(fn.getBody(), scope, label, false, self.ctx.tokenInfo);
+        const body = fn.getBody();
+        for (let i = 0; i < body.length; i++) {
+          const stmt = body[i];
+        }
+
+        const [value] = await Eval.do(body, scope, label, false, self.ctx.tokenInfo);
 
         return value ? Expr.plain(value, self.convert, `<${fn.name || 'Function'}>`) : undefined;
       } catch (e) {
@@ -1641,6 +1652,7 @@ export default class Eval {
     const { value } = token;
     const subTree = [];
     const convert = state && typeof state.convert === 'function' ? state.convert : null;
+    
 
     const isDirectiveStmt = stmt => !!(stmt && typeof stmt.getBody === 'function');
 
@@ -1911,14 +1923,6 @@ export default class Eval {
     }
 
     if (isDirectiveStmt(value.signal)) {
-      // Cache signals per owner-environment (not per token) so each component instance
-      // gets its own independent signal. Keying by token gives a stable unique ID.
-      //
-      // `environment` here is `this.env` from the Eval instance. When Eval.do is
-      // called with noInheritance=false (which all signal-body lookups do), a fresh
-      // `new Env(outerEnv)` is created, so environment.parent IS the persistent
-      // outer env (component scope or root env). We cache on that parent so the
-      // signal survives across multiple Eval.do calls into the same outer scope.
       const _ownerEnv = environment.parent || environment;
       if (!_ownerEnv.__signalCache) _ownerEnv.__signalCache = new Map();
       const _cached = _ownerEnv.__signalCache.get(token);
@@ -1930,30 +1934,38 @@ export default class Eval {
       if (isDone) {
         // no-op
       } else {
-      const signal = resolveRuntimeFn('signal');
-      const args = normalizeDirectiveArgs(value.signal);
+      const signalFn = resolveRuntimeFn('signal');
+      const signalArgs = normalizeDirectiveArgs(value.signal);
       const runtimeArgs = [];
 
-      // Evaluate all signal args together so multi-token expressions like
-      // `props.start` (LITERAL + DOT + LITERAL) are handled correctly.
-      // Comma separators were already stripped by normalizeDirectiveArgs, so
-      // each evaluated token in the result corresponds to one argument.
-      const evaluated = await Eval.do(args, environment, 'Expr', true, parentTokenInfo);
+      const evaluated = await Eval.do(signalArgs, environment, 'Expr', true, parentTokenInfo);
       for (const tok of evaluated) {
         runtimeArgs.push(toPlain(tok));
       }
 
-      // Auto-name from assignment variable: `count = @signal 0` → name "count"
-      // _assignName is set at definition time in evalBlocks when name && body.
-      // The explicit 2nd arg `@signal 0, "name"` takes priority (runtimeArgs.length === 2).
       const signalName = token._assignName
         || (token && typeof token.getName === 'function' ? token.getName() : null);
       if (signalName && runtimeArgs.length < 2) {
         runtimeArgs.push(signalName);
       }
 
-      const _signalToken = Expr.value(signal(...runtimeArgs), parentTokenInfo);
+      const _signalToken = Expr.value(signalFn(...runtimeArgs), parentTokenInfo);
       _ownerEnv.__signalCache.set(token, _signalToken);
+      
+      // Walk up the env chain to find where the signal is actually defined
+      const _sigName = token._assignName;
+      let _defEnv = environment;
+      while (_defEnv) {
+        if (_defEnv.locals && _defEnv.locals[_sigName]) {
+          const entry = _defEnv.locals[_sigName];
+          if (entry && entry.body && entry.body[0] === token) {
+            entry.body = [_signalToken];
+            break;
+          }
+        }
+        _defEnv = _defEnv.parent;
+      }
+      
       subTree.push(_signalToken);
       isDone = true;
       }
@@ -1974,28 +1986,26 @@ export default class Eval {
         scope.__viewCache = viewCache;
         scope.__viewCacheIndex = _viewIndex;
         scope.__domRender = domRender;
+        // OLD BEHAVIOR: Skip signal subscription loop entirely.
+        // This allows somedom to subscribe directly to signal objects via Path1.
+        // The loop below is disabled because signals aren't created yet when this runs.
         const localNames = Object.keys(environment.locals || {});
         for (let i = 0; i < localNames.length; i++) {
           const name = localNames[i];
           const local = environment.locals[name];
           const [head] = (local && local.body) || [];
+          // OLD CHECK: head.isObject is always false for LITERAL-wrapped signals
+          // So this loop is effectively skipped, allowing somedom's direct subscription
           if (!(head && head.isObject && head.value && head.value.signal)) continue;
-          const signalEntry = environment.get(name);
-          const resolvedBody = signalEntry && signalEntry.body ? signalEntry.body : [];
-          if (!resolvedBody.length) continue;
-          const resolved = await Eval.do(resolvedBody, environment, 'Lit', false, parentTokenInfo);
-          if (!resolved || !resolved.length) continue;
-          const plain = toPlain(resolved.length === 1 ? resolved[0] : resolved);
+          // This path is never reached for LITERAL-wrapped signals
+          const plain = head.value;
           if (!isSignalValue(plain)) continue;
           signalMap.set(name, plain);
-          scope.def(name, Expr.value(plain.peek(), parentTokenInfo));
+          scope.def(name, Expr.value(plain.get(), parentTokenInfo));
         }
         const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
         if (!rendered.length) return '';
         const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
-        if (typeof result === 'string' && signalMap.size > 0) {
-          signalMap.forEach(sig => sig.get());
-        }
         for (const [idx, entry] of viewCache) {
           if (idx >= _viewIndex.value) {
             if (typeof entry.dispose === 'function') entry.dispose();
@@ -2054,32 +2064,24 @@ export default class Eval {
           scope.__domRender = domRender;
           signalMap = new Map();
 
+          // OLD BEHAVIOR: Skip signal subscription loop entirely.
+          // This allows somedom to subscribe directly to signal objects via Path1.
           const localNames = Object.keys(environment.locals || {});
           for (let i = 0; i < localNames.length; i++) {
             const name = localNames[i];
             const local = environment.locals[name];
             const [head] = (local && local.body) || [];
+            // OLD CHECK: head.isObject is always false for LITERAL-wrapped signals
             if (!(head && head.isObject && head.value && head.value.signal)) continue;
-            const signalEntry = environment.get(name);
-            const resolvedBody = signalEntry && signalEntry.body ? signalEntry.body : [];
-            if (!resolvedBody.length) continue;
-            const resolved = await Eval.do(resolvedBody, environment, 'Lit', false, parentTokenInfo);
-            if (!resolved || !resolved.length) continue;
-            const plain = toPlain(resolved.length === 1 ? resolved[0] : resolved);
+            const plain = head.value;
             if (!isSignalValue(plain)) continue;
-            signalMap.set(name, plain); // live signal for vdom injection
-            scope.def(name, Expr.value(plain.peek(), parentTokenInfo)); // primitive for arithmetic, peek() avoids effect subscription
+            signalMap.set(name, plain);
+            scope.def(name, Expr.value(plain.get(), parentTokenInfo));
           }
 
           const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
           if (!rendered.length) return '';
           const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
-          // Subscribe the render effect to all signals so any signal change re-runs the render.
-          // This covers both string output and vdom output (where #{expr} children may embed
-          // complex expressions that can't subscribe surgically through somedom alone).
-          if (signalMap.size > 0) {
-            signalMap.forEach(sig => sig.get());
-          }
           for (const [idx, entry] of viewCache) {
             if (idx >= _viewIndex.value) {
               if (typeof entry.dispose === 'function') entry.dispose();
@@ -2132,44 +2134,36 @@ export default class Eval {
       }
 
       if (_signalName && _bodyTokens) {
-        // Walk up the env chain to find the actual signal object token, bypassing
-        // primitive overrides (e.g. the render scope sets count = peek() for arithmetic).
-        const findSignalEntry = (name, env) => {
-          let e = env;
-          while (e) {
-            const entry = e.locals && e.locals[name];
-            if (entry) {
-              const [head] = entry.body || [];
-              if (head && head.isObject && head.value && head.value.signal) return entry;
+        const signalName = _signalName;
+        const bodyTokens = _bodyTokens;
+        const handlerFn = async () => {
+          const findSignalEntry = async (name, env) => {
+            let e = env;
+            while (e) {
+              const entry = e.locals && e.locals[name];
+              if (entry) {
+                const [head] = entry.body || [];
+                const v = head && typeof head.valueOf === 'function' ? head.valueOf() : null;
+                if (v && typeof v.set === 'function' && typeof v.peek === 'function') {
+                  return v;
+                }
+              }
+              e = e.parent;
             }
-            e = e.parent;
-          }
-          return null;
-        };
-        const signalEntry = findSignalEntry(_signalName, environment);
-        let signalResolved = [];
-        try {
-          signalResolved = signalEntry && signalEntry.body
-            ? await Eval.do(signalEntry.body, environment, 'Lit', false, parentTokenInfo)
-            : [];
-        } catch (_err) {
-          // signal not yet resolvable (e.g. Runtime not loaded in test env) — skip updater path
-        }
-        const _r0 = signalResolved.length ? signalResolved[0] : null;
-        const signalObj = _r0 ? toPlain(_r0) : null;
-        if (signalObj && typeof signalObj.set === 'function' && typeof signalObj.peek === 'function') {
-          const signalName = _signalName;
-          const bodyTokens = _bodyTokens;
-          const handlerFn = async () => {
+            return null;
+          };
+          const signalObj = await findSignalEntry(signalName, environment);
+          if (signalObj && typeof signalObj.set === 'function' && typeof signalObj.peek === 'function') {
             const current = signalObj.peek();
             const innerEnv = new Env(environment);
             innerEnv.def(signalName, Expr.value(current, parentTokenInfo));
             const [result] = await Eval.do(bodyTokens, innerEnv, 'OnBody', true, parentTokenInfo);
-            signalObj.set(result ? toPlain(result) : current);
-          };
-          subTree.push(Expr.value(handlerFn, parentTokenInfo));
-          isDone = true;
-        }
+            const next = result ? toPlain(result) : current;
+            signalObj.set(next);
+          }
+        };
+        subTree.push(Expr.value(handlerFn, parentTokenInfo));
+        isDone = true;
       }
 
       if (isDone) {

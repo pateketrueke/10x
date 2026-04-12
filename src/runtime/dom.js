@@ -144,25 +144,35 @@ export function render(selectorOrElement, view) {
   };
 
   return effect(async () => {
-    const next = await view.render();
-    if (typeof next === 'string') {
-      target.innerHTML = next;
-      prev = null;
-      root = null;
-    } else if (!prev) {
-      untracked(() => mount(target, next, false, cb));
-      root = rootFor(next);
-      prev = next;
-    } else if (root) {
-      try {
-        const node = await Promise.resolve().then(() => untracked(() => patch(root, prev, next, false, cb)));
-        root = node || root;
+    let next;
+    try {
+      next = await view.render();
+    } catch (err) {
+      console.error('[10x:dom] view.render() threw:', err);
+      return;
+    }
+    try {
+      if (typeof next === 'string') {
+        target.innerHTML = next;
+        prev = null;
+        root = null;
+      } else if (!prev) {
+        untracked(() => mount(target, next, false, cb));
+        root = rootFor(next);
         prev = next;
-      } catch (_) {
+      } else if (root) {
+        try {
+          const node = await Promise.resolve().then(() => untracked(() => patch(root, prev, next, false, cb)));
+          root = node || root;
+          prev = next;
+        } catch (_) {
+          remount(next);
+        }
+      } else {
         remount(next);
       }
-    } else {
-      remount(next);
+    } catch (err) {
+      console.error('[10x:dom] mount/patch threw:', err);
     }
   });
 }

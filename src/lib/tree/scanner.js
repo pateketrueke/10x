@@ -923,6 +923,8 @@ export default class Scanner {
         }
       }
 
+      if (old === '>' && tag === this.getCurrent(tag)) close.pop();
+
       if (offset && cur === '<' && isAlphaNumeric(next)) {
         let nextTag = '';
         let char;
@@ -937,8 +939,6 @@ export default class Scanner {
         this.col -= 2;
         close.push(nextTag);
       }
-
-      if (old === '>' && tag === this.getCurrent(tag)) close.pop();
       if (!close.length) break;
       this.nextToken();
       offset++;

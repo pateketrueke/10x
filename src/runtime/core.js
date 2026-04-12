@@ -22,6 +22,8 @@ export class SignalProxy {
 let currentEffect = null;
 let devtoolsActive = false;
 
+export function getCurrentEffect() { return currentEffect; }
+
 export function setDevtoolsActive(active) {
   devtoolsActive = active;
 }
@@ -64,6 +66,7 @@ export function signal(initialValue, name) {
       if (currentEffect) {
         this.subs.add(currentEffect);
         if (currentEffect._deps) currentEffect._deps.add(this);
+      } else {
       }
       return this._value;
     },
@@ -105,7 +108,7 @@ export function signal(initialValue, name) {
     },
     subscribe(cb) {
       this.subs.add(cb);
-      return () => this.subs.delete(cb);
+      return () => { this.subs.delete(cb); };
     },
   };
 
