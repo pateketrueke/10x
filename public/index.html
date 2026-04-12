@@ -495,15 +495,6 @@
       overflow: hidden;
       box-shadow: 0 20px 60px rgba(0,0,0,.4), 0 0 0 1px rgba(45,212,191,.06);
     }
-    .demo-editor-bar {
-      display: flex; align-items: center; gap: .5rem;
-      padding: .6rem .9rem;
-      background: rgba(255,255,255,.025);
-      border-bottom: 1px solid rgba(255,255,255,.06);
-    }
-    .demo-editor-bar .tbar-dot { width: 9px; height: 9px; }
-    .demo-file { font: .74rem var(--mono); color: var(--muted); margin-left: .4rem; flex: 1; }
-    #ed-demo { display: block; height: 360px; }
 
     /* ── quick start ────────────────────────────────────────────── */
     .quickstart { padding: 5rem 0; border-top: 1px solid rgba(255,255,255,.05); }
@@ -791,9 +782,18 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
             <div class="live-bar">
               <span class="live-name">signals.md</span>
               <span class="badge-shadow">@shadow</span>
-              <span class="badge-live">LIVE</span>
             </div>
-            <x-editor id="ed-sig" style="display:block;min-height:240px;"></x-editor>
+<pre>count = @signal 0.
+
+@render "#app" @shadow @html
+  &lt;div class="sig-root"&gt;
+    &lt;div class="sig-value"&gt;#{count}&lt;/div&gt;
+    &lt;button id="inc"&gt;increment&lt;/button&gt;
+    &lt;button id="reset"&gt;reset&lt;/button&gt;
+  &lt;/div&gt;.
+
+@on :click "#inc" @shadow count = count + 1.
+@on :click "#reset" @shadow count = 0.</pre>
           </div>
         </div>
       </div>
@@ -823,9 +823,20 @@ add(<span class="xt-number">3</span>, <span class="xt-number">4</span>).
             <div class="live-bar">
               <span class="live-name">x-counter.md</span>
               <span class="badge-shadow">@shadow</span>
-              <span class="badge-live">LIVE</span>
             </div>
-            <x-editor id="ed-xctr" style="display:block;min-height:260px;"></x-editor>
+<pre>count = @signal @prop "start" 0.
+
+@render @shadow @html
+  &lt;div class="ctr-root"&gt;
+    &lt;div class="ctr-value"&gt;#{count}&lt;/div&gt;
+    &lt;button id="dec"&gt;−&lt;/button&gt;
+    &lt;button id="inc"&gt;+&lt;/button&gt;
+    &lt;button id="reset"&gt;reset&lt;/button&gt;
+  &lt;/div&gt;.
+
+@on :click "#inc" @shadow count = count + 1.
+@on :click "#dec" @shadow count = count - 1.
+@on :click "#reset" @shadow count = @prop "start" 0.</pre>
           </div>
         </div>
       </div>
@@ -995,32 +1006,18 @@ Runtime.on(<span class="xt-string">"click"</span>, <span class="xt-string">"#inc
       </div>
     </section>
 
-    <!-- ── tabbed live demo ──────────────────────────────────────── -->
+    <!-- ── live playground ──────────────────────────────────────── -->
     <section class="demo-section reveal" id="demo">
       <div class="shell">
         <div class="demo-header">
-          <div class="sect-label" style="text-align:center;margin-bottom:.55rem">Live Demo</div>
+          <div class="sect-label" style="text-align:center;margin-bottom:.55rem">Playground</div>
           <h2 class="sect-h2" style="text-align:center;margin:0 0 .5rem">See it run.</h2>
           <p style="text-align:center;color:var(--muted);font-size:.95rem;margin:0">
-            Edit any snippet — results appear instantly.
+            Edit any snippet — results and signals update instantly.
           </p>
         </div>
-        <div class="demo-tabs" id="demo-tabs">
-          <button class="demo-tab active" data-tab="lang">Language</button>
-          <button class="demo-tab" data-tab="fns">Functions</button>
-          <button class="demo-tab" data-tab="sig">Signals</button>
-          <button class="demo-tab" data-tab="xctr">x-counter</button>
-          <button class="demo-tab" data-tab="todo">TodoList</button>
-        </div>
         <div class="demo-editor-wrap">
-          <div class="demo-editor-bar">
-            <span class="tbar-dot r"></span>
-            <span class="tbar-dot y"></span>
-            <span class="tbar-dot g"></span>
-            <span class="demo-file" id="demo-filename">primitives.md</span>
-            <span class="tbar-live">LIVE</span>
-          </div>
-          <x-editor id="ed-demo"></x-editor>
+          <iframe src="./devtools.html" style="width:100%;height:560px;border:0;display:block;" loading="lazy" title="10x Playground"></iframe>
         </div>
       </div>
     </section>
@@ -1096,66 +1093,6 @@ fib!(10).
 "hello " + "world".
 :ok.`,
 
-      sig: `count = @signal 0.
-@style "
-  .sig-root { padding: 1.5rem; font-family: system-ui, sans-serif; }
-  .sig-value { font-size: 3rem; font-weight: 700; color: #2dd4bf; line-height: 1; margin-bottom: .6rem; }
-  .sig-actions { display: flex; gap: .5rem; }
-  .sig-inc { padding: .5rem 1.1rem; background: #2dd4bf; border: 0; border-radius: 8px; cursor: pointer; font-size: .9rem; color: #090c12; font-weight: 600; }
-  .sig-reset { padding: .5rem 1rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; cursor: pointer; font-size: .9rem; color: #94a3b8; }
-".
-@render @shadow @html
-  <div class="sig-root">
-    <div class="sig-value">{count}</div>
-    <div class="sig-actions">
-      <button id="inc" class="sig-inc">increment</button>
-      <button id="reset" class="sig-reset">reset</button>
-    </div>
-  </div>.
-@on :click "#inc" count = count + 1.
-@on :click "#reset" count = 0.`,
-
-      xctr: `count = @signal @prop "start" 0.
-@style "
-  .ctr-root { padding: 1.5rem; font-family: system-ui, sans-serif; }
-  .ctr-value { font-size: 3.5rem; font-weight: 700; color: #818cf8; line-height: 1; margin-bottom: .75rem; }
-  .ctr-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
-  .ctr-dec { padding: .5rem 1rem; background: rgba(129,140,248,.12); border: 1px solid rgba(129,140,248,.3); border-radius: 8px; cursor: pointer; color: #818cf8; font-size: 1.1rem; font-weight: 700; }
-  .ctr-inc { padding: .5rem 1rem; background: #818cf8; border: 0; border-radius: 8px; cursor: pointer; color: #090c12; font-size: 1.1rem; font-weight: 700; }
-  .ctr-reset { padding: .5rem 1rem; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; cursor: pointer; color: #475569; font-size: .85rem; }
-".
-@render @shadow @html
-  <div class="ctr-root">
-    <div class="ctr-value">{count}</div>
-    <div class="ctr-actions">
-      <button id="dec" class="ctr-dec">−</button>
-      <button id="inc" class="ctr-inc">+</button>
-      <button id="reset" class="ctr-reset">reset</button>
-    </div>
-  </div>.
-@on :click "#inc" count = count + 1.
-@on :click "#dec" count = count - 1.
-@on :click "#reset" count = @prop "start" 0.`,
-
-      todo: `todos = @signal "Write parser regression tests".
-count = @signal 1.
-@style "
-  .todo-wrap { padding: 1.5rem; font-family: system-ui, sans-serif; }
-  .todo-title { margin: 0 0 .25rem; color: #e2e8f0; font-size: 1.05rem; font-weight: 700; }
-  .todo-meta { opacity: .45; font-size: .8rem; margin-bottom: .5rem; font-family: monospace; }
-  .todo-items { color: #94a3b8; font-size: .9rem; line-height: 1.6; margin-bottom: .75rem; }
-  .todo-add { padding: .4rem .85rem; background: #2dd4bf; border: 0; border-radius: 6px; cursor: pointer; font-size: .85rem; color: #090c12; font-weight: 600; }
-".
-@render @shadow @html
-  <section class="todo-wrap">
-    <h2 class="todo-title">TodoList</h2>
-    <div class="todo-meta">{count} items</div>
-    <div class="todo-items">{todos}</div>
-    <button id="add" class="todo-add">+ add item</button>
-  </section>.
-@on :click "#add" todos = todos + ", task " + count.
-@on :click "#add" count = count + 1.`,
-
       fns: `add    = (a b) -> a + b.
 double = n -> n * 2.
 square = n -> n * n.
@@ -1168,14 +1105,6 @@ fib = n ->
   @if (< n 2) 1, (< n 1) 0
   @else fib(n - 1) + fib(n - 2).
 fib!(12).`,
-    };
-
-    const TAB_FILES = {
-      lang: 'primitives.md',
-      fns:  'functions.md',
-      sig:  'signals.md',
-      xctr: 'x-counter.md',
-      todo: 'todolist.md',
     };
 
     /* ── editor init ─────────────────────────────────────────────── */
@@ -1197,31 +1126,6 @@ fib!(12).`,
       };
       set('ed-hero', 'hero');
       set('ed-lang', 'lang');
-      set('ed-sig',  'sig');
-      set('ed-xctr', 'xctr');
-      set('ed-demo', 'lang');
-    });
-
-    /* ── demo tabs ────────────────────────────────────────────────── */
-    let currentTab = 'lang';
-    const filenameEl = document.getElementById('demo-filename');
-
-    document.getElementById('demo-tabs').addEventListener('click', e => {
-      const btn = e.target.closest('[data-tab]');
-      if (!btn) return;
-      const tab = btn.dataset.tab;
-      if (tab === currentTab) return;
-      currentTab = tab;
-
-      document.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-      if (filenameEl) filenameEl.textContent = TAB_FILES[tab] || tab + '.md';
-
-      ensureEditorReady().then(ready => {
-        if (!ready) return;
-        const ed = document.getElementById('ed-demo');
-        if (ed && SNIPPETS[tab]) ed.value = SNIPPETS[tab];
-      });
     });
 
     /* ── nav scroll effect ────────────────────────────────────────── */
