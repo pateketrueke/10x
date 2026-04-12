@@ -77,6 +77,10 @@ export function lintCode(source, ast) {
   const statements = splitStatements(tokens);
   const signalVars = collectSignalBindings(statements);
 
+  // Track all signal definitions and their usage
+  const signalDefinitions = new Map(); // name -> token
+  const signalUsages = new Set();
+
   // Track which statement-level tokens are callable (have names) to detect bare directives
   const namedCallableHeads = new Set();
   for (const stmt of statements) {
@@ -85,6 +89,38 @@ export function lintCode(source, ast) {
       if (head) namedCallableHeads.add(head);
     }
   }
+
+  // First pass: collect signal definitions
+  walk(tokens, token => {
+    if (token.isObject && token.value && token.value.signal && namedCallableHeads.has(token)) {
+      const name = token._assignName;
+      if (name) {
+        signalDefinitions.set(name, token);
+      }
+    }
+  });
+
+  // Second pass: collect signal usages (excluding definitions)
+  walk(tokens, token => {
+    if (token.isSymbol && typeof token.value === 'string' && signalVars.has(token.value)) {
+      // Check if this is the definition site
+      const isDefinition = signalDefinitions.has(token.value) && signalDefinitions.get(token.value) === token;
+      if (!isDefinition) {
+        signalUsages.add(token.value);
+      }
+    }
+    // Also check @html, @on, @computed bodies
+    if (token.isObject && token.value) {
+      for (const [key, val] of Object.entries(token.value)) {
+        if (['html', 'on', 'computed'].includes(key) && val && typeof val.getBody === 'function') {
+          const ids = collectIdentifiers(val);
+          ids.forEach(id => {
+            if (signalVars.has(id)) signalUsages.add(id);
+          });
+        }
+      }
+    }
+  });
 
   walk(tokens, token => {
     // on-arrow-updater: @on signal -> expr (deprecated, use @on signal = expr)
@@ -181,6 +217,19 @@ export function lintCode(source, ast) {
       }
     }
   });
+
+  // unreferenced-signal: signal defined but never used
+  for (const [name, token] of signalDefinitions) {
+    if (!signalUsages.has(name)) {
+      warnings.push({
+        line: tokenLine(token),
+        col: tokenCol(token),
+        code: 'unreferenced-signal',
+        severity: 'warning',
+        message: `Signal "${name}" is defined but never referenced`,
+      });
+    }
+  }
 
   return warnings;
 }
