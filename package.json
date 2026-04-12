@@ -64,7 +64,7 @@
     "build:runtime:io": "bun build src/runtime/io.js --outfile=dist/io.js --format=esm --external=fs --banner 'var global=globalThis;'",
     "build:runtime:proc": "bun build src/runtime/proc.js --outfile=dist/proc.js --format=esm --banner 'var global=globalThis;'",
     "build:editor": "npm run build:editor:main && npm run build:editor:worker",
-    "build:editor:main": "bun build src/editor.js --outfile=dist/editor.js --format=esm --banner 'var global=globalThis;'",
+    "build:editor:main": "BUILD_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ) && bun build src/editor.js --outfile=dist/editor.js --format=esm --banner \"var global=globalThis;window.__10x_BUILD_TS='$BUILD_TS';\"",
     "build:editor:worker": "bun build src/editor/editor-eval-worker.js --outfile=dist/editor-eval-worker.js --format=esm --banner 'var global=globalThis;'",
     "build:cli": "bun build src/cli.js --outfile=dist/cli.js --format=esm --target=node --external=fs --external=os --external=tty --external=path --banner 'var global=globalThis;'",
     "build:bin": "bun build --compile --target=bun-darwin-arm64 src/cli.js --outfile=dist/bin/10x",

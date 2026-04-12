@@ -12,9 +12,9 @@
   <script type="module">
     import './dist/editor.js';
     const buildTime = document.getElementById('build-time');
-    if (buildTime) {
-      const now = new Date();
-      buildTime.textContent = `build: ${now.toLocaleTimeString()}`;
+    if (buildTime && window.__10x_BUILD_TS) {
+      const ts = new Date(window.__10x_BUILD_TS);
+      buildTime.textContent = `build: ${ts.toLocaleTimeString()}`;
     }
   </script>
   <style>
