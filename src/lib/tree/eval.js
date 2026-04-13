@@ -740,7 +740,13 @@ export default class Eval {
             if (fixed !== null && typeof fixed !== 'undefined') {
               // Preserve expr key so tagToVdom can inject live signals from signalMap
               const isTagNode = fixed && typeof fixed === 'object' && typeof fixed.name === 'string';
-              children.push(isTagNode ? fixed : { expr: child.expr, _resolved: fixed });
+              if (Array.isArray(fixed)) {
+                fixed.forEach(item => {
+                  if (item !== null && typeof item !== 'undefined') children.push(item);
+                });
+              } else {
+                children.push(isTagNode ? fixed : { expr: child.expr, _resolved: fixed });
+              }
             }
           } else {
             parts.forEach(part => {

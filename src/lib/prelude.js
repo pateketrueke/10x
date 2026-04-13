@@ -13,7 +13,7 @@ import Range from './range';
 
 const RE_PLACEHOLDER = /(?<!\{)\{([^{}]*)\}/g;
 const RE_FORMATTING = /^([^:]*?)(?::(.*?[<^>](?=\d)|)(\d+|)([?bxo]|)(\.\d+|)([$^]|))?$/;
-const RE_LAZY = Symbol('LAZY_SEQ');
+export const RE_LAZY = Symbol('LAZY_SEQ');
 
 function isRangeLike(input) {
   return input instanceof Range || (input && typeof input.getIterator === 'function' && typeof input.run === 'function');
@@ -77,7 +77,7 @@ function toLazy(input) {
   if (input && input.value) return toLazy(input.value);
 
   const range = asRange(input);
-
+  
   if (range) {
     return {
       [RE_LAZY]: true,
@@ -103,7 +103,7 @@ function appendLazy(input, op) {
   };
 }
 
-async function collectLazy(input, limit = Infinity, offset = 0) {
+export async function collectLazy(input, limit = Infinity, offset = 0) {
   const lazy = toLazy(input);
 
   if (!lazy) return null;
@@ -377,6 +377,23 @@ export async function drop(input, length, offset) {
 
 export async function map(input, callback) {
   if (typeof callback !== 'function') raise('Missing map callback');
+
+  const isSignal = v => v && typeof v === 'object' && typeof v.peek === 'function';
+  const isLiteralWithSignal = v => v && typeof v === 'object' && v.type && v.type.toString() === 'Symbol(LITERAL)' && isSignal(v.value);
+  const readSignal = v => {
+    if (isLiteralWithSignal(v)) return v.value.peek();
+    if (isSignal(v)) return v.peek();
+    return v;
+  };
+  
+  const unwrapped = readSignal(input);
+  if (Array.isArray(unwrapped)) {
+    const out = [];
+    for (let i = 0, c = unwrapped.length; i < c; i++) {
+      out.push(fromToken(await callback(toToken(unwrapped[i]))));
+    }
+    return out;
+  }
 
   const lazy = appendLazy(input, { type: 'map', callback });
 
