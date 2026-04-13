@@ -390,7 +390,14 @@ export async function map(input, callback) {
   if (Array.isArray(unwrapped)) {
     const out = [];
     for (let i = 0, c = unwrapped.length; i < c; i++) {
-      out.push(fromToken(await callback(toToken(unwrapped[i]))));
+      try {
+        out.push(fromToken(await callback(toToken(unwrapped[i]))));
+      } catch (err) {
+        const msg = err.message || String(err);
+        const newErr = new Error(`[map] ${msg}\n  Index: ${i}\n  Value: ${serialize(unwrapped[i])}`);
+        newErr.cause = err;
+        throw newErr;
+      }
     }
     return out;
   }
@@ -405,7 +412,14 @@ export async function map(input, callback) {
   const out = [];
 
   for (let i = 0, c = arr.length; i < c; i++) {
-    out.push(fromToken(await callback(toToken(arr[i]))));
+    try {
+      out.push(fromToken(await callback(toToken(arr[i]))));
+    } catch (err) {
+      const msg = err.message || String(err);
+      const newErr = new Error(`[map] ${msg}\n  Index: ${i}\n  Value: ${serialize(arr[i])}`);
+      newErr.cause = err;
+      throw newErr;
+    }
   }
 
   return out;
@@ -426,8 +440,15 @@ export async function filter(input, callback) {
   const out = [];
 
   for (let i = 0, c = arr.length; i < c; i++) {
-    if (await callback(toToken(arr[i]))) {
-      out.push(arr[i]);
+    try {
+      if (await callback(toToken(arr[i]))) {
+        out.push(arr[i]);
+      }
+    } catch (err) {
+      const msg = err.message || String(err);
+      const newErr = new Error(`[filter] ${msg}\n  Index: ${i}\n  Value: ${serialize(arr[i])}`);
+      newErr.cause = err;
+      throw newErr;
     }
   }
 

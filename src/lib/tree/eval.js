@@ -669,8 +669,15 @@ export default class Eval {
 
   async evalTagExpr(source) {
     if (!source) return [];
-    const body = Parser.sub(source, this.env);
-    return Eval.do(body, this.env, 'TagExpr', false, this.ctx.tokenInfo);
+    try {
+      const body = Parser.sub(source, this.env);
+      return Eval.do(body, this.env, 'TagExpr', false, this.ctx.tokenInfo);
+    } catch (err) {
+      const msg = err.message || String(err);
+      const newErr = new Error(`[template] ${msg}\n  Expression: {${source}}`);
+      newErr.cause = err;
+      throw newErr;
+    }
   }
 
   async evalTags() {
@@ -1109,7 +1116,21 @@ export default class Eval {
           }
         }
 
-        const result = await Eval.do(target.body, ctx, `:${fnName || ''}`, true, this.ctx.tokenInfo);
+        let result;
+        try {
+          result = await Eval.do(target.body, ctx, `:${fnName || ''}`, true, this.ctx.tokenInfo);
+        } catch (err) {
+          const msg = err.message || String(err);
+          const argsStr = fixedArgs.map(a => {
+            if (a?.isSymbol) return a.value;
+            if (a?.isString) return `"${a.value}"`;
+            if (a?.isNumber) return a.value;
+            return typeof a?.valueOf === 'function' ? String(a.valueOf()) : '?';
+          }).join(', ');
+          const newErr = new Error(`[${fnName || 'lambda'}] ${msg}\n  Arguments: (${argsStr})`);
+          newErr.cause = err;
+          throw newErr;
+        }
 
         if (key) {
           if (this.descriptor !== 'Eval') {
@@ -2311,12 +2332,13 @@ export default class Eval {
               signalObj.set(next);
             }
           } catch (err) {
-            console.error(`[@on ${signalName}] Error in handler:`, err.message);
-            console.error('  isLambda:', isLambda);
-            console.error('  lambdaArgs:', lambdaArgs?.map(a => a?.value));
-            console.error('  bodyTokens:', bodyTokens?.length);
-            console.error('  event:', event);
-            throw err;
+            const src = isLambda 
+              ? `(${lambdaArgs.map(a => a?.value).join(', ')}) -> ...`
+              : bodyTokens?.map(t => t?.value || t?.type).join(' ');
+            const msg = err.message || String(err);
+            const newErr = new Error(`[@on ${signalName}] ${msg}\n  Handler: ${src}\n  Event: ${event?.type || 'unknown'}`);
+            newErr.cause = err;
+            throw newErr;
           }
         };
         subTree.push(Expr.value(handlerFn, parentTokenInfo));
