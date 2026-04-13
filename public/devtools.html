@@ -313,22 +313,9 @@
     const STORAGE_KEY = '10x:playground:files';
     const DEFAULT_FILES = [
       {
-        id: 'file-button',
-        name: 'button.md',
-        value: `# Button Component
-
-Btn = props =>
-  @html
-    <button id={props.id} class={props.class} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer;border-radius:4px;border:1px solid #444;background:#1a1a2e;color:#e2e8f0">
-      #{props.label}
-    </button>.`
-      },
-      {
         id: 'file-counter',
         name: 'counter.md',
         value: `# Counter
-
-@import Btn @from "./button.md".
 
 count = @signal 0.
 
@@ -336,8 +323,8 @@ count = @signal 0.
   <div style="text-align:center;padding:2rem;font-family:system-ui">
     <h1 style="font-size:3rem;margin:0.5rem 0">Count: #{count}</h1>
     <div style="display:flex;gap:0.5rem;justify-content:center">
-      <Btn id="dec" label="-" class="btn" />
-      <Btn id="inc" label="+" class="btn" />
+      <button id="dec" style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">-</button>
+      <button id="inc" style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">+</button>
     </div>
   </div>.
 
