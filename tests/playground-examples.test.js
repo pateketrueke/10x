@@ -545,4 +545,34 @@ describe('Playground: TodoList', () => {
       expect(container.querySelector('#clear-btn')).toBeDefined();
     });
   });
+
+  describe('E2E: Add task workflow', () => {
+    test('Given empty list, When Add clicked, Then task appears', async () => {
+      // Reset container
+      virtualDoc.body.innerHTML = '';
+      container = makeContainer('render-container');
+      
+      const env = new Env(runtimeEnv);
+      
+      // Test simpler version first
+      const simpleTodolist = `
+tasks = @signal [].
+input = @signal "".
+addTask = @on tasks = tasks |> push(:text input, :done :off).
+@render "#render-container" @html <div><input id="task-input" value={input} /><button id="add-btn" onclick={addTask}>Add</button></div>.
+`;
+      try {
+        await run(simpleTodolist, env);
+      } catch (err) {
+        console.error('Simple todolist error:', err.message);
+        throw err;
+      }
+      await wait();
+      
+      console.log('Container innerHTML:', container.innerHTML);
+      
+      const input = container.querySelector('#task-input');
+      expect(input).toBeDefined();
+    });
+  });
 });

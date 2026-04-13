@@ -129,7 +129,10 @@ export default class Parser {
     let stack = [[]];
     let key = token.value;
 
-    while (!this.isDone() && !this.isEnd([OR, PIPE])) {
+    // For @on, don't stop at PIPE (e.g., tasks = tasks |> push(...))
+    const endTokens = key === '@on' ? [OR] : [OR, PIPE];
+
+    while (!this.isDone() && !this.isEnd(endTokens)) {
       const body = stack[stack.length - 1];
       const cur = this.next();
 

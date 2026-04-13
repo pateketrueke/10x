@@ -253,17 +253,22 @@ export function push(target, ...sources) {
 
   const isSignal = v => v && typeof v === 'object' && typeof v.peek === 'function';
   const isLiteralWithSignal = v => v && typeof v === 'object' && v.type && v.type.toString() === 'Symbol(LITERAL)' && isSignal(v.value);
+  const isExpr = v => v && typeof v === 'object' && v.type && typeof v.type === 'symbol';
   const readSignal = v => {
     if (isLiteralWithSignal(v)) return v.value.peek();
     if (isSignal(v)) return v.peek();
     return v;
   };
+  const unwrapValue = v => {
+    if (isExpr(v)) return v.valueOf();
+    return readSignal(v);
+  };
 
-  const unwrapped = readSignal(target);
+  const unwrapped = unwrapValue(target);
   if (Array.isArray(unwrapped)) {
     const result = [...unwrapped];
     sources.forEach(sub => {
-      const val = readSignal(sub);
+      const val = unwrapValue(sub);
       if (sub && sub.isObject) {
         result.push(sub.valueOf());
       } else if (Array.isArray(val)) {
