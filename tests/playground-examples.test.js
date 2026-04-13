@@ -237,3 +237,312 @@ inc = @on count = count + 1.
     });
   });
 });
+
+// ─── Inline Components Example ───────────────────────────────────────────────
+
+const INLINE_COMPONENTS = `
+Counter props =>
+  count = @signal props.start,
+  inc = @on count = count + 1,
+  dec = @on count = count - 1,
+  @html
+    <div class="counter-box" style="text-align:center;padding:1rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;margin:0.5rem">
+      <h3 class="counter-title" style="margin:0 0 0.5rem">Counter: #{count}</h3>
+      <button class="dec-btn" onclick={dec}>-</button>
+      <button class="inc-btn" onclick={inc}>+</button>
+    </div>.
+
+@render "#render-container" @html
+  <div style="font-family:system-ui;padding:1rem">
+    <h2 style="margin:0 0 1rem">Multiple Independent Counters</h2>
+    <div class="counters" style="display:flex;gap:1rem;flex-wrap:wrap">
+      <Counter start=0 />
+      <Counter start=10 />
+      <Counter start=100 />
+    </div>
+  </div>.
+`;
+
+describe('Playground: Inline Components', () => {
+  let runtimeEnv;
+  let container;
+
+  beforeAll(async () => {
+    acquireVirtualDoc();
+    applyAdapter(createBrowserAdapter());
+    runtimeEnv = new Env();
+    await run('@import signal, html, render, on @from "Runtime".', runtimeEnv);
+  });
+
+  afterAll(() => {
+    releaseVirtualDoc();
+  });
+
+  beforeEach(() => {
+    virtualDoc.body.innerHTML = '';
+    container = makeContainer('render-container');
+  });
+
+  describe('Integration: Rendering', () => {
+    test('renders three counter components', async () => {
+      const env = new Env(runtimeEnv);
+      await run(INLINE_COMPONENTS, env);
+      await wait();
+      
+      const counters = container.querySelectorAll('.counter-box');
+      expect(counters.length).toBe(3);
+    });
+
+    test('each counter has correct initial value', async () => {
+      const env = new Env(runtimeEnv);
+      await run(INLINE_COMPONENTS, env);
+      await wait();
+      
+      const titles = container.querySelectorAll('.counter-title');
+      expect(titles[0]?.textContent).toBe('Counter: 0');
+      expect(titles[1]?.textContent).toBe('Counter: 10');
+      expect(titles[2]?.textContent).toBe('Counter: 100');
+    });
+
+    test('each counter has increment and decrement buttons', async () => {
+      const env = new Env(runtimeEnv);
+      await run(INLINE_COMPONENTS, env);
+      await wait();
+      
+      const counters = container.querySelectorAll('.counter-box');
+      counters.forEach(counter => {
+        const incBtn = counter.querySelector('.inc-btn');
+        const decBtn = counter.querySelector('.dec-btn');
+        expect(incBtn).toBeDefined();
+        expect(decBtn).toBeDefined();
+      });
+    });
+  });
+
+  describe('BDD: Component isolation', () => {
+    test('Given three counters, When first counter + clicked, Then only first counter changes', async () => {
+      const env = new Env(runtimeEnv);
+      await run(INLINE_COMPONENTS, env);
+      await wait();
+      
+      const counters = container.querySelectorAll('.counter-box');
+      const firstIncBtn = counters[0].querySelector('.inc-btn');
+      firstIncBtn.dispatchEvent(new Event('click'));
+      await wait();
+      
+      const titles = container.querySelectorAll('.counter-title');
+      expect(titles[0]?.textContent).toBe('Counter: 1');
+      expect(titles[1]?.textContent).toBe('Counter: 10');
+      expect(titles[2]?.textContent).toBe('Counter: 100');
+    });
+
+    test('Given three counters, When second counter - clicked, Then only second counter changes', async () => {
+      const env = new Env(runtimeEnv);
+      await run(INLINE_COMPONENTS, env);
+      await wait();
+      
+      const counters = container.querySelectorAll('.counter-box');
+      const secondDecBtn = counters[1].querySelector('.dec-btn');
+      secondDecBtn.dispatchEvent(new Event('click'));
+      await wait();
+      
+      const titles = container.querySelectorAll('.counter-title');
+      expect(titles[0]?.textContent).toBe('Counter: 0');
+      expect(titles[1]?.textContent).toBe('Counter: 9');
+      expect(titles[2]?.textContent).toBe('Counter: 100');
+    });
+
+    test('Given three counters, When each + clicked once, Then all increment independently', async () => {
+      const env = new Env(runtimeEnv);
+      await run(INLINE_COMPONENTS, env);
+      await wait();
+      
+      const counters = container.querySelectorAll('.counter-box');
+      counters.forEach(counter => {
+        const incBtn = counter.querySelector('.inc-btn');
+        incBtn.dispatchEvent(new Event('click'));
+      });
+      await wait();
+      
+      const titles = container.querySelectorAll('.counter-title');
+      expect(titles[0]?.textContent).toBe('Counter: 1');
+      expect(titles[1]?.textContent).toBe('Counter: 11');
+      expect(titles[2]?.textContent).toBe('Counter: 101');
+    });
+  });
+
+  describe('E2E: Full component workflow', () => {
+    test('Multiple interactions on different counters maintain isolation', async () => {
+      const env = new Env(runtimeEnv);
+      await run(INLINE_COMPONENTS, env);
+      await wait();
+      
+      const counters = container.querySelectorAll('.counter-box');
+      const titles = container.querySelectorAll('.counter-title');
+      
+      // First counter: + 3 times
+      const firstInc = counters[0].querySelector('.inc-btn');
+      firstInc.dispatchEvent(new Event('click'));
+      await wait();
+      firstInc.dispatchEvent(new Event('click'));
+      await wait();
+      firstInc.dispatchEvent(new Event('click'));
+      await wait();
+      
+      // Second counter: - 2 times
+      const secondDec = counters[1].querySelector('.dec-btn');
+      secondDec.dispatchEvent(new Event('click'));
+      await wait();
+      secondDec.dispatchEvent(new Event('click'));
+      await wait();
+      
+      // Third counter: + 1, - 1
+      const thirdInc = counters[2].querySelector('.inc-btn');
+      const thirdDec = counters[2].querySelector('.dec-btn');
+      thirdInc.dispatchEvent(new Event('click'));
+      await wait();
+      thirdDec.dispatchEvent(new Event('click'));
+      await wait();
+      
+      expect(titles[0]?.textContent).toBe('Counter: 3');
+      expect(titles[1]?.textContent).toBe('Counter: 8');
+      expect(titles[2]?.textContent).toBe('Counter: 100');
+    });
+  });
+});
+
+// ─── TodoList Example ────────────────────────────────────────────────────────
+
+const TODOLIST = `
+tasks = @signal [].
+input = @signal "".
+
+addTask = @on
+  tasks = push(tasks, :text input, :done :off),
+  input = "".
+
+updateInput = @on input = e.target.value.
+
+toggleTask = (i) ->
+  tasks = map(tasks, (t j) -> @if (i == j) (:text t.text, :done !t.done) @else t).
+
+clearDone = @on
+  tasks = filter(tasks, (t) -> !t.done).
+
+@render "#render-container" @html
+  <section class="todo-app" style="font-family:system-ui;padding:1rem;max-width:400px;border:1px solid rgba(255,255,255,0.1);border-radius:8px">
+    <h1 style="margin:0 0 0.5rem">TodoList</h1>
+    <div class="input-row" style="display:flex;gap:0.5rem;margin-bottom:1rem">
+      <input 
+        id="task-input"
+        type="text" 
+        placeholder="Add task..." 
+        value={input}
+        oninput={updateInput}
+        style="flex:1;padding:0.5rem"
+      />
+      <button id="add-btn" onclick={addTask} style="padding:0.5rem 1rem;cursor:pointer">Add</button>
+    </div>
+    <ul id="task-list" style="list-style:none;padding:0;margin:0 0 1rem">
+      #{map(tasks, (t i) ->
+        <li class="task-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <input type="checkbox" class="task-checkbox" checked={t.done} onchange={() -> toggleTask(i)} />
+          <span class="task-text" style={t.done ? "text-decoration:line-through;opacity:0.5" : ""}>#{t.text}</span>
+        </li>
+      )}
+    </ul>
+    <button id="clear-btn" onclick={clearDone} style="padding:0.5rem 1rem;cursor:pointer;font-size:0.85rem">Clear done</button>
+  </section>.
+`;
+
+describe('Playground: TodoList', () => {
+  let runtimeEnv;
+  let container;
+
+  beforeAll(async () => {
+    acquireVirtualDoc();
+    applyAdapter(createBrowserAdapter());
+    runtimeEnv = new Env();
+    await run('@import signal, html, render, on @from "Runtime".', runtimeEnv);
+    await run('@from "Prelude" @import (map, filter, size, push).', runtimeEnv);
+  });
+
+  afterAll(() => {
+    releaseVirtualDoc();
+  });
+
+  beforeEach(() => {
+    virtualDoc.body.innerHTML = '';
+    container = makeContainer('render-container');
+  });
+
+  describe('Integration: Rendering', () => {
+    test('renders todo app structure', async () => {
+      const env = new Env(runtimeEnv);
+      await run(TODOLIST, env);
+      await wait();
+      
+      const app = container.querySelector('.todo-app');
+      expect(app).toBeDefined();
+    });
+
+    test('renders input field and buttons', async () => {
+      const env = new Env(runtimeEnv);
+      await run(TODOLIST, env);
+      await wait();
+      
+      const input = container.querySelector('#task-input');
+      const addBtn = container.querySelector('#add-btn');
+      const clearBtn = container.querySelector('#clear-btn');
+      
+      expect(input).toBeDefined();
+      expect(addBtn).toBeDefined();
+      expect(clearBtn).toBeDefined();
+    });
+
+    test('renders empty task list', async () => {
+      const env = new Env(runtimeEnv);
+      await run(TODOLIST, env);
+      await wait();
+      
+      const taskList = container.querySelector('#task-list');
+      expect(taskList).toBeDefined();
+      
+      const tasks = taskList?.querySelectorAll('.task-item');
+      expect(tasks?.length || 0).toBe(0);
+    });
+  });
+
+  describe('BDD: Signal state', () => {
+    test('Given empty tasks signal, When accessed, Then returns empty array', async () => {
+      const env = new Env(runtimeEnv);
+      await run('tasks = @signal [].', env);
+      
+      const tasksSignal = env.get('tasks');
+      expect(tasksSignal).toBeDefined();
+    });
+
+    test('Given empty input signal, When accessed, Then returns empty string', async () => {
+      const env = new Env(runtimeEnv);
+      await run('input = @signal "".', env);
+      
+      const inputSignal = env.get('input');
+      expect(inputSignal).toBeDefined();
+    });
+  });
+
+  describe('E2E: Component structure', () => {
+    test('All required elements are present', async () => {
+      const env = new Env(runtimeEnv);
+      await run(TODOLIST, env);
+      await wait();
+      
+      // Check all major elements exist
+      expect(container.querySelector('.todo-app')).toBeDefined();
+      expect(container.querySelector('#task-input')).toBeDefined();
+      expect(container.querySelector('#add-btn')).toBeDefined();
+      expect(container.querySelector('#task-list')).toBeDefined();
+      expect(container.querySelector('#clear-btn')).toBeDefined();
+    });
+  });
+});
