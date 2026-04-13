@@ -167,6 +167,16 @@ export function items(...args) {
   return args.reduce((p, c) => p.concat(c), []);
 }
 
+export function unwrap(input) {
+  const isSignal = v => v && typeof v === 'object' && typeof v.peek === 'function';
+  const isLiteralWithSignal = v => v && typeof v === 'object' && v.type && v.type.toString() === 'Symbol(LITERAL)' && isSignal(v.value);
+  
+  if (isLiteralWithSignal(input)) return input.value.peek();
+  if (isSignal(input)) return input.peek();
+  if (input && typeof input.valueOf === 'function' && input.type) return input.valueOf();
+  return input;
+}
+
 export function show(...args) {
   return serialize(args);
 }

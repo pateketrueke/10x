@@ -418,16 +418,16 @@ tasks = @signal [].
 input = @signal "".
 
 addTask = @on
-  tasks = push(tasks, :text input, :done :off),
+  tasks = tasks |> push(:text input, :done :off),
   input = "".
 
 updateInput = @on input = e -> e.target.value.
 
 toggleTask = (i) ->
-  tasks = map(tasks, (t j) -> @if (i == j) t | (:done !t.done) @else t).
+  tasks = tasks |> map((t j) -> @if (i == j) t | (:done !t.done) @else t).
 
 clearDone = @on
-  tasks = filter(tasks, (t) -> !t.done).
+  tasks = tasks |> filter((t) -> !t.done).
 
 @render "#render-container" @html
   <section class="todo-app" style="font-family:system-ui;padding:1rem;max-width:400px;border:1px solid rgba(255,255,255,0.1);border-radius:8px">

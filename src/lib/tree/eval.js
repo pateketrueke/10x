@@ -436,6 +436,16 @@ export default class Eval {
 
       assert(next, true, LITERAL, BLOCK);
 
+      // unwrap signal values for pipe
+      const isSignal = v => v && typeof v === 'object' && typeof v.peek === 'function';
+      const isLiteralWithSignal = v => v && typeof v === 'object' && v.type && v.type.toString() === 'Symbol(LITERAL)' && isSignal(v.value);
+      const unwrapSignal = v => {
+        if (isLiteralWithSignal(v)) return Expr.value(v.value.peek(), v.tokenInfo);
+        if (isSignal(v)) return Expr.value(v.peek(), v.tokenInfo);
+        return v;
+      };
+      const pipedValue = unwrapSignal(prev);
+
       const nextToken = this.expr[this.offset + 2];
 
       let nextArgs = isBlock(nextToken) ? nextToken.getArgs() : null;
@@ -448,9 +458,9 @@ export default class Eval {
 
         cutOffset = offset;
         nextArgs = isBlock(body[body.length - 1]) ? body.pop().getArgs() : null;
-        fixedBody = body.concat(Expr.block({ args: [prev].concat(nextArgs ? Expr.from(COMMA) : [], nextArgs || []) }, next.tokenInfo));
+        fixedBody = body.concat(Expr.block({ args: [pipedValue].concat(nextArgs ? Expr.from(COMMA) : [], nextArgs || []) }, next.tokenInfo));
       } else {
-        fixedBody = [next, Expr.block({ args: [prev, Expr.from(COMMA)].concat(nextArgs || []) }, next.tokenInfo)];
+        fixedBody = [next, Expr.block({ args: [pipedValue, Expr.from(COMMA)].concat(nextArgs || []) }, next.tokenInfo)];
       }
 
       this.discard().append(...await Eval.do(fixedBody, this.env, 'Fn', false, this.ctx.tokenInfo));
