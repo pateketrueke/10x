@@ -369,6 +369,29 @@ inc = @on count = count + 1.
       <button onclick={inc} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">+</button>
     </div>
   </div>.`
+      },
+      {
+        id: 'file-todolist',
+        name: 'todolist.md',
+        value: `# TodoList
+
+todos = @signal "Write parser regression tests".
+count = @signal 1.
+
+@render "#render-container" @html
+  <section style="font-family:system-ui;padding:1rem;max-width:400px;border:1px solid rgba(255,255,255,0.1);border-radius:8px">
+    <h1 style="margin:0 0 0.5rem">TodoList</h1>
+    <p style="color:#888;font-size:0.85rem;margin:0 0 1rem">items added: #{count}</p>
+    <p style="margin:0 0 1rem">#{todos}</p>
+    <div style="display:flex;gap:0.5rem">
+      <button id="add" style="padding:0.5rem 1rem;cursor:pointer">+ add item</button>
+      <button id="clear" style="padding:0.5rem 1rem;cursor:pointer">clear</button>
+    </div>
+  </section>.
+
+@on :click "#add"   todos = todos + ", ship feature " + count.
+@on :click "#add"   count = count + 1.
+@on :click "#clear" todos = "Inbox zero".`
       }
     ];
 
