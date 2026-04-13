@@ -313,9 +313,33 @@
     const STORAGE_KEY = '10x:playground:files';
     const DEFAULT_FILES = [
       {
-        id: 'file-counter',
-        name: 'counter.md',
-        value: `# Counter
+        id: 'file-inline-components',
+        name: 'inline-components.md',
+        value: `# Inline Components
+
+Counter props =>
+  count = @signal props.start,
+  @html
+    <div style="text-align:center;padding:1rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;margin:0.5rem">
+      <h3 style="margin:0 0 0.5rem">Counter: #{count}</h3>
+      <button onclick={@on count = count + 1}>+</button>
+      <button onclick={@on count = count - 1}>-</button>
+    </div>.
+
+@render "#render-container" @html
+  <div style="font-family:system-ui;padding:1rem">
+    <h2 style="margin:0 0 1rem">Multiple Independent Counters</h2>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap">
+      <Counter start=0 />
+      <Counter start=10 />
+      <Counter start=100 />
+    </div>
+  </div>.`
+      },
+      {
+        id: 'file-simple-counter',
+        name: 'simple-counter.md',
+        value: `# Simple Counter
 
 count = @signal 0.
 
@@ -323,13 +347,46 @@ count = @signal 0.
   <div style="text-align:center;padding:2rem;font-family:system-ui">
     <h1 style="font-size:3rem;margin:0.5rem 0">Count: #{count}</h1>
     <div style="display:flex;gap:0.5rem;justify-content:center">
-      <button id="dec" style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">-</button>
-      <button id="inc" style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">+</button>
+      <button onclick={@on count = count - 1} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">-</button>
+      <button onclick={@on count = count + 1} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">+</button>
     </div>
-  </div>.
+  </div>.`
+      },
+      {
+        id: 'file-todo',
+        name: 'todo.md',
+        value: `# Todo List
 
-@on :click "#dec" count = count - 1.
-@on :click "#inc" count = count + 1.`
+todos = @signal [].
+input = @signal "".
+
+addTodo = @on
+  todos = push(todos, { text: input, done: false }),
+  input = "".
+
+@render "#render-container" @html
+  <div style="font-family:system-ui;padding:1rem;max-width:400px">
+    <h2 style="margin:0 0 1rem">Todo List</h2>
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+      <input 
+        type="text" 
+        placeholder="Add todo..." 
+        value={input}
+        oninput={@on input = e.target.value}
+        style="flex:1;padding:0.5rem"
+      />
+      <button onclick={addTodo} style="padding:0.5rem 1rem">Add</button>
+    </div>
+    <ul style="list-style:none;padding:0;margin:0">
+      #{map(todos, (t i) ->
+        <li style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">
+          <span style={t.done ? "text-decoration:line-through;opacity:0.5" : ""}>#{t.text}</span>
+          <button onclick={@on todos = map(todos, (x j) -> @if (i == j) { done: !x.done, text: x.text } @else x)} style="margin-left:auto;font-size:0.8rem">done</button>
+        </li>
+      )}
+    </ul>
+    <p style="color:#888;margin-top:1rem;font-size:0.85rem">#{size(todos)} items</p>
+  </div>.`
       }
     ];
 
@@ -491,13 +548,8 @@ count = @signal 0.
       return toInvalidate;
     };
 
-    const getMainFile = () => {
-      for (let i = files.length - 1; i >= 0; i--) {
-        if (files[i].value.includes('@render')) {
-          return files[i];
-        }
-      }
-      return files[files.length - 1];
+    const getActiveFile = () => {
+      return files.find(f => f.id === activeId) || files[files.length - 1];
     };
 
     // HMR-aware update
@@ -522,10 +574,10 @@ count = @signal 0.
           signalSnapshots.clear();
         }
         
-        // Run the main file
-        const mainFile = getMainFile();
-        if (mainFile && orchestrator) {
-          orchestrator.value = mainFile.value;
+        // Run the active file
+        const activeFile = getActiveFile();
+        if (activeFile && orchestrator) {
+          orchestrator.value = activeFile.value;
           
           // Restore signals after execution
           if (changedFileId) {
@@ -656,9 +708,9 @@ count = @signal 0.
       globalThis.__10x_devtools?.onSignals?.(detail);
     });
     
-    const mainFile = getMainFile();
-    if (mainFile) {
-      orchestrator.value = mainFile.value;
+    const activeFile = getActiveFile();
+    if (activeFile) {
+      orchestrator.value = activeFile.value;
     }
 
     const setShadowMode = (code, enabled) => {

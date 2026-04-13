@@ -34,6 +34,7 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
     container.appendChild(groupHeader);
 
     signals.forEach(({ name, value, subsCount, history, lazy, restored }) => {
+      console.log('[devtools:render] signal:', { name, displayName: name.includes('.') ? name.split('.').pop() : name });
       const isCollapsed = collapsedSignals.has(name);
 
       const displayName = name.includes('.') ? name.split('.').pop() : name;
@@ -129,15 +130,17 @@ function renderGroupedRows(container, groups, collapsedSignals, rerender) {
 
 function buildLazySnapshot(registry) {
   const entries = Array.from(registry.entries());
-  return entries.map(([key, signal]) => ({
-    id: signal._devtoolsId || null,
-    name: signal._devtoolsName || `signal_${signal._devtoolsId}`,
-    moduleUrl: signal._moduleUrl || 'global',
-    value: undefined,
-    subs: signal.subs ? signal.subs.size : 0,
-    history: [],
-    lazy: true,
-  }));
+  return entries
+    .filter(([key, signal]) => signal?._devtoolsName)
+    .map(([key, signal]) => ({
+      id: signal._devtoolsId || null,
+      name: signal._devtoolsName,
+      moduleUrl: signal._moduleUrl || 'global',
+      value: undefined,
+      subs: signal.subs ? signal.subs.size : 0,
+      history: [],
+      lazy: true,
+    }));
 }
 
 function renderRowsFromSnapshot(container, snapshot, collapsedSignals) {
@@ -431,8 +434,12 @@ export function devtools(options = {}) {
   };
 
   globalThis.__10x_devtools_signal_created = (info) => {
+    console.log('[devtools] signal created:', info);
     const existing = latestSnapshot.find(e => e && (e.id === info.id || e.name === info.name));
-    if (existing) return;
+    if (existing) {
+      console.log('[devtools] signal already exists, skipping');
+      return;
+    }
 
     const restored = remountSnapshot[info.name];
     const isRestored = restored !== undefined;

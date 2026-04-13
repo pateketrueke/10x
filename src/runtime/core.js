@@ -48,6 +48,12 @@ export function signal(initialValue, name, moduleUrl) {
   const signalId = nextSignalId();
   const key = Symbol(`signal_${signalId}`);
   const signalName = name || `signal_${signalId}`;
+  
+  // Debug logging
+  if (globalThis.__10x_debug_signal) {
+    console.log('[core:signal] creating signal:', { signalId, name, signalName, moduleUrl });
+  }
+  
   const state = {
     [SIGNAL]: true,
     _devtoolsId: signalId,
@@ -179,7 +185,7 @@ export function effect(fn) {
 }
 
 export function computed(fn) {
-  const out = signal(undefined);
+  const out = signal(undefined, 'computed');
   effect(() => out.set(fn()));
   return out;
 }

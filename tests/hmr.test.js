@@ -16,7 +16,7 @@ describe('HMR', () => {
 
     const snap = {};
     for (const [k, s] of (globalThis.__10x_signals || new Map())) {
-      if (typeof k === 'string') snap[k] = s.peek();
+      if (s && s._devtoolsName) snap[s._devtoolsName] = s.peek();
     }
 
     const after = new Map();
@@ -27,7 +27,7 @@ describe('HMR', () => {
     globalThis.__10x_signals = after;
 
     for (const [k, s] of (globalThis.__10x_signals || new Map())) {
-      if (typeof k === 'string' && snap[k] !== undefined) s.set(snap[k]);
+      if (s && s._devtoolsName && snap[s._devtoolsName] !== undefined) s.set(snap[s._devtoolsName]);
     }
 
     expect(afterCount.get()).toBe(5);

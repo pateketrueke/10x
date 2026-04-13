@@ -39,14 +39,15 @@ function toSerializable(value) {
 
 function buildSignalSnapshot() {
   const out = [];
-  for (const [name, signal] of getSignalRegistry().entries()) {
-    const history = Array.isArray(signal?._history) ? signal._history.slice(-20) : [];
+  for (const [key, signal] of getSignalRegistry().entries()) {
+    if (!signal?._devtoolsName) continue;
+    const history = Array.isArray(signal._history) ? signal._history.slice(-20) : [];
     out.push({
-      id: signal?._devtoolsId || null,
-      name: String(name),
-      moduleUrl: signal?._moduleUrl || 'global',
+      id: signal._devtoolsId || null,
+      name: signal._devtoolsName,
+      moduleUrl: signal._moduleUrl || 'global',
       value: toSerializable(read(signal)),
-      subs: signal?.subs ? signal.subs.size : 0,
+      subs: signal.subs ? signal.subs.size : 0,
       history: history.map(entry => ({
         ts: entry?.ts || Date.now(),
         value: toSerializable(entry?.value),

@@ -2003,6 +2003,8 @@ export default class Eval {
       const signalName = token._assignName
         || (token && typeof token.getName === 'function' ? token.getName() : null);
       
+      debugLog('signal', 'signalName:', signalName);
+      
       // Walk up the env chain to find component info for grouping
       let componentName = environment.__componentName;
       let componentInstanceId = environment.__componentInstanceId;
@@ -2018,6 +2020,9 @@ export default class Eval {
         ? `${componentName}$${componentInstanceId}.${signalName}`
         : signalName;
       
+      debugLog('signal', 'namespacedName:', namespacedName);
+      debugLog('signal', 'runtimeArgs before:', runtimeArgs);
+      
       // Set moduleUrl for devtools grouping
       const moduleUrl = (componentName && componentInstanceId)
         ? `${componentName}$${componentInstanceId}`
@@ -2029,6 +2034,9 @@ export default class Eval {
       if (moduleUrl && runtimeArgs.length < 3) {
         runtimeArgs.push(moduleUrl);
       }
+
+      debugLog('signal', 'runtimeArgs after:', runtimeArgs);
+      debugLog('signal', 'calling signalFn with:', ...runtimeArgs);
 
       const _signalToken = Expr.value(signalFn(...runtimeArgs), parentTokenInfo);
       _ownerEnv.__signalCache.set(token, _signalToken);

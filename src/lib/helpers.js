@@ -536,10 +536,11 @@ export function slice(s) {
 }
 
 export function isDigit(c) {
-  return c >= '0' && c <= '9';
+  return c != null && c >= '0' && c <= '9';
 }
 
 export function isReadable(c, raw) {
+  if (c == null) return false;
   return (c === '#' || c === '$')
     || (c >= '&' && c <= "'")
     || (c >= '^' && c <= 'z')
