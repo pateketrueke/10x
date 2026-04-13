@@ -1169,9 +1169,9 @@ export default class Eval {
           }
         }
 
-        // Evaluate body if it contains signal/computed directives or if derive conditions are met
+        // Evaluate body if it contains signal/computed/on directives or if derive conditions are met
         const hasSignalDirective = body.some(tok => 
-          tok && tok.isObject && tok.value && (tok.value.signal || tok.value.computed)
+          tok && tok.isObject && tok.value && (tok.value.signal || tok.value.computed || tok.value.on)
         );
         
         const call = (!args && this.derive && DERIVE_METHODS.includes(this.descriptor)) || hasSignalDirective
@@ -2299,6 +2299,27 @@ export default class Eval {
         _bodyTokens = args.slice(2);
       }
 
+      // Form C: multi-statement body — each element is a signal update
+      // e.g., @on tasks = push(...), input = ""
+      let _multiStatements = null;
+      if (!_signalName && _rawOnBody.length > 1) {
+        _multiStatements = [];
+        for (const stmt of _rawOnBody) {
+          if (stmt && stmt.isBlock && stmt.hasBody) {
+            const innerBody = stmt.getBody();
+            if (innerBody && innerBody.length === 1 && innerBody[0] && innerBody[0].isCallable) {
+              const callable = innerBody[0];
+              const name = callable.getName();
+              const body = callable.getBody();
+              if (name && body) {
+                _multiStatements.push({ signalName: name, bodyTokens: body });
+              }
+            }
+          }
+        }
+        if (_multiStatements.length === 0) _multiStatements = null;
+      }
+
       if (_signalName && _bodyTokens) {
         const signalName = _signalName;
         const bodyTokens = _bodyTokens;
@@ -2347,6 +2368,52 @@ export default class Eval {
               : bodyTokens?.map(t => t?.value || t?.type).join(' ');
             const msg = err.message || String(err);
             const newErr = new Error(`[@on ${signalName}] ${msg}\n  Handler: ${src}\n  Event: ${event?.type || 'unknown'}`);
+            newErr.cause = err;
+            throw newErr;
+          }
+        };
+        subTree.push(Expr.value(handlerFn, parentTokenInfo));
+        isDone = true;
+      }
+
+      // Handle multi-statement @on bodies
+      if (_multiStatements) {
+        const statements = _multiStatements;
+        
+        const handlerFn = async (event) => {
+          try {
+            const findSignalEntry = async (name, env) => {
+              let e = env;
+              while (e) {
+                const entry = e.locals && e.locals[name];
+                if (entry) {
+                  const [head] = entry.body || [];
+                  const v = head && typeof head.valueOf === 'function' ? head.valueOf() : null;
+                  if (v && typeof v.set === 'function' && typeof v.peek === 'function') {
+                    return v;
+                  }
+                }
+                e = e.parent;
+              }
+              return null;
+            };
+
+            for (const stmt of statements) {
+              const signalObj = await findSignalEntry(stmt.signalName, environment);
+              if (signalObj && typeof signalObj.set === 'function' && typeof signalObj.peek === 'function') {
+                const current = signalObj.peek();
+                const innerEnv = new Env(environment);
+                innerEnv.def(stmt.signalName, Expr.value(current, parentTokenInfo));
+                
+                const [result] = await Eval.do(stmt.bodyTokens, innerEnv, 'OnBody', true, parentTokenInfo);
+                const next = result ? toPlain(result) : current;
+                signalObj.set(next);
+              }
+            }
+          } catch (err) {
+            const src = statements.map(s => `${s.signalName} = ...`).join(', ');
+            const msg = err.message || String(err);
+            const newErr = new Error(`[@on multi] ${msg}\n  Statements: ${src}\n  Event: ${event?.type || 'unknown'}`);
             newErr.cause = err;
             throw newErr;
           }
