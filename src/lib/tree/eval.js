@@ -2276,38 +2276,47 @@ export default class Eval {
         const isLambda = lambda && lambda.isCallable && lambdaArgs.length > 0;
         
         const handlerFn = async (event) => {
-          const findSignalEntry = async (name, env) => {
-            let e = env;
-            while (e) {
-              const entry = e.locals && e.locals[name];
-              if (entry) {
-                const [head] = entry.body || [];
-                const v = head && typeof head.valueOf === 'function' ? head.valueOf() : null;
-                if (v && typeof v.set === 'function' && typeof v.peek === 'function') {
-                  return v;
+          try {
+            const findSignalEntry = async (name, env) => {
+              let e = env;
+              while (e) {
+                const entry = e.locals && e.locals[name];
+                if (entry) {
+                  const [head] = entry.body || [];
+                  const v = head && typeof head.valueOf === 'function' ? head.valueOf() : null;
+                  if (v && typeof v.set === 'function' && typeof v.peek === 'function') {
+                    return v;
+                  }
                 }
+                e = e.parent;
               }
-              e = e.parent;
+              return null;
+            };
+            const signalObj = await findSignalEntry(signalName, environment);
+            if (signalObj && typeof signalObj.set === 'function' && typeof signalObj.peek === 'function') {
+              const current = signalObj.peek();
+              const innerEnv = new Env(environment);
+              innerEnv.def(signalName, Expr.value(current, parentTokenInfo));
+              
+              let result;
+              if (isLambda && lambdaArgs.length > 0) {
+                const argName = lambdaArgs[0].value;
+                innerEnv.def(argName, Expr.value(event, parentTokenInfo));
+                [result] = await Eval.do(lambda.getBody(), innerEnv, 'OnBody', true, parentTokenInfo);
+              } else {
+                [result] = await Eval.do(bodyTokens, innerEnv, 'OnBody', true, parentTokenInfo);
+              }
+              
+              const next = result ? toPlain(result) : current;
+              signalObj.set(next);
             }
-            return null;
-          };
-          const signalObj = await findSignalEntry(signalName, environment);
-          if (signalObj && typeof signalObj.set === 'function' && typeof signalObj.peek === 'function') {
-            const current = signalObj.peek();
-            const innerEnv = new Env(environment);
-            innerEnv.def(signalName, Expr.value(current, parentTokenInfo));
-            
-            let result;
-            if (isLambda && lambdaArgs.length > 0) {
-              const argName = lambdaArgs[0].value;
-              innerEnv.def(argName, Expr.value(event, parentTokenInfo));
-              [result] = await Eval.do(lambda.getBody(), innerEnv, 'OnBody', true, parentTokenInfo);
-            } else {
-              [result] = await Eval.do(bodyTokens, innerEnv, 'OnBody', true, parentTokenInfo);
-            }
-            
-            const next = result ? toPlain(result) : current;
-            signalObj.set(next);
+          } catch (err) {
+            console.error(`[@on ${signalName}] Error in handler:`, err.message);
+            console.error('  isLambda:', isLambda);
+            console.error('  lambdaArgs:', lambdaArgs?.map(a => a?.value));
+            console.error('  bodyTokens:', bodyTokens?.length);
+            console.error('  event:', event);
+            throw err;
           }
         };
         subTree.push(Expr.value(handlerFn, parentTokenInfo));
