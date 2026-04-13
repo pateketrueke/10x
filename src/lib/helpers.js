@@ -1018,7 +1018,7 @@ export function matchesType(value, typeStr, env) {
 
 // Debug logging system with categories
 const DEBUG_CATEGORIES_KEY = '10x:debug:categories';
-const ALL_DEBUG_CATEGORIES = ['signal', 'eval', 'render', 'html', 'hmr', 'parser', 'env'];
+const ALL_DEBUG_CATEGORIES = ['signal', 'eval', 'render', 'html', 'hmr', 'parser', 'env', 'editor'];
 
 function getDebugCategories() {
   try {

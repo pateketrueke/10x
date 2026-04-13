@@ -32,6 +32,7 @@ import {
   emitEditorRuntimeLog,
   bootstrapEnv,
 } from './editor-runtime-shared.js';
+import { debugLog } from '../lib/helpers.js';
 
 applyAdapter(createBrowserAdapter());
 
@@ -756,14 +757,14 @@ function buildInlineAnchors(anchors) {
 }
 
 function buildStatementAnchors(source) {
-  console.log('[buildAnchors] source length:', source.length);
+  debugLog('editor', 'buildAnchors source length:', source.length);
   const anchors = [];
 
   try {
     const chunks = Parser.getAST(source, 'split');
     const chunkInfo = chunks.map((c, i) => {
       const first = c.body?.[0];
-      const last = c.body?.[c.body.length - 1];
+      const last = c.body?.[c.body?.length - 1];
       const types = c.body?.map(t => String(t?.type).replace('Symbol(', '').replace(')', '')) || [];
       return {
         idx: i,
@@ -772,7 +773,7 @@ function buildStatementAnchors(source) {
         lines: c.lines,
       };
     });
-    console.log('[buildAnchors] chunks:', JSON.stringify(chunkInfo));
+    debugLog('editor', 'buildAnchors chunks:', JSON.stringify(chunkInfo));
     const sourceLines = source.split('\n');
     const lineStarts = [];
     let offset = 0;
@@ -794,8 +795,8 @@ function buildStatementAnchors(source) {
     };
 
     for (const chunk of chunks) {
-      console.log('[buildAnchors] processing chunk:', chunk.lines);
-      if (!chunk.body.length) { console.log('[buildAnchors] skip empty body'); continue; }
+      debugLog('editor', 'processing chunk:', chunk.lines);
+      if (!chunk.body.length) { debugLog('editor', 'skip empty body'); continue; }
 
       // chunk.body[last] is the EOL token (pushed by parser split()); its
       // tokenInfo.line matches the DOM eol.dataset.line exactly — more
@@ -810,34 +811,34 @@ function buildStatementAnchors(source) {
         ? chunk.lines[0]
         : line;
       let statementSource = sourceLines.slice(firstLine, line + 1).join('\n');
-      console.log('[buildAnchors] initial source:', statementSource.substring(0, 50));
+      debugLog('editor', 'initial source:', statementSource.substring(0, 50));
 
       // Parser split can under-report multiline markup/string statement bounds.
       // If we don't see a terminating dot yet, extend until next EOL-looking line.
       if (!/\.\s*$/.test(statementSource.trimEnd())) {
-        console.log('[buildAnchors] no dot, extending...');
+        debugLog('editor', 'no dot, extending...');
         let end = line;
         while (end + 1 < sourceLines.length) {
           end += 1;
           statementSource += `\n${sourceLines[end]}`;
-          console.log('[buildAnchors] extended to:', sourceLines[end].substring(0, 30));
+          debugLog('editor', 'extended to:', sourceLines[end].substring(0, 30));
           if (/\.\s*$/.test(sourceLines[end])) {
             line = end;
-            console.log('[buildAnchors] found dot at line', line);
+            debugLog('editor', 'found dot at line', line);
             break;
           }
         }
       }
-      console.log('[buildAnchors] final source:', statementSource.substring(0, 50));
-      console.log('[buildAnchors] trimmed:', statementSource.trim());
-      if (!statementSource.trim()) { console.log('[buildAnchors] skip empty trimmed'); continue; }
+      debugLog('editor', 'final source:', statementSource.substring(0, 50));
+      debugLog('editor', 'trimmed:', statementSource.trim());
+      if (!statementSource.trim()) { debugLog('editor', 'skip empty trimmed'); continue; }
 
-      console.log('[buildAnchors] normalizing:', statementSource.substring(0, 30));
+      debugLog('editor', 'normalizing:', statementSource.substring(0, 30));
       const normalized = normalizeStatement(statementSource);
-      console.log('[buildAnchors] normalized:', normalized);
+      debugLog('editor', 'normalized:', normalized);
       const nth = (counts.get(normalized) || 0) + 1;
       counts.set(normalized, nth);
-      console.log('[buildAnchors] creating anchor with id:', `${hashString(normalized)}-${nth}`);
+      debugLog('editor', 'creating anchor with id:', `${hashString(normalized)}-${nth}`);
 
       anchors.push({
         id: `${hashString(normalized)}-${nth}`,
@@ -847,7 +848,7 @@ function buildStatementAnchors(source) {
         source: statementSource,
         isProseOnly: isProseOnlyChunk(chunk),
       });
-      console.log('[buildAnchors] anchor pushed, total anchors:', anchors.length);
+      debugLog('editor', 'anchor pushed, total anchors:', anchors.length);
     }
   } catch (err) {
     console.error('[buildAnchors] error:', err);
@@ -1150,7 +1151,7 @@ class XEditor extends HTMLElement {
   // Suppress onInput feedback loops while we rebuild DOM.
 
   connectedCallback() {
-    console.log('[editor] connectedCallback');
+    debugLog('editor', 'connectedCallback');
     this._shadow = this.attachShadow({ mode: 'open' });
     this._tooltipTimer = null;
     this._tooltipTarget = null;
@@ -1208,7 +1209,7 @@ class XEditor extends HTMLElement {
     this._loadReplHistory();
 
     const initial = this.textContent || this.getAttribute('value') || '';
-    console.log('[editor] initial value:', initial.substring(0, 100));
+    debugLog('editor', 'initial value:', initial.substring(0, 100));
     if (initial) {
       this._applySource(initial);
       this._scheduleEval();
@@ -1276,7 +1277,7 @@ class XEditor extends HTMLElement {
     this._editable.innerHTML = '';
     this._editable.appendChild(renderTokens(source));
     this._anchors = buildStatementAnchors(source);
-    console.log('[editor] anchors:', this._anchors.map(a => ({ id: a.id, prose: a.isProseOnly, src: a.source.substring(0, 40) })));
+    debugLog('editor', 'anchors:', this._anchors.map(a => ({ id: a.id, prose: a.isProseOnly, src: a.source.substring(0, 40) })));
     this._inlineAnchors = buildInlineAnchors(this._anchors);
     this._bindInlineAnchorNodes();
     this._injectResults();
@@ -2240,6 +2241,6 @@ class XEditor extends HTMLElement {
 }
 
 customElements.define('x-editor', XEditor);
-console.log('[editor] defined x-editor');
+debugLog('editor', 'defined x-editor');
 
 export default XEditor;
