@@ -1062,11 +1062,17 @@ export function getDebugCategoriesInfo() {
 
 export function toggleDebugCategory(category) {
   const enabled = getDebugCategories();
-  if (enabled.has(category)) {
+  
+  // If 'all' is enabled, disable it first and only enable the specific category
+  if (enabled.has('all') && category !== 'all') {
+    enabled.clear();
+    enabled.add(category);
+  } else if (enabled.has(category)) {
     enabled.delete(category);
   } else {
     enabled.add(category);
   }
+  
   setDebugCategories(enabled);
   return enabled.has(category);
 }

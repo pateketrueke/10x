@@ -266,8 +266,12 @@ export function devtools(options = {}) {
       checkbox.type = 'checkbox';
       checkbox.checked = cat.enabled;
       checkbox.onchange = () => {
-        toggleDebugCategory(cat.name);
-        checkbox.checked = isDebugEnabled(cat.name);
+        const newState = toggleDebugCategory(cat.name);
+        checkbox.checked = newState;
+        // Refresh all checkboxes since toggling one can affect others (e.g., 'all')
+        debugDropdown.remove();
+        debugDropdown = null;
+        configBtn.click();
       };
       
       const span = document.createElement('span');
