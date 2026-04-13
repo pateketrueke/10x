@@ -112,7 +112,7 @@ export function style(hostOrCss, css) {
   document.head.appendChild(element);
 }
 
-export function render(selectorOrElement, view) {
+export function render(selectorOrElement, view, moduleUrl) {
   if (typeof document === 'undefined') {
     return () => {};
   }
@@ -143,7 +143,7 @@ export function render(selectorOrElement, view) {
     prev = next;
   };
 
-  return effect(async () => {
+  const run = effect(async () => {
     let next;
     try {
       next = await view.render();
@@ -175,6 +175,21 @@ export function render(selectorOrElement, view) {
       console.error('[10x:dom] mount/patch threw:', err);
     }
   });
+
+  // Register effect for HMR cleanup
+  if (moduleUrl) {
+    const registry = globalThis.__10x_effects instanceof Map
+      ? globalThis.__10x_effects
+      : (globalThis.__10x_effects = new Map());
+    let effects = registry.get(moduleUrl);
+    if (!effects) {
+      effects = new Set();
+      registry.set(moduleUrl, effects);
+    }
+    effects.add(run);
+  }
+
+  return run;
 }
 
 export function on(eventName, selectorOrElement, handler, root) {

@@ -1111,9 +1111,17 @@ function compileHmrFooter() {
     '    for (const [k, s] of (globalThis.__10x_signals || new Map())) {',
     "      if (typeof k === 'string') data.__signals[k] = s.peek();",
     '    }',
+    '    // Cleanup render effects',
+    '    const effects = (globalThis.__10x_effects || new Map()).get(_hmrUrl);',
+    '    if (effects) {',
+    '      effects.forEach(eff => { if (eff && typeof eff.stop === "function") eff.stop(); });',
+    '      effects.clear();',
+    '    }',
     '  });',
     '  import.meta.hot.accept(newMod => {',
     '    const snap = import.meta.hot.data.__signals || {};',
+    '    // Reset component instance ID for consistent signal names',
+    '    if (typeof $resetComponentInstanceId === "function") $resetComponentInstanceId(0);',
     '    let _restoredCount = 0;',
     '    for (const [k, s] of (globalThis.__10x_signals || new Map())) {',
     "      if (typeof k === 'string' && snap[k] !== undefined) {",
@@ -1127,8 +1135,12 @@ function compileHmrFooter() {
     '    const hosts = globalThis.__10x_components?.get(_hmrUrl);',
     '    if (hosts && newMod?.setup) {',
     '      hosts.forEach(host => {',
-    '        if (host.shadowRoot) host.shadowRoot.innerHTML = "";',
-    '        newMod.setup(host);',
+    '        try {',
+    '          if (host.shadowRoot) host.shadowRoot.innerHTML = "";',
+    '          newMod.setup(host);',
+    '        } catch (err) {',
+    '          console.error("[10x:hmr] setup() threw:", err);',
+    '        }',
     '      });',
     '    }',
     '  });',
@@ -1143,7 +1155,8 @@ function compileRenderDirective(body, value, ctx) {
     return `$.renderShadow(host, ${htmlExpr}${hmrUrlArg})`;
   }
   const selector = body.length ? compileExpression(body, ctx) : 'undefined';
-  return `$.render(${selector}, ${htmlExpr})`;
+  const hmrUrlArg = ctx.hmr ? ', import.meta.url' : '';
+  return `$.render(${selector}, ${htmlExpr}${hmrUrlArg})`;
 }
 
 function compileOnDirective(body, ctx) {

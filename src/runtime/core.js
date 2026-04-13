@@ -216,3 +216,20 @@ export function prop(host, name, fallback) {
 export function getSignalRegistry() {
   return globalRegistry;
 }
+
+export function getEffectsRegistry() {
+  if (!globalThis.__10x_effects) {
+    globalThis.__10x_effects = new Map();
+  }
+  return globalThis.__10x_effects;
+}
+
+let _componentInstanceId = 0;
+
+export function getComponentInstanceId() {
+  return _componentInstanceId;
+}
+
+export function resetComponentInstanceId(value) {
+  _componentInstanceId = value;
+}
