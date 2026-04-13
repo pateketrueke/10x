@@ -2229,15 +2229,38 @@ export default class Eval {
       // normalizeDirectiveArgs unwraps callables (type === BLOCK), so the callable
       // must be read from the raw body of value.on before normalization.
       // Form A: raw body has a single callable → name = signal, body = expr tokens
-      // Form B: raw tokens [LITERAL, EQUAL, ...exprTokens] (fallback, unlikely after parser)
+      // Form B: raw tokens [LITERAL, EQUAL, ...rest] — directive body wasn't sub-parsed
       const _rawOnBody = value.on.getBody ? value.on.getBody() : [];
-      const _callable = _rawOnBody.length === 1 && _rawOnBody[0] && _rawOnBody[0].isCallable
-        ? _rawOnBody[0]
-        : (args.length === 1 && args[0] && args[0].isCallable ? args[0] : null);
+      
+      // Handle nested structure: @on input = (e) -> expr
+      // rawBody[0] is a Block, rawBody[0].getBody()[0] is the signal callable
+      let _callable = null;
+      if (_rawOnBody.length === 1 && _rawOnBody[0] && _rawOnBody[0].isBlock) {
+        const innerBody = _rawOnBody[0].getBody();
+        if (innerBody && innerBody.length === 1 && innerBody[0] && innerBody[0].isCallable) {
+          _callable = innerBody[0];
+        }
+      }
+      
+      // Fallback: check if raw body has a single callable
+      if (!_callable && _rawOnBody.length === 1 && _rawOnBody[0] && _rawOnBody[0].isCallable) {
+        _callable = _rawOnBody[0];
+      }
+      
+      // Fallback: check args
+      if (!_callable && args.length === 1 && args[0] && args[0].isCallable) {
+        _callable = args[0];
+      }
 
       // Form A: single callable token — name = signal, body = expr tokens
       let _signalName = _callable ? _callable.getName() : null;
       let _bodyTokens = _callable ? _callable.getBody() : null;
+      
+      // Check if body contains a lambda (for @on signal = (e) -> expr form)
+      let _lambda = null;
+      if (_bodyTokens && _bodyTokens.length === 1 && _bodyTokens[0] && _bodyTokens[0].isCallable) {
+        _lambda = _bodyTokens[0];
+      }
 
       // Form B: raw [LITERAL, EQUAL, ...rest] — directive body wasn't sub-parsed
       if (!_callable && args.length >= 2 && args[0] && args[0].type === LITERAL && args[1] && args[1].type === EQUAL) {
@@ -2248,7 +2271,11 @@ export default class Eval {
       if (_signalName && _bodyTokens) {
         const signalName = _signalName;
         const bodyTokens = _bodyTokens;
-        const handlerFn = async () => {
+        const lambda = _lambda;
+        const lambdaArgs = lambda && typeof lambda.getArgs === 'function' ? lambda.getArgs() : [];
+        const isLambda = lambda && lambda.isCallable && lambdaArgs.length > 0;
+        
+        const handlerFn = async (event) => {
           const findSignalEntry = async (name, env) => {
             let e = env;
             while (e) {
@@ -2269,7 +2296,16 @@ export default class Eval {
             const current = signalObj.peek();
             const innerEnv = new Env(environment);
             innerEnv.def(signalName, Expr.value(current, parentTokenInfo));
-            const [result] = await Eval.do(bodyTokens, innerEnv, 'OnBody', true, parentTokenInfo);
+            
+            let result;
+            if (isLambda && lambdaArgs.length > 0) {
+              const argName = lambdaArgs[0].value;
+              innerEnv.def(argName, Expr.value(event, parentTokenInfo));
+              [result] = await Eval.do(lambda.getBody(), innerEnv, 'OnBody', true, parentTokenInfo);
+            } else {
+              [result] = await Eval.do(bodyTokens, innerEnv, 'OnBody', true, parentTokenInfo);
+            }
+            
             const next = result ? toPlain(result) : current;
             signalObj.set(next);
           }

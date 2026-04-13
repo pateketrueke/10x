@@ -421,7 +421,7 @@ addTask = @on
   tasks = push(tasks, :text input, :done :off),
   input = "".
 
-updateInput = @on input = (e) -> e.target.value.
+updateInput = @on input = (e) -> e.currentTarget.value.
 
 toggleTask = (i) ->
   tasks = map(tasks, (t j) -> @if (i == j) (:text t.text, :done !t.done) @else t).
