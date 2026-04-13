@@ -294,10 +294,12 @@
       </div>
     </div>
   </div>
-  <!-- Hidden orchestrator editor that runs combined source -->
+  <!-- Hidden orchestrator editor that runs the main file -->
   <x-editor id="orchestrator-editor" value=""></x-editor>
   <script type="module">
     import { devtools } from './dist/runtime.js';
+    import { Env, execute, applyAdapter, createBrowserAdapter } from './dist/editor.js';
+    import { getSignalRegistry, read } from './dist/runtime-core.js';
     
     const STORAGE_KEY = '10x:playground:files';
     const DEFAULT_FILES = [
@@ -316,6 +318,8 @@ Btn = props =>
         id: 'file-counter',
         name: 'counter.md',
         value: `# Counter
+
+@import Btn @from "./button.md".
 
 count = @signal 0.
 
@@ -358,30 +362,77 @@ count = @signal 0.
     const editors = new Map();
     let orchestrator = null;
     let updateTimeout = null;
+    let moduleCache = new Map();
 
     const fileTabsEl = document.getElementById('file-tabs');
     const editorsContainerEl = document.getElementById('editors-container');
 
-    // Combine all file sources into one program
-    const combineSources = () => {
-      // Sync editor values to file objects first
-      editors.forEach((editor, id) => {
-        const file = files.find(f => f.id === id);
-        if (file) file.value = editor.value;
-      });
+    // Setup virtual module resolution
+    applyAdapter(createBrowserAdapter());
+    
+    // Virtual file system - resolve imports from in-memory files
+    Env.resolve = async (src, name, alias, environment) => {
+      // Normalize path
+      let path = src.replace(/^\.\//, '');
+      if (!path.endsWith('.md')) path += '.md';
       
-      // Concatenate all files with separators
-      return files.map(f => f.value).join('\n\n');
+      // Find file in our virtual FS
+      const file = files.find(f => f.name === path);
+      if (!file) {
+        console.warn(`[playground] Module not found: ${src}`);
+        return null;
+      }
+      
+      // Check cache
+      const cacheKey = file.id;
+      if (moduleCache.has(cacheKey)) {
+        return moduleCache.get(cacheKey);
+      }
+      
+      // Create new environment for this module
+      const moduleEnv = new Env(environment);
+      moduleCache.set(cacheKey, moduleEnv);
+      
+      // Execute the module
+      await execute(file.value, moduleEnv);
+      
+      return moduleEnv;
+    };
+    
+    // Clear module cache when files change
+    const clearModuleCache = () => {
+      moduleCache.clear();
     };
 
-    // Update orchestrator with combined source (debounced)
+    // Get the "main" file (last file that has @render)
+    const getMainFile = () => {
+      // Find the last file with @render, or just use the last file
+      for (let i = files.length - 1; i >= 0; i--) {
+        if (files[i].value.includes('@render')) {
+          return files[i];
+        }
+      }
+      return files[files.length - 1];
+    };
+
+    // Update orchestrator with main file (debounced)
     const updateOrchestrator = () => {
       if (updateTimeout) clearTimeout(updateTimeout);
       updateTimeout = setTimeout(() => {
-        if (!orchestrator) return;
-        const combined = combineSources();
-        orchestrator.value = combined;
+        // Sync editor values to file objects
+        editors.forEach((editor, id) => {
+          const file = files.find(f => f.id === id);
+          if (file) file.value = editor.value;
+        });
+        
         saveFiles(files);
+        clearModuleCache();
+        
+        // Run the main file
+        const mainFile = getMainFile();
+        if (mainFile && orchestrator) {
+          orchestrator.value = mainFile.value;
+        }
       }, 150);
     };
 
@@ -500,15 +551,18 @@ count = @signal 0.
     orchestrator = document.getElementById('orchestrator-editor');
     orchestrator.addEventListener('tenx-signals', ({ detail }) => {
       if (globalThis.__10x_devtools_debug) {
-        console.info('[10x:devtools.html] orchestrator tenx-signals event', {
+        console.info('[playground] orchestrator tenx-signals event', {
           snapshotCount: Array.isArray(detail) ? detail.length : 0,
         });
       }
       globalThis.__10x_devtools?.onSignals?.(detail);
     });
     
-    // Initial combined source
-    orchestrator.value = combineSources();
+    // Initial run
+    const mainFile = getMainFile();
+    if (mainFile) {
+      orchestrator.value = mainFile.value;
+    }
 
     // Transform existing editor code by adding/removing @shadow annotations in-place.
     const setShadowMode = (code, enabled) => {
