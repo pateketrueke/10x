@@ -1,12 +1,12 @@
 # Counter Step Definitions
 
-import Counter from "./counter.md"
 import { read } from "10x/core"
+import { count } from "./counter.md"
 
 @before_all @mount "#app".
 
 Given "a counter starting at {num}" (n) =>
-  Counter({ start: n }).
+  count.set(n).
 
 When "I click the increment button" =>
   @click "#inc".

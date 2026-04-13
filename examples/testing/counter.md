@@ -1,6 +1,7 @@
 # Counter Component
 
-count = @signal 0.
+start = 0.
+count = @signal start.
 
 @render "#app" @html
   <div style="text-align:center;padding:1rem">

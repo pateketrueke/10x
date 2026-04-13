@@ -1,3 +1,5 @@
+import { compile } from './index.js';
+
 export function parseGherkin(source) {
   const lines = String(source || '').split('\n');
   const feature = {
@@ -100,34 +102,54 @@ export function parseStepDefinitions(source) {
     if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('import ')) continue;
     
     if (trimmed.startsWith('@before_all')) {
-      steps.before_all = { type: 'hook', name: 'before_all', body: [] };
-      currentDef = steps.before_all;
-      inBlock = true;
-      blockLines = [];
+      const rest = trimmed.slice('@before_all'.length).trim();
+      if (rest.endsWith('.')) {
+        steps.before_all = { type: 'hook', name: 'before_all', body: [rest] };
+      } else {
+        steps.before_all = { type: 'hook', name: 'before_all', body: [] };
+        currentDef = steps.before_all;
+        inBlock = true;
+        blockLines = rest ? [rest] : [];
+      }
       continue;
     }
     
     if (trimmed.startsWith('@before_each')) {
-      steps.before_each = { type: 'hook', name: 'before_each', body: [] };
-      currentDef = steps.before_each;
-      inBlock = true;
-      blockLines = [];
+      const rest = trimmed.slice('@before_each'.length).trim();
+      if (rest.endsWith('.')) {
+        steps.before_each = { type: 'hook', name: 'before_each', body: [rest] };
+      } else {
+        steps.before_each = { type: 'hook', name: 'before_each', body: [] };
+        currentDef = steps.before_each;
+        inBlock = true;
+        blockLines = rest ? [rest] : [];
+      }
       continue;
     }
     
     if (trimmed.startsWith('@after_all')) {
-      steps.after_all = { type: 'hook', name: 'after_all', body: [] };
-      currentDef = steps.after_all;
-      inBlock = true;
-      blockLines = [];
+      const rest = trimmed.slice('@after_all'.length).trim();
+      if (rest.endsWith('.')) {
+        steps.after_all = { type: 'hook', name: 'after_all', body: [rest] };
+      } else {
+        steps.after_all = { type: 'hook', name: 'after_all', body: [] };
+        currentDef = steps.after_all;
+        inBlock = true;
+        blockLines = rest ? [rest] : [];
+      }
       continue;
     }
     
     if (trimmed.startsWith('@after_each')) {
-      steps.after_each = { type: 'hook', name: 'after_each', body: [] };
-      currentDef = steps.after_each;
-      inBlock = true;
-      blockLines = [];
+      const rest = trimmed.slice('@after_each'.length).trim();
+      if (rest.endsWith('.')) {
+        steps.after_each = { type: 'hook', name: 'after_each', body: [rest] };
+      } else {
+        steps.after_each = { type: 'hook', name: 'after_each', body: [] };
+        currentDef = steps.after_each;
+        inBlock = true;
+        blockLines = rest ? [rest] : [];
+      }
       continue;
     }
     
@@ -308,23 +330,41 @@ export function compileFeature(feature, stepsModule, componentModule) {
   return lines.join('\n');
 }
 
-export function compileStepDefinitions(steps) {
+export function compileStepDefinitions(steps, imports = []) {
   const lines = [];
   
+  for (const imp of imports) {
+    lines.push(imp);
+  }
+  
   lines.push(`import { mount, click, expect } from '10x/testing';`);
-  lines.push(`import { signal, effect, html } from '10x/core';`);
+  lines.push(`import { signal, effect, html, read } from '10x/core';`);
   lines.push('');
   
   if (steps.before_all) {
+    const bodyCode = steps.before_all.body.join('\n');
+    const compiled = compile(bodyCode, { module: false, runtimePath: '10x/runtime' });
+    const cleanCode = compiled
+      .replace(/^\/\/.*$/gm, '')
+      .replace(/^import.*$/gm, '')
+      .replace(/export /g, '')
+      .trim();
     lines.push(`export const before_all = async () => {`);
-    lines.push(`  ${steps.before_all.body.join('\n  ')}`);
+    lines.push(`  ${cleanCode}`);
     lines.push(`};`);
     lines.push('');
   }
   
   if (steps.before_each) {
+    const bodyCode = steps.before_each.body.join('\n');
+    const compiled = compile(bodyCode, { module: false, runtimePath: '10x/runtime' });
+    const cleanCode = compiled
+      .replace(/^\/\/.*$/gm, '')
+      .replace(/^import.*$/gm, '')
+      .replace(/export /g, '')
+      .trim();
     lines.push(`export const before_each = async () => {`);
-    lines.push(`  ${steps.before_each.body.join('\n  ')}`);
+    lines.push(`  ${cleanCode}`);
     lines.push(`};`);
     lines.push('');
   }
@@ -333,8 +373,16 @@ export function compileStepDefinitions(steps) {
     const key = stepPatternToKey(def.type, def.pattern);
     const params = def.params.length ? def.params.join(', ') : '';
     
+    const bodyCode = def.body.join('\n');
+    const compiled = compile(bodyCode, { module: false, runtimePath: '10x/runtime' });
+    const cleanCode = compiled
+      .replace(/^\/\/.*$/gm, '')
+      .replace(/^import.*$/gm, '')
+      .replace(/export /g, '')
+      .trim();
+    
     lines.push(`export const ${key} = async (${params}) => {`);
-    lines.push(`  ${def.body.join('\n  ')}`);
+    lines.push(`  ${cleanCode}`);
     lines.push(`};`);
     lines.push('');
   }

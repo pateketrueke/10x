@@ -1455,8 +1455,11 @@ function compileStatement(tokens, ctx, statementIndex) {
     && tokens[1].type === BLOCK
     && tokens[1].hasArgs
     && !tokens[1].hasBody;
+  
+  const looksLikeMethodCall = tokens.length >= 3
+    && tokens.some(t => t.type === DOT);
 
-  if (!hasOperator && !looksLikeCall) {
+  if (!hasOperator && !looksLikeCall && !looksLikeMethodCall) {
     const exprs = tokens.map(token => compileToken(token, ctx)).join(', ');
     if (shouldPrint || autoPrint) return `console.log(${exprs});`;
     return `${exprs};`;
