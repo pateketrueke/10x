@@ -319,11 +319,13 @@
 
 Counter props =>
   count = @signal props.start,
+  inc = @on count = count + 1,
+  dec = @on count = count - 1,
   @html
     <div style="text-align:center;padding:1rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;margin:0.5rem">
       <h3 style="margin:0 0 0.5rem">Counter: #{count}</h3>
-      <button onclick={@on count = count + 1}>+</button>
-      <button onclick={@on count = count - 1}>-</button>
+      <button onclick={inc}>+</button>
+      <button onclick={dec}>-</button>
     </div>.
 
 @render "#render-container" @html
@@ -342,13 +344,15 @@ Counter props =>
         value: `# Simple Counter
 
 count = @signal 0.
+dec = @on count = count - 1.
+inc = @on count = count + 1.
 
 @render "#render-container" @html
   <div style="text-align:center;padding:2rem;font-family:system-ui">
     <h1 style="font-size:3rem;margin:0.5rem 0">Count: #{count}</h1>
     <div style="display:flex;gap:0.5rem;justify-content:center">
-      <button onclick={@on count = count - 1} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">-</button>
-      <button onclick={@on count = count + 1} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">+</button>
+      <button onclick={dec} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">-</button>
+      <button onclick={inc} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">+</button>
     </div>
   </div>.`
       },
@@ -364,6 +368,8 @@ addTodo = @on
   todos = push(todos, { text: input, done: false }),
   input = "".
 
+updateInput = @on input = e.target.value.
+
 @render "#render-container" @html
   <div style="font-family:system-ui;padding:1rem;max-width:400px">
     <h2 style="margin:0 0 1rem">Todo List</h2>
@@ -372,7 +378,7 @@ addTodo = @on
         type="text" 
         placeholder="Add todo..." 
         value={input}
-        oninput={@on input = e.target.value}
+        oninput={updateInput}
         style="flex:1;padding:0.5rem"
       />
       <button onclick={addTodo} style="padding:0.5rem 1rem">Add</button>
@@ -381,7 +387,6 @@ addTodo = @on
       #{map(todos, (t i) ->
         <li style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">
           <span style={t.done ? "text-decoration:line-through;opacity:0.5" : ""}>#{t.text}</span>
-          <button onclick={@on todos = map(todos, (x j) -> @if (i == j) { done: !x.done, text: x.text } @else x)} style="margin-left:auto;font-size:0.8rem">done</button>
         </li>
       )}
     </ul>
