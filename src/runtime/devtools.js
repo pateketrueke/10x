@@ -1,5 +1,5 @@
 import { getSignalRegistry, effect, read, isDevtoolsActive, setDevtoolsActive } from './core.js';
-import { getDebugCategoriesInfo, toggleDebugCategory, setAllDebugCategories, isDebugEnabled } from '../lib/helpers.js';
+import { getDebugCategoriesInfo, toggleDebugCategory, setAllDebugCategories, isDebugEnabled, debugLogState } from '../lib/helpers.js';
 
 const MAX_HISTORY = 20;
 
@@ -305,6 +305,16 @@ export function devtools(options = {}) {
     allLabel.appendChild(allCheckbox);
     allLabel.appendChild(allSpan);
     debugDropdown.appendChild(allLabel);
+    
+    // Debug state button
+    const stateBtn = document.createElement('button');
+    stateBtn.textContent = 'show state';
+    stateBtn.style.cssText = 'background:none;border:1px solid rgba(255,255,255,0.2);color:#888;cursor:pointer;font-size:10px;padding:0.25rem 0.5rem;border-radius:4px;margin-top:0.5rem;width:100%;';
+    stateBtn.onclick = (e) => {
+      e.stopPropagation();
+      debugLogState();
+    };
+    debugDropdown.appendChild(stateBtn);
     
     titleRight.style.position = 'relative';
     titleRight.appendChild(debugDropdown);

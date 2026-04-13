@@ -1044,6 +1044,14 @@ export function debugLog(category, ...args) {
   console.log(`[${category}]`, ...args);
 }
 
+// For debugging the debug system itself
+export function debugLogState() {
+  const enabled = getDebugCategories();
+  console.log('[debug] enabled categories:', Array.from(enabled));
+  console.log('[debug] localStorage key:', DEBUG_CATEGORIES_KEY);
+  console.log('[debug] localStorage value:', localStorage.getItem(DEBUG_CATEGORIES_KEY));
+}
+
 export function getDebugCategoriesInfo() {
   const enabled = getDebugCategories();
   return ALL_DEBUG_CATEGORIES.map(cat => ({
