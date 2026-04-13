@@ -1131,7 +1131,12 @@ export default class Eval {
           }
         }
 
-        const call = !args && this.derive && DERIVE_METHODS.includes(this.descriptor)
+        // Evaluate body if it contains signal/computed directives or if derive conditions are met
+        const hasSignalDirective = body.some(tok => 
+          tok && tok.isObject && tok.value && (tok.value.signal || tok.value.computed)
+        );
+        
+        const call = (!args && this.derive && DERIVE_METHODS.includes(this.descriptor)) || hasSignalDirective
           ? await Eval.do(body, this.env, 'Fn', true, this.ctx.tokenInfo)
           : body;
 
