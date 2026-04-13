@@ -336,16 +336,16 @@ Counter props =>
   inc = @on count = count + 1,
   dec = @on count = count - 1,
   @html
-    <div style="text-align:center;padding:1rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;margin:0.5rem">
-      <h3 style="margin:0 0 0.5rem">Counter: #{count}</h3>
-      <button onclick={inc}>+</button>
-      <button onclick={dec}>-</button>
+    <div class="counter-box" style="text-align:center;padding:1rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;margin:0.5rem">
+      <h3 class="counter-title" style="margin:0 0 0.5rem">Counter: #{count}</h3>
+      <button class="dec-btn" onclick={dec}>-</button>
+      <button class="inc-btn" onclick={inc}>+</button>
     </div>.
 
 @render "#render-container" @html
   <div style="font-family:system-ui;padding:1rem">
     <h2 style="margin:0 0 1rem">Multiple Independent Counters</h2>
-    <div style="display:flex;gap:1rem;flex-wrap:wrap">
+    <div class="counters" style="display:flex;gap:1rem;flex-wrap:wrap">
       <Counter start=0 />
       <Counter start=10 />
       <Counter start=100 />
@@ -363,10 +363,10 @@ inc = @on count = count + 1.
 
 @render "#render-container" @html
   <div style="text-align:center;padding:2rem;font-family:system-ui">
-    <h1 style="font-size:3rem;margin:0.5rem 0">Count: #{count}</h1>
+    <h1 id="count-display" style="font-size:3rem;margin:0.5rem 0">Count: #{count}</h1>
     <div style="display:flex;gap:0.5rem;justify-content:center">
-      <button onclick={dec} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">-</button>
-      <button onclick={inc} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">+</button>
+      <button id="dec-btn" onclick={dec} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">-</button>
+      <button id="inc-btn" onclick={inc} style="padding:0.5rem 1rem;font-size:1rem;cursor:pointer">+</button>
     </div>
   </div>.`
       },
@@ -382,6 +382,8 @@ addTask = @on
   tasks = push(tasks, :text input, :done :off),
   input = "".
 
+updateInput = @on input = e.target.value.
+
 toggleTask = (i) ->
   tasks = map(tasks, (t j) -> @if (i == j) (:text t.text, :done !t.done) @else t).
 
@@ -389,28 +391,28 @@ clearDone = @on
   tasks = filter(tasks, (t) -> !t.done).
 
 @render "#render-container" @html
-  <section style="font-family:system-ui;padding:1rem;max-width:400px;border:1px solid rgba(255,255,255,0.1);border-radius:8px">
+  <section class="todo-app" style="font-family:system-ui;padding:1rem;max-width:400px;border:1px solid rgba(255,255,255,0.1);border-radius:8px">
     <h1 style="margin:0 0 0.5rem">TodoList</h1>
-    <p style="color:#888;font-size:0.85rem;margin:0 0 1rem">#{size(tasks)} tasks, #{size(filter(tasks, (t) -> t.done))} done</p>
-    <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+    <div class="input-row" style="display:flex;gap:0.5rem;margin-bottom:1rem">
       <input 
+        id="task-input"
         type="text" 
         placeholder="Add task..." 
         value={input}
-        oninput={@on input = e.target.value}
+        oninput={updateInput}
         style="flex:1;padding:0.5rem"
       />
-      <button onclick={addTask} style="padding:0.5rem 1rem;cursor:pointer">Add</button>
+      <button id="add-btn" onclick={addTask} style="padding:0.5rem 1rem;cursor:pointer">Add</button>
     </div>
-    <ul style="list-style:none;padding:0;margin:0 0 1rem">
+    <ul id="task-list" style="list-style:none;padding:0;margin:0 0 1rem">
       #{map(tasks, (t i) ->
-        <li style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
-          <input type="checkbox" checked={t.done} onchange={() -> toggleTask(i)} />
-          <span style={t.done ? "text-decoration:line-through;opacity:0.5" : ""}>#{t.text}</span>
+        <li class="task-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <input type="checkbox" class="task-checkbox" checked={t.done} onchange={() -> toggleTask(i)} />
+          <span class="task-text" style={t.done ? "text-decoration:line-through;opacity:0.5" : ""}>#{t.text}</span>
         </li>
       )}
     </ul>
-    <button onclick={clearDone} style="padding:0.5rem 1rem;cursor:pointer;font-size:0.85rem">Clear done</button>
+    <button id="clear-btn" onclick={clearDone} style="padding:0.5rem 1rem;cursor:pointer;font-size:0.85rem">Clear done</button>
   </section>.`
       }
     ];
