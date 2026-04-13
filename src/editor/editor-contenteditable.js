@@ -664,7 +664,7 @@ function appendToken(parent, token) {
   }
 
   const text = tokenText(token);
-  if (!text) return;
+  if (text === undefined || text === null) return;
 
   if (n === 'STRING') {
     if (/<\/?[A-Za-z]/.test(text)) {
