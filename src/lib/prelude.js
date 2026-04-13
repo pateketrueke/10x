@@ -241,6 +241,30 @@ export function get(target, ...props) {
 export function push(target, ...sources) {
   if (!target) raise('No target given');
 
+  const isSignal = v => v && typeof v === 'object' && typeof v.peek === 'function';
+  const isLiteralWithSignal = v => v && typeof v === 'object' && v.type && v.type.toString() === 'Symbol(LITERAL)' && isSignal(v.value);
+  const readSignal = v => {
+    if (isLiteralWithSignal(v)) return v.value.peek();
+    if (isSignal(v)) return v.peek();
+    return v;
+  };
+
+  const unwrapped = readSignal(target);
+  if (Array.isArray(unwrapped)) {
+    const result = [...unwrapped];
+    sources.forEach(sub => {
+      const val = readSignal(sub);
+      if (sub && sub.isObject) {
+        result.push(sub.valueOf());
+      } else if (Array.isArray(val)) {
+        result.push(...val);
+      } else {
+        result.push(val);
+      }
+    });
+    return result;
+  }
+
   if (!(target.isObject
     || target.isString
     || target.isNumber
