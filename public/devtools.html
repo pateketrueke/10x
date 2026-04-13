@@ -304,6 +304,12 @@
     import { createBrowserAdapter } from './dist/editor.js';
     import { getSignalRegistry, read } from './dist/runtime-core.js';
     
+    const EDITOR_BOOTSTRAP = `
+@import to @from "Unit".
+@from "Prelude" @import (map, filter, take, drop, head, tail, size, keys, vals, pairs, rev, list, push, show).
+@import signal, read, html, render, renderShadow, h, style, on @from "Runtime".
+`;
+    
     const STORAGE_KEY = '10x:playground:files';
     const DEFAULT_FILES = [
       {
@@ -323,7 +329,6 @@ Btn = props =>
         value: `# Counter
 
 @import Btn @from "./button.md".
-@import signal, read, html, render, on @from "Runtime".
 
 count = @signal 0.
 
@@ -470,6 +475,9 @@ count = @signal 0.
       // Create new environment for this module
       const moduleEnv = new Env(environment);
       moduleCache.set(file.id, { env: moduleEnv, exports: {}, imports: parseImports(file.value) });
+      
+      // Bootstrap the environment with Runtime functions
+      await execute(EDITOR_BOOTSTRAP, moduleEnv);
       
       // Execute the module
       await execute(file.value, moduleEnv);
