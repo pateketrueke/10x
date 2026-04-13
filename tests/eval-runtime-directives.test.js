@@ -1,6 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { Env, execute as run, applyAdapter } from '../src/main.js';
-import { createBrowserAdapter } from '../src/adapters/browser/index.js';
+import { Env, execute as run, applyAdapter, createBrowserAdapter } from '../src/main.js';
 
 applyAdapter(createBrowserAdapter());
 
@@ -15,11 +14,71 @@ describe('Eval Runtime Directives', () => {
   });
 
   test('should execute @signal/@render/@on directives in interpreter mode', async () => {
+    const createMockElement = (tagName = 'DIV') => {
+      const children = [];
+      const el = {
+        nodeType: 1,
+        childNodes: children,
+        firstChild: null,
+        tagName: tagName.toUpperCase(),
+        appendChild: (child) => {
+          children.push(child);
+          el.firstChild = children[0];
+          return child;
+        },
+        insertBefore: (child, ref) => {
+          const idx = ref ? children.indexOf(ref) : 0;
+          if (idx >= 0) children.splice(idx, 0, child);
+          else children.push(child);
+          el.firstChild = children[0];
+          return child;
+        },
+        setAttribute: () => {},
+        style: {},
+        get textContent() {
+          return children.map(c => c.textContent || c.nodeValue || '').join('');
+        },
+        get innerHTML() {
+          return children.map(c => {
+            if (c.nodeType === 3) return c.nodeValue;
+            if (c.tagName) {
+              const content = c.textContent || '';
+              return `<${c.tagName.toLowerCase()}>${content}</${c.tagName.toLowerCase()}>`;
+            }
+            return '';
+          }).join('');
+        },
+      };
+      return el;
+    };
+
+    const createMockTextNode = (text) => ({
+      nodeType: 3,
+      nodeValue: text,
+      textContent: text,
+    });
+
+    const rootChildren = [];
     const node = {
-      innerHTML: '',
-      firstChild: null,
+      get innerHTML() {
+        return rootChildren.map(c => {
+          if (c.nodeType === 3) return c.nodeValue;
+          if (c.tagName) {
+            const content = c.textContent || '';
+            return `<${c.tagName.toLowerCase()}>${content}</${c.tagName.toLowerCase()}>`;
+          }
+          return '';
+        }).join('');
+      },
+      set innerHTML(v) { rootChildren.length = 0; rootChildren.push(createMockTextNode(v)); },
+      get firstChild() { return rootChildren[0] || null; },
       addEventListener: () => {},
       removeEventListener: () => {},
+      appendChild: (child) => {
+        rootChildren.push(child);
+        return child;
+      },
+      childNodes: rootChildren,
     };
     const documentListeners = {};
     const originalDocument = globalThis.document;
@@ -30,11 +89,8 @@ describe('Eval Runtime Directives', () => {
       removeEventListener: name => { delete documentListeners[name]; },
       head: { appendChild: () => {} },
       body: { appendChild: () => {} },
-      createElement: () => ({
-        appendChild: () => {},
-        insertBefore: () => {},
-        style: {},
-      }),
+      createElement: createMockElement,
+      createTextNode: createMockTextNode,
     };
 
     try {
@@ -43,7 +99,7 @@ describe('Eval Runtime Directives', () => {
 
       const source = `
 count = @signal 0.
-@render "#app" @html "<button id='inc'>#{count}</button>".
+@render "#app" @html <button id="inc">#{count}</button>.
 @on :click "#inc" count = count + 1.
 `;
 
@@ -67,6 +123,50 @@ count = @signal 0.
   });
 
   test('should execute @shadow render/on directives in interpreter mode', async () => {
+    const createMockElement = (tagName = 'DIV') => {
+      const children = [];
+      const el = {
+        nodeType: 1,
+        childNodes: children,
+        firstChild: null,
+        tagName: tagName.toUpperCase(),
+        appendChild: (child) => {
+          children.push(child);
+          el.firstChild = children[0];
+          return child;
+        },
+        insertBefore: (child, ref) => {
+          const idx = ref ? children.indexOf(ref) : 0;
+          if (idx >= 0) children.splice(idx, 0, child);
+          else children.push(child);
+          el.firstChild = children[0];
+          return child;
+        },
+        setAttribute: () => {},
+        style: {},
+        get textContent() {
+          return children.map(c => c.textContent || c.nodeValue || '').join('');
+        },
+        get innerHTML() {
+          return children.map(c => {
+            if (c.nodeType === 3) return c.nodeValue;
+            if (c.tagName) {
+              const content = c.textContent || '';
+              return `<${c.tagName.toLowerCase()}>${content}</${c.tagName.toLowerCase()}>`;
+            }
+            return '';
+          }).join('');
+        },
+      };
+      return el;
+    };
+
+    const createMockTextNode = (text) => ({
+      nodeType: 3,
+      nodeValue: text,
+      textContent: text,
+    });
+
     const rootListeners = {};
     let shadowChildren = [];
     const host = {
@@ -75,7 +175,14 @@ count = @signal 0.
         const shadowRoot = {
           outlet: null,
           get innerHTML() {
-            return '';
+            return shadowChildren.map(c => {
+              if (c.nodeType === 3) return c.nodeValue;
+              if (c.tagName) {
+                const content = c.textContent || '';
+                return `<${c.tagName.toLowerCase()}>${content}</${c.tagName.toLowerCase()}>`;
+              }
+              return '';
+            }).join('');
           },
           set innerHTML(_) {
             shadowChildren = [];
@@ -100,13 +207,8 @@ count = @signal 0.
       removeEventListener: () => {},
       head: { appendChild: () => {} },
       body: { appendChild: () => {} },
-      createElement: () => ({
-        innerHTML: '',
-        firstChild: null,
-        appendChild: () => {},
-        insertBefore: () => {},
-        style: {},
-      }),
+      createElement: createMockElement,
+      createTextNode: createMockTextNode,
     };
 
     try {
@@ -115,7 +217,7 @@ count = @signal 0.
 
       const source = `
 count = @signal 0.
-@render "#host" @shadow @html "<button id='inc'>#{count}</button>".
+@render "#host" @shadow @html <button id="inc">#{count}</button>.
 @on :click "#inc" @shadow count = count + 1.
 `;
 
@@ -146,6 +248,50 @@ count = @signal 0.
   });
 
   test('should still support legacy @on shadow ordering', async () => {
+    const createMockElement = (tagName = 'DIV') => {
+      const children = [];
+      const el = {
+        nodeType: 1,
+        childNodes: children,
+        firstChild: null,
+        tagName: tagName.toUpperCase(),
+        appendChild: (child) => {
+          children.push(child);
+          el.firstChild = children[0];
+          return child;
+        },
+        insertBefore: (child, ref) => {
+          const idx = ref ? children.indexOf(ref) : 0;
+          if (idx >= 0) children.splice(idx, 0, child);
+          else children.push(child);
+          el.firstChild = children[0];
+          return child;
+        },
+        setAttribute: () => {},
+        style: {},
+        get textContent() {
+          return children.map(c => c.textContent || c.nodeValue || '').join('');
+        },
+        get innerHTML() {
+          return children.map(c => {
+            if (c.nodeType === 3) return c.nodeValue;
+            if (c.tagName) {
+              const content = c.textContent || '';
+              return `<${c.tagName.toLowerCase()}>${content}</${c.tagName.toLowerCase()}>`;
+            }
+            return '';
+          }).join('');
+        },
+      };
+      return el;
+    };
+
+    const createMockTextNode = (text) => ({
+      nodeType: 3,
+      nodeValue: text,
+      textContent: text,
+    });
+
     const rootListeners = {};
     let shadowChildren = [];
     const host = {
@@ -154,7 +300,14 @@ count = @signal 0.
         const shadowRoot = {
           outlet: null,
           get innerHTML() {
-            return '';
+            return shadowChildren.map(c => {
+              if (c.nodeType === 3) return c.nodeValue;
+              if (c.tagName) {
+                const content = c.textContent || '';
+                return `<${c.tagName.toLowerCase()}>${content}</${c.tagName.toLowerCase()}>`;
+              }
+              return '';
+            }).join('');
           },
           set innerHTML(_) {
             shadowChildren = [];
@@ -179,13 +332,8 @@ count = @signal 0.
       removeEventListener: () => {},
       head: { appendChild: () => {} },
       body: { appendChild: () => {} },
-      createElement: () => ({
-        innerHTML: '',
-        firstChild: null,
-        appendChild: () => {},
-        insertBefore: () => {},
-        style: {},
-      }),
+      createElement: createMockElement,
+      createTextNode: createMockTextNode,
     };
 
     try {
@@ -194,7 +342,7 @@ count = @signal 0.
 
       const source = `
 count = @signal 0.
-@render "#host" @shadow @html "<button id='inc'>#{count}</button>".
+@render "#host" @shadow @html <button id="inc">#{count}</button>.
 @on :click "#inc" count = count + 1 @shadow.
 `;
 

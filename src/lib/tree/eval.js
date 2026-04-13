@@ -1361,11 +1361,25 @@ export default class Eval {
     const prev = this.getPrev();
     const next = this.nextToken();
 
+    // Debug logging
+    if (globalThis.__10x_debug_strings) {
+      console.log('[evalStrings] ctx:', { type: this.ctx.type?.toString?.(), value: typeof this.ctx.value === 'string' ? this.ctx.value : typeof this.ctx.value === 'object' ? Array.isArray(this.ctx.value) ? 'array' : 'object' : this.ctx.value });
+      console.log('[evalStrings] isString:', isString(this.ctx), 'value is string:', typeof this.ctx.value === 'string', 'isMod:', isMod(next));
+    }
+
     // evaluate interpolated strings, e.g. `"x#{y}"`
     if (isString(this.ctx) && typeof this.ctx.value !== 'string' && !isMod(next)) {
-      const result = await Eval.do(this.ctx.valueOf(), this.env, 'Str', false, this.ctx.tokenInfo);
+      let result;
+      try {
+        result = await Eval.do(this.ctx.valueOf(), this.env, 'Str', false, this.ctx.tokenInfo);
+      } catch (e) {
+        if (globalThis.__10x_debug_strings) {
+          console.error('[evalStrings] Eval.do error:', e);
+        }
+        throw e;
+      }
 
-      this.replace(Expr.value(result.map(sub => sub.value).join(''), this.ctx.tokenInfo), true);
+      this.replace(Expr.value(result.map(sub => sub.valueOf()).join(''), this.ctx.tokenInfo), true);
       return;
     }
 
@@ -2114,6 +2128,12 @@ export default class Eval {
           scope.__domRender = domRender;
           signalMap = new Map();
 
+          // Debug logging
+          if (globalThis.__10x_debug_strings) {
+            console.log('[html view] htmlBody:', htmlBody);
+            console.log('[html view] htmlBody[0].value:', htmlBody[0]?.value);
+          }
+
           // OLD BEHAVIOR: Skip signal subscription loop entirely.
           // This allows somedom to subscribe directly to signal objects via Path1.
           const localNames = Object.keys(environment.locals || {});
@@ -2130,8 +2150,19 @@ export default class Eval {
           }
 
           const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
+          
+          if (globalThis.__10x_debug_strings) {
+            console.log('[html view] rendered:', rendered);
+            console.log('[html view] rendered types:', rendered.map(r => ({ type: r.type?.toString?.() || 'primitive', value: typeof r.value === 'string' ? r.value : typeof r.value === 'object' ? Array.isArray(r.value) ? 'array' : 'object' : r.value })));
+          }
+          
           if (!rendered.length) return '';
           const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+          
+          if (globalThis.__10x_debug_strings) {
+            console.log('[html view] result:', result);
+          }
+          
           for (const [idx, entry] of viewCache) {
             if (idx >= _viewIndex.value) {
               if (typeof entry.dispose === 'function') entry.dispose();
@@ -2621,6 +2652,11 @@ export default class Eval {
         raise(`Given \`${JSON.stringify(tokens)}\` as input!`);
       }
 
+      // Debug logging
+      if (globalThis.__10x_debug_strings) {
+        console.log('[Eval.run] tokens:', tokens.map(t => ({ type: t.type?.toString?.() || 'primitive', value: typeof t.value === 'string' ? t.value : typeof t.value === 'object' ? 'object' : t.value })));
+      }
+
       const vm = new Eval(tokens, environment, noInheritance);
       const result = await vm.run(descriptor, parentTokenInfo);
 
@@ -2632,6 +2668,10 @@ export default class Eval {
 
   static do(params, ...args) {
     if (Array.isArray(params)) {
+      // Debug logging
+      if (globalThis.__10x_debug_strings) {
+        console.log('[Eval.do] params:', params.map(t => ({ type: t.type?.toString?.() || 'primitive', value: typeof t.value === 'string' ? t.value : typeof t.value === 'object' ? Array.isArray(t.value) ? 'array' : 'object' : t.value })));
+      }
       return !(params.length === 1 && isNumber(params[0])) ? Eval.run(params, ...args) : params;
     }
 

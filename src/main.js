@@ -2,7 +2,7 @@
 ---
 $format: esm
 ---
-*/
+ */
 
 import { execute, evaluate } from './lib/index.js';
 import Env from './lib/tree/env';
@@ -20,6 +20,8 @@ export { Env, Expr, Parser };
 export * from './lib/tree/symbols.js';
 
 export { main, format } from './util';
+
+export { createBrowserAdapter } from './adapters/browser/index.js';
 
 export function applyAdapter(adapter, options) {
   applyRuntimeAdapter({
