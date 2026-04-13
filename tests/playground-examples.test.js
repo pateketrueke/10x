@@ -424,7 +424,7 @@ addTask = @on
 updateInput = @on input = e -> e.currentTarget.value.
 
 toggleTask = (i) ->
-  tasks = map(tasks, (t j) -> @if (i == j) (:text t.text, :done !t.done) @else t).
+  tasks = map(tasks, (t j) -> @if (i == j) t | (:done !t.done) @else t).
 
 clearDone = @on
   tasks = filter(tasks, (t) -> !t.done).
