@@ -375,23 +375,43 @@ inc = @on count = count + 1.
         name: 'todolist.md',
         value: `# TodoList
 
-todos = @signal "Write parser regression tests".
-count = @signal 1.
+tasks = @signal [].
+input = @signal "".
+
+addTask = @on
+  tasks = push(tasks, :text input, :done :off),
+  input = "".
+
+toggleTask = (i) ->
+  tasks = map(tasks, (t j) -> @if (i == j) (:text t.text, :done !t.done) @else t).
+
+clearDone = @on
+  tasks = filter(tasks, (t) -> !t.done).
 
 @render "#render-container" @html
   <section style="font-family:system-ui;padding:1rem;max-width:400px;border:1px solid rgba(255,255,255,0.1);border-radius:8px">
     <h1 style="margin:0 0 0.5rem">TodoList</h1>
-    <p style="color:#888;font-size:0.85rem;margin:0 0 1rem">items added: #{count}</p>
-    <p style="margin:0 0 1rem">#{todos}</p>
-    <div style="display:flex;gap:0.5rem">
-      <button id="add" style="padding:0.5rem 1rem;cursor:pointer">+ add item</button>
-      <button id="clear" style="padding:0.5rem 1rem;cursor:pointer">clear</button>
+    <p style="color:#888;font-size:0.85rem;margin:0 0 1rem">#{size(tasks)} tasks, #{size(filter(tasks, (t) -> t.done))} done</p>
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+      <input 
+        type="text" 
+        placeholder="Add task..." 
+        value={input}
+        oninput={@on input = e.target.value}
+        style="flex:1;padding:0.5rem"
+      />
+      <button onclick={addTask} style="padding:0.5rem 1rem;cursor:pointer">Add</button>
     </div>
-  </section>.
-
-@on :click "#add"   todos = todos + ", ship feature " + count.
-@on :click "#add"   count = count + 1.
-@on :click "#clear" todos = "Inbox zero".`
+    <ul style="list-style:none;padding:0;margin:0 0 1rem">
+      #{map(tasks, (t i) ->
+        <li style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <input type="checkbox" checked={t.done} onchange={() -> toggleTask(i)} />
+          <span style={t.done ? "text-decoration:line-through;opacity:0.5" : ""}>#{t.text}</span>
+        </li>
+      )}
+    </ul>
+    <button onclick={clearDone} style="padding:0.5rem 1rem;cursor:pointer;font-size:0.85rem">Clear done</button>
+  </section>.`
       }
     ];
 
