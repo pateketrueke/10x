@@ -74,6 +74,20 @@
       border-radius: 99px;
       padding: 0.18rem 0.5rem;
     }
+    #run-btn {
+      margin-left: auto;
+      font: 600 .72rem var(--mono);
+      letter-spacing: 0.05em;
+      color: var(--bg);
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      padding: 0.3rem 0.7rem;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    #run-btn:hover { background: #5eead4; }
+    #run-btn:active { transform: scale(0.97); }
     .file-tabs {
       display: flex;
       align-items: center;
@@ -269,7 +283,7 @@
         <span class="tbar-dot y"></span>
         <span class="tbar-dot g"></span>
         <span class="pane-title">playground</span>
-        <span class="pane-badge">LIVE</span>
+        <button id="run-btn" type="button" title="Run (Ctrl/Cmd+Enter)">▶ Run</button>
       </div>
       <div class="file-tabs" id="file-tabs"></div>
       <div class="editors-container" id="editors-container"></div>
@@ -717,6 +731,48 @@ updateInput = @on input = e.target.value.
     if (activeFile) {
       orchestrator.value = activeFile.value;
     }
+
+    // Run button: clear everything and re-run
+    const runBtn = document.getElementById('run-btn');
+    const clearAll = () => {
+      // Clear signal registry
+      const registry = getSignalRegistry();
+      registry.clear();
+      
+      // Clear devtools
+      globalThis.__10x_devtools?.clear?.();
+      
+      // Clear output
+      resetRenderContainer();
+      
+      // Clear logs
+      document.getElementById('log-container').innerHTML = '';
+      
+      // Clear module cache
+      moduleCache.clear();
+      signalSnapshots.clear();
+    };
+    
+    const runActiveFile = () => {
+      clearAll();
+      const file = getActiveFile();
+      if (file && orchestrator) {
+        // Sync editor value to file
+        const editor = editors.get(file.id);
+        if (editor) file.value = editor.value;
+        orchestrator.value = file.value;
+      }
+    };
+    
+    runBtn.addEventListener('click', runActiveFile);
+    
+    // Keyboard shortcut: Ctrl/Cmd+Enter
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runActiveFile();
+      }
+    });
 
     const setShadowMode = (code, enabled) => {
       let result = code
