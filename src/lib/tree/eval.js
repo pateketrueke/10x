@@ -33,6 +33,7 @@ import {
   isInvokable, isComment, isObject, isLiteral, isScalar, isResult, isString, isNumber, isSymbol, isLogic, isData, isUnit,
   isMixed, isPlain, isRange, isSlice, isArray, isSome, isEvery, isBlock, isComma, isPipe, isMath, isNot, isMod, isEnd, isDot, isEOL, isOR,
   matchesType, inferRuntimeType, canonicalTypeName,
+  debugLog, isDebugEnabled,
 } from '../helpers';
 
 function parseAnnotation(annStr) {
@@ -1981,6 +1982,7 @@ export default class Eval {
       if (!_ownerEnv.__signalCache) _ownerEnv.__signalCache = new Map();
       const _cached = _ownerEnv.__signalCache.get(token);
       if (_cached) {
+        debugLog('signal', 'using cached signal:', _cached.value?._devtoolsName);
         subTree.push(_cached);
         isDone = true;
       }
@@ -1988,6 +1990,7 @@ export default class Eval {
       if (isDone) {
         // no-op
       } else {
+      debugLog('signal', 'creating new signal, token._assignName:', token._assignName);
       const signalFn = resolveRuntimeFn('signal');
       const signalArgs = normalizeDirectiveArgs(value.signal);
       const runtimeArgs = [];

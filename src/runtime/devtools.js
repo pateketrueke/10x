@@ -1,4 +1,5 @@
 import { getSignalRegistry, effect, read, isDevtoolsActive, setDevtoolsActive } from './core.js';
+import { getDebugCategoriesInfo, toggleDebugCategory, setAllDebugCategories, isDebugEnabled } from '../lib/helpers.js';
 
 const MAX_HISTORY = 20;
 
@@ -230,7 +231,99 @@ export function devtools(options = {}) {
 
   const title = document.createElement('div');
   title.style.cssText = 'font-weight:700;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;';
-  title.innerHTML = `<span>10x DevTools</span><span style="font-weight:400;font-size:10px;color:#888;">Alt+D / Ctrl+Shift+D</span>`;
+  
+  const titleLeft = document.createElement('span');
+  titleLeft.innerHTML = '10x DevTools <span style="font-weight:400;font-size:10px;color:#888;margin-left:0.5rem;">Alt+D</span>';
+  
+  const titleRight = document.createElement('div');
+  titleRight.style.cssText = 'display:flex;gap:0.5rem;align-items:center;';
+  
+  // Debug config button
+  const configBtn = document.createElement('button');
+  configBtn.innerHTML = '⚙';
+  configBtn.style.cssText = 'background:none;border:none;color:#888;cursor:pointer;font-size:14px;padding:0;line-height:1;';
+  configBtn.title = 'Debug categories';
+  
+  // Debug dropdown
+  let debugDropdown = null;
+  configBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (debugDropdown) {
+      debugDropdown.remove();
+      debugDropdown = null;
+      return;
+    }
+    
+    debugDropdown = document.createElement('div');
+    debugDropdown.style.cssText = 'position:absolute;right:0;top:100%;background:#1a1f2e;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:0.5rem;z-index:1000;min-width:140px;font-size:11px;';
+    
+    const categories = getDebugCategoriesInfo();
+    categories.forEach(cat => {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0;cursor:pointer;';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = cat.enabled;
+      checkbox.onchange = () => {
+        toggleDebugCategory(cat.name);
+        checkbox.checked = isDebugEnabled(cat.name);
+      };
+      
+      const span = document.createElement('span');
+      span.textContent = cat.name;
+      span.style.color = '#d8dde4';
+      
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      debugDropdown.appendChild(label);
+    });
+    
+    // All toggle
+    const divider = document.createElement('div');
+    divider.style.cssText = 'border-top:1px solid rgba(255,255,255,0.1);margin:0.4rem 0;';
+    debugDropdown.appendChild(divider);
+    
+    const allLabel = document.createElement('label');
+    allLabel.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0;cursor:pointer;';
+    
+    const allCheckbox = document.createElement('input');
+    allCheckbox.type = 'checkbox';
+    allCheckbox.checked = categories.some(c => c.enabled && c.name === 'all') || (categories.every(c => c.enabled) && categories.length > 0);
+    allCheckbox.onchange = () => {
+      setAllDebugCategories(allCheckbox.checked);
+      // Refresh dropdown
+      debugDropdown.remove();
+      debugDropdown = null;
+      configBtn.click();
+    };
+    
+    const allSpan = document.createElement('span');
+    allSpan.textContent = 'all';
+    allSpan.style.color = '#ffa657';
+    
+    allLabel.appendChild(allCheckbox);
+    allLabel.appendChild(allSpan);
+    debugDropdown.appendChild(allLabel);
+    
+    titleRight.style.position = 'relative';
+    titleRight.appendChild(debugDropdown);
+    
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', function closeDropdown(e) {
+        if (debugDropdown && !debugDropdown.contains(e.target) && e.target !== configBtn) {
+          debugDropdown.remove();
+          debugDropdown = null;
+          document.removeEventListener('click', closeDropdown);
+        }
+      });
+    }, 0);
+  };
+  
+  titleRight.appendChild(configBtn);
+  title.appendChild(titleLeft);
+  title.appendChild(titleRight);
 
   const buildStatus = document.createElement('div');
   buildStatus.style.cssText = 'font-size:10px;color:#666;margin-bottom:0.5rem;';

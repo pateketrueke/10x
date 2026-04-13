@@ -1015,3 +1015,58 @@ export function matchesType(value, typeStr, env) {
   if (!actual || actual === 'unknown') return true;
   return actual === declared;
 }
+
+// Debug logging system with categories
+const DEBUG_CATEGORIES_KEY = '10x:debug:categories';
+const ALL_DEBUG_CATEGORIES = ['signal', 'eval', 'render', 'html', 'hmr', 'parser', 'env'];
+
+function getDebugCategories() {
+  try {
+    const stored = localStorage.getItem(DEBUG_CATEGORIES_KEY);
+    if (stored) return new Set(stored.split(',').filter(Boolean));
+  } catch {}
+  return new Set();
+}
+
+function setDebugCategories(categories) {
+  try {
+    localStorage.setItem(DEBUG_CATEGORIES_KEY, Array.from(categories).join(','));
+  } catch {}
+}
+
+export function isDebugEnabled(category) {
+  const enabled = getDebugCategories();
+  return enabled.has(category) || enabled.has('all');
+}
+
+export function debugLog(category, ...args) {
+  if (!isDebugEnabled(category)) return;
+  console.log(`[${category}]`, ...args);
+}
+
+export function getDebugCategoriesInfo() {
+  const enabled = getDebugCategories();
+  return ALL_DEBUG_CATEGORIES.map(cat => ({
+    name: cat,
+    enabled: enabled.has(cat),
+  }));
+}
+
+export function toggleDebugCategory(category) {
+  const enabled = getDebugCategories();
+  if (enabled.has(category)) {
+    enabled.delete(category);
+  } else {
+    enabled.add(category);
+  }
+  setDebugCategories(enabled);
+  return enabled.has(category);
+}
+
+export function setAllDebugCategories(enable) {
+  if (enable) {
+    setDebugCategories(new Set(['all']));
+  } else {
+    setDebugCategories(new Set());
+  }
+}
