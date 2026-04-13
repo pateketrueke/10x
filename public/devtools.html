@@ -160,6 +160,9 @@
     .playground-editor.active {
       display: block;
     }
+    #orchestrator-editor {
+      display: none;
+    }
     .devtools-pane {
       display: flex;
       flex-direction: column;
@@ -291,6 +294,8 @@
       </div>
     </div>
   </div>
+  <!-- Hidden orchestrator editor that runs combined source -->
+  <x-editor id="orchestrator-editor" value=""></x-editor>
   <script type="module">
     import { devtools } from './dist/runtime.js';
     
@@ -351,9 +356,34 @@ count = @signal 0.
     let files = loadFiles();
     let activeId = files[0]?.id || null;
     const editors = new Map();
+    let orchestrator = null;
+    let updateTimeout = null;
 
     const fileTabsEl = document.getElementById('file-tabs');
     const editorsContainerEl = document.getElementById('editors-container');
+
+    // Combine all file sources into one program
+    const combineSources = () => {
+      // Sync editor values to file objects first
+      editors.forEach((editor, id) => {
+        const file = files.find(f => f.id === id);
+        if (file) file.value = editor.value;
+      });
+      
+      // Concatenate all files with separators
+      return files.map(f => f.value).join('\n\n');
+    };
+
+    // Update orchestrator with combined source (debounced)
+    const updateOrchestrator = () => {
+      if (updateTimeout) clearTimeout(updateTimeout);
+      updateTimeout = setTimeout(() => {
+        if (!orchestrator) return;
+        const combined = combineSources();
+        orchestrator.value = combined;
+        saveFiles(files);
+      }, 150);
+    };
 
     const renderTabs = () => {
       fileTabsEl.innerHTML = '';
@@ -394,11 +424,9 @@ count = @signal 0.
         editorsContainerEl.appendChild(editorEl);
         editors.set(file.id, editorEl);
         
-        editorEl.addEventListener('tenx-signals', ({ detail }) => {
-          if (globalThis.__10x_devtools_debug) {
-            console.info('[10x:devtools.html] tenx-signals event', { fileId: file.id });
-          }
-          globalThis.__10x_devtools?.onSignals?.(detail);
+        // Listen for changes and update orchestrator
+        editorEl.addEventListener('tenx-signals', () => {
+          updateOrchestrator();
         });
       });
     };
@@ -443,6 +471,7 @@ count = @signal 0.
       renderTabs();
       renderEditors();
       activateFile(newId);
+      updateOrchestrator();
     };
 
     const closeFile = (id) => {
@@ -460,11 +489,26 @@ count = @signal 0.
       saveFiles(files);
       renderTabs();
       renderEditors();
+      updateOrchestrator();
     };
 
     // Initialize
     renderTabs();
     renderEditors();
+    
+    // Setup orchestrator
+    orchestrator = document.getElementById('orchestrator-editor');
+    orchestrator.addEventListener('tenx-signals', ({ detail }) => {
+      if (globalThis.__10x_devtools_debug) {
+        console.info('[10x:devtools.html] orchestrator tenx-signals event', {
+          snapshotCount: Array.isArray(detail) ? detail.length : 0,
+        });
+      }
+      globalThis.__10x_devtools?.onSignals?.(detail);
+    });
+    
+    // Initial combined source
+    orchestrator.value = combineSources();
 
     // Transform existing editor code by adding/removing @shadow annotations in-place.
     const setShadowMode = (code, enabled) => {
@@ -497,6 +541,7 @@ count = @signal 0.
         }
       });
       saveFiles(files);
+      updateOrchestrator();
     });
 
     const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
