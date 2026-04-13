@@ -418,7 +418,7 @@ tasks = @signal [].
 input = @signal "".
 
 addTask = @on
-  tasks = tasks |> push(:text input, :done :off),
+  tasks = tasks |> push(:text read(input), :done :off),
   input = "".
 
 updateInput = @on input = e -> e.target.value.
@@ -444,7 +444,7 @@ clearDone = @on
       <button id="add-btn" onclick={addTask} style="padding:0.5rem 1rem;cursor:pointer">Add</button>
     </div>
     <ul id="task-list" style="list-style:none;padding:0;margin:0 0 1rem">
-      #{map(tasks, (t i) ->
+      #{tasks |> map((t i) ->
         <li class="task-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
           <input type="checkbox" class="task-checkbox" checked={t.done} onchange={() -> toggleTask(i)} />
           <span class="task-text" style={t.done ? "text-decoration:line-through;opacity:0.5" : ""}>#{t.text}</span>
@@ -463,7 +463,7 @@ describe('Playground: TodoList', () => {
     acquireVirtualDoc();
     applyAdapter(createBrowserAdapter());
     runtimeEnv = new Env();
-    await run('@import signal, html, render, on @from "Runtime".', runtimeEnv);
+    await run('@import signal, read, html, render, on @from "Runtime".', runtimeEnv);
     await run('@from "Prelude" @import (map, filter, size, push).', runtimeEnv);
   });
 
