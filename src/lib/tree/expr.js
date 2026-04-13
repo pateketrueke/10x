@@ -313,11 +313,16 @@ export default class Expr {
 
     while (
       callable.hasBody
+      && callable.head()
       && callable.head().isCallable
       && callable.getBody().length === 1
     ) {
-      length += callable.head().getArgs().length;
-      callable = callable.head();
+      const head = callable.head();
+      if (head && typeof head.getArgs === 'function') {
+        const args = head.getArgs();
+        if (args) length += args.length;
+      }
+      callable = head;
       break;
     }
 
@@ -460,9 +465,14 @@ export default class Expr {
       return mixed.value.substr(1);
     }
 
-    return mixed.isFunction
-      ? mixed.value.target
-      : mixed.valueOf();
+    const value = mixed.isFunction ? mixed.value.target : mixed.valueOf();
+    
+    // Unwrap signal objects to their current value
+    if (value && typeof value === 'object' && typeof value.get === 'function' && typeof value.set === 'function') {
+      return value.get();
+    }
+    
+    return value;
   }
 
   static each(tokens, callback) {

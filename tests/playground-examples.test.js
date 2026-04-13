@@ -465,6 +465,12 @@ describe('Playground: TodoList', () => {
     runtimeEnv = new Env();
     await run('@import signal, read, html, render, on @from "Runtime".', runtimeEnv);
     await run('@from "Prelude" @import (map, filter, size, push).', runtimeEnv);
+    
+    // Verify imports
+    console.log('runtimeEnv has signal:', runtimeEnv.has('signal'));
+    console.log('runtimeEnv has read:', runtimeEnv.has('read'));
+    console.log('runtimeEnv has on:', runtimeEnv.has('on'));
+    console.log('runtimeEnv has push:', runtimeEnv.has('push'));
   });
 
   afterAll(() => {
@@ -554,25 +560,62 @@ describe('Playground: TodoList', () => {
       
       const env = new Env(runtimeEnv);
       
-      // Test simpler version first
-      const simpleTodolist = `
-tasks = @signal [].
-input = @signal "".
-addTask = @on tasks = tasks |> push(:text input, :done :off).
-@render "#render-container" @html <div><input id="task-input" value={input} /><button id="add-btn" onclick={addTask}>Add</button></div>.
-`;
-      try {
-        await run(simpleTodolist, env);
-      } catch (err) {
-        console.error('Simple todolist error:', err.message);
-        throw err;
+      // Use the actual TODOLIST code
+      const result = await run(TODOLIST, env);
+      
+      // Check for errors
+      if (run.failure) {
+        console.error('Run failure:', run.failure.message);
+        console.error('Stack:', run.failure.stack?.split('\n').slice(0, 5).join('\n'));
+        throw run.failure;
       }
+      
       await wait();
       
-      console.log('Container innerHTML:', container.innerHTML);
+      console.log('Run result:', result);
+      console.log('Container innerHTML:', container.innerHTML?.slice(0, 500));
+      
+      // Check if rendered
+      const app = container.querySelector('.todo-app');
+      if (!app) {
+        throw new Error('Todo app not rendered');
+      }
+      
+      // Check if addTask was created
+      const addTaskEntry = env.get('addTask');
+      console.log('addTask entry:', addTaskEntry?.body?.[0]?.type?.toString());
+      console.log('addTask value:', typeof addTaskEntry?.body?.[0]?.valueOf());
       
       const input = container.querySelector('#task-input');
-      expect(input).toBeDefined();
+      const addBtn = container.querySelector('#add-btn');
+      
+      if (!input || !addBtn) {
+        throw new Error('Input or button not found');
+      }
+      
+      // Type in input
+      input.value = 'Test task';
+      // Create a mock event with target
+      const inputEvent = { 
+        type: 'input',
+        target: input,
+        currentTarget: input,
+        bubbles: true
+      };
+      input.dispatchEvent(inputEvent);
+      await wait();
+      
+      // Click add
+      const clickEvent = { type: 'click', bubbles: true };
+      addBtn.dispatchEvent(clickEvent);
+      await wait();
+      
+      console.log('After click, container:', container.innerHTML?.slice(0, 800));
+      
+      // Check task appears
+      const tasks = container.querySelectorAll('.task-item');
+      expect(tasks.length).toBe(1);
+      expect(tasks[0]?.textContent).toContain('Test task');
     });
   });
 });
