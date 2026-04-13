@@ -294,7 +294,6 @@
       </div>
     </div>
   </div>
-  <!-- Hidden orchestrator editor that runs the main file -->
   <x-editor id="orchestrator-editor" value=""></x-editor>
   <script type="module">
     import { devtools } from './dist/runtime.js';
@@ -362,36 +361,110 @@ count = @signal 0.
     const editors = new Map();
     let orchestrator = null;
     let updateTimeout = null;
-    let moduleCache = new Map();
+    
+    // HMR-aware module system
+    const moduleCache = new Map();        // file.id -> { env, exports, imports }
+    const dependencyGraph = new Map();    // file.id -> Set of file.ids that import it
+    const signalSnapshots = new Map();    // file.id -> signal snapshots for HMR
 
     const fileTabsEl = document.getElementById('file-tabs');
     const editorsContainerEl = document.getElementById('editors-container');
 
-    // Setup virtual module resolution
     applyAdapter(createBrowserAdapter());
+    
+    // Build dependency graph from imports
+    const parseImports = (source) => {
+      const imports = [];
+      const importRegex = /@import\s+[^@]+@from\s+"([^"]+)"/g;
+      let match;
+      while ((match = importRegex.exec(source)) !== null) {
+        let path = match[1].replace(/^\.\//, '');
+        if (!path.endsWith('.md')) path += '.md';
+        imports.push(path);
+      }
+      return imports;
+    };
+    
+    // Update dependency graph
+    const updateDependencyGraph = () => {
+      dependencyGraph.clear();
+      files.forEach(file => {
+        const imports = parseImports(file.value);
+        imports.forEach(importPath => {
+          const depFile = files.find(f => f.name === importPath);
+          if (depFile) {
+            if (!dependencyGraph.has(depFile.id)) {
+              dependencyGraph.set(depFile.id, new Set());
+            }
+            dependencyGraph.get(depFile.id).add(file.id);
+          }
+        });
+      });
+    };
+    
+    // Get all modules that depend on a given module (transitively)
+    const getDependents = (fileId, visited = new Set()) => {
+      if (visited.has(fileId)) return [];
+      visited.add(fileId);
+      
+      const directDeps = dependencyGraph.get(fileId) || new Set();
+      let allDeps = [...directDeps];
+      
+      directDeps.forEach(depId => {
+        allDeps = allDeps.concat(getDependents(depId, visited));
+      });
+      
+      return [...new Set(allDeps)];
+    };
+    
+    // Snapshot signals for a module before invalidation
+    const snapshotModuleSignals = (fileId) => {
+      const module = moduleCache.get(fileId);
+      if (!module) return;
+      
+      const snapshot = {};
+      const registry = getSignalRegistry();
+      for (const [key, signal] of registry.entries()) {
+        if (typeof key === 'string' && signal._moduleUrl === fileId) {
+          snapshot[key] = signal.peek();
+        }
+      }
+      signalSnapshots.set(fileId, snapshot);
+    };
+    
+    // Restore signals after module reload
+    const restoreModuleSignals = (fileId) => {
+      const snapshot = signalSnapshots.get(fileId);
+      if (!snapshot) return;
+      
+      const registry = getSignalRegistry();
+      for (const [key, signal] of registry.entries()) {
+        if (typeof key === 'string' && snapshot[key] !== undefined) {
+          signal.set(snapshot[key]);
+        }
+      }
+    };
     
     // Virtual file system - resolve imports from in-memory files
     Env.resolve = async (src, name, alias, environment) => {
-      // Normalize path
       let path = src.replace(/^\.\//, '');
       if (!path.endsWith('.md')) path += '.md';
       
-      // Find file in our virtual FS
       const file = files.find(f => f.name === path);
       if (!file) {
         console.warn(`[playground] Module not found: ${src}`);
         return null;
       }
       
-      // Check cache
-      const cacheKey = file.id;
-      if (moduleCache.has(cacheKey)) {
-        return moduleCache.get(cacheKey);
+      // Check cache (module might be cached if not invalidated)
+      if (moduleCache.has(file.id)) {
+        const cached = moduleCache.get(file.id);
+        return cached.env;
       }
       
       // Create new environment for this module
       const moduleEnv = new Env(environment);
-      moduleCache.set(cacheKey, moduleEnv);
+      moduleCache.set(file.id, { env: moduleEnv, exports: {}, imports: parseImports(file.value) });
       
       // Execute the module
       await execute(file.value, moduleEnv);
@@ -399,14 +472,26 @@ count = @signal 0.
       return moduleEnv;
     };
     
-    // Clear module cache when files change
-    const clearModuleCache = () => {
-      moduleCache.clear();
+    // Invalidate a module and its dependents
+    const invalidateModule = (fileId) => {
+      const toInvalidate = [fileId, ...getDependents(fileId)];
+      
+      // Snapshot signals before invalidation
+      toInvalidate.forEach(id => snapshotModuleSignals(id));
+      
+      // Clear module cache for invalidated modules
+      toInvalidate.forEach(id => moduleCache.delete(id));
+      
+      if (debug) {
+        console.log(`[playground:HMR] Invalidated modules:`, toInvalidate.map(id => 
+          files.find(f => f.id === id)?.name
+        ));
+      }
+      
+      return toInvalidate;
     };
 
-    // Get the "main" file (last file that has @render)
     const getMainFile = () => {
-      // Find the last file with @render, or just use the last file
       for (let i = files.length - 1; i >= 0; i--) {
         if (files[i].value.includes('@render')) {
           return files[i];
@@ -415,8 +500,8 @@ count = @signal 0.
       return files[files.length - 1];
     };
 
-    // Update orchestrator with main file (debounced)
-    const updateOrchestrator = () => {
+    // HMR-aware update
+    const updateOrchestrator = (changedFileId = null) => {
       if (updateTimeout) clearTimeout(updateTimeout);
       updateTimeout = setTimeout(() => {
         // Sync editor values to file objects
@@ -426,12 +511,26 @@ count = @signal 0.
         });
         
         saveFiles(files);
-        clearModuleCache();
+        updateDependencyGraph();
+        
+        // HMR: only invalidate changed module + dependents
+        if (changedFileId) {
+          invalidateModule(changedFileId);
+        } else {
+          // Full reload
+          moduleCache.clear();
+          signalSnapshots.clear();
+        }
         
         // Run the main file
         const mainFile = getMainFile();
         if (mainFile && orchestrator) {
           orchestrator.value = mainFile.value;
+          
+          // Restore signals after execution
+          if (changedFileId) {
+            setTimeout(() => restoreModuleSignals(changedFileId), 0);
+          }
         }
       }, 150);
     };
@@ -475,9 +574,9 @@ count = @signal 0.
         editorsContainerEl.appendChild(editorEl);
         editors.set(file.id, editorEl);
         
-        // Listen for changes and update orchestrator
+        // HMR: pass the changed file ID
         editorEl.addEventListener('tenx-signals', () => {
-          updateOrchestrator();
+          updateOrchestrator(file.id);
         });
       });
     };
@@ -485,7 +584,6 @@ count = @signal 0.
     const activateFile = (id) => {
       if (!editors.has(id)) return;
       
-      // Save current editor value before switching
       if (activeId && editors.has(activeId)) {
         const currentEditor = editors.get(activeId);
         const currentFile = files.find(f => f.id === activeId);
@@ -494,12 +592,10 @@ count = @signal 0.
       
       activeId = id;
       
-      // Update tab styles
       fileTabsEl.querySelectorAll('.file-tab').forEach((tab) => {
         tab.classList.toggle('active', tab.dataset.id === id);
       });
       
-      // Update editor visibility
       editors.forEach((editor, editorId) => {
         editor.classList.toggle('active', editorId === id);
       });
@@ -543,14 +639,13 @@ count = @signal 0.
       updateOrchestrator();
     };
 
-    // Initialize
     renderTabs();
     renderEditors();
+    updateDependencyGraph();
     
-    // Setup orchestrator
     orchestrator = document.getElementById('orchestrator-editor');
     orchestrator.addEventListener('tenx-signals', ({ detail }) => {
-      if (globalThis.__10x_devtools_debug) {
+      if (debug) {
         console.info('[playground] orchestrator tenx-signals event', {
           snapshotCount: Array.isArray(detail) ? detail.length : 0,
         });
@@ -558,13 +653,11 @@ count = @signal 0.
       globalThis.__10x_devtools?.onSignals?.(detail);
     });
     
-    // Initial run
     const mainFile = getMainFile();
     if (mainFile) {
       orchestrator.value = mainFile.value;
     }
 
-    // Transform existing editor code by adding/removing @shadow annotations in-place.
     const setShadowMode = (code, enabled) => {
       let result = code
         .replace(/(@render\b[^.]*?) @shadow (@html\b)/g, '$1 $2')
