@@ -150,15 +150,18 @@
       min-height: 0;
       position: relative;
       overflow: hidden;
+      background: var(--bg);
     }
     .playground-editor {
       position: absolute;
       inset: 0;
-      display: none;
       min-height: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
     .playground-editor.active {
-      display: block;
+      visibility: visible;
+      pointer-events: auto;
     }
     #orchestrator-editor {
       display: none;
@@ -546,7 +549,11 @@ count = @signal 0.
           <span class="tab-name">${file.name}</span>
           <span class="close-btn" title="Close ${file.name}">×</span>
         `;
-        tab.querySelector('.tab-name').addEventListener('click', () => activateFile(file.id));
+        tab.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('close-btn')) {
+            activateFile(file.id);
+          }
+        });
         tab.querySelector('.close-btn').addEventListener('click', (e) => {
           e.stopPropagation();
           closeFile(file.id);
@@ -571,7 +578,6 @@ count = @signal 0.
         editorEl.id = `ed-${file.id}`;
         editorEl.className = `playground-editor${file.id === activeId ? ' active' : ''}`;
         editorEl.setAttribute('value', file.value);
-        editorEl.style.cssText = 'display:block;height:100%;';
         editorsContainerEl.appendChild(editorEl);
         editors.set(file.id, editorEl);
         
