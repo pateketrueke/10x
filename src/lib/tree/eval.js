@@ -1924,12 +1924,12 @@ export default class Eval {
         const [head, ...tail] = body[i].getBody();
         const [result] = await Eval.do([head], environment, 'If', true, parentTokenInfo);
 
-        if (result.value === true) {
+        if (result && result.value === true) {
           subTree.push(...await Eval.do(tail, environment, 'Then', true, parentTokenInfo));
           break;
         }
 
-        if (result.value === false && value.else instanceof Expr.Statement) {
+        if (result && result.value === false && value.else instanceof Expr.Statement) {
           subTree.push(...await Eval.do(value.else.getBody(), environment, 'Else', true, parentTokenInfo));
           break;
         }
