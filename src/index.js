@@ -522,7 +522,7 @@ async function cli() {
     }
     
     if (file.endsWith('.feature.md')) {
-      const outFile = file.replace(/\.md$/, '.js');
+      const outFile = file.replace(/\.feature\.md$/, '.feature.test.js');
       const source = fs.readFileSync(file, 'utf8');
       const { parseGherkin, compileFeature } = await import('./compiler/gherkin.js');
       const feature = parseGherkin(source);
