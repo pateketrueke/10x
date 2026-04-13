@@ -908,7 +908,7 @@ export default class Parser {
         push(this.convertTextToString(token, tokenInfo));
       } else if (!(isText(token) || isCode(token) || isRef(token))) {
         // parse within tokenized strings!
-        if (isString(token) && tokenInfo.kind === 'markup' && typeof token.value === 'string') {
+        if (isString(token) && token.kind === 'markup' && typeof token.value === 'string') {
           try {
             push(Expr.tag(parseTag(token.value), tokenInfo));
           } catch (_) {

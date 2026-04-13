@@ -1509,6 +1509,17 @@ export default class Eval {
         return;
       }
 
+      // Convert STRING tokens with markup kind to tag tokens
+      if (isString(this.ctx) && this.ctx.isMarkup && typeof this.ctx.value === 'string') {
+        try {
+          const { parseTag } = await import('../tag.js');
+          const tagNode = parseTag(this.ctx.value);
+          this.ctx = Expr.tag(tagNode, this.ctx.tokenInfo || this.ctx);
+        } catch (e) {
+          // If parsing fails, keep the string as-is
+        }
+      }
+
       if (
         await this.evalUnary()
         || await this.evalTags()
