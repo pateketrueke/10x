@@ -2,68 +2,75 @@
 
 ## What Works
 
-### 1. Direct `@on` (not assigned to variable)
+### 1. `@on` with assignment
 ```10x
-@on tasks = tasks |> push(:text read(input), :done :off).
+addTask = @on tasks = tasks |> push(:text read(input), :done :off).
 ```
 Returns a handler function that can be called.
 
-### 2. Pipe operator with signals
+### 2. Multi-statement `@on`
+```10x
+addTask = @on
+  tasks = tasks |> push(:text read(input), :done :off),
+  input = "".
+```
+Updates multiple signals in sequence.
+
+### 3. Pipe operator with signals
 ```10x
 tasks |> push(:text "hello", :done :off)
 tasks |> map((t) -> t.text)
 tasks |> filter((t) -> !t.done)
 ```
 
-### 3. `read(signal)` to get signal value
+### 4. `read(signal)` to get signal value
 ```10x
 read(tasks)  # Returns the array value
 read(input)  # Returns the string value
 ```
 
-### 4. Object merge with `|`
+### 5. Object merge with `|`
 ```10x
 t | (:done !t.done)  # Merges object, overriding :done
 ```
 
-## What Doesn't Work
-
-### 1. Assignment doesn't evaluate right-hand side
-```10x
-result = map([1,2,3], (x) -> x * 2)  # Stores tokens, not result
-```
-
-### 2. Multi-statement `@on` bodies
-```10x
-@on tasks = push(...), input = ""  # Doesn't work
-```
-
-## Working Todolist Pattern
+## Full Todolist Example
 
 ```10x
 tasks = @signal [].
 input = @signal "".
 
-# Create handlers separately
-addTask = @on tasks = tasks |> push(:text read(input), :done :off).
-clearInput = @on input = "".
-toggleTask = (i) -> tasks = tasks |> map((t j) -> @if (i == j) t | (:done !t.done) @else t).
-clearDone = @on tasks = tasks |> filter((t) -> !t.done).
-
-# Combined add + clear
-addAndClear = @on
+addTask = @on
   tasks = tasks |> push(:text read(input), :done :off),
   input = "".
+
+updateInput = @on input = e -> e.target.value.
+
+toggleTask = (i) ->
+  tasks = tasks |> map((t j) -> @if (i == j) t | (:done !t.done) @else t).
+
+clearDone = @on
+  tasks = tasks |> filter((t) -> !t.done).
+
+@render "#app" @html
+  <section>
+    <input value={input} oninput={updateInput} />
+    <button onclick={addTask}>Add</button>
+    <ul>
+      #{tasks |> map((t i) ->
+        <li>
+          <input type="checkbox" checked={t.done} onchange={() -> toggleTask(i)} />
+          #{t.text}
+        </li>
+      )}
+    </ul>
+    <button onclick={clearDone}>Clear done</button>
+  </section>.
 ```
 
-Wait, multi-statement doesn't work. Need separate handlers:
+## Notes
 
-```10x
-# In template, call both handlers
-<button onclick={@on tasks = tasks |> push(:text read(input), :done :off), input = ""}>Add</button>
-```
-
-Or use inline @on in template:
-```10x
-<button onclick={@on tasks = tasks |> push(:text read(input), :done :off). @on input = "".}>Add</button>
-```
+- `@on` is syntax sugar for signal updates - it finds the signal and updates it
+- Use `read(signal)` when passing signal values to functions
+- Pipe operator `|>` auto-unwraps signals
+- Multi-statement `@on` updates signals in sequence
