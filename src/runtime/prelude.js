@@ -1,7 +1,11 @@
+const isSignal = v => v && typeof v === 'object' && typeof v.peek === 'function';
+const readSignal = v => isSignal(v) ? v.peek() : v;
+
 function toArray(input) {
-  if (Array.isArray(input)) return input;
-  if (input == null) return [];
-  return Array.from(input);
+  const value = readSignal(input);
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  return Array.from(value);
 }
 
 export function* range(start, end = Infinity, step = 1) {
@@ -31,28 +35,31 @@ export function tail(list) {
 }
 
 export function filter(list, fn) {
-  if (Array.isArray(list)) return list.filter(fn);
-  return (function* () { // eslint-disable-line func-names
-    for (const item of list || []) {
+  const value = readSignal(list);
+  if (Array.isArray(value)) return value.filter(fn);
+  return (function* () {
+    for (const item of value || []) {
       if (fn(item)) yield item;
     }
   }());
 }
 
 export function map(list, fn) {
-  if (Array.isArray(list)) return list.map(fn);
-  return (function* () { // eslint-disable-line func-names
-    for (const item of list || []) {
+  const value = readSignal(list);
+  if (Array.isArray(value)) return value.map(fn);
+  return (function* () {
+    for (const item of value || []) {
       yield fn(item);
     }
   }());
 }
 
 export function take(list, n) {
-  if (Array.isArray(list)) return list.slice(0, n);
+  const value = readSignal(list);
+  if (Array.isArray(value)) return value.slice(0, n);
   const out = [];
   let i = 0;
-  for (const item of list || []) {
+  for (const item of value || []) {
     out.push(item);
     i++;
     if (i >= n) break;
