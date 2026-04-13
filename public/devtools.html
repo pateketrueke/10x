@@ -297,7 +297,8 @@
   <x-editor id="orchestrator-editor" value=""></x-editor>
   <script type="module">
     import { devtools } from './dist/runtime.js';
-    import { Env, execute, applyAdapter, createBrowserAdapter } from './dist/editor.js';
+    import { Env, execute, applyAdapter } from './dist/main.js';
+    import { createBrowserAdapter } from './dist/editor.js';
     import { getSignalRegistry, read } from './dist/runtime-core.js';
     
     const STORAGE_KEY = '10x:playground:files';
