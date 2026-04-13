@@ -365,7 +365,7 @@ todos = @signal [].
 input = @signal "".
 
 addTodo = @on
-  todos = push(todos, { text: input, done: false }),
+  todos = push(todos, :text input, :done :off),
   input = "".
 
 updateInput = @on input = e.target.value.
