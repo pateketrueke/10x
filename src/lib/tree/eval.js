@@ -1122,6 +1122,15 @@ export default class Eval {
     // evaluate or expand definitions in place!
     if (this.ctx.isCallable) {
       if (name && body) {
+        // Pre-annotate signal/computed tokens with assignment name before evaluation
+        for (const tok of body) {
+          if (tok && tok.isObject && tok.value) {
+            if (tok.value.signal || tok.value.computed) {
+              tok._assignName = name;
+            }
+          }
+        }
+
         const call = !args && this.derive && DERIVE_METHODS.includes(this.descriptor)
           ? await Eval.do(body, this.env, 'Fn', true, this.ctx.tokenInfo)
           : body;
