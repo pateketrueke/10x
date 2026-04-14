@@ -49,6 +49,8 @@ export const EQUAL = Symbol('EQUAL');
 export const NOT_EQ = Symbol('NOT_EQ');
 export const EXACT_EQ = Symbol('EXACT_EQ');
 
+export const PEEK = Symbol('PEEK');
+
 export const LESS = Symbol('LESS');
 export const LESS_EQ = Symbol('LESS_EQ');
 export const GREATER = Symbol('GREATER');

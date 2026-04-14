@@ -3,7 +3,7 @@
 import {
   COMMENT, COMMENT_MULTI, CODE, BOLD, ITALIC, BLOCKQUOTE, HEADING, OL_ITEM, UL_ITEM, REF,
   TEXT, OPEN, CLOSE, COMMA, BEGIN, DONE, EOF, EOL,
-  MINUS, PLUS, MUL, DIV, MOD, DOT, OR, SOME, EVERY,
+  MINUS, PLUS, MUL, DIV, MOD, DOT, OR, SOME, EVERY, PEEK,
   PIPE, BLOCK, RANGE, REGEX, SYMBOL, LITERAL, NUMBER, STRING, NOT_EQ,
   DIRECTIVE,
   NOT, LIKE, EXACT_EQ, EQUAL, LESS_EQ, LESS, GREATER_EQ, GREATER,
@@ -85,6 +85,7 @@ export function isCode(t) { return t && t.type === CODE; }
 export function isDot(t) { return t && t.type === DOT; }
 export function isMod(t) { return t && t.type === MOD; }
 export function isNot(t) { return t && t.type === NOT; }
+export function isPeek(t) { return t && t.type === PEEK; }
 export function isRef(t) { return t && t.type === REF; }
 
 export function isOR(t) { return t && t.type === OR; }

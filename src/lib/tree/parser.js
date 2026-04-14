@@ -3,14 +3,14 @@ import Scanner from './scanner';
 import { parseTag } from '../tag';
 
 import {
-  CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME, DOT,
+  CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME, DOT, PEEK,
   HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM, TABLE, FAT_ARROW,
 } from './symbols';
 
 import {
   Token, check, raise, assert, hasBreaks, hasStatements, isStatement, isSpecial, isComment, isRange, isSlice, isComma, isNumber,
   isString, isSymbol, isDirective, isLogic, isUnit, isSome, isOpen, isClose, isBegin, isDone, isBlock, isText, isCode,
-  isRef, isLiteral, isList, isEqual, isMath, isNot, isEnd, isEOF, isEOL, quote, literal as tokenLiteral, isWhitespaceText,
+  isRef, isLiteral, isList, isEqual, isMath, isNot, isPeek, isEnd, isEOF, isEOL, quote, literal as tokenLiteral, isWhitespaceText,
 } from '../helpers';
 
 export default class Parser {
@@ -781,6 +781,16 @@ export default class Parser {
       if (isLiteral(token) && isNot(curToken)) {
         push(Expr.literal({ type: LITERAL, value: token.value, cached: true }, tokenInfo));
         this.next();
+        continue;
+      }
+
+      // handle $signal peek syntax, e.g. `$items` to get signal value without tracking
+      if (isPeek(token) && isLiteral(curToken)) {
+        this.next();
+        push(Expr.expression({
+          type: PEEK,
+          value: [Expr.from(curToken)],
+        }, tokenInfo));
         continue;
       }
 

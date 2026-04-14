@@ -2,7 +2,7 @@ import {
   EOF, EOL, TEXT, HEADING, BLOCKQUOTE, OL_ITEM, UL_ITEM, REF, TABLE,
   OPEN, CLOSE, COMMA, BEGIN, DONE, CODE,
   MINUS, PLUS, MUL, DIV, MOD,
-  OR, DOT, PIPE, BLOCK, RANGE, SOME, EVERY,
+  OR, DOT, PIPE, BLOCK, RANGE, SOME, EVERY, PEEK,
   REGEX, SYMBOL, LITERAL, NUMBER, STRING,
   DIRECTIVE,
   NOT, LIKE, EQUAL, NOT_EQ, EXACT_EQ,
@@ -328,7 +328,13 @@ export default class Scanner {
       case '%': this.addToken(MOD); break;
       case '~': this.addToken(LIKE); break;
       case '?': this.addToken(SOME); break;
-      case '$': this.addToken(EVERY); break;
+      case '$':
+        if (isReadable(this.peek())) {
+          this.addToken(PEEK);
+        } else {
+          this.addToken(EVERY);
+        }
+        break;
 
       case '|': this.addToken(this.isMatch('>') ? PIPE : OR); break;
       case '>': this.addToken(this.isMatch('=') ? GREATER_EQ : GREATER); break;

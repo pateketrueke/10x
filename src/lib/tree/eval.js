@@ -6,7 +6,7 @@
 import Env from './env';
 import Expr from './expr';
 import Parser from './parser';
-import { getCurrentEffect } from '../../runtime/core.js';
+import { getCurrentEffect, getCurrentRenderId, withAsyncContext } from '../../runtime/core.js';
 import Range from '../range';
 import { composeTag, renderTag } from '../tag';
 
@@ -24,14 +24,14 @@ export function resetComponentInstanceId(value) {
 
 import {
   EOL, COMMA, MINUS, PLUS, MUL, DIV, MOD, BLOCK, RANGE, LITERAL, NUMBER, STRING, SYMBOL,
-  EQUAL, LESS_EQ, LESS, GREATER_EQ, GREATER, NOT, LIKE, NOT_EQ, EXACT_EQ, FFI,
+  EQUAL, LESS_EQ, LESS, GREATER_EQ, GREATER, NOT, LIKE, NOT_EQ, EXACT_EQ, FFI, PEEK,
   DERIVE_METHODS,
 } from './symbols';
 
 import {
   argv, only, raise, check, assert, hasDiff, hasIn, serialize,
   isInvokable, isComment, isObject, isLiteral, isScalar, isResult, isString, isNumber, isSymbol, isLogic, isData, isUnit,
-  isMixed, isPlain, isRange, isSlice, isArray, isSome, isEvery, isBlock, isComma, isPipe, isMath, isNot, isMod, isEnd, isDot, isEOL, isOR,
+  isMixed, isPlain, isRange, isSlice, isArray, isSome, isEvery, isBlock, isComma, isPipe, isMath, isNot, isMod, isEnd, isDot, isEOL, isOR, isPeek,
   matchesType, inferRuntimeType, canonicalTypeName,
   debugLog, isDebugEnabled,
 } from '../helpers';
@@ -869,6 +869,19 @@ export default class Eval {
     // evaluate logical expressions, e.g. `(< 1 2)`
     const { type, value } = this.ctx;
     let result = await Eval.do(value, this.env, 'Expr', true, this.ctx.tokenInfo);
+
+    // handle $signal peek syntax, e.g. `$items` to get signal value without tracking
+    if (type === PEEK) {
+      const resolved = result[0];
+      // If resolved is a Literal with a signal value, get the signal object
+      const signalObj = resolved?.value ?? resolved;
+      if (signalObj && typeof signalObj.peek === 'function') {
+        this.append(Expr.value(signalObj.peek(), this.ctx.tokenInfo));
+      } else {
+        this.append(Expr.value(signalObj?.valueOf?.() ?? signalObj, this.ctx.tokenInfo));
+      }
+      return true;
+    }
 
     // evaluate multiple checks, e.g. `(? a b c)` OR `($ x y z)`
     if (isSome(this.ctx) || isEvery(this.ctx)) {
@@ -2192,7 +2205,14 @@ export default class Eval {
         // Create an effect that evaluates the expression and sets the signal
         // The expression evaluation will track dependencies via valueOf() -> get()
         effectFn(async () => {
-          const evaluated = await Eval.do(computedArgs, environment, 'Call', true, parentTokenInfo);
+          // Get the current effect for dependency tracking
+          const currentEffect = getCurrentEffect();
+          const currentRenderId = getCurrentRenderId();
+          
+          // Use withAsyncContext to preserve the effect context during async evaluation
+          const evaluated = await withAsyncContext(currentEffect, currentRenderId, async () => {
+            return Eval.do(computedArgs, environment, 'Call', true, parentTokenInfo);
+          });
           const result = evaluated.length === 1
             ? toPlain(evaluated[0])
             : evaluated.map(t => toPlain(t));

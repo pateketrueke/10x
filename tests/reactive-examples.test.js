@@ -410,3 +410,83 @@ describe('Examples: Data Pipeline', () => {
     expect(tailValues).toEqual(["2", "3"]);
   });
 });
+
+describe('Reactive: $signal peek syntax', () => {
+  let runtimeEnv;
+
+  beforeAll(async () => {
+    acquireVirtualDoc();
+    runtimeEnv = new Env();
+    await run('@import signal, html, render, on, effect @from "Runtime".', runtimeEnv);
+  });
+
+  afterAll(() => {
+    releaseVirtualDoc();
+  });
+
+  test('$signal gets value without tracking', async () => {
+    const env = new Env(runtimeEnv);
+    await run('count = signal(10).', env);
+    
+    const result = await run('$count.', env);
+    expect(result[0]?.value).toBe("10");
+  });
+
+  test('$signal with non-signal returns value', async () => {
+    const env = new Env(runtimeEnv);
+    await run('x = 42.', env);
+    
+    const result = await run('$x.', env);
+    expect(result[0]?.value).toBe("42");
+  });
+
+  test('$signal in expression', async () => {
+    const env = new Env(runtimeEnv);
+    await run('count = signal(5).', env);
+    
+    const result = await run('$count + 1.', env);
+    expect(result[0]?.value).toBe("6");
+  });
+
+  test('$signal does not track dependencies', async () => {
+    const env = new Env(runtimeEnv);
+    await run('count = @signal 10.', env);
+    await run('doubled = @computed $count * 2.', env);
+    
+    // Wait for effect to run
+    await wait(50);
+    
+    const result1 = await run('doubled.', env);
+    const value1 = result1[0]?.value?.peek?.() ?? result1[0]?.value;
+    expect(value1).toBe(20);
+    
+    await run('count.set(20).', env);
+    await wait(50);
+    
+    const result2 = await run('doubled.', env);
+    const value2 = result2[0]?.value?.peek?.() ?? result2[0]?.value;
+    // $signal does NOT track, so doubled should still be 20
+    expect(value2).toBe(20);
+  });
+
+  test('signal.get() does track dependencies', async () => {
+    const env = new Env(runtimeEnv);
+    await run('count = @signal 10.', env);
+    await run('doubled = @computed count.get() * 2.', env);
+    
+    // Wait for effect to run
+    await wait(50);
+    
+    const result1 = await run('doubled.', env);
+    const value1 = result1[0]?.value?.peek?.() ?? result1[0]?.value;
+    expect(value1).toBe(20);
+    
+    await run('count.set(20).', env);
+    await wait(50);
+    
+    const result2 = await run('doubled.', env);
+    const value2 = result2[0]?.value?.peek?.() ?? result2[0]?.value;
+    // count.get() DOES track, so doubled should update to 40
+    expect(value2).toBe(40);
+  });
+});
