@@ -43,7 +43,7 @@ describe('Reactive: Signals', () => {
   beforeAll(async () => {
     acquireVirtualDoc();
     runtimeEnv = new Env();
-    await run('@import signal, html, render, on @from "Runtime".', runtimeEnv);
+    await run('@import signal, html, render, on, effect @from "Runtime".', runtimeEnv);
   });
 
   afterAll(() => {
@@ -75,6 +75,48 @@ describe('Reactive: Signals', () => {
     const result = await run('count.', env);
     expect(result).toBeDefined();
   });
+
+  test('@computed creates reactive computed signal', async () => {
+    const env = new Env(runtimeEnv);
+    await run('count = @signal 5.\ndoubled = @computed count * 2.', env);
+    await wait();
+    // doubled should be 10
+    const result = await run('doubled.', env);
+    expect(result).toBeDefined();
+    expect(result[0]?.value?.peek?.()).toBe(10);
+  });
+
+  test('@computed updates when dependency changes', async () => {
+    const env = new Env(runtimeEnv);
+    await run('count = @signal 5.\ndoubled = @computed count * 2.', env);
+    await wait();
+    // doubled should be 10
+    let result = await run('doubled.', env);
+    expect(result[0]?.value?.peek?.()).toBe(10);
+    // Update count directly
+    const countResult = await run('count.', env);
+    countResult[0].value.set(6);
+    await wait();
+    // doubled should now be 12
+    result = await run('doubled.', env);
+    expect(result[0]?.value?.peek?.()).toBe(12);
+  });
+
+  test('@computed with multiple dependencies', async () => {
+    const env = new Env(runtimeEnv);
+    await run('x = @signal 3.\ny = @signal 4.\nsum = @computed x + y.', env);
+    await wait();
+    // sum should be 7
+    let result = await run('sum.', env);
+    expect(result[0]?.value?.peek?.()).toBe(7);
+    // Update x directly
+    const xResult = await run('x.', env);
+    xResult[0].value.set(10);
+    await wait();
+    // sum should now be 14
+    result = await run('sum.', env);
+    expect(result[0]?.value?.peek?.()).toBe(14);
+  });
 });
 
 describe('Reactive: Rendering', () => {
@@ -84,7 +126,7 @@ describe('Reactive: Rendering', () => {
   beforeAll(async () => {
     acquireVirtualDoc();
     runtimeEnv = new Env();
-    await run('@import signal, html, render, on @from "Runtime".', runtimeEnv);
+    await run('@import signal, html, render, on, effect @from "Runtime".', runtimeEnv);
   });
 
   afterAll(() => {
@@ -142,7 +184,7 @@ describe('Reactive: Event Handlers', () => {
   beforeAll(async () => {
     acquireVirtualDoc();
     runtimeEnv = new Env();
-    await run('@import signal, html, render, on @from "Runtime".', runtimeEnv);
+    await run('@import signal, html, render, on, effect @from "Runtime".', runtimeEnv);
   });
 
   afterAll(() => {

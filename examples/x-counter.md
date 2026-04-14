@@ -12,14 +12,22 @@ If the prop is missing, it falls back to `0`.
 
 count = @signal @prop "start" 0.
 
+## Computed Values
+
+`@computed` creates derived reactive values that auto-update when `count` changes.
+
+doubled = @computed count * 2.
+isEven = @computed (= count % 2 0).
+
 ## View
 
 The UI is rendered into `@shadow`, so styles and markup stay scoped.
-Whenever `count` changes, `#{count}` updates automatically.
+Whenever `count` changes, all `#{...}` references update automatically.
 
 @render @shadow @html
   <div class="counter">
     <h1>#{count}</h1>
+    <p class="info">doubled: #{doubled} | #{isEven ? "even" | "odd"}</p>
     <div class="actions">
       <button id="dec">−</button>
       <button id="inc">+</button>

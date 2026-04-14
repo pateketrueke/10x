@@ -17,9 +17,38 @@ active.
 
 ## Computed Values
 
+`@computed` creates a reactive derived value that auto-updates when dependencies change.
+
+# Simple arithmetic
 doubled = @computed count * 2.
-greeting = @computed "Hello, " + name.
+tripled = @computed count * 3.
+
+# String operations
+greeting = @computed "Hello, " + name + "!".
+
+# Boolean expressions
 isPositive = @computed (> count 0).
+isEven = @computed (= count % 2 0).
+
+# Multiple dependencies
+x = @signal 1.
+y = @signal 2.
+sum = @computed x + y.
+product = @computed x * y.
+hypotenuse = @computed (x * x + y * y) ^ 0.5.
+
+## Why @computed vs Template Interpolation
+
+Template interpolation `#{count}` is reactive because somedom subscribes to the signal directly. But expressions like `#{count * 2}` are evaluated once during render - they don't update when `count` changes.
+
+# NOT reactive - expression evaluated once
+@html <span>#{count * 2}</span>.
+
+# Reactive - @computed creates a signal
+doubled = @computed count * 2.
+@html <span>#{doubled}</span>.
+
+Use `@computed` whenever you need a reactive derived value in your templates.
 
 ## Event Handlers
 

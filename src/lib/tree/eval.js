@@ -1603,8 +1603,24 @@ export default class Eval {
   }
 
   static math(ops, expr, tokenInfo) {
+    // Helper to unwrap signals to their values (for @computed dependency tracking)
+    const unwrapSignal = (v) => {
+      if (v && typeof v === 'object' && v.type && v.type.toString() === 'Symbol(LITERAL)') {
+        const val = v.value;
+        if (val && typeof val === 'object' && typeof val.get === 'function') {
+          // Use get() to track dependencies when inside an effect (for @computed)
+          return Expr.value(val.get(), v.tokenInfo);
+        }
+      }
+      return v;
+    };
+
     return Eval.walk(ops, expr, (left, op, right) => {
       let result;
+
+      // Unwrap signals before type checking
+      left = unwrapSignal(left);
+      right = unwrapSignal(right);
 
       if (op.type === PLUS) {
         assert(left, true, STRING, NUMBER, SYMBOL);
@@ -2105,6 +2121,84 @@ export default class Eval {
       
       subTree.push(_signalToken);
       isDone = true;
+      }
+    }
+
+    // @computed directive: creates a reactive computed signal
+    // `doubled = @computed count * 2.` creates a signal that auto-updates when count changes
+    if (isDirectiveStmt(value.computed)) {
+      const _ownerEnv = environment.parent || environment;
+      if (!_ownerEnv.__signalCache) _ownerEnv.__signalCache = new Map();
+      const _cached = _ownerEnv.__signalCache.get(token);
+      if (_cached) {
+        debugLog('computed', 'using cached computed signal:', _cached.value?._devtoolsName);
+        subTree.push(_cached);
+        isDone = true;
+      }
+
+      if (!isDone) {
+        debugLog('computed', 'creating new computed signal, token._assignName:', token._assignName);
+        const signalFn = resolveRuntimeFn('signal');
+        const effectFn = resolveRuntimeFn('effect');
+        const computedArgs = normalizeDirectiveArgs(value.computed);
+
+        const signalName = token._assignName
+          || (token && typeof token.getName === 'function' ? token.getName() : null);
+
+        // Walk up the env chain to find component info for grouping
+        let componentName = environment.__componentName;
+        let componentInstanceId = environment.__componentInstanceId;
+        let envPtr = environment.parent;
+        while (envPtr && (!componentName || !componentInstanceId)) {
+          if (envPtr.__componentName) componentName = envPtr.__componentName;
+          if (envPtr.__componentInstanceId) componentInstanceId = envPtr.__componentInstanceId;
+          envPtr = envPtr.parent;
+        }
+
+        // Namespace signal name for unique identification
+        const namespacedName = (componentName && componentInstanceId)
+          ? `${componentName}$${componentInstanceId}.${signalName}`
+          : signalName;
+
+        // Set moduleUrl for devtools grouping
+        const moduleUrl = (componentName && componentInstanceId)
+          ? `${componentName}$${componentInstanceId}`
+          : undefined;
+
+        // Create the output signal
+        const runtimeArgs = [undefined, namespacedName];
+        if (moduleUrl) runtimeArgs.push(moduleUrl);
+        const outSignal = signalFn(...runtimeArgs);
+
+        // Create an effect that evaluates the expression and sets the signal
+        // The expression evaluation will track dependencies via valueOf() -> get()
+        effectFn(async () => {
+          const evaluated = await Eval.do(computedArgs, environment, 'Expr', true, parentTokenInfo);
+          const result = evaluated.length === 1
+            ? toPlain(evaluated[0])
+            : evaluated.map(t => toPlain(t));
+          outSignal.set(result);
+        });
+
+        const _signalToken = Expr.value(outSignal, parentTokenInfo);
+        _ownerEnv.__signalCache.set(token, _signalToken);
+
+        // Walk up the env chain to find where the signal is actually defined
+        const _sigName = token._assignName;
+        let _defEnv = environment;
+        while (_defEnv) {
+          if (_defEnv.locals && _defEnv.locals[_sigName]) {
+            const entry = _defEnv.locals[_sigName];
+            if (entry && entry.body && entry.body[0] === token) {
+              entry.body = [_signalToken];
+              break;
+            }
+          }
+          _defEnv = _defEnv.parent;
+        }
+
+        subTree.push(_signalToken);
+        isDone = true;
       }
     }
 

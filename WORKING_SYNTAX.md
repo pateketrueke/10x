@@ -16,7 +16,15 @@ addTask = @on
 ```
 Updates multiple signals in sequence.
 
-### 3. Pipe operator with signals
+### 3. `@computed` for reactive derived values
+```10x
+doubled = @computed count * 2.
+greeting = @computed "Hello, " + name + "!".
+sum = @computed x + y.
+```
+Creates a signal that auto-updates when any dependency changes. Dependencies are tracked automatically.
+
+### 4. Pipe operator with signals
 ```10x
 tasks |> push(:text "hello", :done :off)
 tasks |> map((t) -> t.text)

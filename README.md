@@ -301,7 +301,8 @@ See the [`examples/`](examples/) directory:
 - [`sorting.md`](examples/sorting.md) — Classic sorting algorithms compared
 - [`lulz.md`](examples/lulz.md) — Range + pipe + `@match` + map-heavy toy program
 - [`markdown.md`](examples/markdown.md) — Prose mixed with code
-- [`todolist.md`](examples/todolist.md) — Reactive directives demo (`@signal`, `@html`, `@render`, `@on`)
+- [`todolist.md`](examples/todolist.md) — Reactive directives demo (`@signal`, `@computed`, `@html`, `@render`, `@on`)
+- [`reactive.md`](examples/reactive.md) — Signals, computed values, and event handlers
 - [`x-counter.md`](examples/x-counter.md) — Reactive web component with state, view, and events
 - [`prompt.md`](examples/prompt.md) — Interactive input
 - [`stdin.md`](examples/stdin.md) — Reading from stdin

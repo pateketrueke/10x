@@ -344,11 +344,32 @@ name = @signal "Alice".
 
 #### @computed
 
-Creates derived reactive value:
+Creates a derived reactive value that automatically updates when its dependencies change:
 
 ```markdown
 doubled = @computed count * 2.
+greeting = @computed "Hello, " + name + "!".
+sum = @computed x + y.
 ```
+
+**How it works:**
+
+- Creates a signal that auto-updates when any referenced signal changes
+- Dependencies are tracked automatically - no manual subscription needed
+- Works with any expression: arithmetic, string concatenation, comparisons, etc.
+
+**Why use `@computed` vs template interpolation:**
+
+```markdown
+# Template interpolation - evaluated once, NOT reactive
+@html <span>#{count * 2}</span>.
+
+# @computed - creates a reactive signal
+doubled = @computed count * 2.
+@html <span>#{doubled}</span>.  # Updates when count changes
+```
+
+Template interpolation `#{count}` is reactive because somedom subscribes to the signal directly. But `#{count * 2}` is an expression evaluated once during render. Use `@computed` for reactive derived values.
 
 #### @render / @html
 
