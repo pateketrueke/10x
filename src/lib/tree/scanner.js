@@ -239,7 +239,17 @@ export default class Scanner {
 
       // prevent text-phrases to be parsed as tokens, e.g. `a b` OR `A, b`, etc.
       // skip prose detection on the line immediately following an EOL (code context)
-      if (this.afterEOL !== 1 && ((isAlphaNumeric(char) && char !== '@') || char === '*') && this.parseText(char)) return;
+      // also skip if the line looks like code (has operators with spaces)
+      const lineLooksLikeCode = () => {
+        for (let j = this.offset; j < this.chars.length; j++) {
+          if (this.chars[j] === '\n') return false;
+          if (this.chars[j] === ' ' && '+-*/'.includes(this.chars[j + 1]) && this.chars[j + 2] === ' ') {
+            return true;
+          }
+        }
+        return false;
+      };
+      if (this.afterEOL !== 1 && !lineLooksLikeCode() && ((isAlphaNumeric(char) && char !== '@') || char === '*') && this.parseText(char)) return;
 
       // extract code-blocks, e.g. ````\n...\n````
       if (char === '`' && char === this.peek() && char === this.peekNext() && this.parseFence(char)) return;
@@ -716,10 +726,21 @@ export default class Scanner {
       }
       return false;
     };
+    // Check if line looks like code (has operators with spaces)
+    const looksLikeCode = (from) => {
+      for (let j = from; j < this.chars.length; j++) {
+        if (this.chars[j] === '\n') return false;
+        // Check for operators with spaces around them: ` * `, ` + `, ` - `, ` / `
+        if (this.chars[j] === ' ' && '+-*/'.includes(this.chars[j + 1]) && this.chars[j + 2] === ' ') {
+          return true;
+        }
+      }
+      return false;
+    };
     if (
       (isReadable(this.blank) && token === '*')
       || (nextToken === ' ' && ');:.,'.includes(token) && !(token === '.' && looksLikeUnitLiteral))
-      || (token === ' ' && (nextToken === '*' || (nextToken && isAlphaNumeric(nextToken) && !hasFatArrowAhead(i))))
+      || (token === ' ' && (nextToken === '*' || (nextToken && isAlphaNumeric(nextToken) && !hasFatArrowAhead(i) && !looksLikeCode(i))))
     ) {
       this.pushToken(token, nextToken);
       this.offset = this.start = i + 2;
