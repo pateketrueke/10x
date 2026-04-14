@@ -2,6 +2,7 @@ import { describe, test, expect, beforeAll } from 'bun:test';
 import { execute } from '../src/main.js';
 import Env from '../src/lib/tree/env.js';
 import Expr from '../src/lib/tree/expr.js';
+import Eval from '../src/lib/tree/eval.js';
 import { signal, read, effect, html } from '../src/runtime/core.js';
 import { on, render } from '../src/runtime/dom.js';
 import { map, filter, push } from '../src/lib/prelude.js';
@@ -42,8 +43,8 @@ describe('Signal Pipe Syntax', () => {
     await execute('result = [1, 2, 3] |> map((x) -> x * 2).', e);
     
     const resultEntry = e.get('result');
-    const [resultToken] = resultEntry.body || [];
-    expect(resultToken?.valueOf()).toEqual([2, 4, 6]);
+    const [resultToken] = await Eval.do(resultEntry.body || [], e, 'Test', false);
+    expect(Expr.plain(resultToken)).toEqual([2, 4, 6]);
   });
 
   test('pipe operator with signal unwrapping', async () => {
@@ -52,8 +53,8 @@ describe('Signal Pipe Syntax', () => {
     await execute('result = tasks |> map((x) -> x * 2).', e);
     
     const resultEntry = e.get('result');
-    const [resultToken] = resultEntry.body || [];
-    expect(resultToken?.valueOf()).toEqual([2, 4, 6]);
+    const [resultToken] = await Eval.do(resultEntry.body || [], e, 'Test', false);
+    expect(Expr.plain(resultToken)).toEqual([2, 4, 6]);
   });
 
   test('push with array', async () => {
@@ -61,8 +62,8 @@ describe('Signal Pipe Syntax', () => {
     await execute('result = push([1, 2], 3, 4).', e);
     
     const resultEntry = e.get('result');
-    const [resultToken] = resultEntry.body || [];
-    expect(resultToken?.valueOf()).toEqual([1, 2, 3, 4]);
+    const [resultToken] = await Eval.do(resultEntry.body || [], e, 'Test', false);
+    expect(Expr.plain(resultToken)).toEqual([1, 2, 3, 4]);
   });
 
   test('push with signal via pipe', async () => {
@@ -71,8 +72,8 @@ describe('Signal Pipe Syntax', () => {
     await execute('result = tasks |> push("a", "b").', e);
     
     const resultEntry = e.get('result');
-    const [resultToken] = resultEntry.body || [];
-    expect(resultToken?.valueOf()).toEqual(['a', 'b']);
+    const [resultToken] = await Eval.do(resultEntry.body || [], e, 'Test', false);
+    expect(Expr.plain(resultToken)).toEqual(['a', 'b']);
   });
 
   test('push with object via pipe', async () => {
@@ -81,8 +82,8 @@ describe('Signal Pipe Syntax', () => {
     await execute('result = tasks |> push(:text "hello", :done :off).', e);
     
     const resultEntry = e.get('result');
-    const [resultToken] = resultEntry.body || [];
-    expect(resultToken?.valueOf()).toEqual([{ text: 'hello', done: false }]);
+    const [resultToken] = await Eval.do(resultEntry.body || [], e, 'Test', false);
+    expect(Expr.plain(resultToken)).toEqual([{ text: 'hello', done: false }]);
   });
 
   test('@on handler with pipe syntax', async () => {
