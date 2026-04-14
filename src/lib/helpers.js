@@ -136,6 +136,11 @@ export function hasBreaks(token) {
   }
 }
 
+export function isWhitespaceText(token) {
+  if (!isText(token)) return false;
+  return token.value.buffer.every(x => typeof x === 'string' && /^\s*$/.test(x));
+}
+
 export function hasDiff(prev, next, isWeak) {
   // ignore checks from any value given as `_` (placeholder)
   if (prev === LITERAL || next === LITERAL) return false;

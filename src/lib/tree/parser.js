@@ -10,7 +10,7 @@ import {
 import {
   Token, check, raise, assert, hasBreaks, hasStatements, isStatement, isSpecial, isComment, isRange, isSlice, isComma, isNumber,
   isString, isSymbol, isDirective, isLogic, isUnit, isSome, isOpen, isClose, isBegin, isDone, isBlock, isText, isCode,
-  isRef, isLiteral, isList, isEqual, isMath, isNot, isEnd, isEOF, isEOL, quote, literal as tokenLiteral,
+  isRef, isLiteral, isList, isEqual, isMath, isNot, isEnd, isEOF, isEOL, quote, literal as tokenLiteral, isWhitespaceText,
 } from '../helpers';
 
 export default class Parser {
@@ -395,7 +395,7 @@ export default class Parser {
 
     return isEOL(token)
       || (endToken && endToken.includes(token.type))
-      || (!raw && isText(token) && !hasBreaks(token));
+      || (!raw && isText(token) && !hasBreaks(token) && !isWhitespaceText(token));
   }
 
   has(token) {
