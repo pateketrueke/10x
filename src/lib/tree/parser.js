@@ -513,7 +513,17 @@ export default class Parser {
   }
 
   push(raw) {
-    this.buffer.push(Expr.from(this.next(raw)));
+    const token = this.next(raw);
+    // Check if this is a markup token that should be parsed as a tag
+    if (isString(token) && token.kind === 'markup' && typeof token.value === 'string') {
+      try {
+        this.buffer.push(Expr.tag(parseTag(token.value), token.tokenInfo || token));
+        return;
+      } catch (_) {
+        // Fall through to default handling
+      }
+    }
+    this.buffer.push(Expr.from(token));
   }
 
   parse() {
