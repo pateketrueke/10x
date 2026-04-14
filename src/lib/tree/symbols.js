@@ -72,7 +72,7 @@ export const CONTROL_TYPES = [
   '@while', '@do',
   '@let', '@loop', '@match',
   '@import', '@from', '@module', '@export', '@template',
-  '@on', '@signal', '@computed', '@render', '@html',
+  '@on', '@signal', '@computed', '@render', '@html', '@shadow',
 ];
 
 export const SYMBOL_TYPES = [
