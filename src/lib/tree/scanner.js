@@ -165,6 +165,11 @@ export default class Scanner {
         parts.forEach(chunk => {
           if (chunk.indexOf(']') !== -1) {
             const matches = chunk.match(/\[(.+?)\](?:\s*\[(.*?)\]|\((.+?)\))/);
+            if (!matches) {
+              prev.push(...extractInterpolationTokens(chunk, line, offset));
+              offset += chunk.length;
+              return;
+            }
             const [href, title] = (matches[3] || matches[2]).split(/\s+/);
 
             const desc = title && title.charAt() === '"'
@@ -577,20 +582,28 @@ export default class Scanner {
     while (end < this.chars.length && this.chars[end] !== '\n') end++;
 
     const line = this.source.substring(start, end);
-    const matches = line.match(/^\[([^\]]+)\]\(([^)]+)\)\s*$/);
+    const matches = line.match(/^\[([^\]]+)\]\(([^)]+)\)([\.\?\!\,])?\s*$/);
 
     if (!matches) return false;
 
     this.offset = end;
     this.col = lineCol + line.length;
     this.appendText();
-    this.tokens.push(new Token(REF, {
-      image: false,
-      text: line,
-      href: matches[2],
-      cap: null,
-      alt: matches[1],
-    }, null, { line: this.line, col: lineCol, kind: 'raw' }));
+
+    if (this.tokens.length === 0) {
+      this.tokens.push(new Token(REF, {
+        image: false,
+        text: matches[1],
+        href: matches[2],
+        cap: null,
+        alt: matches[1],
+      }, null, { line: this.line, col: lineCol, kind: 'raw' }));
+      if (matches[3]) {
+        this.tokens.push(new Token(TEXT, { buffer: [matches[3]] }, null, { line: this.line, col: lineCol + matches[1].length + matches[2].length + 4 }));
+      }
+    } else {
+      this.tokens.push(new Token(TEXT, { buffer: [line] }, null, { line: this.line, col: lineCol }));
+    }
     return true;
   }
 
@@ -740,7 +753,7 @@ export default class Scanner {
     if (
       (isReadable(this.blank) && token === '*')
       || (nextToken === ' ' && ');:.,'.includes(token) && !(token === '.' && looksLikeUnitLiteral))
-      || (token === ' ' && (nextToken === '*' || (nextToken && isAlphaNumeric(nextToken) && !hasFatArrowAhead(i) && !looksLikeCode(i))))
+      || (token === ' ' && (nextToken === '*' || nextToken === '[' || (nextToken && isAlphaNumeric(nextToken) && !hasFatArrowAhead(i) && !looksLikeCode(i))))
     ) {
       this.pushToken(token, nextToken);
       this.offset = this.start = i + 2;

@@ -708,6 +708,7 @@ Expr.define('unit', class Unit extends Expr.Val {
   }
 
   static exists(type) {
+    if (!type) return false;
     ensureDefaultMappings();
     return DEFAULT_MAPPINGS[type] || DEFAULT_MAPPINGS[type.toLowerCase()];
   }
