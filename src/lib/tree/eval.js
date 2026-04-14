@@ -2339,6 +2339,9 @@ export default class Eval {
         const isLambda = lambda && lambda.isCallable && lambdaArgs.length > 0;
         
         const handlerFn = async (event) => {
+          if (process.env.DEBUG_SIGNAL) {
+            console.log(`[@on handler] called for signal: ${signalName}`);
+          }
           try {
             const findSignalEntry = async (name, env) => {
               let e = env;
@@ -2356,6 +2359,9 @@ export default class Eval {
               return null;
             };
             const signalObj = await findSignalEntry(signalName, environment);
+            if (process.env.DEBUG_SIGNAL) {
+              console.log(`[@on handler] found signal:`, !!signalObj);
+            }
             if (signalObj && typeof signalObj.set === 'function' && typeof signalObj.peek === 'function') {
               const current = signalObj.peek();
               const innerEnv = new Env(environment);
@@ -2483,12 +2489,9 @@ export default class Eval {
         const targetName = handlerToken.getName();
         if (environment.has(targetName, true)) {
           const targetEntry = environment.get(targetName);
-          const resolvedTarget = targetEntry && targetEntry.body
-            ? await Eval.do(targetEntry.body, environment, 'Lit', false, parentTokenInfo)
-            : [];
-          const target = resolvedTarget.length
-            ? toPlain(resolvedTarget.length === 1 ? resolvedTarget[0] : resolvedTarget)
-            : null;
+          // Get the signal object directly without unwrapping
+          const [head] = targetEntry && targetEntry.body ? targetEntry.body : [];
+          const target = head && typeof head.valueOf === 'function' ? head.valueOf() : null;
 
           if (isSignalValue(target)) {
             handler = async () => {
@@ -2504,9 +2507,16 @@ export default class Eval {
       }
 
       if (!handler) {
+        if (process.env.DEBUG_SIGNAL) {
+          console.log(`[@on] handler not found from callable, resolving from tokens`);
+        }
         const [resolvedHandlerToken] = await Eval.do([handlerToken], environment, 'Expr', true, parentTokenInfo);
         const resolvedHandler = resolvedHandlerToken ? toPlain(resolvedHandlerToken) : null;
         handler = typeof resolvedHandler === 'function' ? resolvedHandler : () => {};
+      }
+
+      if (process.env.DEBUG_SIGNAL) {
+        console.log(`[@on] registering handler for event: ${eventName}, selector: ${selector}`);
       }
 
       const shadowRoot = hasShadow

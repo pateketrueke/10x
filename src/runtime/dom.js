@@ -143,14 +143,48 @@ export function render(selectorOrElement, view, moduleUrl) {
     prev = next;
   };
 
-  const run = effect(async () => {
+  // Manual effect implementation to handle async rendering properly
+  let stopped = false;
+  const deps = new Set();
+  const renderId = Math.random().toString(36).slice(2, 8);
+  
+  const cleanup = () => {
+    deps.forEach(dep => {
+      if (dep && dep.subs) dep.subs.delete(run);
+    });
+    deps.clear();
+  };
+
+  const run = async () => {
+    if (stopped) return;
+    cleanup();
+    
+    // Import effectStack and async context tracking
+    const { effectStack, pushRenderId, removeRenderIdAt, withAsyncContext } = await import('./core.js');
+    
+    // Push this render's ID to the stack and save the index
+    const renderIdIndex = pushRenderId(renderId);
+    
+    // Push this effect to the stack for signal tracking
+    effectStack.push(run);
+    
     let next;
     try {
-      next = await view.render();
+      // Run view.render() with async context (preserves effect/renderId across await)
+      next = await withAsyncContext(run, renderId, () => view.render());
     } catch (err) {
       console.error('[10x:dom] view.render() threw:', err);
+      const idx = effectStack.indexOf(run);
+      if (idx !== -1) effectStack.splice(idx, 1);
+      removeRenderIdAt(renderIdIndex);
       return;
     }
+    
+    // Pop effect and render ID after view.render() completes
+    const idx = effectStack.indexOf(run);
+    if (idx !== -1) effectStack.splice(idx, 1);
+    removeRenderIdAt(renderIdIndex);
+    
     try {
       if (typeof next === 'string') {
         target.innerHTML = next;
@@ -174,7 +208,17 @@ export function render(selectorOrElement, view, moduleUrl) {
     } catch (err) {
       console.error('[10x:dom] mount/patch threw:', err);
     }
-  });
+  };
+  
+  run._deps = deps;
+  run._renderId = renderId;
+  run.stop = () => {
+    stopped = true;
+    cleanup();
+  };
+
+  // Initial render
+  run();
 
   // Register effect for HMR cleanup
   if (moduleUrl) {
@@ -199,6 +243,9 @@ export function on(eventName, selectorOrElement, handler, root) {
 
   if (typeof handler !== 'function') throw new Error('on(...) expects a handler function');
 
+  // Normalize event name: remove leading ':' if present
+  const normalizedEventName = eventName.replace(/^:/, '');
+
   if (typeof selectorOrElement === 'string') {
     const eventRoot = root ?? document;
     const delegated = event => {
@@ -210,16 +257,16 @@ export function on(eventName, selectorOrElement, handler, root) {
       if (matched) handler(event);
     };
 
-    eventRoot.addEventListener(eventName, delegated);
-    return () => eventRoot.removeEventListener(eventName, delegated);
+    eventRoot.addEventListener(normalizedEventName, delegated);
+    return () => eventRoot.removeEventListener(normalizedEventName, delegated);
   }
 
   const target = selectorOrElement;
 
   if (!target) throw new Error(`Event target not found: ${selectorOrElement}`);
 
-  target.addEventListener(eventName, handler);
-  return () => target.removeEventListener(eventName, handler);
+  target.addEventListener(normalizedEventName, handler);
+  return () => target.removeEventListener(normalizedEventName, handler);
 }
 
 export function renderShadow(host, view, moduleUrl) {
@@ -250,8 +297,46 @@ export function renderShadow(host, view, moduleUrl) {
     prev = next;
   };
 
-  return effect(async () => {
-    const next = await view.render();
+  // Manual effect implementation with async context tracking
+  let stopped = false;
+  const deps = new Set();
+  const renderId = Math.random().toString(36).slice(2, 8);
+  
+  const cleanup = () => {
+    deps.forEach(dep => {
+      if (dep && dep.subs) dep.subs.delete(run);
+    });
+    deps.clear();
+  };
+
+  const run = async () => {
+    if (stopped) return;
+    cleanup();
+    
+    const { effectStack, pushRenderId, removeRenderIdAt, withAsyncContext } = await import('./core.js');
+    
+    const renderIdIndex = pushRenderId(renderId);
+    effectStack.push(run);
+    
+    let next;
+    try {
+      next = await withAsyncContext(run, renderId, () => view.render());
+    } catch (err) {
+      console.error('[10x:dom:shadow] view.render() threw:', err);
+      const idx = effectStack.indexOf(run);
+      if (idx !== -1) effectStack.splice(idx, 1);
+      removeRenderIdAt(renderIdIndex);
+      return;
+    }
+    
+    const idx = effectStack.indexOf(run);
+    if (idx !== -1) effectStack.splice(idx, 1);
+    removeRenderIdAt(renderIdIndex);
+    
+    if (process.env.DEBUG_SIGNAL) {
+      console.log(`[renderShadow] next:`, next, `prev:`, prev);
+    }
+    
     if (typeof next === 'string') {
       outlet.innerHTML = next;
       prev = null;
@@ -271,5 +356,28 @@ export function renderShadow(host, view, moduleUrl) {
     } else {
       remount(next);
     }
-  });
+  };
+  
+  run._deps = deps;
+  run._renderId = renderId;
+  run.stop = () => {
+    stopped = true;
+    cleanup();
+  };
+
+  run();
+
+  if (moduleUrl) {
+    const registry = globalThis.__10x_effects instanceof Map
+      ? globalThis.__10x_effects
+      : (globalThis.__10x_effects = new Map());
+    let effects = registry.get(moduleUrl);
+    if (!effects) {
+      effects = new Set();
+      registry.set(moduleUrl, effects);
+    }
+    effects.add(run);
+  }
+
+  return run;
 }

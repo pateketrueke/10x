@@ -147,6 +147,17 @@ count = @signal 0.
         get textContent() {
           return children.map(c => c.textContent || c.nodeValue || '').join('');
         },
+        set textContent(value) {
+          children.length = 0;
+          if (value !== null && value !== undefined && value !== '') {
+            children.push({
+              nodeType: 3,
+              nodeValue: String(value),
+              textContent: String(value),
+            });
+          }
+          el.firstChild = children[0] || null;
+        },
         get innerHTML() {
           return children.map(c => {
             if (c.nodeType === 3) return c.nodeValue;
@@ -161,11 +172,17 @@ count = @signal 0.
       return el;
     };
 
-    const createMockTextNode = (text) => ({
-      nodeType: 3,
-      nodeValue: text,
-      textContent: text,
-    });
+    const createMockTextNode = (text) => {
+      const node = {
+        nodeType: 3,
+        _value: text,
+        get nodeValue() { return node._value; },
+        set nodeValue(v) { node._value = v; },
+        get textContent() { return node._value; },
+        set textContent(v) { node._value = v; },
+      };
+      return node;
+    };
 
     const rootListeners = {};
     let shadowChildren = [];
@@ -272,6 +289,17 @@ count = @signal 0.
         get textContent() {
           return children.map(c => c.textContent || c.nodeValue || '').join('');
         },
+        set textContent(value) {
+          children.length = 0;
+          if (value !== null && value !== undefined && value !== '') {
+            children.push({
+              nodeType: 3,
+              nodeValue: String(value),
+              textContent: String(value),
+            });
+          }
+          el.firstChild = children[0] || null;
+        },
         get innerHTML() {
           return children.map(c => {
             if (c.nodeType === 3) return c.nodeValue;
@@ -286,11 +314,17 @@ count = @signal 0.
       return el;
     };
 
-    const createMockTextNode = (text) => ({
-      nodeType: 3,
-      nodeValue: text,
-      textContent: text,
-    });
+    const createMockTextNode = (text) => {
+      const node = {
+        nodeType: 3,
+        _value: text,
+        get nodeValue() { return node._value; },
+        set nodeValue(v) { node._value = v; },
+        get textContent() { return node._value; },
+        set textContent(v) { node._value = v; },
+      };
+      return node;
+    };
 
     const rootListeners = {};
     let shadowChildren = [];

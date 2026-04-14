@@ -19,10 +19,43 @@ export class SignalProxy {
   subscribe(cb) { return this._signal.subscribe(cb); }
 }
 
-let currentEffect = null;
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+export let effectStack = [];
+export let renderIdStack = [];
+export let asyncRenderContexts = new Map();
+let asyncContextId = 0;
+let effectIdCounter = 0;
 let devtoolsActive = false;
 
-export function getCurrentEffect() { return currentEffect; }
+// Async context tracking using Node.js AsyncLocalStorage
+const asyncLocalStorage = new AsyncLocalStorage();
+
+export function getCurrentEffect() { 
+  const store = asyncLocalStorage.getStore();
+  if (store && store.effect) return store.effect;
+  return effectStack[effectStack.length - 1] || null; 
+}
+export function getCurrentRenderId() { 
+  const store = asyncLocalStorage.getStore();
+  if (store && store.renderId) return store.renderId;
+  return renderIdStack[renderIdStack.length - 1] || null; 
+}
+export function pushRenderId(id) { renderIdStack.push(id); return renderIdStack.length - 1; }
+export function removeRenderIdAt(idx) { if (idx >= 0 && idx < renderIdStack.length) renderIdStack.splice(idx, 1); }
+
+// Run an async function with a specific context
+export function withAsyncContext(effect, renderId, fn) {
+  return asyncLocalStorage.run({ effect, renderId }, fn);
+}
+
+function nextEffectId() {
+  return ++effectIdCounter;
+}
+
+function nextAsyncContextId() {
+  return ++asyncContextId;
+}
 
 export function setDevtoolsActive(active) {
   devtoolsActive = active;
@@ -69,16 +102,27 @@ export function signal(initialValue, name, moduleUrl) {
       this.set(nextValue);
     },
     get() {
-      if (currentEffect) {
-        this.subs.add(currentEffect);
-        if (currentEffect._deps) currentEffect._deps.add(this);
-      } else {
+      const effect = getCurrentEffect();
+      const renderId = getCurrentRenderId();
+      if (process.env.DEBUG_SIGNAL) {
+        console.log(`[signal.get] ${this._devtoolsName}:`, { effectRenderId: effect?._renderId, renderId });
+      }
+      if (effect) {
+        // Subscribe if the effect belongs to the current render context
+        // or if there's no render context (non-async effect)
+        if (!renderId || effect._renderId === renderId) {
+          this.subs.add(effect);
+          if (effect._deps) effect._deps.add(this);
+        }
       }
       return this._value;
     },
     set(nextValue) {
       const prev = this._value;
       this._value = nextValue;
+      if (process.env.DEBUG_SIGNAL) {
+        console.log(`[signal.set] ${this._devtoolsName}: ${prev} -> ${nextValue}, subs: ${this.subs.size}`);
+      }
       if (devtoolsActive && this._history) {
         this._history.push({ value: nextValue, prev, ts: Date.now() });
         if (this._history.length > MAX_HISTORY) this._history.shift();
@@ -144,6 +188,7 @@ export function read(value) {
 }
 
 export function effect(fn) {
+  const effectId = nextEffectId();
   const cleanup = () => {
     if (!run._deps) return;
     run._deps.forEach(dep => {
@@ -155,24 +200,26 @@ export function effect(fn) {
   const run = () => {
     if (run._stopped) return undefined;
     cleanup();
-    currentEffect = run;
+    effectStack.push(run);
     let result;
     try {
       result = fn();
     } catch (error) {
-      currentEffect = null;
+      effectStack.pop();
       throw error;
     }
 
     if (result && typeof result.then === 'function') {
       return result.finally(() => {
-        if (currentEffect === run) currentEffect = null;
+        const idx = effectStack.indexOf(run);
+        if (idx !== -1) effectStack.splice(idx, 1);
       });
     }
 
-    currentEffect = null;
+    effectStack.pop();
     return result;
   };
+  run._id = effectId;
   run._deps = new Set();
   run._stopped = false;
   run.stop = () => {
@@ -195,12 +242,12 @@ export function batch(fn) {
 }
 
 export function untracked(fn) {
-  const prev = currentEffect;
-  currentEffect = null;
+  const prev = effectStack.slice();
+  effectStack = [];
   try {
     return fn();
   } finally {
-    currentEffect = prev;
+    effectStack = prev;
   }
 }
 
