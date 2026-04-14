@@ -184,6 +184,12 @@ export default class Parser {
           this.inBlockBody = false;
           body.push(Expr.from(cur));
           this.inBlockBody = savedInBlockBody;
+        } else if (isString(cur) && cur.kind === 'markup' && typeof cur.value === 'string') {
+          try {
+            body.push(Expr.tag(parseTag(cur.value), cur.tokenInfo || cur));
+          } catch (_) {
+            body.push(Expr.from(cur));
+          }
         } else {
           body.push(Expr.from(cur));
         }
