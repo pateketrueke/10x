@@ -10,6 +10,7 @@ import Time from '../../lib/std/time.js';
 import Num from '../../lib/std/num.js';
 import UUID from '../../lib/std/uuid.js';
 import Http from '../../lib/std/http.js';
+import * as Prelude from '../../lib/prelude.js';
 
 let cwd = process.cwd();
 
@@ -49,6 +50,31 @@ export default ({ Env }, argv = process.argv.slice(2)) => {
   const _argv = argv;
 
   Env.shared = {
+    // Prelude functions - available globally without import
+    map: Prelude.map,
+    filter: Prelude.filter,
+    reduce: Prelude.reduce,
+    head: Prelude.head,
+    tail: Prelude.tail,
+    take: Prelude.take,
+    drop: Prelude.drop,
+    rev: Prelude.rev,
+    size: Prelude.size,
+    push: Prelude.push,
+    pairs: Prelude.pairs,
+    keys: Prelude.keys,
+    vals: Prelude.vals,
+    get: Prelude.get,
+    equals: Prelude.equals,
+    show: Prelude.show,
+    format: Prelude.format,
+    list: Prelude.list,
+    items: Prelude.items,
+    unwrap: Prelude.unwrap,
+    render: Prelude.render,
+    cast: Prelude.cast,
+    repr: Prelude.repr,
+    // Namespaced modules
     Proc: {
       cwd: () => cwd,
       chdir: p => { cwd = path.resolve(cwd, p); },

@@ -3,7 +3,7 @@
 import Expr from './expr';
 import * as Prelude from '../prelude';
 
-import { FFI, LITERAL } from './symbols';
+import { FFI, LITERAL, BLOCK } from './symbols';
 import { raise, isPlain } from '../helpers';
 
 const SAFE_GLOBALS = ['Promise', 'RegExp', 'Object', 'Array', 'String', 'Number', 'Math', 'Date', 'JSON'];
@@ -12,6 +12,12 @@ const SAFE_PRELUDE = Object.keys(Prelude).reduce((prev, cur) => {
   prev[cur] = Expr.unsafe(Prelude[cur], cur, cur === 'check');
   return prev;
 }, {});
+
+const PRELUDE_FUNCTIONS = [
+  'map', 'filter', 'head', 'tail', 'take', 'drop', 'rev',
+  'size', 'push', 'pairs', 'keys', 'vals', 'get', 'equals', 'show',
+  'format', 'list', 'items', 'unwrap', 'render', 'cast', 'repr',
+];
 
 export default class Env {
   constructor(value) {
@@ -26,6 +32,21 @@ export default class Env {
     this.descriptor = null;
 
     Object.defineProperty(this, 'parent', { value });
+
+    // Add prelude functions to root environment (no parent)
+    if (!value && Env.shared) {
+      for (const name of PRELUDE_FUNCTIONS) {
+        if (Env.shared[name] && !this.locals[name]) {
+          this.def(name, Expr.function({
+            type: FFI,
+            value: {
+              target: Env.shared[name],
+              label: name,  // Use just the name for FFI callback detection
+            },
+          }, `Prelude/${name}`));
+        }
+      }
+    }
   }
 
   has(name, recursive) {
