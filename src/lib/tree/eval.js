@@ -440,8 +440,16 @@ export default class Eval {
       const isSignal = v => v && typeof v === 'object' && typeof v.peek === 'function';
       const isLiteralWithSignal = v => v && typeof v === 'object' && v.type && v.type.toString() === 'Symbol(LITERAL)' && isSignal(v.value);
       const unwrapSignal = v => {
-        if (isLiteralWithSignal(v)) return Expr.value(v.value.peek(), v.tokenInfo);
-        if (isSignal(v)) return Expr.value(v.peek(), v.tokenInfo);
+        if (isLiteralWithSignal(v)) {
+          // Use get() for dependency tracking when inside an effect
+          const val = v.value;
+          const value = typeof val.get === 'function' ? val.get() : val.peek();
+          return Expr.value(value, v.tokenInfo);
+        }
+        if (isSignal(v)) {
+          const value = typeof v.get === 'function' ? v.get() : v.peek();
+          return Expr.value(value, v.tokenInfo);
+        }
         return v;
       };
       const pipedValue = unwrapSignal(prev);
@@ -935,11 +943,22 @@ export default class Eval {
         let result;
         const label = prev.value.label || '';
         const supportsCallableArgs = ['map', 'filter'].includes(label);
+        const isSignal = v => v && typeof v === 'object' && typeof v.peek === 'function';
+        const isLiteralWithSignal = v => v && typeof v === 'object' && v.type && v.type.toString() === 'Symbol(LITERAL)' && isSignal(v.value);
         const preparedArgs = fixedArgs.map(arg => {
           if (supportsCallableArgs && arg && arg.isCallable) {
             return (...input) => {
               return this.convert(arg, Expr.value(input).valueOf(), `<${prev.value.label || 'FFI'}>`);
             };
+          }
+
+          // Unwrap signals to their values (for dependency tracking in @computed)
+          if (isLiteralWithSignal(arg)) {
+            const val = arg.value;
+            return typeof val.get === 'function' ? val.get() : val.peek();
+          }
+          if (isSignal(arg)) {
+            return typeof arg.get === 'function' ? arg.get() : arg.peek();
           }
 
           return arg;
@@ -2173,7 +2192,7 @@ export default class Eval {
         // Create an effect that evaluates the expression and sets the signal
         // The expression evaluation will track dependencies via valueOf() -> get()
         effectFn(async () => {
-          const evaluated = await Eval.do(computedArgs, environment, 'Expr', true, parentTokenInfo);
+          const evaluated = await Eval.do(computedArgs, environment, 'Call', true, parentTokenInfo);
           const result = evaluated.length === 1
             ? toPlain(evaluated[0])
             : evaluated.map(t => toPlain(t));

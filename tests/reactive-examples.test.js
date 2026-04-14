@@ -248,3 +248,165 @@ describe('Reactive: Event Handlers', () => {
     expect(val.textContent).toBe('0');
   });
 });
+
+// Tests for new examples: reactive-form, shopping-cart, data-pipeline
+describe('Examples: Reactive Form', () => {
+  let runtimeEnv;
+
+  beforeAll(async () => {
+    acquireVirtualDoc();
+    runtimeEnv = new Env();
+    await run('@import signal, html, render, on, effect @from "Runtime".', runtimeEnv);
+  });
+
+  afterAll(() => {
+    releaseVirtualDoc();
+  });
+
+  test('form validation with computed', async () => {
+    const env = new Env(runtimeEnv);
+    await run(`
+      name = @signal "".
+      nameValid = @computed (> (size(name)) 2).
+    `, env);
+    await wait();
+
+    // Initially invalid (empty string has size 0)
+    let result = await run('nameValid.', env);
+    expect(result[0]?.value?.peek?.()).toBe(false);
+
+    // Set valid name
+    const nameResult = await run('name.', env);
+    nameResult[0].value.set("Alice");
+    await wait();
+
+    result = await run('nameValid.', env);
+    expect(result[0]?.value?.peek?.()).toBe(true);
+  });
+
+  test('computed greeting based on name', async () => {
+    const env = new Env(runtimeEnv);
+    await run(`
+      name = @signal "".
+      greeting = @computed "Hello, " + name + "!".
+    `, env);
+    await wait();
+
+    let result = await run('greeting.', env);
+    expect(result[0]?.value?.peek?.()).toBe("Hello, !");
+
+    const nameResult = await run('name.', env);
+    nameResult[0].value.set("Bob");
+    await wait();
+
+    result = await run('greeting.', env);
+    expect(result[0]?.value?.peek?.()).toBe("Hello, Bob!");
+  });
+});
+
+describe('Examples: Shopping Cart', () => {
+  let runtimeEnv;
+
+  beforeAll(async () => {
+    acquireVirtualDoc();
+    runtimeEnv = new Env();
+    await run('@import signal, html, render, on, effect @from "Runtime".', runtimeEnv);
+  });
+
+  afterAll(() => {
+    releaseVirtualDoc();
+  });
+
+  test('computed item count', async () => {
+    const env = new Env(runtimeEnv);
+    await run(`
+      items = @signal [].
+      itemCount = @computed size(items).
+    `, env);
+    await wait();
+
+    let result = await run('itemCount.', env);
+    expect(result[0]?.value?.peek?.()).toBe(0);
+
+    // Add item
+    const itemsResult = await run('items.', env);
+    itemsResult[0].value.set([{ name: "Widget" }]);
+    await wait();
+
+    result = await run('itemCount.', env);
+    expect(result[0]?.value?.peek?.()).toBe(1);
+  });
+
+  test('computed totals', async () => {
+    const env = new Env(runtimeEnv);
+    await run(`
+      subtotal = @signal 100.
+      tax = @computed subtotal * 0.08.
+      total = @computed subtotal + tax.
+    `, env);
+    await wait();
+
+    let result = await run('tax.', env);
+    expect(result[0]?.value?.peek?.()).toBe(8);
+
+    result = await run('total.', env);
+    expect(result[0]?.value?.peek?.()).toBe(108);
+  });
+});
+
+describe('Examples: Data Pipeline', () => {
+  let runtimeEnv;
+
+  beforeAll(async () => {
+    acquireVirtualDoc();
+    runtimeEnv = new Env();
+    await run('@import signal, html, render, on, effect @from "Runtime".', runtimeEnv);
+  });
+
+  afterAll(() => {
+    releaseVirtualDoc();
+  });
+
+  test('map with auto-imported prelude', async () => {
+    const env = new Env(runtimeEnv);
+    const result = await run('[1, 2, 3] |> map((x) -> x * 2).', env);
+    // Result is array of Literals
+    const values = result?.[0]?.value?.map?.(r => r?.value ?? r?.valueOf?.()) || result?.map(r => r?.value?.valueOf?.() ?? r?.value);
+    expect(values).toEqual(["2", "4", "6"]);
+  });
+
+  test('filter with auto-imported prelude', async () => {
+    const env = new Env(runtimeEnv);
+    const result = await run('[1, 2, 3, 4, 5] |> filter((x) -> (= x % 2 0)).', env);
+    const values = result?.[0]?.value?.map?.(r => r?.value ?? r?.valueOf?.()) || result?.map(r => r?.value?.valueOf?.() ?? r?.value);
+    expect(values).toEqual(["2", "4"]);
+  });
+
+  test('chained pipes', async () => {
+    const env = new Env(runtimeEnv);
+    const result = await run(`
+      [1, 2, 3, 4, 5]
+        |> filter((x) -> (= x % 2 0))
+        |> map((x) -> x * 10).
+    `, env);
+    const values = result?.[0]?.value?.map?.(r => r?.value ?? r?.valueOf?.()) || result?.map(r => r?.value?.valueOf?.() ?? r?.value);
+    expect(values).toEqual(["20", "40"]);
+  });
+
+  test('size with auto-imported prelude', async () => {
+    const env = new Env(runtimeEnv);
+    const result = await run('[1, 2, 3] |> size.', env);
+    expect(result[0]?.value).toBe("3");
+  });
+
+  test('head/tail with auto-imported prelude', async () => {
+    const env = new Env(runtimeEnv);
+    
+    const headResult = await run('[1, 2, 3] |> head.', env);
+    expect(headResult[0]?.value).toBe("1");
+    
+    const tailResult = await run('[1, 2, 3] |> tail.', env);
+    const tailValues = tailResult?.[0]?.value?.map?.(r => r?.value ?? r?.valueOf?.()) || tailResult?.map(r => r?.value?.valueOf?.() ?? r?.value);
+    expect(tailValues).toEqual(["2", "3"]);
+  });
+});
