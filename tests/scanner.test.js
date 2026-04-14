@@ -359,4 +359,58 @@ describe('Scanner', () => {
       ]);
     });
   });
+
+  describe('markup edge cases', () => {
+    test('lambda in attribute value', () => {
+      const tokens = new Scanner('<button onclick={() -> foo()}>Click</button>').scanTokens();
+      expect(tokens.length).toBe(2);
+      expect(tokens[0].type).toBe(STRING);
+      expect(tokens[0].kind).toBe('markup');
+      expect(tokens[0].value).toBe('<button onclick={() -> foo()}>Click</button>');
+    });
+
+    test('nested braces in attribute', () => {
+      const tokens = new Scanner('<div style={a ? "{x}" : "y"}>Text</div>').scanTokens();
+      expect(tokens.length).toBe(2);
+      expect(tokens[0].type).toBe(STRING);
+      expect(tokens[0].kind).toBe('markup');
+      expect(tokens[0].value).toBe('<div style={a ? "{x}" : "y"}>Text</div>');
+    });
+
+    test('directive in attribute', () => {
+      const tokens = new Scanner('<span class={@if x "a" @else "b"}>Text</span>').scanTokens();
+      expect(tokens.length).toBe(2);
+      expect(tokens[0].type).toBe(STRING);
+      expect(tokens[0].kind).toBe('markup');
+      expect(tokens[0].value).toBe('<span class={@if x "a" @else "b"}>Text</span>');
+    });
+
+    test('multiple nested tags with expressions', () => {
+      const tokens = new Scanner('<ul><li onclick={() -> toggle(i)}>#{t.text}</li></ul>').scanTokens();
+      expect(tokens.length).toBe(2);
+      expect(tokens[0].type).toBe(STRING);
+      expect(tokens[0].kind).toBe('markup');
+      expect(tokens[0].value).toBe('<ul><li onclick={() -> toggle(i)}>#{t.text}</li></ul>');
+    });
+
+    test('void tag with expression in attribute', () => {
+      const tokens = new Scanner('<input type="checkbox" checked={t.done} onchange={() -> toggle(i)} />').scanTokens();
+      expect(tokens.length).toBe(2);
+      expect(tokens[0].type).toBe(STRING);
+      expect(tokens[0].kind).toBe('markup');
+      expect(tokens[0].value).toBe('<input type="checkbox" checked={t.done} onchange={() -> toggle(i)} />');
+    });
+
+    test('complex nested markup with lambdas', () => {
+      const source = `<li class="task-item">
+        <input type="checkbox" onchange={() -> toggleTask(i)} />
+        <span>#{t.text}</span>
+      </li>`;
+      const tokens = new Scanner(source).scanTokens();
+      expect(tokens.length).toBe(2);
+      expect(tokens[0].type).toBe(STRING);
+      expect(tokens[0].kind).toBe('markup');
+      expect(tokens[0].value).toContain('onchange={() -> toggleTask(i)}');
+    });
+  });
 });

@@ -882,15 +882,29 @@ export default class Scanner {
     this.subString(this.source.substring(this.start + 1, this.offset - 1), false, info);
   }
 
+  // Parses HTML-like markup tags, handling nested elements and attribute expressions.
+  // 
+  // State tracking:
+  // - `close` stack: tracks open tag names that need closing (e.g., ["li", "span"])
+  // - `braceDepth`: tracks nesting inside {...} attribute expressions
+  //   - 0 = outside expression (normal tag parsing)
+  //   - >0 = inside expression (skip tag-closing logic to avoid misinterpreting > in ->)
+  // - `offset`: iteration counter, used to skip nested tag detection on first pass
+  //
+  // Example: <li onchange={() -> foo()}>...</li>
+  // - The `->` inside the attribute expression would be misinterpreted as a tag closer
+  // - braceDepth prevents this by skipping tag-closing logic when inside {...}
   parseMarkup() {
     const tokenInfo = { line: this.line, col: this.col - 1, kind: 'markup' };
 
+    // Read tag name after <
     while (isAlphaNumeric(this.peek())) this.nextToken();
 
     const openTag = this.peekCurrent(4);
     const tagName = openTag.substr(1);
-    const close = [tagName];
+    const close = [tagName]; // Stack of open tags to close
 
+    // Check if void tag has immediate closing (e.g., <input></input>)
     const hasImmediateClosing = name => {
       let idx = this.offset + 1;
       while (idx < this.source.length && /\s/.test(this.source[idx])) idx++;
@@ -899,6 +913,7 @@ export default class Scanner {
     };
 
     let offset = 0;
+    let braceDepth = 0; // Tracks {...} nesting in attribute expressions
 
     while (!this.isDone()) {
       if (this.peek() === '\n') {
@@ -911,21 +926,29 @@ export default class Scanner {
       const next = this.peekNext();
       const tag = `</${close[close.length - 1]}>`;
 
-      if (cur === '/' && next === '>') {
+      // Track brace depth for attribute expressions like {() -> foo()}
+      if (cur === '{') braceDepth++;
+      if (cur === '}') braceDepth = Math.max(0, braceDepth - 1);
+
+      // Self-closing tag: /> - pop from close stack (only outside expressions)
+      if (cur === '/' && next === '>' && braceDepth === 0) {
         this.nextToken(2);
         close.pop();
       }
 
-      if (cur === '>' && close.length) {
+      // Void tag closing: > - pop void tags like <input> (only outside expressions)
+      if (cur === '>' && close.length && braceDepth === 0) {
         const top = String(close[close.length - 1] || '').toLowerCase();
         if (isVoidTag(top) && !hasImmediateClosing(top)) {
           close.pop();
         }
       }
 
-      if (old === '>' && tag === this.getCurrent(tag)) close.pop();
+      // Closing tag: </tag> - pop from close stack (only outside expressions)
+      if (old === '>' && tag === this.getCurrent(tag) && braceDepth === 0) close.pop();
 
-      if (offset && cur === '<' && isAlphaNumeric(next)) {
+      // Nested tag: <tagname - push to close stack (only outside expressions)
+      if (offset && cur === '<' && isAlphaNumeric(next) && braceDepth === 0) {
         let nextTag = '';
         let char;
 
@@ -939,6 +962,8 @@ export default class Scanner {
         this.col -= 2;
         close.push(nextTag);
       }
+      
+      // Done when all tags are closed
       if (!close.length) break;
       this.nextToken();
       offset++;

@@ -397,12 +397,43 @@ Render into shadow DOM (scoped styles):
 
 ### Annotations
 
-Type annotations (for documentation/linting):
+Type annotations for documentation, linting, and runtime validation:
 
 ```markdown
-a :: num.
+a :: number.
 a = 1.
 name :: string.
+name = "Alice".
+```
+
+#### Supported Types
+
+```markdown
+count :: number.
+name :: string.
+active :: boolean.
+items :: list.
+fn :: function.
+result :: :ok | :err.           # Symbol types
+value :: number | string.       # Union types
+```
+
+#### Runtime Validation
+
+Type annotations are opt-in and validated at runtime in dev mode:
+
+```markdown
+x :: number.
+x = "hello".                    # Type error: expected number, got string
+```
+
+Union types allow multiple valid types:
+
+```markdown
+id :: number | string.
+id = 42.                        # OK
+id = "abc".                     # OK
+id = :on.                       # Type error: expected number | string, got symbol
 ```
 
 ---

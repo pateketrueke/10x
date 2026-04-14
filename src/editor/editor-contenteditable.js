@@ -696,7 +696,7 @@ function renderTokens(source) {
   const frag = document.createDocumentFragment();
   if (hasIncompleteMarkdownPrefixLine(source)) {
     appendPlainTextWithBreaks(frag, source);
-    return frag;
+    return { fragment: frag, error: null };
   }
 
   try {
@@ -704,11 +704,11 @@ function renderTokens(source) {
     for (const token of tokens) {
       appendToken(frag, token);
     }
-  } catch (_) {
-    // Parse fallback: keep raw text editable when tokenization fails.
+    return { fragment: frag, error: null };
+  } catch (err) {
     appendPlainTextWithBreaks(frag, source);
+    return { fragment: frag, error: err };
   }
-  return frag;
 }
 
 function normalizeStatement(source) {
@@ -853,10 +853,10 @@ function buildStatementAnchors(source) {
     }
   } catch (err) {
     console.error('[buildAnchors] error:', err);
-    // Keep current anchors empty on parse failure.
+    return { anchors: [], error: err };
   }
 
-  return anchors;
+  return { anchors, error: null };
 }
 
 // ─── Custom Element ───────────────────────────────────────────────────────────
@@ -870,6 +870,29 @@ const STYLES = `
     font-size: 14px;
     line-height: 1.7;
     color: #d4d4d4;
+  }
+
+  [data-parse-error] {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: #5a1d1d;
+    color: #f48771;
+    font-size: 12px;
+    border-bottom: 1px solid #7a2d2d;
+    z-index: 100;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  [data-parse-error]::before {
+    content: '⚠';
+    font-size: 14px;
   }
 
   [contenteditable="plaintext-only"] {
@@ -1176,6 +1199,7 @@ class XEditor extends HTMLElement {
     this._inlineResultsById = new Map();
     this._inlineAnchorNodes = new Map();
     this._signalSnapshot = [];
+    this._parseError = null;
     this._mainThreadRenderDisposers = new Map();
     this._mainThreadOnDisposers = new Map();
     this._killedStatementIds = new Set();
@@ -1193,7 +1217,12 @@ class XEditor extends HTMLElement {
     this._tooltip = document.createElement('div');
     this._tooltip.dataset.tooltipLayer = '';
 
+    this._parseErrorEl = document.createElement('div');
+    this._parseErrorEl.dataset.parseError = '';
+    this._parseErrorEl.style.display = 'none';
+
     this._shadow.appendChild(style);
+    this._shadow.appendChild(this._parseErrorEl);
     this._shadow.appendChild(this._editable);
     this._shadow.appendChild(this._tooltip);
 
@@ -1276,8 +1305,12 @@ class XEditor extends HTMLElement {
     this._hideTooltip();
     this._rendering = true;
     this._editable.innerHTML = '';
-    this._editable.appendChild(renderTokens(source));
-    this._anchors = buildStatementAnchors(source);
+    const { fragment: tokenFrag, error: parseError } = renderTokens(source);
+    this._editable.appendChild(tokenFrag);
+    const { anchors, error: anchorError } = buildStatementAnchors(source);
+    this._anchors = anchors;
+    this._parseError = parseError || anchorError;
+    this._updateParseErrorDisplay();
     debugLog('editor', 'anchors:', this._anchors.map(a => ({ id: a.id, prose: a.isProseOnly, src: a.source.substring(0, 40) })));
     this._inlineAnchors = buildInlineAnchors(this._anchors);
     this._bindInlineAnchorNodes();
@@ -1285,6 +1318,19 @@ class XEditor extends HTMLElement {
     this._lastText = source;
     this._rendering = false;
     setCursorOffset(this._editable, this._shadow, cursorOffset);
+    if (document.activeElement !== this._editable) {
+      this._editable.focus();
+    }
+  }
+
+  _updateParseErrorDisplay() {
+    if (this._parseError) {
+      const msg = this._parseError.message || String(this._parseError);
+      this._parseErrorEl.textContent = msg;
+      this._parseErrorEl.style.display = 'flex';
+    } else {
+      this._parseErrorEl.style.display = 'none';
+    }
   }
 
   // ── inject result widgets at statement EOL anchors ───────────────────────
@@ -1308,13 +1354,14 @@ class XEditor extends HTMLElement {
       label.textContent = '…';
       widget.appendChild(label);
 
-      const cancelBtn = document.createElement('button');
-      cancelBtn.type = 'button';
-      cancelBtn.dataset.cancelBtn = '';
-      cancelBtn.setAttribute('aria-label', 'Cancel evaluation');
-      cancelBtn.title = 'Cancel evaluation';
-      cancelBtn.textContent = '×';
-      widget.appendChild(cancelBtn);
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.tabIndex = -1;
+        cancelBtn.dataset.cancelBtn = '';
+        cancelBtn.setAttribute('aria-label', 'Cancel evaluation');
+        cancelBtn.title = 'Cancel evaluation';
+        cancelBtn.textContent = '×';
+        widget.appendChild(cancelBtn);
       return widget;
     }
 
@@ -1344,6 +1391,7 @@ class XEditor extends HTMLElement {
       widget.dataset.copyValue = text;
       const copyBtn = document.createElement('button');
       copyBtn.type = 'button';
+      copyBtn.tabIndex = -1;
       copyBtn.dataset.copyBtn = '';
       copyBtn.setAttribute('aria-label', 'Copy result');
       copyBtn.title = 'Copy result';
@@ -1369,6 +1417,11 @@ class XEditor extends HTMLElement {
   }
 
   _injectResults() {
+    if (!this._anchors.length && !this._inlineAnchors.length) return;
+
+    const wasFocused = document.activeElement === this._editable;
+    const cursor = getCursorOffset(this._editable, this._shadow);
+
     this._editable.querySelectorAll('[data-inline-anchor]').forEach(node => {
       delete node.dataset.inlineHasResult;
       delete node.dataset.inlineError;
@@ -1382,7 +1435,6 @@ class XEditor extends HTMLElement {
       delete node.dataset.eolStatementId;
       delete node.dataset.eolCopyValue;
     });
-    if (!this._anchors.length && !this._inlineAnchors.length) return;
 
     const byLine = new Map();
     this._anchors.forEach(anchor => {
@@ -1436,6 +1488,13 @@ class XEditor extends HTMLElement {
     }
 
     this._injectInlineResults();
+
+    if (cursor !== null) {
+      setCursorOffset(this._editable, this._shadow, cursor);
+    }
+    if (wasFocused && document.activeElement !== this._editable) {
+      this._editable.focus();
+    }
   }
 
   _insertWidgetAtOffset(offset, widget) {
@@ -1560,7 +1619,7 @@ class XEditor extends HTMLElement {
         this._appliedEvalRequestId = requestId;
 
         if (preRemountSnapshot && typeof globalThis.__10x_devtools_before_remount === 'function') {
-          globalThis.__10x_devtools_before_remount('worker', preRemountSnapshot);
+          // globalThis.__10x_devtools_before_remount('worker', preRemountSnapshot);
         }
 
         if (runtimeLog && typeof globalThis.__10x_runtime_log === 'function') {
@@ -1732,7 +1791,7 @@ class XEditor extends HTMLElement {
     try {
       this._clearMainThreadRuntimeEffects();
       if (typeof globalThis.__10x_devtools_before_remount === 'function') {
-        globalThis.__10x_devtools_before_remount('main-thread');
+        // globalThis.__10x_devtools_before_remount('main-thread');
       }
       resetComponentInstanceId(0);
       getSignalRegistry().clear();

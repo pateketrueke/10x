@@ -1,6 +1,15 @@
 import { isVoidTag } from './void-tags';
 
-function fail(message) {
+function fail(message, input, state) {
+  if (input && state) {
+    const pos = state.i;
+    const start = Math.max(0, pos - 20);
+    const end = Math.min(input.length, pos + 20);
+    const before = input.slice(start, pos);
+    const after = input.slice(pos, end);
+    const pointer = ' '.repeat(Math.min(pos, 20)) + '^';
+    throw new Error(`${message}\n  at position ${pos}\n  ${before}${after}\n  ${pointer}`);
+  }
   throw new Error(message);
 }
 
@@ -36,7 +45,7 @@ function readName(input, state) {
   const start = state.i;
 
   while (state.i < input.length && /[A-Za-z0-9:_-]/.test(input[state.i])) state.i++;
-  if (state.i === start) fail('Invalid tag name');
+  if (state.i === start) fail('Invalid tag name', input, state);
 
   return input.slice(start, state.i);
 }
@@ -46,7 +55,7 @@ function readQuoted(input, state) {
   const start = state.i;
 
   while (state.i < input.length && input[state.i] !== quote) state.i++;
-  if (state.i >= input.length) fail('Unterminated attribute string');
+  if (state.i >= input.length) fail('Unterminated attribute string', input, state);
 
   const value = input.slice(start, state.i);
   state.i++;
@@ -77,14 +86,14 @@ function parseAttrs(input, state) {
       if (spreadExpr.expr.startsWith('...')) {
         // spread: {...obj}
         const source = spreadExpr.expr.slice(3).trim();
-        if (!source) fail('Missing source after spread operator in tag attrs');
+        if (!source) fail('Missing source after spread operator in tag attrs', input, state);
         spreads.push({ expr: source });
       } else if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(spreadExpr.expr.trim())) {
         // shorthand: {bar} → bar={bar}
         const ident = spreadExpr.expr.trim();
         attrs[ident] = { expr: ident };
       } else {
-        fail('Only spread expressions or shorthand identifiers are allowed in bare tag attr braces');
+        fail('Only spread expressions or shorthand identifiers are allowed in bare tag attr braces', input, state);
       }
       continue;
     }
@@ -125,7 +134,7 @@ function parseText(input, state) {
 }
 
 function readExpr(input, state) {
-  if (input[state.i] !== '{') fail('Expecting `{`');
+  if (input[state.i] !== '{') fail('Expecting `{`', input, state);
 
   state.i++;
   let depth = 1;
@@ -162,11 +171,11 @@ function readExpr(input, state) {
     buffer += cur;
   }
 
-  if (depth !== 0) fail('Unterminated expression in tag');
+  if (depth !== 0) fail('Unterminated expression in tag', input, state);
 
   const source = buffer.trim();
 
-  if (source === '@render') fail('Missing expression after @render');
+  if (source === '@render') fail('Missing expression after @render', input, state);
   if (source.startsWith('@render ')) {
     return { expr: source.slice(8).trim() };
   }
@@ -175,7 +184,7 @@ function readExpr(input, state) {
 }
 
 function parseNode(input, state) {
-  if (input[state.i] !== '<') fail('Expecting `<`');
+  if (input[state.i] !== '<') fail('Expecting `<`', input, state);
 
   state.i++;
   const name = readName(input, state);
@@ -188,7 +197,7 @@ function parseNode(input, state) {
     state.i++;
   }
 
-  if (input[state.i] !== '>') fail('Expecting `>`');
+  if (input[state.i] !== '>') fail('Expecting `>`', input, state);
   state.i++;
 
   const node = {
@@ -212,10 +221,10 @@ function parseNode(input, state) {
       state.i += 2;
       const closeName = readName(input, state);
 
-      if (closeName !== name) fail(`Mismatched closing tag: </${closeName}>`);
+      if (closeName !== name) fail(`Mismatched closing tag: </${closeName}>`, input, state);
       skipSpaces(input, state);
 
-      if (input[state.i] !== '>') fail('Expecting `>`');
+      if (input[state.i] !== '>') fail('Expecting `>`', input, state);
       state.i++;
       return node;
     }
@@ -238,7 +247,7 @@ function parseNode(input, state) {
     }
   }
 
-  fail(`Missing closing tag for <${name}>`);
+  fail(`Missing closing tag for <${name}>`, input, state);
 }
 
 function escapeText(value) {
@@ -260,7 +269,7 @@ export function parseTag(input) {
   const node = parseNode(source, state);
 
   skipSpaces(source, state);
-  if (state.i !== source.length) fail('Unexpected trailing content after tag');
+  if (state.i !== source.length) fail('Unexpected trailing content after tag', source, state);
 
   return node;
 }
