@@ -542,8 +542,7 @@ export function format(str, ...args) {
 
   const data = args.reduce((p, c) => {
     if (p[p.length - 1] && (
-      (p[p.length - 1].isRange && c.isRange)
-      || (p[p.length - 1].isObject && c.isObject)
+      (p[p.length - 1].isObject && c.isObject)
     )) {
       push(p[p.length - 1], c);
     } else p.push(c);
