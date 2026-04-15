@@ -1361,6 +1361,17 @@ export default class Eval {
       return true;
     }
 
+    // reject `||` — two consecutive OR tokens — not a valid operator
+    // Use `x ? y | z` for ternary or `@if x y @else z` for conditionals
+    if (isOR(this.ctx) && isOR(this.nextToken())) {
+      raise('`||` is not a valid operator — use `x ? y | z` or `@if x y @else z`', this.ctx.tokenInfo);
+    }
+
+    // reject `&&` — use @if or chained conditions instead
+    if (isLiteral(this.ctx) && this.ctx.value === '&&') {
+      raise('`&&` is not a valid operator — use `@if (cond1) (@if (cond2) ...)`', this.ctx.tokenInfo);
+    }
+
     // evaluate negations on values, e.g. `!0` OR `!"foo"`
     if (isNot(prev) && isResult(this.ctx)) {
       // eagerly resolve dot-chains: `!x.y.z` → negate the property value
