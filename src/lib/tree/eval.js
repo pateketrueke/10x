@@ -848,6 +848,7 @@ export default class Eval {
           { type: BLOCK, value: { ...compEntry, name: resolvedNode.name } },
           this.ctx.tokenInfo
         );
+        
         const compResult = await this.convert(compFn, [propsArg], 'TagComp');
         if (compResult !== undefined) return [Expr.value(compResult, this.ctx.tokenInfo)];
         return [];
@@ -1034,7 +1035,7 @@ export default class Eval {
         return true;
       }
 
-      // prefill scope with current arguments
+        // prefill scope with current arguments
       const { target, scope } = Env.sub(fixedArgs, prev.value, this.env);
 
       // check arguments length, but skip such validation if spread args are given!
@@ -1885,11 +1886,15 @@ export default class Eval {
       return [node.name, attrs, children];
     };
 
-    const htmlVdomFromValue = (entry) => {
+    const htmlVdomFromValue = async (entry) => {
       if (entry === null || typeof entry === 'undefined') return '';
 
       if (Array.isArray(entry)) {
-        return entry.map(htmlVdomFromValue);
+        const results = [];
+        for (const item of entry) {
+          results.push(await htmlVdomFromValue(item));
+        }
+        return results;
       }
 
       if (entry instanceof Expr) {
@@ -1901,6 +1906,27 @@ export default class Eval {
 
       if (typeof entry === 'object' && typeof entry.name === 'string' && Array.isArray(entry.children)) {
         return tagToVdom(entry);
+      }
+
+      // Handle view objects (from @html directive in components)
+      // Use the view cache mechanism to render them as nested views
+      if (typeof entry === 'object' && typeof entry.render === 'function') {
+        // Check if we have a viewCache and domRender from the parent render (via scope)
+        if (scope.__viewCache && scope.__domRender && typeof document !== 'undefined') {
+          const idx = scope.__viewCacheIndex.value++;
+          let cacheEntry = scope.__viewCache.get(idx);
+          if (!cacheEntry) {
+            const placeholder = document.createElement('x-slot');
+            const dispose = scope.__domRender(placeholder, entry);
+            cacheEntry = { placeholder, dispose };
+            scope.__viewCache.set(idx, cacheEntry);
+          }
+          return cacheEntry.placeholder;
+        } else {
+          // Fallback: render inline (for test env or no document)
+          const vdom = await entry.render();
+          return vdom;
+        }
       }
 
       return String(entry);
@@ -2334,6 +2360,53 @@ export default class Eval {
           scope.__domRender = domRender;
           signalMap = new Map();
 
+          // Local version of htmlVdomFromValue that has access to scope
+          const localHtmlVdomFromValue = async (entry) => {
+            if (entry === null || typeof entry === 'undefined') return '';
+
+            if (Array.isArray(entry)) {
+              const results = [];
+              for (const item of entry) {
+                results.push(await localHtmlVdomFromValue(item));
+              }
+              return results;
+            }
+
+            if (entry instanceof Expr) {
+              if (entry.isTag) return tagToVdom(entry.valueOf());
+              return localHtmlVdomFromValue(Expr.plain(entry, convert, '<HTML>'));
+            }
+
+            if (isSignalValue(entry)) return entry;
+
+            if (typeof entry === 'object' && typeof entry.name === 'string' && Array.isArray(entry.children)) {
+              return tagToVdom(entry);
+            }
+
+            // Handle view objects (from @html directive in components)
+            // Use the view cache mechanism to render them as nested views
+            if (typeof entry === 'object' && typeof entry.render === 'function') {
+              // Check if we have a viewCache and domRender from the parent render (via scope)
+              if (scope.__viewCache && scope.__domRender && typeof document !== 'undefined') {
+                const idx = scope.__viewCacheIndex.value++;
+                let cacheEntry = scope.__viewCache.get(idx);
+                if (!cacheEntry) {
+                  const placeholder = document.createElement('x-slot');
+                  const dispose = scope.__domRender(placeholder, entry);
+                  cacheEntry = { placeholder, dispose };
+                  scope.__viewCache.set(idx, cacheEntry);
+                }
+                return cacheEntry.placeholder;
+              } else {
+                // Fallback: render inline (for test env or no document)
+                const vdom = await entry.render();
+                return vdom;
+              }
+            }
+
+            return String(entry);
+          };
+
           // Debug logging
           if (globalThis.__10x_debug_strings) {
             console.log('[html view] htmlBody:', htmlBody);
@@ -2363,7 +2436,7 @@ export default class Eval {
           }
           
           if (!rendered.length) return '';
-          const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+          const result = await localHtmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
           
           if (globalThis.__10x_debug_strings) {
             console.log('[html view] result:', result);

@@ -66,8 +66,7 @@ describe('Components: Basic', () => {
     expect(container.innerHTML).toContain('info');
   });
 
-  // TODO: Fix this test - component rendering issue
-  test.skip('component with state', async () => {
+  test('component with state', async () => {
     const env = new Env(runtimeEnv);
     await run(`
       Counter props =>
@@ -89,7 +88,8 @@ describe('Components: Basic', () => {
     incBtn.dispatchEvent(new Event('click'));
     await wait();
     
-    expect(countEl.textContent).toBe('1');
+    const countElAfter = container.querySelector('#count');
+    expect(countElAfter.textContent).toBe('1');
   });
 });
 

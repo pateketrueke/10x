@@ -10,6 +10,9 @@ import { serialize, deindent } from '../src/lib/helpers';
 
 import Env from '../src/lib/tree/env';
 import Expr from '../src/lib/tree/expr';
+import shared from '../src/adapters/node/shared.js';
+
+shared({ Env }, process.argv.slice(2));
 
 describe('Prelude', () => {
   describe('equals(a, b, weak)', () => {

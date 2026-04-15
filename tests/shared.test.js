@@ -1,11 +1,10 @@
 /* eslint-disable no-unused-expressions */
 
-import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
+import { expect, test, describe, beforeEach, afterEach, beforeAll, afterAll, mock, spyOn } from 'bun:test';
 
 import { stdin } from 'mock-stdin';
 import { stdout, stderr } from 'stdout-stderr';
 
-import td from 'testdouble';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -70,7 +69,9 @@ describe('Shared', () => {
     });
 
     test('exit() and wait()', async () => {
-      td.replace(process, 'exit', td.func());
+      const originalExit = process.exit;
+      const exitMock = mock(() => {});
+      process.exit = exitMock;
 
       await run(deindent(`
         @import exit, wait @from "Proc".
@@ -78,9 +79,8 @@ describe('Shared', () => {
         exit().
       `));
 
-      expect(td.explain(process.exit).callCount).toEqual(1);
-
-      td.reset();
+      expect(exitMock).toHaveBeenCalledTimes(1);
+      process.exit = originalExit;
     });
 
     test('getopts(...) — returns input from argv', async () => {
