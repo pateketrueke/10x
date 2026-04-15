@@ -430,7 +430,7 @@ export async function map(input, callback) {
     const out = [];
     for (let i = 0, c = unwrapped.length; i < c; i++) {
       try {
-        out.push(fromToken(await callback(toToken(unwrapped[i]))));
+        out.push(fromToken(await callback(toToken(unwrapped[i]), toToken(i))));
       } catch (err) {
         const msg = err.message || String(err);
         const newErr = new Error(`[map] ${msg}\n  Index: ${i}\n  Value: ${serialize(unwrapped[i])}`);
@@ -452,7 +452,7 @@ export async function map(input, callback) {
 
   for (let i = 0, c = arr.length; i < c; i++) {
     try {
-      out.push(fromToken(await callback(toToken(arr[i]))));
+      out.push(fromToken(await callback(toToken(arr[i]), toToken(i))));
     } catch (err) {
       const msg = err.message || String(err);
       const newErr = new Error(`[map] ${msg}\n  Index: ${i}\n  Value: ${serialize(arr[i])}`);

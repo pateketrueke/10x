@@ -40,7 +40,7 @@ export function setupRuntime() {
 
 export async function createRuntimeEnv() {
   const env = new Env();
-  await run('@import signal, html, render, on @from "Runtime".', env);
+  await run('@import signal, html, render, on, effect @from "Runtime".', env);
   return env;
 }
 

@@ -129,8 +129,9 @@ export default class Parser {
     let stack = [[]];
     let key = token.value;
 
-    // For @on, don't stop at PIPE (e.g., tasks = tasks |> push(...))
-    const endTokens = key === '@on' ? [OR] : [OR, PIPE];
+    // For @on and @if, don't stop at OR (e.g., tasks = tasks |> push(...) or @if ... t | (:done !t.done) @else ...)
+    // For @on, also don't stop at PIPE
+    const endTokens = key === '@on' ? [] : key === '@if' ? [PIPE] : [OR, PIPE];
 
     while (!this.isDone() && !this.isEnd(endTokens)) {
       const body = stack[stack.length - 1];
@@ -595,6 +596,46 @@ export default class Parser {
       // always pass right tokenInfo aswell!
       const tokenInfo = token.tokenInfo || token;
 
+      // Handle suffix @if: <then-expr> @if <condition> @else <else-expr>
+      if (isDirective(token) && token.value === '@if') {
+        const thenExpr = pop();
+        if (thenExpr.length > 0) {
+          // Parse condition until @else - use custom parsing
+          const conditionTokens = [];
+          while (!this.isDone()) {
+            const nextTok = this.peek();
+            if (isDirective(nextTok) && nextTok.value === '@else') break;
+            if (isEOL(nextTok)) break;
+            conditionTokens.push(this.next());
+          }
+          const condition = this.subTree(conditionTokens);
+          const elseToken = this.peek();
+          
+          if (isDirective(elseToken) && elseToken.value === '@else') {
+            this.next(); // consume @else
+            const elseExpr = this.leaf();
+            
+            // Create an if statement with suffix form
+            // Structure matches prefix @if: { if: { body: [BLOCK with condition + then] }, else: { body: [elseExpr] } }
+            push(Expr.map({
+              if: Expr.ifStatement({ 
+                type: BLOCK, 
+                value: { 
+                  body: [
+                    Expr.block({ body: [...condition, ...thenExpr] }, tokenInfo)
+                  ] 
+                } 
+              }, tokenInfo),
+              else: Expr.elseStatement({ 
+                type: BLOCK, 
+                value: { body: elseExpr } 
+              }, elseToken.tokenInfo),
+            }, tokenInfo));
+            continue;
+          }
+        }
+      }
+
       // collect pairs of symbols as tuples, but leave single and well-know symbols alone!
       if (isSymbol(token) || isDirective(token)) {
         const fixedToken = this.collection(tokenInfo, curToken, nextToken);
@@ -875,7 +916,7 @@ export default class Parser {
 
               if (args.length && args.every(arg => isLiteral(arg))) {
                 this.next();
-                const body = this.subTree(this.statement([OR, PIPE]));
+                const body = this.subTree(this.statement([OR]));
 
                 leaf[leaf.length - 1] = Expr.callable({
                   type: BLOCK,

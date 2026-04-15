@@ -179,8 +179,7 @@ describe('Components: Props', () => {
     container = makeContainer('render-container');
   });
 
-  // TODO: Fix this test - component rendering issue
-  test.skip('numeric props are passed correctly', async () => {
+  test('numeric props are passed correctly', async () => {
     const env = new Env(runtimeEnv);
     // Use the exact pattern from playground tests
     const code = `Counter props =>

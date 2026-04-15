@@ -177,9 +177,7 @@ describe('E2E: TodoList', () => {
   });
 
   describe('Toggling Tasks', () => {
-    // TODO: Pipe operator `|>` has issues in certain contexts
-    // Issue: SyntaxError when using pipe operator with map
-    test.skip('can toggle task completion', async () => {
+    test('can toggle task completion', async () => {
       const env = new Env(runtimeEnv);
       await run(TODOLIST, env);
       await wait();
@@ -201,7 +199,13 @@ describe('E2E: TodoList', () => {
       
       // Check task is marked as done
       const taskText = container.querySelector('.task-text');
-      expect(taskText?.style?.textDecoration).toContain('line-through');
+      const style = taskText?.getAttribute?.('style') || taskText?.style?.cssText || taskText?.style;
+      // Debug: log the tasks signal value
+      const tasksSignal = env.get('tasks')?.body?.[0]?.value;
+      console.log('tasks after toggle:', tasksSignal?.peek?.());
+      console.log('taskText:', taskText?.textContent);
+      console.log('style:', style);
+      expect(typeof style === 'string' ? style : JSON.stringify(style)).toContain('line-through');
     });
   });
 

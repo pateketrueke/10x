@@ -68,9 +68,7 @@ describe('E2E: Reactive Signals', () => {
     expect(countEl?.textContent).toBe('1');
   });
 
-  // TODO: @computed directive not fully implemented
-  // Issue: @computed doesn't evaluate the expression correctly
-  test.skip('multiple signals work independently', async () => {
+  test('multiple signals work independently', async () => {
     const env = await createRuntimeEnv();
     await run(`
       x = @signal 1.
