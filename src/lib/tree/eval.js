@@ -1290,6 +1290,24 @@ export default class Eval {
 
     // evaluate negative numbers that are lone, e.g. `-1` BUT NOT `1-2`
     if (prev && prev.type === MINUS && !isNumber(this.getOlder())) {
+      // eagerly resolve dot-chains: `-x.y.z` → negate the property value
+      if (isLiteral(this.ctx) && isDot(this.nextToken())) {
+        const chain = [this.ctx];
+        let skip = 0;
+        let i = this.offset + 1;
+        while (i < this.expr.length && isDot(this.expr[i])) {
+          chain.push(this.expr[i]);
+          chain.push(this.expr[i + 1]);
+          skip += 2;
+          i += 2;
+        }
+        const [resolved] = await Eval.do(chain, this.env, 'Expr', false, this.ctx.tokenInfo);
+        this.discard() // remove the `-`
+          .append(Expr.value(resolved.valueOf() * -1, this.ctx.tokenInfo));
+        this.move(skip);
+        return true;
+      }
+
       if (!isNumber(this.ctx)) {
         assert(this.ctx, false, NUMBER);
       }
@@ -1316,7 +1334,7 @@ export default class Eval {
           skip += 2;
           i += 2;
         }
-        const [resolved] = await Eval.do(chain, this.env, 'Expr', true, this.ctx.tokenInfo);
+        const [resolved] = await Eval.do(chain, this.env, 'Expr', false, this.ctx.tokenInfo);
         this.discard() // remove the `!`
           .append(Expr.value(!resolved.valueOf(), this.ctx.tokenInfo));
         this.move(skip);
