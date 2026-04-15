@@ -93,6 +93,8 @@ Numbers can have units attached:
 2 * 3             # Multiplication → 6
 6 / 2             # Division → 3
 5 % 3             # Modulo → 2
+-x                # Unary minus on variable → negated value
+-x.n              # Unary minus with dot access
 ```
 
 ### Comparison
@@ -113,11 +115,14 @@ All comparison operators use prefix notation:
 ### Logical
 
 ```markdown
-!0                # Not (negation) → :on
-!1                # Not → :off
-(? 0 1 0)         # Some - true if any is truthy → :on
-($ 1 1 1)         # Every - true if all are truthy → :on
+!x                # NOT — negation
+!x.done           # NOT with dot access (no parens needed)
+!t.done           # Works in callbacks too: (t) -> !t.done
+(? 0 1 0)         # Some (OR) — true if any is truthy → :on
+($ 1 1 1)         # Every (AND) — true if all are truthy → :on
 ```
+
+> **Note:** `||` and `&&` are not valid operators. Use `(? a b)` for OR, `($ a b)` for AND.
 
 ### Pipe
 
@@ -131,8 +136,15 @@ All comparison operators use prefix notation:
 ```markdown
 :on ? 42 | -1     # If truthy, return 42, else -1 → 42
 :off ? 42 | -1    # → -1
-0 | 2             # If falsy, return 2 → 2
-1 | 2             # → 1
+x ? x | :default  # Nil-coalescing pattern
+```
+
+### Suffix Conditional
+
+```markdown
+v @if v > 0 @else 0           # Suffix @if — condition after value
+x | (:done :on) @if !x.done @else x   # Object merge with condition
+f = (v) -> v @if v > 0 @else 0        # In function bodies
 ```
 
 ### Record Merge
@@ -239,15 +251,27 @@ fib!(10)            # Cached/memoized call (use ! suffix)
 ```markdown
 data.key                        # Dot access
 data.nested.value               # Nested access
-[list]:0                        # Index access
+xs.0                            # Numeric index via dot → first element
+xs.1                            # Second element
+"hello".0                       # String character by index → "h"
+xs.0.name                       # Chained: index then property
+get(xs, 0)                      # Index via prelude get()
+get(xs, :key)                   # Key lookup via prelude get()
+[list]:0                        # Bracket index access
 [user]:("name")                 # Dynamic key access
 [:t 42]:t                       # Symbol key access
+x?.prop                         # Optional chaining — nil if x is nil
+x?.a?.b                         # Chained optional access
 ```
 
 ### Spread
 
 ```markdown
-div(.., 2)                      # Spread arguments
+[..xs]                          # Spread array into new array
+[1, ..xs]                       # Prepend then spread
+[..xs, ..ys]                    # Merge two arrays
+f(..xs)                         # Spread array as function arguments
+div(.., 2)                      # Placeholder spread (partial application)
 (a b ..) -> [a, b, ..]          # Rest parameters
 ```
 
@@ -266,10 +290,23 @@ _, b = (4, 5).                  # Discard first value
 
 ### @if / @else
 
+Prefix form — condition first:
+
 ```markdown
-@if (< 1 2) "yes" @else "no"
-@if condition body @else alternative
+@if (< 1 2) "yes" @else "no"   # With comparison
+@if x 1 @else 0                # Bare variable condition
+@if !x 1 @else 0               # Negated condition
+@if !x.done 1 @else 0          # Negated dot-access condition
 @if (:on) "truthy" @else @do (x = 42. x)
+```
+
+Suffix form — value first, condition after:
+
+```markdown
+1 @if y @else 0                # Value @if condition @else fallback
+v @if v > 0 @else 0            # Multi-token condition
+f = (v) -> v @if v > 0 @else 0 # In function bodies
+t | (:done :on) @if !t.done @else t  # Object merge with condition
 ```
 
 ### @while / @do
@@ -284,9 +321,17 @@ _, b = (4, 5).                  # Discard first value
 Pattern matching with conditions:
 
 ```markdown
-@match 1 1 42                     # If 1 == 1, return 42
-@match x (< 2) "small" @else "big"
-@match value pattern result, pattern result @else default
+@match 1 (1) :one, (2) :two, _ :other   # Symbol results, _ wildcard
+@match x (1) 42, (2) 99 @else 0         # Number results with @else
+@match x (< 2) "small" @else "big"      # Comparison pattern
+@match value (1) :one @else :other       # Inline comma or @else form
+```
+
+Wildcard and catch-all:
+
+```markdown
+_ :fallback                      # _ matches anything (catch-all)
+@else :fallback                  # @else also works as catch-all
 ```
 
 First-class match functions:
@@ -299,7 +344,10 @@ classify(1)                       # Returns "one"
 ### @try / @check / @rescue
 
 ```markdown
-@try riskyOp @rescue 0            # Return 0 on error
+@try riskyOp @rescue 0            # Return 0 on error (no binding)
+@try riskyOp @rescue (e) e        # Bind error to e, use in body
+@try riskyOp @rescue (e) :caught  # Bind and ignore error value
+@try riskyOp @rescue (_) :caught  # Discard error explicitly
 @try x @check (> x 0) @rescue -1  # Check condition, rescue if fails
 ```
 
@@ -681,7 +729,9 @@ size(list)              # Length
 pairs(obj)              # Key-value pairs
 keys(obj)               # Keys
 vals(obj)               # Values
-get(target, ...props)   # Deep get
+get(target, key)        # Get by index (number) or key (symbol)
+                        #   get(xs, 0)    → first element
+                        #   get(xs, :key) → property lookup
 push(target, ...sources) # Merge/push
 
 # Utility
