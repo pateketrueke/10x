@@ -829,7 +829,7 @@ export default class Eval {
               const idx = _e.__viewCacheIndex.value++;
               let entry = _e.__viewCache.get(idx);
               if (!entry) {
-                const placeholder = document.createElement('x-slot');
+                const placeholder = document.createElement(fixed.__wrapperTag || 'x-slot');
                 const dispose = _e.__domRender(placeholder, fixed);
                 entry = { placeholder, dispose };
                 _e.__viewCache.set(idx, entry);
@@ -2069,6 +2069,7 @@ export default class Eval {
           const idx = scope.__viewCacheIndex.value++;
           let cacheEntry = scope.__viewCache.get(idx);
           if (!cacheEntry) {
+            // Use the wrapper tag from @html:tag syntax, default to 'div'
             const placeholder = document.createElement('x-slot');
             const dispose = scope.__domRender(placeholder, entry);
             cacheEntry = { placeholder, dispose };
@@ -2468,6 +2469,8 @@ export default class Eval {
         }
         return result;
       });
+      // @html:tag — attach wrapper tag to view for x-slot creation
+      if (token.__htmlWrapperTag) view.__wrapperTag = token.__htmlWrapperTag;
       subTree.push(Expr.value(view, parentTokenInfo));
       isDone = true;
     }
@@ -2548,8 +2551,8 @@ export default class Eval {
               if (scope.__viewCache && scope.__domRender && typeof document !== 'undefined') {
                 const idx = scope.__viewCacheIndex.value++;
                 let cacheEntry = scope.__viewCache.get(idx);
-                if (!cacheEntry) {
-                  const placeholder = document.createElement('x-slot');
+          if (!cacheEntry) {
+            const placeholder = document.createElement(entry.__wrapperTag || 'x-slot');
                   const dispose = scope.__domRender(placeholder, entry);
                   cacheEntry = { placeholder, dispose };
                   scope.__viewCache.set(idx, cacheEntry);

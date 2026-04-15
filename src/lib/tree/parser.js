@@ -120,11 +120,16 @@ export default class Parser {
       if (token.value === ':on') return Expr.value(true, token);
       if (token.value === ':off') return Expr.value(false, token);
 
-      if (isDirective(token)) {
-        return Expr.stmt(token.value, [], token);
-      }
+      // @html:tag — don't early-return; consume :tag and continue collection
+      if (isDirective(token) && token.value === '@html' && isSymbol(curToken) && !isSpecial(curToken)) {
+        // fall through to collection body below
+      } else {
+        if (isDirective(token)) {
+          return Expr.stmt(token.value, [], token);
+        }
 
-      return Expr.symbol(token.value, isSome(curToken) || null, token);
+        return Expr.symbol(token.value, isSome(curToken) || null, token);
+      }
     }
 
     const map = {};
@@ -132,6 +137,13 @@ export default class Parser {
     let optional;
     let stack = [[]];
     let key = token.value;
+
+    // @html:tag — consume the :tag symbol and store the tag name
+    let __htmlWrapperTag = null;
+    if (key === '@html' && isSymbol(curToken) && !isSpecial(curToken)) {
+      __htmlWrapperTag = curToken.value.slice(1); // strip ':'
+      this.next(); // consume :tag token
+    }
 
     // For @on and @if, don't stop at OR (e.g., tasks = tasks |> push(...) or @if ... t | (:done !t.done) @else ...)
     // For @on, also don't stop at PIPE
@@ -167,6 +179,12 @@ export default class Parser {
       // Also for @else when it appears inside a @match context (map has 'match' key).
       const isMatchBody = (key === '@match' || key === '@try' || key === '@rescue'
         || (key === '@else' && map.match)) && isSymbol(cur) && !isSpecial(cur);
+
+      // @html:tag — consume the symbol as wrapper tag instead of splitting the key
+      if (!this.depth && key === '@html' && isSymbol(cur) && !isSpecial(cur)) {
+        __htmlWrapperTag = cur.value.slice(1); // strip ':'
+        continue;
+      }
 
       if (!this.depth && (isSymbol(cur) || isDirective(cur)) && !keepElseBodyDirective && !isIfBody && !isMatchBody) {
         if (isSpecial(cur) || isSlice(cur)) {
@@ -249,7 +267,10 @@ export default class Parser {
       }, token);
     }
 
-    return Expr.map(map, token);
+    const result = Expr.map(map, token);
+    // Attach wrapper tag for @html:tag syntax
+    if (__htmlWrapperTag) result.__htmlWrapperTag = __htmlWrapperTag;
+    return result;
   }
 
   definition(token, isAnonymous) {
