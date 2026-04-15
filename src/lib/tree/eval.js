@@ -2460,7 +2460,12 @@ export default class Eval {
         }
         const rendered = await Eval.do(htmlBody, scope, 'Render', true, parentTokenInfo);
         if (!rendered.length) return '';
-        const result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+        let result = htmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+        // @html:tag — wrap rendered output in the specified element
+        if (token.__htmlWrapperTag) {
+          const children = Array.isArray(result) ? result : [result];
+          result = [token.__htmlWrapperTag, {}, children];
+        }
         for (const [idx, entry] of viewCache) {
           if (idx >= _viewIndex.value) {
             if (typeof entry.dispose === 'function') entry.dispose();
@@ -2597,7 +2602,12 @@ export default class Eval {
           }
           
           if (!rendered.length) return '';
-          const result = await localHtmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+          let result = await localHtmlVdomFromValue(rendered.length === 1 ? rendered[0] : rendered);
+          // @html:tag — wrap rendered output in the specified element
+          if (token.__htmlWrapperTag) {
+            const children = Array.isArray(result) ? result : [result];
+            result = [token.__htmlWrapperTag, {}, children];
+          }
           
           if (globalThis.__10x_debug_strings) {
             console.log('[html view] result:', result);
