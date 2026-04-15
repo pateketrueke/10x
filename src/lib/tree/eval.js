@@ -929,6 +929,12 @@ export default class Eval {
       && !isEnd(this.oldToken())
     ) {
       if (!(prev.isFFI || prev.isCallable || prev.isFunction || prev.isTag || isMixed(prev, 'function'))) {
+        // Give a specific error when two object literals are adjacent without a comma,
+        // e.g. [(:a 1) (:b 2)] → should be [(:a 1), (:b 2)]
+        const ctxIsObj = this.ctx.hasArgs && this.ctx.getArgs()[0]?.isObject;
+        if (prev.isObject && ctxIsObj) {
+          raise(`Missing comma between objects — use \`(...), (...)\` to separate items in a list`, this.ctx.tokenInfo);
+        }
         check(prev, 'callable');
       }
 
