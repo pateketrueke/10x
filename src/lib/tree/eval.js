@@ -244,6 +244,11 @@ export default class Eval {
         check(head, 'statement', 'after');
       }
 
+      // `_` is a wildcard — matches anything
+      if (isLiteral(head, '_')) {
+        return body;
+      }
+
       // evaluate partial logical-expressions, e.g. `(< a b)`
       if (isBlock(head) && isLogic(head.getArg(0))) {
         const [kind, ...others] = head.getArgs();
