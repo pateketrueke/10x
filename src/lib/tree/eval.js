@@ -1362,9 +1362,8 @@ export default class Eval {
     }
 
     // reject `||` — two consecutive OR tokens — not a valid operator
-    // Use `x ? y | z` for ternary or `@if x y @else z` for conditionals
     if (isOR(this.ctx) && isOR(this.nextToken())) {
-      raise('`||` is not a valid operator — use `x ? y | z` or `@if x y @else z`', this.ctx.tokenInfo);
+      raise('`||` is not a valid operator — use `(? a b)` for OR or `x ? y | z` for ternary', this.ctx.tokenInfo);
     }
 
     // reject `&&` — use ($ ...) for AND, (? ...) for OR
