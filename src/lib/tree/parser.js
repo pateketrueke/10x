@@ -159,11 +159,16 @@ export default class Parser {
         && isDirective(cur)
         && ['@do', '@match', '@let'].includes(cur.value);
 
-      // For @if, don't treat symbols as new keys - we need to capture the full then-expr
-      // But @else should still be treated as a new key to separate then-expr from else-expr
+      // For @if/@while, don't treat symbols as new keys - we need to capture the full then-expr
+      // But @else should still be treated as a new key to separate then-expr from else-expr.
+      // For @match/@try/@rescue, symbols are result values — don't split on them either.
       const isIfBody = (key === '@if' || key === '@while') && !(isDirective(cur) && cur.value === '@else');
+      // In @match/@try/@rescue bodies, symbols are result values — don't split on them.
+      // Also for @else when it appears inside a @match context (map has 'match' key).
+      const isMatchBody = (key === '@match' || key === '@try' || key === '@rescue'
+        || (key === '@else' && map.match)) && isSymbol(cur) && !isSpecial(cur);
 
-      if (!this.depth && (isSymbol(cur) || isDirective(cur)) && !keepElseBodyDirective && !isIfBody) {
+      if (!this.depth && (isSymbol(cur) || isDirective(cur)) && !keepElseBodyDirective && !isIfBody && !isMatchBody) {
         if (isSpecial(cur) || isSlice(cur)) {
           body.push(Expr.from(cur));
           continue;

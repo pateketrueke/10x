@@ -241,11 +241,24 @@ export function size(token) {
 }
 
 export function get(target, ...props) {
-  const isObject = target.length === 1 && (target[0].isObject || target[0].isRange);
-  const isArray = isObject && target[0].isRange;
-  const input = isObject ? target[0].valueOf() : target;
+  // target is a single Expr token (array, object, or string)
+  const input = target.valueOf();
+  const isObj = target.isObject;
 
-  return props.reduce((prev, cur) => prev.concat(isObject && !isArray ? input[cur].getBody() : input[cur]), []);
+  return props.reduce((prev, cur) => {
+    let key = cur && typeof cur.valueOf === 'function' ? cur.valueOf() : cur;
+    // strip leading ':' from symbol keys, e.g. ':a' → 'a'
+    if (typeof key === 'string' && key[0] === ':') key = key.slice(1);
+    let val;
+    if (Array.isArray(input) || typeof input === 'string') {
+      val = input[key];
+    } else if (isObj) {
+      const entry = input[key];
+      val = entry && typeof entry.getBody === 'function' ? entry.getBody()[0] : entry;
+    }
+    if (typeof val === 'undefined' || val === null) return prev;
+    return prev.concat([val instanceof Expr ? val : Expr.value(val)]);
+  }, []);
 }
 
 export function push(target, ...sources) {

@@ -527,7 +527,7 @@ export default class Eval {
         check(prev || this.ctx, 'map', prev ? null : 'before');
       }
 
-      if (!(isLiteral(next) || (isBlock(next) && next.value.name))) {
+      if (!(isLiteral(next) || isNumber(next) || (isBlock(next) && next.value.name))) {
         if (!next) {
           check(this.ctx, LITERAL, 'after');
         } else {
@@ -535,7 +535,7 @@ export default class Eval {
         }
       }
 
-      const key = next.value.name || next.value;
+      const key = next.value.name || (isNumber(next) ? Number(next.value) : next.value);
       const map = isArray(prev) ? Expr.plain(prev.value) : prev.value;
 
       if (typeof map[key] === 'undefined') {
