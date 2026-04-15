@@ -15,6 +15,7 @@
 9. [Modules and Imports](#modules-and-imports)
 10. [Markdown Integration](#markdown-integration)
 11. [Standard Library](#standard-library)
+12. [Complete Example](#complete-example--todolist)
 
 ---
 
@@ -460,18 +461,36 @@ view = @html:span <span>#{name}</span>.
 
 #### @on
 
-Event handlers:
+Event handlers that update signals:
 
 ```markdown
-@on :click "#inc" count = count + 1.
+@on :click "#inc" count = count + 1.          # Single assignment
 @on :click "#dec" count = count - 1.
 @on :input "#field" name = event.target.value.
+
+@on                                            # Multi-statement
+  tasks = tasks |> push(:text read(input), :done :off),
+  input = "".
 ```
 
 Inline event handlers:
 
 ```markdown
 <button onclick={@on count = count + 1}>+</button>
+```
+
+Regular functions can also update signals via assignment:
+
+```markdown
+toggleTask = (i) ->
+  tasks = tasks |> map((t j) -> @if (i == j) t | (:done !t.done) @else t).
+```
+
+Use `read(signal)` to get the current value of a signal:
+
+```markdown
+read(tasks)   # Returns the array value
+read(input)   # Returns the string value
 ```
 
 #### @shadow
@@ -867,4 +886,42 @@ Multiple statements on one line use `,`:
 
 ```markdown
 x = 1, y = 2, x + y.
+```
+
+---
+
+## Complete Example — Todolist
+
+A full reactive todolist demonstrating signals, events, pipes, callbacks, and HTML rendering:
+
+```markdown
+tasks = @signal [].
+input = @signal "".
+
+addTask = @on
+  tasks = tasks |> push(:text read(input), :done :off),
+  input = "".
+
+updateInput = @on input = e -> e.target.value.
+
+toggleTask = (i) ->
+  tasks = tasks |> map((t j) -> @if (i == j) t | (:done !t.done) @else t).
+
+clearDone = @on
+  tasks = tasks |> filter((t) -> !t.done).
+
+@render "#app" @html
+  <section>
+    <input value={input} oninput={updateInput} />
+    <button onclick={addTask}>Add</button>
+    <ul>
+      #{tasks |> map((t i) ->
+        <li>
+          <input type="checkbox" checked={t.done} onchange={() -> toggleTask(i)} />
+          #{t.text}
+        </li>
+      )}
+    </ul>
+    <button onclick={clearDone}>Clear done</button>
+  </section>.
 ```
