@@ -3005,8 +3005,16 @@ export default class Eval {
               let newBody = [];
               let head = [];
 
-              // inject failure into given block, e.g. `@rescue e -> ...`
-              if (fixedBody[0].isCallable) {
+              // inject failure into given block, e.g. `@rescue (e) body` or `@rescue e -> body`
+              if (isBlock(fixedBody[0]) && fixedBody[0].hasArgs && !fixedBody[0].hasBody && !fixedBody[0].isExpression) {
+                // (e) binding — bind error to the named variable, use rest as body
+                const args = fixedBody[0].getArgs();
+                if (args.length === 1) {
+                  scope = new Env(environment);
+                  scope.def(args[0].value, Expr.value(failure.toString()));
+                  fixedBody = fixedBody.slice(1);
+                }
+              } else if (fixedBody[0].isCallable) {
                 if (fixedBody[0].hasArgs) {
                   if (fixedBody[0].getArgs().length > 1) {
                     check(fixedBody[0].getArg(1), 'block');
@@ -3040,7 +3048,7 @@ export default class Eval {
 
               // append any non-block value
               if (!isDone && !isBlock(fixedBody[0])) {
-                subTree.push(...await Eval.do(fixedBody, environment, 'Rescue', true, parentTokenInfo));
+                subTree.push(...await Eval.do(fixedBody, scope, 'Rescue', true, parentTokenInfo));
                 isDone = true;
               }
             }
