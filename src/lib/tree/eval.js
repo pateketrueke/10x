@@ -1305,6 +1305,24 @@ export default class Eval {
 
     // evaluate negations on values, e.g. `!0` OR `!"foo"`
     if (isNot(prev) && isResult(this.ctx)) {
+      // eagerly resolve dot-chains: `!x.y.z` → negate the property value
+      if (isLiteral(this.ctx) && isDot(this.nextToken())) {
+        const chain = [this.ctx];
+        let skip = 0;
+        let i = this.offset + 1; // points to the DOT
+        while (i < this.expr.length && isDot(this.expr[i])) {
+          chain.push(this.expr[i]);     // dot
+          chain.push(this.expr[i + 1]); // property name
+          skip += 2;
+          i += 2;
+        }
+        const [resolved] = await Eval.do(chain, this.env, 'Expr', true, this.ctx.tokenInfo);
+        this.discard() // remove the `!`
+          .append(Expr.value(!resolved.valueOf(), this.ctx.tokenInfo));
+        this.move(skip);
+        return true;
+      }
+
       // evaluate literals and blocks, e.g. `!(1)` OR `!foo`
       if (isLiteral(this.ctx) || isBlock(this.ctx)) {
         [this.ctx] = await Eval.do([this.ctx], this.env, 'Expr', true, this.ctx.tokenInfo);
