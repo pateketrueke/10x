@@ -1308,6 +1308,11 @@ export default class Eval {
         return true;
       }
 
+      // resolve literals and blocks from scope, e.g. `-x` OR `-(expr)`
+      if (isLiteral(this.ctx) || isBlock(this.ctx)) {
+        [this.ctx] = await Eval.do([this.ctx], this.env, 'Expr', false, this.ctx.tokenInfo);
+      }
+
       if (!isNumber(this.ctx)) {
         assert(this.ctx, false, NUMBER);
       }
