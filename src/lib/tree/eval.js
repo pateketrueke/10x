@@ -1367,9 +1367,9 @@ export default class Eval {
       raise('`||` is not a valid operator — use `x ? y | z` or `@if x y @else z`', this.ctx.tokenInfo);
     }
 
-    // reject `&&` — use @if or chained conditions instead
+    // reject `&&` — use ($ ...) for AND, (? ...) for OR
     if (isLiteral(this.ctx) && this.ctx.value === '&&') {
-      raise('`&&` is not a valid operator — use `@if (cond1) (@if (cond2) ...)`', this.ctx.tokenInfo);
+      raise('`&&` is not a valid operator — use `($ a b)` for AND or `(? a b)` for OR', this.ctx.tokenInfo);
     }
 
     // evaluate negations on values, e.g. `!0` OR `!"foo"`
