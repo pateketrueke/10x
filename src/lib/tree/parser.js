@@ -675,19 +675,18 @@ export default class Parser {
             this.next(); // consume @else
             const elseExpr = this.leaf();
             
-            // Clear the used tokens from the leaf (including PIPE and object merge)
-            if (fullThenTokens.length > 0) {
-              get().splice(0, fullThenTokens.length);
-            }
+            // pop() already removed the fullThenTokens from the leaf by truncating it.
             
-            // Create an if statement with suffix form
-            // Structure matches prefix @if: { if: { body: [BLOCK with condition + then] }, else: { body: [elseExpr] } }
+            // Create an if statement with suffix form.
+            // Condition tokens are wrapped in a block so evalIf can identify head vs tail.
+            // Then-tokens (fullThenTokens) are raw parsed tokens passed directly to the eval.
+            const condBlock = Expr.block({ body: condition }, tokenInfo);
             push(Expr.map({
               if: Expr.ifStatement({ 
                 type: BLOCK, 
                 value: { 
                   body: [
-                    Expr.block({ body: [...condition, ...fullThenTokens] }, tokenInfo)
+                    Expr.block({ body: [condBlock, ...fullThenTokens] }, tokenInfo)
                   ] 
                 } 
               }, tokenInfo),
