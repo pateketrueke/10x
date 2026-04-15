@@ -599,6 +599,10 @@ export default class Expr {
 
   static range(begin, end, tokenInfo) {
     if (!begin.length && !end.length) check(tokenInfo, 'values', 'around');
+    // allow `..xs` (spread of a named variable): empty begin with a single literal end
+    if (!begin.length && end.length === 1 && end[0] && end[0].type === LITERAL) {
+      return Expr.from(RANGE, { begin: [], end, spread: true }, tokenInfo);
+    }
     if (!begin.length) check(tokenInfo, 'value', 'before');
 
     return Expr.from(RANGE, { begin, end }, tokenInfo);

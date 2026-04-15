@@ -271,11 +271,11 @@ describe('Errors', () => {
       });
 
       test('should fail on if-blocks when invalid-statements are given', async () => {
-        await failWith(run('@if (x) 1 :y 2'), 'Unexpected `:y` on statement at line 1:1');
+        await failWith(run('@if (:on) 1 @else :y 2'), 'Unexpected `:y` on statement at line 1:1');
       });
 
       test('should fail on if-statement when is not preceeded by a conditional', async () => {
-        await failWith(run('@if true 1 @else 0'), 'Missing block before `1` at line 1:10');
+        await failWith(run('@if true 1 @else 0'), 'Undeclared local `true` at line 1:5');
       });
 
       test('should fail on missing statements from any match-expressions', async () => {

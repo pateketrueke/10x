@@ -488,6 +488,21 @@ export default class Eval {
     const prev = this.getPrev();
     const next = this.nextToken();
 
+    // optional chaining: x?.prop — short-circuit if prev is nil, else proceed as x.prop
+    if (isSome(this.ctx) && isDot(next)) {
+      if (prev && isResult(prev)) {
+        const v = prev.valueOf();
+        if (v === null || v === undefined) {
+          // short-circuit: replace prev with null, skip DOT + prop name
+          this.discard().append(Expr.value(null, this.ctx.tokenInfo));
+          this.move(2); // skip DOT + prop name
+          return true;
+        }
+        // has value: silently consume the SOME — the following DOT will handle access normally
+        return true;
+      }
+    }
+
     if (isDot(this.ctx)) {
       if (!prev || (isNumber(prev) && !isUnit(prev)) || isSymbol(prev)) {
         // allow method-calls through numbers, e.g. `1.times`
@@ -615,6 +630,20 @@ export default class Eval {
     if (isRange(this.ctx)) {
       if (this.ctx.value instanceof Range) {
         this.append(this.ctx);
+        return true;
+      }
+
+      // spread token `..xs` — evaluate end and emit items individually
+      if (this.ctx.value && this.ctx.value.spread && this.ctx.value.end && this.ctx.value.end.length) {
+        const [spreadVal] = await Eval.do(this.ctx.value.end, this.env, 'Spread', false, this.ctx.tokenInfo);
+        if (spreadVal) {
+          const items = isArray(spreadVal) ? spreadVal.value : spreadVal.valueOf();
+          if (Array.isArray(items)) {
+            this.append(...items.map(item => item instanceof Expr ? item : Expr.value(item, this.ctx.tokenInfo)));
+          } else {
+            this.append(spreadVal);
+          }
+        }
         return true;
       }
 
@@ -1426,13 +1455,18 @@ export default class Eval {
     }
 
     // evaluate if-then/else-operator, e.g. `x ? y | z`
+    // but NOT `x?.prop` (optional chaining — handled in evalDotProps)
     if (isResult(prev) && (isOR(this.ctx) || isSome(this.ctx))) {
-      if (isSome(this.ctx) ? !prev.valueOf() : prev.valueOf()) {
-        this.move(Expr.chunk(this.expr, this.offset + 1).offset);
+      if (isSome(this.ctx) && isDot(this.nextToken())) {
+        // optional chaining — fall through to evalDotProps
       } else {
-        this.discard();
+        if (isSome(this.ctx) ? !prev.valueOf() : prev.valueOf()) {
+          this.move(Expr.chunk(this.expr, this.offset + 1).offset);
+        } else {
+          this.discard();
+        }
+        return true;
       }
-      return true;
     }
   }
 

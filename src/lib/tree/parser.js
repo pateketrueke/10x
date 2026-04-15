@@ -3,7 +3,7 @@ import Scanner from './scanner';
 import { parseTag } from '../tag';
 
 import {
-  CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME, DOT, PEEK,
+  CONTROL_TYPES, OR, EOF, EOL, COMMA, BEGIN, OPEN, CLOSE, DONE, PLUS, MINUS, MUL, BLOCK, STRING, LITERAL, SYMBOL, EQUAL, PIPE, SOME, DOT, PEEK, NOT,
   HEADING, BLOCKQUOTE, UL_ITEM, OL_ITEM, TABLE, FAT_ARROW,
 } from './symbols';
 
@@ -111,7 +111,10 @@ export default class Parser {
 
       // terminate if next-token is an operator, but not within templates or object literals!
       // For object literals (symbol keys starting with :), we want to capture the full value expression
-      || ((isMath(curToken) && !isSome(curToken) && curToken.type !== MINUS) && token.value !== '@template' && !isSymbol(token))
+      // NOT (!) is a unary prefix — don't terminate control directives (@if, @while) on it
+      || ((isMath(curToken) && !isSome(curToken) && curToken.type !== MINUS
+        && !(curToken.type === NOT && isDirective(token) && CONTROL_TYPES.includes(token.value)))
+        && token.value !== '@template' && !isSymbol(token))
     ) {
       if (token.value === ':nil') return Expr.value(null, token);
       if (token.value === ':on') return Expr.value(true, token);
@@ -1266,6 +1269,14 @@ export default class Parser {
 
       // validate and transform conditions and statements
       if (name === '@if' || (name === '@while' && !hasConditional)) {
+        // Auto-wrap bare condition expressions: `@if !x then` or `@if x then`
+        // body = [...conditionTokens, thenExpr] — split last item as then, wrap rest as block
+        if (!isBlock(body[0]) && body.length > 1) {
+          const thenExpr = body[body.length - 1];
+          const condTokens = body.slice(0, -1);
+          body = [Expr.block({ body: condTokens }, condTokens[0]?.tokenInfo || tokenInfo), thenExpr];
+        }
+
         if (!isBlock(body[0])) {
           if (!isClose(lastToken)) {
             raise(`Missing block before \`${lastToken}\``, lastToken.tokenInfo);
