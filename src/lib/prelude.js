@@ -264,13 +264,36 @@ export function push(target, ...sources) {
     return readSignal(v);
   };
 
+  // Helper to recursively evaluate BLOCK values in an object
+  const evalObjectValues = obj => {
+    if (!obj || typeof obj !== 'object') return obj;
+    const result = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val && val.isBlock && val.hasBody) {
+        // Evaluate the body of BLOCK values
+        const body = val.getBody();
+        if (body.length === 1) {
+          result[key] = body[0].valueOf();
+        } else {
+          result[key] = body.map(x => x.valueOf());
+        }
+      } else if (val && typeof val.valueOf === 'function') {
+        result[key] = val.valueOf();
+      } else {
+        result[key] = val;
+      }
+    }
+    return result;
+  };
+
   const unwrapped = unwrapValue(target);
   if (Array.isArray(unwrapped)) {
     const result = [...unwrapped];
     sources.forEach(sub => {
       const val = unwrapValue(sub);
       if (sub && sub.isObject) {
-        result.push(sub.valueOf());
+        result.push(evalObjectValues(sub.valueOf()));
       } else if (Array.isArray(val)) {
         result.push(...val);
       } else {

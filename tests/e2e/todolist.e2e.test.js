@@ -27,7 +27,7 @@ addTask = @on
 updateInput = @on input = e -> e.target.value.
 
 toggleTask = (i) ->
-  tasks = tasks |> map((t j) -> @if (i == j) t | (:done !t.done) @else t).
+  tasks = tasks |> map((t j) -> @if (i == j) t | (:done !(t.done)) @else t).
 
 clearDone = @on
   tasks = tasks |> filter((t) -> !t.done).
@@ -200,11 +200,6 @@ describe('E2E: TodoList', () => {
       // Check task is marked as done
       const taskText = container.querySelector('.task-text');
       const style = taskText?.getAttribute?.('style') || taskText?.style?.cssText || taskText?.style;
-      // Debug: log the tasks signal value
-      const tasksSignal = env.get('tasks')?.body?.[0]?.value;
-      console.log('tasks after toggle:', tasksSignal?.peek?.());
-      console.log('taskText:', taskText?.textContent);
-      console.log('style:', style);
       expect(typeof style === 'string' ? style : JSON.stringify(style)).toContain('line-through');
     });
   });

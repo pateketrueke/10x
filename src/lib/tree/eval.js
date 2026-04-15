@@ -1207,7 +1207,16 @@ export default class Eval {
           tok && tok.isObject && tok.value && (tok.value.signal || tok.value.computed || tok.value.on)
         );
         
-        const call = (!args && this.derive && DERIVE_METHODS.includes(this.descriptor)) || hasSignalDirective
+        // Create a placeholder entry before evaluating the body
+        // This allows @signal/@computed directives to find and update the entry
+        if (hasSignalDirective) {
+          this.env.def(name, this.ctx);
+        }
+        
+        // For assignments without args, evaluate the body to get the actual value
+        const shouldEvaluate = !args || hasSignalDirective || (this.derive && DERIVE_METHODS.includes(this.descriptor));
+        
+        const call = shouldEvaluate
           ? await Eval.do(body, this.env, 'Fn', true, this.ctx.tokenInfo)
           : body;
 
@@ -1224,8 +1233,35 @@ export default class Eval {
           }
         }
 
-        this.env.defn(name, { args, body: call }, this.ctx.tokenInfo);
-        this.registerNamespaceExport(name);
+        // Check if this is a signal update (assignment to a signal variable)
+        // Walk up the env chain to find if 'name' is a signal
+        const findSignalEntry = (env, signalName) => {
+          let e = env;
+          while (e) {
+            const entry = e.locals && e.locals[signalName];
+            if (entry) {
+              const [head] = entry.body || [];
+              const v = head && typeof head.valueOf === 'function' ? head.valueOf() : null;
+              if (v && typeof v.set === 'function' && typeof v.peek === 'function') {
+                return v;
+              }
+            }
+            e = e.parent;
+          }
+          return null;
+        };
+
+        const signalObj = findSignalEntry(this.env, name);
+        const isSignalUpdate = signalObj && !args && !hasSignalDirective;
+
+        if (isSignalUpdate) {
+          // Update the signal value
+          const next = call[0] ? Expr.plain(call[0], this.convert, `<${name}>`) : undefined;
+          signalObj.set(next);
+        } else {
+          this.env.defn(name, { args, body: call }, this.ctx.tokenInfo);
+          this.registerNamespaceExport(name);
+        }
       } else {
         this.append(this.ctx);
       }
@@ -1270,7 +1306,7 @@ export default class Eval {
     // evaluate negations on values, e.g. `!0` OR `!"foo"`
     if (isNot(prev) && isResult(this.ctx)) {
       // evaluate literals and blocks, e.g. `!(1)` OR `!foo`
-      if (isLiteral(this.ctx)) {
+      if (isLiteral(this.ctx) || isBlock(this.ctx)) {
         [this.ctx] = await Eval.do([this.ctx], this.env, 'Expr', true, this.ctx.tokenInfo);
       }
 
@@ -1300,17 +1336,41 @@ export default class Eval {
       }
     }
 
-    // merge records, e.g. `{:a 1} | {"b": 2}`
-    if (isResult(prev) && isOR(this.ctx) && isObject(prev) && !isSome(older)) {
+    // merge records, e.g. `{:a 1} | {"b": 2}` or `t | (:done !t.done)`
+    // Handle both OR (||) and PIPE (|) operators for object merge
+    const next = this.nextToken();
+    const nextIsObject = next?.isObject || (isBlock(next) && next.getArgs()?.[0]?.isObject);
+    if (isResult(prev) && (isOR(this.ctx) || (isPipe(this.ctx) && this.ctx.value === '|' && nextIsObject)) && isObject(prev) && !isSome(older)) {
       const { body, offset } = Expr.chunk(this.expr, this.offset + 1);
 
       if (body.length) {
         const merged = await Eval.do(body, this.env, 'Or', false, this.ctx.tokenInfo);
 
-        if (merged.length === 1 && isObject(merged[0])) {
+        const mergedIsObject = merged.length === 1 && (isObject(merged[0]) || (isBlock(merged[0]) && merged[0].getArgs()?.[0]?.isObject));
+        if (mergedIsObject) {
+          const prevValue = prev.valueOf();
+          const mergedValue = isBlock(merged[0]) && merged[0].getArgs()?.[0]?.isObject ? merged[0].getArgs()[0].valueOf() : merged[0].valueOf();
+          
+          // Evaluate object values before merging
+          const evaluatedMergedValue = {};
+          for (const key of Object.keys(mergedValue)) {
+            const val = mergedValue[key];
+            if (isBlock(val) && val.getBody) {
+              let body = val.getBody();
+              // Handle nested BLOCKs
+              if (body.length === 1 && isBlock(body[0]) && body[0].getBody) {
+                body = body[0].getBody();
+              }
+              const evaluated = await Eval.do(body, this.env, `:${key}`, false, this.ctx.tokenInfo);
+              evaluatedMergedValue[key] = evaluated.length === 1 ? evaluated[0] : Expr.body(evaluated, this.ctx.tokenInfo);
+            } else {
+              evaluatedMergedValue[key] = val;
+            }
+          }
+          
           this.discard().append(Expr.map({
-            ...prev.valueOf(),
-            ...merged[0].valueOf(),
+            ...prevValue,
+            ...evaluatedMergedValue,
           }, this.ctx.tokenInfo));
           this.move(offset);
           return true;
@@ -1622,9 +1682,6 @@ export default class Eval {
         Env.merge(safeArgs, fnArgs, false, scope);
 
         const body = fn.getBody();
-        for (let i = 0; i < body.length; i++) {
-          const stmt = body[i];
-        }
 
         const [value] = await Eval.do(body, scope, label, false, self.ctx.tokenInfo);
 
@@ -2169,9 +2226,14 @@ export default class Eval {
       while (_defEnv) {
         if (_defEnv.locals && _defEnv.locals[_sigName]) {
           const entry = _defEnv.locals[_sigName];
-          if (entry && entry.body && entry.body[0] === token) {
-            entry.body = [_signalToken];
-            break;
+          // Update the entry if it contains the @signal token or a placeholder callable
+          if (entry && entry.body) {
+            const firstToken = entry.body[0];
+            // Check if it's the @signal token itself, or a placeholder callable
+            if (firstToken === token || (firstToken && firstToken.isCallable && firstToken.getName() === _sigName)) {
+              entry.body = [_signalToken];
+              break;
+            }
           }
         }
         _defEnv = _defEnv.parent;

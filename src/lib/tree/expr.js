@@ -440,10 +440,12 @@ export default class Expr {
       const obj = mixed.valueOf();
 
       return Object.keys(obj).reduce((prev, cur) => {
-        const value = obj[cur].getBody();
-        const fixedValue = value.length === 1 ? value[0] : value;
+        const val = obj[cur];
+        const body = typeof val?.getBody === 'function' ? val.getBody() : undefined;
+        const value = body || [val];
+        const fixedValue = value && value.length === 1 ? value[0] : value;
 
-        prev[cur] = Expr.plain(fixedValue, callback, descriptor);
+        prev[cur] = fixedValue !== undefined ? Expr.plain(fixedValue, callback, descriptor) : undefined;
         return prev;
       }, {});
     }

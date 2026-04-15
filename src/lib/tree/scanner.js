@@ -336,7 +336,22 @@ export default class Scanner {
         }
         break;
 
-      case '|': this.addToken(this.isMatch('>') ? PIPE : OR); break;
+      case '|': 
+        if (this.isMatch('>')) {
+          this.addToken(PIPE);
+        } else {
+          let nextIdx = 1;
+          while (this.peekToken(nextIdx) === ' ' || this.peekToken(nextIdx) === '\t') nextIdx++;
+          if (this.peekToken(nextIdx) === '(') {
+            if (globalThis.__10x_debug_if) {
+              console.log('[scanner] | followed by (, classifying as PIPE');
+            }
+            this.addToken(PIPE);
+          } else {
+            this.addToken(OR);
+          }
+        }
+        break;
       case '>': this.addToken(this.isMatch('=') ? GREATER_EQ : GREATER); break;
 
       case '<':

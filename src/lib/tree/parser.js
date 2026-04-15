@@ -109,8 +109,9 @@ export default class Parser {
       // terminate symbol if text is not allowed after! (most control structures are OK)
       || (isText(curToken) && !(isDirective(token) && CONTROL_TYPES.includes(token.value)))
 
-      // terminate if next-token is an operator, but not within templates!
-      || ((isMath(curToken) && !isSome(curToken) && curToken.type !== MINUS) && token.value !== '@template')
+      // terminate if next-token is an operator, but not within templates or object literals!
+      // For object literals (symbol keys starting with :), we want to capture the full value expression
+      || ((isMath(curToken) && !isSome(curToken) && curToken.type !== MINUS) && token.value !== '@template' && !isSymbol(token))
     ) {
       if (token.value === ':nil') return Expr.value(null, token);
       if (token.value === ':on') return Expr.value(true, token);
@@ -131,18 +132,35 @@ export default class Parser {
 
     // For @on and @if, don't stop at OR (e.g., tasks = tasks |> push(...) or @if ... t | (:done !t.done) @else ...)
     // For @on, also don't stop at PIPE
-    const endTokens = key === '@on' ? [] : key === '@if' ? [PIPE] : [OR, PIPE];
+    // For @if, don't stop at PIPE either (to allow object merge in then-expr)
+    const endTokens = key === '@on' ? [] : key === '@if' ? [] : [OR, PIPE];
+
+    if (globalThis.__10x_debug_if && (key === '@if' || key === '@else')) {
+      console.log('[collection] starting with key:', key, 'endTokens:', endTokens?.map(t => t?.toString?.()));
+    }
 
     while (!this.isDone() && !this.isEnd(endTokens)) {
       const body = stack[stack.length - 1];
       const cur = this.next();
+
+      if (globalThis.__10x_debug_if && (key === '@if' || key === '@else')) {
+        console.log('[collection ' + key + '] cur:', { type: cur.type?.toString?.(), value: typeof cur.value === 'string' ? cur.value : 'object' });
+        console.log('[collection ' + key + '] body length:', body.length);
+        const nextTok = this.peek();
+        console.log('[collection ' + key + '] next:', nextTok ? { type: nextTok.type?.toString?.(), value: typeof nextTok.value === 'string' ? nextTok.value : 'object' } : null);
+        console.log('[collection ' + key + '] depth:', this.depth);
+      }
 
       const keepElseBodyDirective = key === '@else'
         && !body.length
         && isDirective(cur)
         && ['@do', '@match', '@let'].includes(cur.value);
 
-      if (!this.depth && (isSymbol(cur) || isDirective(cur)) && !keepElseBodyDirective) {
+      // For @if, don't treat symbols as new keys - we need to capture the full then-expr
+      // But @else should still be treated as a new key to separate then-expr from else-expr
+      const isIfBody = (key === '@if' || key === '@while') && !(isDirective(cur) && cur.value === '@else');
+
+      if (!this.depth && (isSymbol(cur) || isDirective(cur)) && !keepElseBodyDirective && !isIfBody) {
         if (isSpecial(cur) || isSlice(cur)) {
           body.push(Expr.from(cur));
           continue;
@@ -154,6 +172,10 @@ export default class Parser {
         }
 
         this.appendTo(stack, key, map, token, optional);
+        if (globalThis.__10x_debug_if) {
+          console.log('[collection] after appendTo, key:', key, '-> new key:', cur.value);
+          console.log('[collection] next token:', this.peek() ? { type: this.peek().type?.toString?.(), value: this.peek().value } : null);
+        }
         optional = false;
         key = cur.value;
         stack = [[]];
@@ -379,7 +401,16 @@ export default class Parser {
   }
 
   statement(endToken, raw) {
+    if (globalThis.__10x_debug_if) {
+      console.log('[statement] endToken:', endToken?.map(t => t?.toString?.()));
+      console.log('[statement] starting offset:', this.offset);
+    }
     while (!this.isDone() && !this.isEnd(endToken, raw)) this.push(raw);
+    if (globalThis.__10x_debug_if) {
+      console.log('[statement] ending offset:', this.offset);
+      console.log('[statement] buffer length:', this.buffer.length);
+      console.log('[statement] buffer tokens:', this.buffer.map(t => ({ type: t.type?.toString?.(), value: typeof t.value === 'string' ? t.value : 'object' })));
+    }
     return this.pull();
   }
 
@@ -597,7 +628,33 @@ export default class Parser {
       const tokenInfo = token.tokenInfo || token;
 
       // Handle suffix @if: <then-expr> @if <condition> @else <else-expr>
+      // Only trigger if there are tokens before @if (i.e., it's actually a suffix @if)
       if (isDirective(token) && token.value === '@if') {
+        // Get the full then-expr BEFORE pop() modifies the leaf
+        // We need to capture tokens including PIPE for object merge
+        const leafBeforePop = get();
+        const fullThenTokens = [];
+        for (let i = leafBeforePop.length - 1; i >= 0; i--) {
+          const t = leafBeforePop[i];
+          // Stop at terminators but not PIPE (for object merge)
+          if (isEnd(t) && t.type !== PIPE) break;
+          fullThenTokens.unshift(t);
+        }
+        
+        if (globalThis.__10x_debug_if) {
+          console.log('[suffix @if] leafBeforePop length:', leafBeforePop.length);
+          console.log('[suffix @if] fullThenTokens:', fullThenTokens.map(t => ({ type: t.type?.toString?.(), value: typeof t.value === 'string' ? t.value : 'object' })));
+        }
+        
+        // Only treat as suffix @if if there are tokens before it
+        if (fullThenTokens.length === 0) {
+          // This is a prefix @if, not a suffix @if
+          // Let the collection function handle it
+          const fixedToken = this.collection(tokenInfo, curToken, nextToken);
+          push(fixedToken);
+          continue;
+        }
+        
         const thenExpr = pop();
         if (thenExpr.length > 0) {
           // Parse condition until @else - use custom parsing
@@ -615,6 +672,11 @@ export default class Parser {
             this.next(); // consume @else
             const elseExpr = this.leaf();
             
+            // Clear the used tokens from the leaf (including PIPE and object merge)
+            if (fullThenTokens.length > 0) {
+              get().splice(0, fullThenTokens.length);
+            }
+            
             // Create an if statement with suffix form
             // Structure matches prefix @if: { if: { body: [BLOCK with condition + then] }, else: { body: [elseExpr] } }
             push(Expr.map({
@@ -622,7 +684,7 @@ export default class Parser {
                 type: BLOCK, 
                 value: { 
                   body: [
-                    Expr.block({ body: [...condition, ...thenExpr] }, tokenInfo)
+                    Expr.block({ body: [...condition, ...fullThenTokens] }, tokenInfo)
                   ] 
                 } 
               }, tokenInfo),
@@ -1174,6 +1236,13 @@ export default class Parser {
     set.forEach(sub => {
       let body = this.subTree(sub, true);
 
+      if (globalThis.__10x_debug_if && name === '@if') {
+        console.log('[appendTo @if] sub length:', sub.length);
+        console.log('[appendTo @if] sub tokens:', sub.map(t => ({ type: t.type?.toString?.(), value: typeof t.value === 'string' ? t.value : 'object' })));
+        console.log('[appendTo @if] body length:', body.length);
+        console.log('[appendTo @if] body before reduce:', body.map(t => ({ type: t.type?.toString?.(), value: typeof t.value === 'string' ? t.value : 'object', constructor: t.constructor?.name })));
+      }
+
       // reduce depth
       while (
         body.length === 1
@@ -1187,6 +1256,10 @@ export default class Parser {
         ))
       ) {
         body = body[0].getArgs();
+      }
+
+      if (globalThis.__10x_debug_if && name === '@if') {
+        console.log('[appendTo @if] body after reduce:', body.map(t => ({ type: t.type?.toString?.(), value: typeof t.value === 'string' ? t.value : 'object', constructor: t.constructor?.name })));
       }
 
       const lastToken = sub[sub.length - 1];
@@ -1208,8 +1281,12 @@ export default class Parser {
       if (isBlock(body[0]) || body.length > 1) {
         if (body.some(isBlock)) {
           target[prop].push(Expr.body(body, tokenInfo));
-        } else {
+        } else if (isStatement(name)) {
+          // Only wrap in Statement for directive bodies, not for object property values
           target[prop].push(Expr.stmt(body, { ...tokenInfo, kind: 'raw' }));
+        } else {
+          // For object property values, use Expr.body to create a Block
+          target[prop].push(Expr.body(body, tokenInfo));
         }
       } else {
         target[prop].push(...body);

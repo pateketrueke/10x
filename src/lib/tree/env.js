@@ -129,7 +129,9 @@ export default class Env {
     const scope = new Env(environment);
     const list = Expr.args(args);
 
-    while (target.body && target.body[0].isCallable) {
+    // Unwrap nested callables, but not assignments (callables with name)
+    // An assignment like `tasks = tasks |> map(...)` has a name and should not be unwrapped
+    while (target.body && target.body[0].isCallable && !target.body[0].getName()) {
       Env.merge(list, target.args, true, scope);
       target = target.body[0].value;
     }
