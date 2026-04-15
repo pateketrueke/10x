@@ -130,6 +130,30 @@ classify = @match{1 "one", 2 "two", @else "?"}.  # First-class
 
 ---
 
+## @html:tag — wrapper element
+
+```10x
+# Fragment — children rendered directly into #app
+@render "#app" @html
+  <div>foo</div>
+  <b>baz</b>.
+
+# Wrapped — children inside <section> inside #app
+@render "#app" @html:section
+  <div>foo</div>
+  <b>baz</b>.
+
+# Standalone view — x-slot placeholder by default
+view = @html <span>#{name}</span>.
+<p>Hello #{view}</p>      # → <p>Hello <x-slot>...</x-slot></p>
+
+# Standalone view — custom placeholder tag
+view = @html:span <b>#{name}</b>.
+<p>Hello #{view}</p>      # → <p>Hello <span>...</span></p>
+```
+
+---
+
 ## Full Todolist Example
 
 ```10x

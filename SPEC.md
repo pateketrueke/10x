@@ -431,6 +431,33 @@ Renders HTML to a target:
   <div class="counter">#{count}</div>.
 ```
 
+`@html:tag` wraps the rendered output in the specified element:
+
+```markdown
+# Fragment — children go directly into #app
+@render "#app" @html
+  <div>foo</div>
+  <b>baz</b>.
+
+# Wrapped — children are inside <section> inside #app
+@render "#app" @html:section
+  <div>foo</div>
+  <b>baz</b>.
+```
+
+When used as a standalone value embedded via `#{}` interpolation,
+`@html:tag` sets the placeholder wrapper element (default is `x-slot`):
+
+```markdown
+# Uses <x-slot> as placeholder (default)
+view = @html <span>#{name}</span>.
+<p>Hello #{view}</p>   →  <p>Hello <x-slot>...</x-slot></p>
+
+# Uses <span> as placeholder — safe for inline contexts
+view = @html:span <span>#{name}</span>.
+<p>Hello #{view}</p>   →  <p>Hello <span>...</span></p>
+```
+
 #### @on
 
 Event handlers:
